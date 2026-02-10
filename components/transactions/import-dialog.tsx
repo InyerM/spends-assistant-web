@@ -1,19 +1,84 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useMemo } from 'react';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import { transactionKeys } from '@/lib/api/queries/transaction.queries';
-import { Upload, FileText } from 'lucide-react';
+import { Upload, FileText, ArrowLeft, ArrowRight, AlertTriangle } from 'lucide-react';
 
 interface ImportDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
-function parseCsvLine(line: string): string[] {
+type Step = 'upload' | 'map' | 'preview';
+
+type AppField =
+  | 'account'
+  | 'date'
+  | 'amount'
+  | 'description'
+  | 'type'
+  | 'category'
+  | 'notes'
+  | 'payment_method'
+  | 'transfer';
+
+interface FieldConfig {
+  field: AppField;
+  label: string;
+  required: boolean;
+  aliases: string[];
+}
+
+const FIELD_CONFIGS: FieldConfig[] = [
+  { field: 'account', label: 'Account', required: true, aliases: ['account', 'account_id'] },
+  { field: 'date', label: 'Date', required: true, aliases: ['date'] },
+  { field: 'amount', label: 'Amount', required: true, aliases: ['amount'] },
+  {
+    field: 'description',
+    label: 'Description',
+    required: true,
+    aliases: ['description', 'note'],
+  },
+  { field: 'type', label: 'Type', required: true, aliases: ['type'] },
+  { field: 'category', label: 'Category', required: false, aliases: ['category', 'category_id'] },
+  { field: 'notes', label: 'Notes', required: false, aliases: ['notes', 'note'] },
+  {
+    field: 'payment_method',
+    label: 'Payment Method',
+    required: false,
+    aliases: ['payment_method', 'payment_type'],
+  },
+  { field: 'transfer', label: 'Transfer', required: false, aliases: ['transfer'] },
+];
+
+const UNMAPPED = '__unmapped__';
+
+function detectDelimiter(headerLine: string): string {
+  const semicolons = (headerLine.match(/;/g) ?? []).length;
+  const commas = (headerLine.match(/,/g) ?? []).length;
+  return semicolons > commas ? ';' : ',';
+}
+
+function parseCsvLine(line: string, delimiter: string): string[] {
   const result: string[] = [];
   let current = '';
   let inQuotes = false;
@@ -27,7 +92,7 @@ function parseCsvLine(line: string): string[] {
       } else {
         inQuotes = !inQuotes;
       }
-    } else if (char === ',' && !inQuotes) {
+    } else if (char === delimiter && !inQuotes) {
       result.push(current.trim());
       current = '';
     } else {
@@ -38,13 +103,18 @@ function parseCsvLine(line: string): string[] {
   return result;
 }
 
-function parseCsv(text: string): { headers: string[]; rows: Record<string, string>[] } {
+function parseCsv(text: string): {
+  headers: string[];
+  rows: Record<string, string>[];
+  delimiter: string;
+} {
   const lines = text.split('\n').filter((l) => l.trim());
-  if (lines.length < 2) return { headers: [], rows: [] };
+  if (lines.length < 2) return { headers: [], rows: [], delimiter: ',' };
 
-  const headers = parseCsvLine(lines[0]).map((h) => h.toLowerCase().trim());
+  const delimiter = detectDelimiter(lines[0]);
+  const headers = parseCsvLine(lines[0], delimiter).map((h) => h.toLowerCase().trim());
   const rows = lines.slice(1).map((line) => {
-    const values = parseCsvLine(line);
+    const values = parseCsvLine(line, delimiter);
     const row: Record<string, string> = {};
     headers.forEach((h, i) => {
       row[h] = values[i] ?? '';
@@ -52,58 +122,161 @@ function parseCsv(text: string): { headers: string[]; rows: Record<string, strin
     return row;
   });
 
-  return { headers, rows };
+  return { headers, rows, delimiter };
 }
 
-const REQUIRED_COLUMNS = ['date', 'amount', 'description', 'type', 'account_id', 'source'];
+function buildAutoMapping(csvHeaders: string[]): Record<AppField, string> {
+  const mapping: Record<AppField, string> = {} as Record<AppField, string>;
+  const used = new Set<string>();
+
+  for (const config of FIELD_CONFIGS) {
+    const match = config.aliases.find((alias) => csvHeaders.includes(alias) && !used.has(alias));
+    if (match) {
+      mapping[config.field] = match;
+      used.add(match);
+    } else {
+      mapping[config.field] = UNMAPPED;
+    }
+  }
+
+  // If 'note' was mapped to description, don't also map it to notes
+  if (mapping.description === 'note' && mapping.notes === 'note') {
+    mapping.notes = UNMAPPED;
+  }
+
+  return mapping;
+}
+
+interface TransformedRow {
+  date: string;
+  time: string;
+  amount: number;
+  description: string;
+  notes: string | null;
+  type: string;
+  account: string;
+  category: string | null;
+  payment_method: string | null;
+  source: string;
+}
+
+function transformRow(
+  row: Record<string, string>,
+  mapping: Record<AppField, string>,
+): TransformedRow {
+  const get = (field: AppField): string => {
+    const col = mapping[field];
+    if (!col || col === UNMAPPED) return '';
+    return row[col] ?? '';
+  };
+
+  const rawDate = get('date');
+  let date = rawDate;
+  let time = '12:00:00';
+
+  // Handle ISO date strings like 2025-11-02T20:42:26.348Z
+  if (rawDate.includes('T')) {
+    const [datePart, timePart] = rawDate.split('T');
+    date = datePart;
+    time = timePart.replace('Z', '').split('.')[0];
+  }
+
+  const rawType = get('type').toLowerCase();
+  const transferVal = get('transfer').toLowerCase();
+  const type = transferVal === 'true' ? 'transfer' : rawType;
+
+  return {
+    date,
+    time,
+    amount: Math.abs(parseFloat(get('amount')) || 0),
+    description: get('description'),
+    notes: get('notes') || null,
+    type,
+    account: get('account'),
+    category: get('category') || null,
+    payment_method: get('payment_method').toLowerCase() || null,
+    source: 'csv_import',
+  };
+}
+
+interface ImportResult {
+  imported: number;
+  skipped: number;
+  errors: string[];
+}
 
 export function ImportDialog({ open, onOpenChange }: ImportDialogProps): React.ReactElement {
+  const [step, setStep] = useState<Step>('upload');
   const [file, setFile] = useState<File | null>(null);
-  const [preview, setPreview] = useState<{ headers: string[]; rowCount: number } | null>(null);
+  const [csvHeaders, setCsvHeaders] = useState<string[]>([]);
+  const [mapping, setMapping] = useState<Record<AppField, string>>({} as Record<AppField, string>);
   const [isImporting, setIsImporting] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
   const parsedRowsRef = useRef<Record<string, string>[]>([]);
+
+  const resetState = (): void => {
+    setStep('upload');
+    setFile(null);
+    setCsvHeaders([]);
+    setMapping({} as Record<AppField, string>);
+    parsedRowsRef.current = [];
+  };
 
   const handleFileSelect = async (selectedFile: File): Promise<void> => {
     setFile(selectedFile);
     const text = await selectedFile.text();
     const { headers, rows } = parseCsv(text);
 
-    const missing = REQUIRED_COLUMNS.filter((c) => !headers.includes(c));
-    if (missing.length > 0) {
-      toast.error(`Missing required columns: ${missing.join(', ')}`);
+    if (headers.length === 0 || rows.length === 0) {
+      toast.error('CSV file is empty or has no data rows');
       setFile(null);
-      setPreview(null);
       return;
     }
 
     parsedRowsRef.current = rows;
-    setPreview({ headers, rowCount: rows.length });
+    setCsvHeaders(headers);
+    setMapping(buildAutoMapping(headers));
+    setStep('map');
   };
+
+  const handleMappingChange = (field: AppField, csvColumn: string): void => {
+    setMapping((prev) => ({ ...prev, [field]: csvColumn }));
+  };
+
+  const usedColumns = useMemo(() => {
+    const used = new Set<string>();
+    for (const col of Object.values(mapping)) {
+      if (col !== UNMAPPED) used.add(col);
+    }
+    return used;
+  }, [mapping]);
+
+  const missingRequired = useMemo(
+    () =>
+      FIELD_CONFIGS.filter(
+        (c) => c.required && (!mapping[c.field] || mapping[c.field] === UNMAPPED),
+      ).map((c) => c.label),
+    [mapping],
+  );
+
+  const previewRows = useMemo(
+    () => parsedRowsRef.current.slice(0, 5).map((row) => transformRow(row, mapping)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [mapping, step],
+  );
 
   const handleImport = async (): Promise<void> => {
     if (parsedRowsRef.current.length === 0) return;
 
     setIsImporting(true);
     try {
-      const transactions = parsedRowsRef.current.map((row) => ({
-        date: row.date,
-        time: row.time || '00:00:00',
-        amount: parseFloat(row.amount),
-        description: row.description,
-        notes: row.notes || null,
-        type: row.type,
-        account_id: row.account_id,
-        category_id: row.category_id || null,
-        payment_method: row.payment_method || null,
-        source: row.source || 'csv_import',
-      }));
+      const transactions = parsedRowsRef.current.map((row) => transformRow(row, mapping));
 
       const res = await fetch('/api/transactions/import', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ transactions }),
+        body: JSON.stringify({ transactions, resolve_names: true }),
       });
 
       if (!res.ok) {
@@ -111,12 +284,19 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps): React.R
         throw new Error((error as { error: string }).error || 'Import failed');
       }
 
-      const result = (await res.json()) as { imported: number };
-      toast.success(`Imported ${result.imported} transactions`);
+      const result = (await res.json()) as ImportResult;
+
+      if (result.errors.length > 0) {
+        toast.warning(
+          `Imported ${result.imported}, skipped ${result.skipped}: ${result.errors[0]}`,
+        );
+      } else {
+        toast.success(`Imported ${result.imported} transactions`);
+      }
+
       void queryClient.invalidateQueries({ queryKey: transactionKeys.all });
       onOpenChange(false);
-      setFile(null);
-      setPreview(null);
+      resetState();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Import failed');
     } finally {
@@ -124,77 +304,172 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps): React.R
     }
   };
 
+  const renderUploadStep = (): React.ReactElement => (
+    <div className='space-y-4'>
+      <p className='text-muted-foreground text-sm'>
+        Upload a CSV file. Column mapping is configured in the next step. Both comma and semicolon
+        delimiters are auto-detected.
+      </p>
+
+      <input
+        ref={fileRef}
+        type='file'
+        accept='.csv'
+        className='hidden'
+        onChange={(e): void => {
+          const f = e.target.files?.[0];
+          if (f) void handleFileSelect(f);
+        }}
+      />
+
+      <button
+        onClick={(): void => fileRef.current?.click()}
+        className='border-border hover:bg-card-overlay flex w-full cursor-pointer flex-col items-center gap-2 rounded-lg border-2 border-dashed p-8 transition-colors'>
+        <Upload className='text-muted-foreground h-8 w-8' />
+        <span className='text-muted-foreground text-sm'>Click to select a CSV file</span>
+      </button>
+
+      <div className='flex justify-end'>
+        <Button variant='outline' onClick={(): void => onOpenChange(false)}>
+          Cancel
+        </Button>
+      </div>
+    </div>
+  );
+
+  const renderMapStep = (): React.ReactElement => (
+    <div className='space-y-4'>
+      <div className='flex items-center gap-2'>
+        <FileText className='text-muted-foreground h-4 w-4' />
+        <span className='text-sm font-medium'>{file?.name}</span>
+        <span className='text-muted-foreground text-xs'>
+          ({parsedRowsRef.current.length} rows, {csvHeaders.length} columns)
+        </span>
+      </div>
+
+      <div className='space-y-2'>
+        {FIELD_CONFIGS.map((config) => (
+          <div key={config.field} className='flex items-center gap-3'>
+            <span className='w-32 text-sm'>
+              {config.label}
+              {config.required && <span className='text-destructive ml-0.5'>*</span>}
+            </span>
+            <Select
+              value={mapping[config.field]}
+              onValueChange={(v): void => handleMappingChange(config.field, v)}>
+              <SelectTrigger size='sm' className='w-48'>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={UNMAPPED}>— Skip —</SelectItem>
+                {csvHeaders.map((header) => (
+                  <SelectItem
+                    key={header}
+                    value={header}
+                    disabled={usedColumns.has(header) && mapping[config.field] !== header}>
+                    {header}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        ))}
+      </div>
+
+      {missingRequired.length > 0 && (
+        <div className='text-destructive flex items-center gap-2 text-xs'>
+          <AlertTriangle className='h-3.5 w-3.5' />
+          Missing required: {missingRequired.join(', ')}
+        </div>
+      )}
+
+      <div className='flex justify-between'>
+        <Button variant='outline' onClick={(): void => resetState()}>
+          <ArrowLeft className='mr-1 h-4 w-4' />
+          Back
+        </Button>
+        <Button
+          disabled={missingRequired.length > 0}
+          className='cursor-pointer'
+          onClick={(): void => setStep('preview')}>
+          Preview
+          <ArrowRight className='ml-1 h-4 w-4' />
+        </Button>
+      </div>
+    </div>
+  );
+
+  const renderPreviewStep = (): React.ReactElement => (
+    <div className='space-y-4'>
+      <p className='text-muted-foreground text-sm'>
+        Showing first {previewRows.length} of {parsedRowsRef.current.length} rows. Accounts and
+        categories will be resolved by name.
+      </p>
+
+      <div className='max-h-64 overflow-auto rounded border'>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Date</TableHead>
+              <TableHead>Account</TableHead>
+              <TableHead>Description</TableHead>
+              <TableHead className='text-right'>Amount</TableHead>
+              <TableHead>Type</TableHead>
+              <TableHead>Category</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {previewRows.map((row, i) => (
+              <TableRow key={i}>
+                <TableCell className='text-xs'>{row.date}</TableCell>
+                <TableCell className='text-xs'>{row.account}</TableCell>
+                <TableCell className='max-w-[150px] truncate text-xs'>{row.description}</TableCell>
+                <TableCell className='text-right text-xs'>{row.amount.toLocaleString()}</TableCell>
+                <TableCell className='text-xs'>{row.type}</TableCell>
+                <TableCell className='text-xs'>{row.category ?? '—'}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+
+      <div className='flex justify-between'>
+        <Button variant='outline' onClick={(): void => setStep('map')}>
+          <ArrowLeft className='mr-1 h-4 w-4' />
+          Back
+        </Button>
+        <Button
+          onClick={(): void => void handleImport()}
+          disabled={isImporting}
+          className='cursor-pointer'>
+          {isImporting ? 'Importing...' : `Import ${parsedRowsRef.current.length} transactions`}
+        </Button>
+      </div>
+    </div>
+  );
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className='border-border bg-card sm:max-w-[500px]'>
+    <Dialog
+      open={open}
+      onOpenChange={(v): void => {
+        if (!v) resetState();
+        onOpenChange(v);
+      }}>
+      <DialogContent className='border-border bg-card sm:max-w-[600px]'>
         <DialogHeader>
-          <DialogTitle>Import Transactions</DialogTitle>
+          <DialogTitle>
+            Import Transactions
+            {step !== 'upload' && (
+              <span className='text-muted-foreground ml-2 text-sm font-normal'>
+                — {step === 'map' ? 'Map Columns' : 'Preview'}
+              </span>
+            )}
+          </DialogTitle>
         </DialogHeader>
 
-        <div className='space-y-4'>
-          <p className='text-muted-foreground text-sm'>
-            Upload a CSV file with the following columns: <br />
-            <code className='text-foreground text-xs'>
-              date, time, amount, description, type, account_id, source
-            </code>
-            <br />
-            Optional: <code className='text-xs'>notes, category_id, payment_method</code>
-          </p>
-
-          <input
-            ref={fileRef}
-            type='file'
-            accept='.csv'
-            className='hidden'
-            onChange={(e): void => {
-              const f = e.target.files?.[0];
-              if (f) void handleFileSelect(f);
-            }}
-          />
-
-          {!file ? (
-            <button
-              onClick={(): void => fileRef.current?.click()}
-              className='border-border hover:bg-card-overlay flex w-full cursor-pointer flex-col items-center gap-2 rounded-lg border-2 border-dashed p-8 transition-colors'>
-              <Upload className='text-muted-foreground h-8 w-8' />
-              <span className='text-muted-foreground text-sm'>Click to select a CSV file</span>
-            </button>
-          ) : (
-            <div className='border-border flex items-center gap-3 rounded-lg border p-3'>
-              <FileText className='text-muted-foreground h-8 w-8' />
-              <div className='min-w-0 flex-1'>
-                <p className='text-foreground truncate text-sm font-medium'>{file.name}</p>
-                {preview && (
-                  <p className='text-muted-foreground text-xs'>
-                    {preview.rowCount} rows · {preview.headers.length} columns
-                  </p>
-                )}
-              </div>
-              <Button
-                variant='ghost'
-                size='sm'
-                className='cursor-pointer'
-                onClick={(): void => {
-                  setFile(null);
-                  setPreview(null);
-                }}>
-                Change
-              </Button>
-            </div>
-          )}
-
-          <div className='flex justify-end gap-3'>
-            <Button variant='outline' onClick={(): void => onOpenChange(false)}>
-              Cancel
-            </Button>
-            <Button
-              onClick={(): void => void handleImport()}
-              disabled={!preview || isImporting}
-              className='cursor-pointer'>
-              {isImporting ? 'Importing...' : `Import ${preview?.rowCount ?? 0} transactions`}
-            </Button>
-          </div>
-        </div>
+        {step === 'upload' && renderUploadStep()}
+        {step === 'map' && renderMapStep()}
+        {step === 'preview' && renderPreviewStep()}
       </DialogContent>
     </Dialog>
   );
