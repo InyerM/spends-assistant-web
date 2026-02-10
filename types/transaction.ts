@@ -42,15 +42,28 @@ export interface UpdateTransactionInput extends Partial<CreateTransactionInput> 
   id: string;
 }
 
+export interface BulkUpdateTransactionInput {
+  ids: string[];
+  updates: {
+    type?: TransactionType;
+    category_id?: string | null;
+    account_id?: string;
+  };
+}
+
 export interface TransactionFilters {
   type?: TransactionType;
+  types?: TransactionType[];
   account_id?: string;
   account_ids?: string[];
   category_id?: string;
+  category_ids?: string[];
   source?: string;
   date_from?: string;
   date_to?: string;
   search?: string;
   page?: number;
   limit?: number;
+  sort_by?: 'date' | 'amount';
+  sort_order?: 'asc' | 'desc';
 }

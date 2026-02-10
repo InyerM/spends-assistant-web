@@ -7,6 +7,7 @@ import { SpendingByCategory } from '@/components/dashboard/spending-by-category'
 import { RecentTransactions } from '@/components/dashboard/recent-transactions';
 import { MonthSelector } from '@/components/dashboard/month-selector';
 import { AccountEditDialog } from '@/components/accounts/account-edit-dialog';
+import { AccountCreateDialog } from '@/components/accounts/account-create-dialog';
 import type { Account } from '@/types';
 
 export default function DashboardPage(): React.ReactElement {
@@ -14,6 +15,7 @@ export default function DashboardPage(): React.ReactElement {
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth());
   const [editingAccount, setEditingAccount] = useState<Account | null>(null);
+  const [createAccountOpen, setCreateAccountOpen] = useState(false);
 
   const handleMonthChange = (newYear: number, newMonth: number): void => {
     setYear(newYear);
@@ -22,7 +24,10 @@ export default function DashboardPage(): React.ReactElement {
 
   return (
     <div className='space-y-4 p-4 sm:space-y-6 sm:p-6'>
-      <BalanceOverview onEditAccount={(account): void => setEditingAccount(account)} />
+      <BalanceOverview
+        onEditAccount={(account): void => setEditingAccount(account)}
+        onAddAccount={(): void => setCreateAccountOpen(true)}
+      />
 
       <div className='flex items-center justify-between'>
         <h2 className='text-foreground text-base font-semibold sm:text-lg'>Overview</h2>
@@ -43,6 +48,8 @@ export default function DashboardPage(): React.ReactElement {
           if (!open) setEditingAccount(null);
         }}
       />
+
+      <AccountCreateDialog open={createAccountOpen} onOpenChange={setCreateAccountOpen} />
     </div>
   );
 }

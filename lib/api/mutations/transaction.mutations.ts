@@ -1,7 +1,12 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { transactionKeys } from '@/lib/api/queries/transaction.queries';
 import { accountKeys } from '@/lib/api/queries/account.queries';
-import type { Transaction, CreateTransactionInput, UpdateTransactionInput } from '@/types';
+import type {
+  Transaction,
+  CreateTransactionInput,
+  UpdateTransactionInput,
+  BulkUpdateTransactionInput,
+} from '@/types';
 
 async function createTransaction(input: CreateTransactionInput): Promise<Transaction> {
   const res = await fetch('/api/transactions', {
@@ -58,6 +63,33 @@ export function useUpdateTransaction(): ReturnType<
 
   return useMutation({
     mutationFn: updateTransaction,
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: transactionKeys.all });
+      void queryClient.invalidateQueries({ queryKey: accountKeys.all });
+    },
+  });
+}
+
+async function bulkUpdateTransactions(input: BulkUpdateTransactionInput): Promise<Transaction[]> {
+  const res = await fetch('/api/transactions/bulk', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error((error as { error: string }).error || 'Failed to bulk update');
+  }
+  return res.json() as Promise<Transaction[]>;
+}
+
+export function useBulkUpdateTransactions(): ReturnType<
+  typeof useMutation<Transaction[], Error, BulkUpdateTransactionInput>
+> {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: bulkUpdateTransactions,
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: transactionKeys.all });
       void queryClient.invalidateQueries({ queryKey: accountKeys.all });

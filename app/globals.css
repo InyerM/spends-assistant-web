@@ -79,6 +79,14 @@
   --radius-xl: calc(var(--radius) + 4px);
 }
 
+@utility scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
 body {
   background: hsl(var(--background));
   color: hsl(var(--foreground));

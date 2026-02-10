@@ -1,5 +1,6 @@
 'use client';
 
+import { useRef, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAccounts } from '@/lib/api/queries/account.queries';
@@ -7,6 +8,7 @@ import { formatCurrency } from '@/lib/utils/formatting';
 import type { LucideIcon } from 'lucide-react';
 import {
   Pencil,
+  Plus,
   Landmark,
   PiggyBank,
   CreditCard,
@@ -48,13 +50,85 @@ function darkenColor(hex: string): string {
   return `#${dr.toString(16).padStart(2, '0')}${dg.toString(16).padStart(2, '0')}${db.toString(16).padStart(2, '0')}`;
 }
 
-interface BalanceOverviewProps {
-  onEditAccount?: (account: Account) => void;
+function chunk<T>(arr: T[], size: number): T[][] {
+  const chunks: T[][] = [];
+  for (let i = 0; i < arr.length; i += size) {
+    chunks.push(arr.slice(i, i + size));
+  }
+  return chunks;
 }
 
-export function BalanceOverview({ onEditAccount }: BalanceOverviewProps): React.ReactElement {
+interface AccountCardProps {
+  account: Account;
+  onEdit?: (account: Account) => void;
+  onClick: () => void;
+}
+
+function AccountCard({ account, onEdit, onClick }: AccountCardProps): React.ReactElement {
+  const rawColor = account.color ?? FALLBACK_COLORS[account.type];
+  const bgColor = darkenColor(rawColor);
+  const Icon = ACCOUNT_TYPE_ICONS[account.type];
+
+  return (
+    <div
+      className='group relative flex cursor-pointer items-center gap-3 rounded-xl p-4 transition-opacity hover:opacity-90'
+      style={{ backgroundColor: bgColor }}
+      onClick={onClick}
+      role='button'
+      tabIndex={0}
+      onKeyDown={(e): void => {
+        if (e.key === 'Enter') onClick();
+      }}>
+      <Icon className='h-5 w-5 shrink-0 text-white/70' />
+      <div className='min-w-0 flex-1'>
+        <p className='truncate text-sm font-semibold text-white'>{account.name}</p>
+        <p className='text-sm text-white/80'>{formatCurrency(account.balance, account.currency)}</p>
+      </div>
+      {onEdit && (
+        <button
+          onClick={(e): void => {
+            e.stopPropagation();
+            onEdit(account);
+          }}
+          className='cursor-pointer rounded-md p-1 text-white/60 opacity-0 transition-opacity group-hover:opacity-100 hover:text-white'>
+          <Pencil className='h-3.5 w-3.5' />
+        </button>
+      )}
+    </div>
+  );
+}
+
+interface BalanceOverviewProps {
+  onEditAccount?: (account: Account) => void;
+  onAddAccount?: () => void;
+}
+
+export function BalanceOverview({
+  onEditAccount,
+  onAddAccount,
+}: BalanceOverviewProps): React.ReactElement {
   const { data: accounts, isLoading } = useAccounts();
   const router = useRouter();
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [activeSlide, setActiveSlide] = useState(0);
+
+  const accountList = accounts ?? [];
+  const mobilePages = chunk(accountList, 4);
+  const lastPageFull = accountList.length > 0 && accountList.length % 4 === 0;
+  const needsExtraPage = onAddAccount && (lastPageFull || accountList.length === 0);
+  const totalSlides = mobilePages.length + (needsExtraPage ? 1 : 0);
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const handleScroll = (): void => {
+      const gap = 12; // matches gap-3 (0.75rem)
+      const idx = Math.round(el.scrollLeft / (el.clientWidth + gap));
+      setActiveSlide(idx);
+    };
+    el.addEventListener('scroll', handleScroll, { passive: true });
+    return (): void => el.removeEventListener('scroll', handleScroll);
+  }, []);
 
   if (isLoading) {
     return (
@@ -66,44 +140,77 @@ export function BalanceOverview({ onEditAccount }: BalanceOverviewProps): React.
     );
   }
 
-  return (
-    <div className='grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5'>
-      {accounts?.map((account) => {
-        const rawColor = account.color ?? FALLBACK_COLORS[account.type];
-        const bgColor = darkenColor(rawColor);
-        const Icon = ACCOUNT_TYPE_ICONS[account.type];
+  const addCard = onAddAccount ? (
+    <button
+      onClick={onAddAccount}
+      className='border-border text-muted-foreground hover:border-muted-foreground/50 hover:text-foreground flex cursor-pointer items-center gap-3 rounded-xl border-2 border-dashed p-4 transition-colors'>
+      <Plus className='h-5 w-5 shrink-0' />
+      <div className='min-w-0 text-left'>
+        <p className='text-sm font-semibold'>Add Account</p>
+        <p className='text-muted-foreground/60 text-sm'>New</p>
+      </div>
+    </button>
+  ) : null;
 
-        return (
-          <div
-            key={account.id}
-            className='group relative flex cursor-pointer items-center gap-3 rounded-xl p-4 transition-opacity hover:opacity-90'
-            style={{ backgroundColor: bgColor }}
-            onClick={(): void => router.push(`/accounts/${account.id}`)}
-            role='button'
-            tabIndex={0}
-            onKeyDown={(e): void => {
-              if (e.key === 'Enter') router.push(`/accounts/${account.id}`);
-            }}>
-            <Icon className='h-5 w-5 shrink-0 text-white/70' />
-            <div className='min-w-0 flex-1'>
-              <p className='truncate text-sm font-semibold text-white'>{account.name}</p>
-              <p className='text-sm text-white/80'>
-                {formatCurrency(account.balance, account.currency)}
-              </p>
+  return (
+    <>
+      {/* Mobile: horizontal carousel */}
+      <div className='sm:hidden'>
+        <div
+          ref={scrollRef}
+          className='scrollbar-none flex snap-x snap-mandatory gap-3 overflow-x-auto'>
+          {mobilePages.map((page, pageIdx) => {
+            const isLastPage = pageIdx === mobilePages.length - 1;
+            const showAddHere = isLastPage && onAddAccount && page.length < 4;
+            return (
+              <div
+                key={pageIdx}
+                className='grid w-full min-w-full shrink-0 snap-center grid-cols-2 content-start gap-2'>
+                {page.map((account) => (
+                  <AccountCard
+                    key={account.id}
+                    account={account}
+                    onEdit={onEditAccount}
+                    onClick={(): void => router.push(`/accounts/${account.id}`)}
+                  />
+                ))}
+                {showAddHere && addCard}
+              </div>
+            );
+          })}
+          {needsExtraPage && (
+            <div className='grid w-full min-w-full shrink-0 snap-center grid-cols-2 content-start gap-2'>
+              {addCard}
             </div>
-            {onEditAccount && (
-              <button
-                onClick={(e): void => {
-                  e.stopPropagation();
-                  onEditAccount(account);
-                }}
-                className='cursor-pointer rounded-md p-1 text-white/60 opacity-0 transition-opacity group-hover:opacity-100 hover:text-white'>
-                <Pencil className='h-3.5 w-3.5' />
-              </button>
-            )}
+          )}
+        </div>
+        {/* Dot indicators */}
+        {totalSlides > 1 && (
+          <div className='mt-2 flex justify-center gap-1.5'>
+            {Array.from({ length: totalSlides }).map((_, i) => (
+              <div
+                key={i}
+                className={`h-1.5 rounded-full transition-all ${
+                  i === activeSlide ? 'bg-foreground w-4' : 'bg-muted-foreground/30 w-1.5'
+                }`}
+              />
+            ))}
           </div>
-        );
-      })}
-    </div>
+        )}
+      </div>
+
+      {/* Desktop: grid */}
+      <div className='hidden gap-3 sm:grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5'>
+        {accountList.map((account) => (
+          <AccountCard
+            key={account.id}
+            account={account}
+            onEdit={onEditAccount}
+            onClick={(): void => router.push(`/accounts/${account.id}`)}
+          />
+        ))}
+        {addCard}
+      </div>
+    </>
   );
 }

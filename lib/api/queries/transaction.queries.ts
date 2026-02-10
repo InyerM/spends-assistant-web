@@ -15,18 +15,30 @@ interface TransactionsResult {
   count: number;
 }
 
+export interface TransactionsPage {
+  data: Transaction[];
+  count: number;
+  page: number;
+}
+
+const PAGE_SIZE = 50;
+
 async function fetchTransactions(filters: TransactionFilters): Promise<TransactionsResult> {
   const params = new URLSearchParams();
   if (filters.page) params.set('page', String(filters.page));
   if (filters.limit) params.set('limit', String(filters.limit));
-  if (filters.type) params.set('type', filters.type);
+  if (filters.types?.length) params.set('types', filters.types.join(','));
+  else if (filters.type) params.set('type', filters.type);
   if (filters.account_ids?.length) params.set('account_ids', filters.account_ids.join(','));
   else if (filters.account_id) params.set('account_id', filters.account_id);
-  if (filters.category_id) params.set('category_id', filters.category_id);
+  if (filters.category_ids?.length) params.set('category_ids', filters.category_ids.join(','));
+  else if (filters.category_id) params.set('category_id', filters.category_id);
   if (filters.source) params.set('source', filters.source);
   if (filters.date_from) params.set('date_from', filters.date_from);
   if (filters.date_to) params.set('date_to', filters.date_to);
   if (filters.search) params.set('search', filters.search);
+  if (filters.sort_by) params.set('sort_by', filters.sort_by);
+  if (filters.sort_order) params.set('sort_order', filters.sort_order);
 
   const res = await fetch(`/api/transactions?${params.toString()}`);
   if (!res.ok) throw new Error('Failed to fetch transactions');
@@ -56,57 +68,31 @@ export function useTransaction(id: string): ReturnType<typeof useQuery<Transacti
   });
 }
 
-interface MonthPageParam {
-  year: number;
-  month: number;
-}
-
-export interface MonthPage {
-  data: Transaction[];
-  count: number;
-  year: number;
-  month: number;
-}
-
 export function useInfiniteTransactions(
-  filters: Omit<TransactionFilters, 'page' | 'limit' | 'date_from' | 'date_to'> = {},
-  startYear?: number,
-  startMonth?: number,
+  filters: Omit<TransactionFilters, 'page' | 'limit'> = {},
 ): ReturnType<
   typeof useInfiniteQuery<
-    MonthPage,
+    TransactionsPage,
     Error,
-    { pages: MonthPage[] },
+    { pages: TransactionsPage[] },
     readonly unknown[],
-    MonthPageParam
+    number
   >
 > {
-  const now = new Date();
-  const initYear = startYear ?? now.getFullYear();
-  const initMonth = startMonth ?? now.getMonth();
-
   return useInfiniteQuery({
-    queryKey: [...transactionKeys.all, 'infinite', filters, initYear, initMonth] as const,
-    queryFn: async ({ pageParam }): Promise<MonthPage> => {
-      const { year, month } = pageParam;
-      const dateFrom = `${year}-${String(month + 1).padStart(2, '0')}-01`;
-      const lastDay = new Date(year, month + 1, 0).getDate();
-      const dateTo = `${year}-${String(month + 1).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
-
+    queryKey: [...transactionKeys.all, 'infinite', filters] as const,
+    queryFn: async ({ pageParam }): Promise<TransactionsPage> => {
       const result = await fetchTransactions({
         ...filters,
-        date_from: dateFrom,
-        date_to: dateTo,
-        limit: 500,
+        page: pageParam,
+        limit: PAGE_SIZE,
       });
-
-      return { ...result, year, month };
+      return { ...result, page: pageParam };
     },
-    initialPageParam: { year: initYear, month: initMonth },
-    getNextPageParam: (_lastPage, _allPages, lastPageParam) => {
-      const prevMonth = lastPageParam.month === 0 ? 11 : lastPageParam.month - 1;
-      const prevYear = lastPageParam.month === 0 ? lastPageParam.year - 1 : lastPageParam.year;
-      return { year: prevYear, month: prevMonth };
+    initialPageParam: 1,
+    getNextPageParam: (lastPage): number | undefined => {
+      if (lastPage.data.length < PAGE_SIZE) return undefined;
+      return lastPage.page + 1;
     },
   });
 }

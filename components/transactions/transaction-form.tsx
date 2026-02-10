@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, Fragment } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -19,7 +20,10 @@ import { Textarea } from '@/components/ui/textarea';
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
+  SelectSeparator,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
@@ -28,7 +32,7 @@ import { useCategories } from '@/lib/api/queries/category.queries';
 import { useCreateTransaction } from '@/lib/api/mutations/transaction.mutations';
 import { useUpdateTransaction } from '@/lib/api/mutations/transaction.mutations';
 import { getCurrentColombiaTimes } from '@/lib/utils/date';
-import type { Transaction } from '@/types';
+import type { Transaction, Category } from '@/types';
 
 const formSchema = z.object({
   date: z.string().min(1, 'Date is required'),
@@ -90,6 +94,35 @@ export function TransactionForm({
         },
   });
 
+  useEffect(() => {
+    if (open && transaction) {
+      form.reset({
+        date: transaction.date,
+        time: transaction.time,
+        amount: transaction.amount,
+        description: transaction.description,
+        notes: transaction.notes ?? '',
+        type: transaction.type,
+        account_id: transaction.account_id,
+        category_id: transaction.category_id ?? undefined,
+        transfer_to_account_id: transaction.transfer_to_account_id ?? undefined,
+      });
+    } else if (open && !transaction) {
+      const times = getCurrentColombiaTimes();
+      form.reset({
+        date: times.date,
+        time: times.time,
+        amount: 0,
+        description: '',
+        notes: '',
+        type: 'expense',
+        account_id: '',
+        category_id: undefined,
+        transfer_to_account_id: undefined,
+      });
+    }
+  }, [open, transaction, form]);
+
   const watchType = form.watch('type');
 
   async function onSubmit(values: FormValues): Promise<void> {
@@ -119,16 +152,10 @@ export function TransactionForm({
     }
   }
 
-  const expenseCategories = categories?.filter((c) => c.type === 'expense') ?? [];
-  const incomeCategories = categories?.filter((c) => c.type === 'income') ?? [];
-  const transferCategories = categories?.filter((c) => c.type === 'transfer') ?? [];
-
-  const filteredCategories =
-    watchType === 'expense'
-      ? expenseCategories
-      : watchType === 'income'
-        ? incomeCategories
-        : transferCategories;
+  const filteredCategories = categories?.filter((c) => c.type === watchType) ?? [];
+  const parentCategories = filteredCategories.filter((c) => !c.parent_id);
+  const getChildren = (parentId: string): Category[] =>
+    filteredCategories.filter((c) => c.parent_id === parentId);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -198,7 +225,14 @@ export function TransactionForm({
                 <FormItem>
                   <FormLabel>Amount (COP)</FormLabel>
                   <FormControl>
-                    <Input type='number' step='1' min='0' placeholder='0' {...field} />
+                    <Input
+                      type='number'
+                      step='1'
+                      min='0'
+                      placeholder='0'
+                      {...field}
+                      onChange={(e): void => field.onChange(e.target.valueAsNumber)}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -284,11 +318,37 @@ export function TransactionForm({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {filteredCategories.map((cat) => (
-                        <SelectItem key={cat.id} value={cat.id}>
-                          {cat.icon ?? ''} {cat.name}
-                        </SelectItem>
-                      ))}
+                      {parentCategories.map((parent, idx) => {
+                        const children = getChildren(parent.id);
+                        if (children.length === 0) {
+                          return (
+                            <SelectItem key={parent.id} value={parent.id}>
+                              {parent.icon ? `${parent.icon} ` : ''}
+                              {parent.name}
+                            </SelectItem>
+                          );
+                        }
+                        return (
+                          <Fragment key={parent.id}>
+                            {idx > 0 && <SelectSeparator />}
+                            <SelectGroup>
+                              <SelectLabel>
+                                {parent.icon ? `${parent.icon} ` : ''}
+                                {parent.name}
+                              </SelectLabel>
+                              <SelectItem value={parent.id} className='pl-4'>
+                                All {parent.name}
+                              </SelectItem>
+                              {children.map((child) => (
+                                <SelectItem key={child.id} value={child.id} className='pl-6'>
+                                  {child.icon ? `${child.icon} ` : ''}
+                                  {child.name}
+                                </SelectItem>
+                              ))}
+                            </SelectGroup>
+                          </Fragment>
+                        );
+                      })}
                     </SelectContent>
                   </Select>
                   <FormMessage />

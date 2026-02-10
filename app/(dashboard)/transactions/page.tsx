@@ -5,32 +5,42 @@ import { Button } from '@/components/ui/button';
 import { TransactionList } from '@/components/transactions/transaction-list';
 import { TransactionFiltersBar } from '@/components/transactions/transaction-filters';
 import { TransactionForm } from '@/components/transactions/transaction-form';
-import { Plus, Upload, Download } from 'lucide-react';
+import { BulkEditDialog } from '@/components/transactions/bulk-edit-dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Plus, Upload, Download, MoreVertical, CheckSquare, X, Pencil } from 'lucide-react';
 import { ImportDialog } from '@/components/transactions/import-dialog';
 import { exportTransactionsCsv } from '@/lib/utils/export';
 import { useTransactions } from '@/lib/api/queries/transaction.queries';
 import type { Transaction, TransactionFilters } from '@/types';
 
-type ListFilters = Omit<TransactionFilters, 'page' | 'limit' | 'date_from' | 'date_to'>;
+type ListFilters = Omit<TransactionFilters, 'page' | 'limit'>;
+
+function getInitialDates(): { date_from: string; date_to: string } {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = now.getMonth();
+  const lastDay = new Date(y, m + 1, 0).getDate();
+  return {
+    date_from: `${y}-${String(m + 1).padStart(2, '0')}-01`,
+    date_to: `${y}-${String(m + 1).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`,
+  };
+}
 
 export default function TransactionsPage(): React.ReactElement {
-  const now = new Date();
-  const [year, setYear] = useState(now.getFullYear());
-  const [month, setMonth] = useState(now.getMonth());
-  const [filters, setFilters] = useState<ListFilters>({});
+  const [filters, setFilters] = useState<ListFilters>(getInitialDates);
   const [formOpen, setFormOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkEditOpen, setBulkEditOpen] = useState(false);
 
-  const dateFrom = `${year}-${String(month + 1).padStart(2, '0')}-01`;
-  const lastDay = new Date(year, month + 1, 0).getDate();
-  const dateTo = `${year}-${String(month + 1).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
-  const { data: exportData } = useTransactions({
-    ...filters,
-    date_from: dateFrom,
-    date_to: dateTo,
-    limit: 500,
-  });
+  const { data: exportData } = useTransactions({ ...filters, limit: 500 });
 
   const handleEdit = (transaction: Transaction): void => {
     setEditingTransaction(transaction);
@@ -42,58 +52,130 @@ export default function TransactionsPage(): React.ReactElement {
     if (!open) setEditingTransaction(null);
   };
 
-  const handleMonthChange = (newYear: number, newMonth: number): void => {
-    setYear(newYear);
-    setMonth(newMonth);
-  };
-
   const handleExport = (): void => {
     if (exportData?.data) {
       exportTransactionsCsv(exportData.data);
     }
   };
 
+  const toggleSelect = (id: string): void => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const exitSelectMode = (): void => {
+    setSelectMode(false);
+    setSelectedIds(new Set());
+  };
+
+  const handleBulkComplete = (): void => {
+    exitSelectMode();
+  };
+
   return (
     <div className='space-y-4 p-4 sm:space-y-6 sm:p-6'>
-      <div className='flex items-center justify-between'>
-        <div>
-          <h2 className='text-foreground text-2xl font-bold'>Transactions</h2>
-          <p className='text-muted-foreground text-sm'>View and manage all your transactions</p>
-        </div>
-        <div className='flex gap-2'>
+      {selectMode ? (
+        <div className='bg-card border-border flex items-center justify-between gap-2 rounded-lg border p-3'>
+          <div className='flex items-center gap-3'>
+            <Button
+              variant='ghost'
+              size='sm'
+              className='cursor-pointer px-2'
+              onClick={exitSelectMode}>
+              <X className='h-4 w-4' />
+            </Button>
+            <span className='text-sm font-medium'>{selectedIds.size} selected</span>
+          </div>
           <Button
-            variant='outline'
             size='sm'
             className='cursor-pointer'
-            onClick={(): void => setImportOpen(true)}>
-            <Upload className='mr-1.5 h-4 w-4' />
-            Import
-          </Button>
-          <Button
-            variant='outline'
-            size='sm'
-            className='cursor-pointer'
-            onClick={handleExport}
-            disabled={!exportData?.data.length}>
-            <Download className='mr-1.5 h-4 w-4' />
-            Export
-          </Button>
-          <Button className='cursor-pointer' onClick={(): void => setFormOpen(true)}>
-            <Plus className='mr-2 h-4 w-4' />
-            New Transaction
+            disabled={selectedIds.size === 0}
+            onClick={(): void => setBulkEditOpen(true)}>
+            <Pencil className='mr-1.5 h-4 w-4' />
+            Edit
           </Button>
         </div>
-      </div>
+      ) : (
+        <div className='flex items-center justify-between gap-2'>
+          <div className='min-w-0'>
+            <h2 className='text-foreground text-xl font-bold sm:text-2xl'>Transactions</h2>
+            <p className='text-muted-foreground hidden text-sm sm:block'>
+              View and manage all your transactions
+            </p>
+          </div>
+          <div className='flex shrink-0 gap-2'>
+            <Button
+              variant='outline'
+              size='sm'
+              className='cursor-pointer'
+              onClick={(): void => setSelectMode(true)}>
+              <CheckSquare className='h-4 w-4 sm:mr-1.5' />
+              <span className='hidden sm:inline'>Select</span>
+            </Button>
+            <Button
+              variant='outline'
+              size='sm'
+              className='hidden cursor-pointer sm:flex'
+              onClick={(): void => setImportOpen(true)}>
+              <Upload className='mr-1.5 h-4 w-4' />
+              Import
+            </Button>
+            <Button
+              variant='outline'
+              size='sm'
+              className='hidden cursor-pointer sm:flex'
+              onClick={handleExport}
+              disabled={!exportData?.data.length}>
+              <Download className='mr-1.5 h-4 w-4' />
+              Export
+            </Button>
+            <Button size='sm' className='cursor-pointer' onClick={(): void => setFormOpen(true)}>
+              <Plus className='mr-1 h-4 w-4' />
+              <span className='hidden sm:inline'>New Transaction</span>
+              <span className='sm:hidden'>New</span>
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant='outline' size='sm' className='cursor-pointer px-2 sm:hidden'>
+                  <MoreVertical className='h-4 w-4' />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align='end'>
+                <DropdownMenuItem
+                  className='cursor-pointer'
+                  onClick={(): void => setImportOpen(true)}>
+                  <Upload className='mr-2 h-4 w-4' />
+                  Import
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  className='cursor-pointer'
+                  onClick={handleExport}
+                  disabled={!exportData?.data.length}>
+                  <Download className='mr-2 h-4 w-4' />
+                  Export
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </div>
+      )}
 
-      <TransactionFiltersBar
+      <TransactionFiltersBar filters={filters} onFiltersChange={setFilters} />
+
+      <TransactionList
         filters={filters}
-        onFiltersChange={setFilters}
-        year={year}
-        month={month}
-        onMonthChange={handleMonthChange}
+        onEdit={handleEdit}
+        selectMode={selectMode}
+        selectedIds={selectedIds}
+        onToggleSelect={toggleSelect}
       />
-
-      <TransactionList filters={filters} onEdit={handleEdit} year={year} month={month} />
 
       <TransactionForm
         open={formOpen}
@@ -102,6 +184,13 @@ export default function TransactionsPage(): React.ReactElement {
       />
 
       <ImportDialog open={importOpen} onOpenChange={setImportOpen} />
+
+      <BulkEditDialog
+        open={bulkEditOpen}
+        onOpenChange={setBulkEditOpen}
+        selectedIds={selectedIds}
+        onComplete={handleBulkComplete}
+      />
     </div>
   );
 }

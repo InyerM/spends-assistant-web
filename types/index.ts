@@ -3,6 +3,7 @@ export type {
   TransactionType,
   CreateTransactionInput,
   UpdateTransactionInput,
+  BulkUpdateTransactionInput,
   TransactionFilters,
 } from './transaction';
 
