@@ -26,10 +26,43 @@ import {
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAccounts } from '@/lib/api/queries/account.queries';
-import { useCreateAccount, useUpdateAccount } from '@/lib/api/mutations/account.mutations';
+import { useCreateAccount } from '@/lib/api/mutations/account.mutations';
+import { AccountEditDialog } from '@/components/accounts/account-edit-dialog';
 import { formatCurrency } from '@/lib/utils/formatting';
-import { Plus, Pencil } from 'lucide-react';
+import {
+  Plus,
+  Pencil,
+  Landmark,
+  PiggyBank,
+  CreditCard,
+  Banknote,
+  TrendingUp,
+  Bitcoin,
+  HandCoins,
+} from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import type { Account, AccountType } from '@/types';
+
+const ACCOUNT_TYPE_ICONS: Record<AccountType, LucideIcon> = {
+  checking: Landmark,
+  savings: PiggyBank,
+  credit_card: CreditCard,
+  cash: Banknote,
+  investment: TrendingUp,
+  crypto: Bitcoin,
+  credit: HandCoins,
+};
+
+function AccountTypeIcon({
+  type,
+  className,
+}: {
+  type: AccountType;
+  className?: string;
+}): React.ReactElement {
+  const Icon = ACCOUNT_TYPE_ICONS[type];
+  return <Icon className={className} />;
+}
 
 const accountTypes: { value: AccountType; label: string }[] = [
   { value: 'checking', label: 'Checking' },
@@ -41,7 +74,7 @@ const accountTypes: { value: AccountType; label: string }[] = [
   { value: 'credit', label: 'Credit' },
 ];
 
-const formSchema = z.object({
+const createFormSchema = z.object({
   name: z.string().min(1, 'Name is required'),
   type: z.enum(['checking', 'savings', 'credit_card', 'cash', 'investment', 'crypto', 'credit']),
   institution: z.string().optional(),
@@ -51,17 +84,16 @@ const formSchema = z.object({
   icon: z.string().optional(),
 });
 
-type FormValues = z.infer<typeof formSchema>;
+type CreateFormValues = z.infer<typeof createFormSchema>;
 
 export default function AccountsPage(): React.ReactElement {
   const { data: accounts, isLoading } = useAccounts();
   const createMutation = useCreateAccount();
-  const updateMutation = useUpdateAccount();
-  const [dialogOpen, setDialogOpen] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
   const [editingAccount, setEditingAccount] = useState<Account | null>(null);
 
-  const form = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
+  const form = useForm<CreateFormValues>({
+    resolver: zodResolver(createFormSchema),
     defaultValues: {
       name: '',
       type: 'checking',
@@ -73,22 +105,7 @@ export default function AccountsPage(): React.ReactElement {
     },
   });
 
-  const handleEdit = (account: Account): void => {
-    setEditingAccount(account);
-    form.reset({
-      name: account.name,
-      type: account.type,
-      institution: account.institution ?? '',
-      last_four: account.last_four ?? '',
-      currency: account.currency,
-      color: account.color ?? '',
-      icon: account.icon ?? '',
-    });
-    setDialogOpen(true);
-  };
-
   const handleCreate = (): void => {
-    setEditingAccount(null);
     form.reset({
       name: '',
       type: 'checking',
@@ -98,21 +115,19 @@ export default function AccountsPage(): React.ReactElement {
       color: '',
       icon: '',
     });
-    setDialogOpen(true);
+    setCreateOpen(true);
   };
 
-  async function onSubmit(values: FormValues): Promise<void> {
+  const watchType = form.watch('type');
+  const showLastFour = watchType === 'credit_card' || watchType === 'credit';
+
+  async function onCreateSubmit(values: CreateFormValues): Promise<void> {
     try {
-      if (editingAccount) {
-        await updateMutation.mutateAsync({ id: editingAccount.id, ...values });
-        toast.success('Account updated');
-      } else {
-        await createMutation.mutateAsync(values);
-        toast.success('Account created');
-      }
-      setDialogOpen(false);
+      await createMutation.mutateAsync(values);
+      toast.success('Account created');
+      setCreateOpen(false);
     } catch {
-      toast.error(editingAccount ? 'Failed to update account' : 'Failed to create account');
+      toast.error('Failed to create account');
     }
   }
 
@@ -149,12 +164,13 @@ export default function AccountsPage(): React.ReactElement {
             <Card key={account.id} className='border-border bg-card'>
               <CardHeader className='flex flex-row items-center justify-between space-y-0'>
                 <CardTitle className='text-base font-medium'>
-                  {account.icon ?? '💳'} {account.name}
+                  <AccountTypeIcon type={account.type} className='mr-2 inline h-4 w-4' />
+                  {account.name}
                 </CardTitle>
                 <Button
                   variant='ghost'
                   size='sm'
-                  onClick={(): void => handleEdit(account)}
+                  onClick={(): void => setEditingAccount(account)}
                   className='h-8 w-8 p-0'>
                   <Pencil className='h-4 w-4' />
                 </Button>
@@ -175,13 +191,13 @@ export default function AccountsPage(): React.ReactElement {
         </div>
       )}
 
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent className='border-border bg-card sm:max-w-[425px]'>
           <DialogHeader>
-            <DialogTitle>{editingAccount ? 'Edit Account' : 'New Account'}</DialogTitle>
+            <DialogTitle>New Account</DialogTitle>
           </DialogHeader>
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className='space-y-4'>
+            <form onSubmit={form.handleSubmit(onCreateSubmit)} className='space-y-4'>
               <FormField
                 control={form.control}
                 name='name'
@@ -235,19 +251,21 @@ export default function AccountsPage(): React.ReactElement {
                 )}
               />
 
-              <FormField
-                control={form.control}
-                name='last_four'
-                render={({ field }): React.ReactElement => (
-                  <FormItem>
-                    <FormLabel>Last 4 Digits</FormLabel>
-                    <FormControl>
-                      <Input placeholder='1234' maxLength={4} {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              {showLastFour && (
+                <FormField
+                  control={form.control}
+                  name='last_four'
+                  render={({ field }): React.ReactElement => (
+                    <FormItem>
+                      <FormLabel>Last 4 Digits</FormLabel>
+                      <FormControl>
+                        <Input placeholder='1234' maxLength={4} {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
 
               <div className='grid grid-cols-2 gap-4'>
                 <FormField
@@ -279,23 +297,25 @@ export default function AccountsPage(): React.ReactElement {
               </div>
 
               <div className='flex justify-end gap-3 pt-4'>
-                <Button type='button' variant='outline' onClick={(): void => setDialogOpen(false)}>
+                <Button type='button' variant='outline' onClick={(): void => setCreateOpen(false)}>
                   Cancel
                 </Button>
-                <Button
-                  type='submit'
-                  disabled={createMutation.isPending || updateMutation.isPending}>
-                  {createMutation.isPending || updateMutation.isPending
-                    ? 'Saving...'
-                    : editingAccount
-                      ? 'Update'
-                      : 'Create'}
+                <Button type='submit' disabled={createMutation.isPending}>
+                  {createMutation.isPending ? 'Saving...' : 'Create'}
                 </Button>
               </div>
             </form>
           </Form>
         </DialogContent>
       </Dialog>
+
+      <AccountEditDialog
+        account={editingAccount}
+        open={editingAccount !== null}
+        onOpenChange={(open): void => {
+          if (!open) setEditingAccount(null);
+        }}
+      />
     </div>
   );
 }

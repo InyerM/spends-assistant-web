@@ -1,5 +1,6 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -7,21 +8,19 @@ import { useTransactions } from '@/lib/api/queries/transaction.queries';
 import { useCategories } from '@/lib/api/queries/category.queries';
 import { useAccounts } from '@/lib/api/queries/account.queries';
 import { formatCurrency } from '@/lib/utils/formatting';
-import { formatDateForDisplay, formatTimeForDisplay } from '@/lib/utils/date';
-import { ArrowDownLeft, ArrowUpRight, ArrowRightLeft } from 'lucide-react';
+import { formatTimeForDisplay } from '@/lib/utils/date';
+import { ArrowDownLeft, ArrowUpRight, ArrowRightLeft, ArrowRight } from 'lucide-react';
 import type { TransactionType } from '@/types';
 
-const typeConfig: Record<
-  TransactionType,
-  { icon: typeof ArrowDownLeft; colorClass: string; label: string }
-> = {
-  expense: { icon: ArrowUpRight, colorClass: 'text-destructive', label: 'Expense' },
-  income: { icon: ArrowDownLeft, colorClass: 'text-success', label: 'Income' },
-  transfer: { icon: ArrowRightLeft, colorClass: 'text-transfer', label: 'Transfer' },
+const typeConfig: Record<TransactionType, { icon: typeof ArrowDownLeft; colorClass: string }> = {
+  expense: { icon: ArrowUpRight, colorClass: 'text-destructive' },
+  income: { icon: ArrowDownLeft, colorClass: 'text-success' },
+  transfer: { icon: ArrowRightLeft, colorClass: 'text-transfer' },
 };
 
 export function RecentTransactions(): React.ReactElement {
-  const { data: result, isLoading } = useTransactions({ limit: 15 });
+  const router = useRouter();
+  const { data: result, isLoading } = useTransactions({ limit: 5 });
   const { data: categories } = useCategories();
   const { data: accounts } = useAccounts();
 
@@ -39,7 +38,7 @@ export function RecentTransactions(): React.ReactElement {
     return (
       <Card className='border-border bg-card'>
         <CardHeader>
-          <CardTitle>Recent Transactions</CardTitle>
+          <Skeleton className='h-5 w-40' />
         </CardHeader>
         <CardContent className='space-y-4'>
           {Array.from({ length: 5 }).map((_, i) => (
@@ -61,51 +60,65 @@ export function RecentTransactions(): React.ReactElement {
 
   return (
     <Card className='border-border bg-card'>
-      <CardHeader>
-        <CardTitle>Recent Transactions</CardTitle>
+      <CardHeader className='pb-3'>
+        <CardTitle className='text-base font-medium'>Recent Transactions</CardTitle>
       </CardHeader>
       <CardContent>
         {transactions.length === 0 ? (
           <p className='text-muted-foreground py-8 text-center text-sm'>No transactions yet</p>
         ) : (
-          <div className='space-y-3'>
-            {transactions.map((tx) => {
-              const config = typeConfig[tx.type];
-              const Icon = config.icon;
-              const categoryName = getCategoryName(tx.category_id);
-              const accountName = getAccountName(tx.account_id);
+          <>
+            <div className='space-y-1'>
+              {transactions.map((tx) => {
+                const config = typeConfig[tx.type];
+                const Icon = config.icon;
+                const categoryName = getCategoryName(tx.category_id);
+                const accountName = getAccountName(tx.account_id);
 
-              return (
-                <div
-                  key={tx.id}
-                  className='hover:bg-card-overlay flex items-center gap-3 rounded-lg p-2'>
+                return (
                   <div
-                    className={`bg-card-overlay flex h-10 w-10 items-center justify-center rounded-full ${config.colorClass}`}>
-                    <Icon className='h-5 w-5' />
-                  </div>
-                  <div className='min-w-0 flex-1'>
-                    <p className='text-foreground truncate text-sm font-medium'>{tx.description}</p>
-                    <div className='text-muted-foreground flex items-center gap-2 text-xs'>
-                      <span>{formatDateForDisplay(tx.date)}</span>
-                      <span>{formatTimeForDisplay(tx.time)}</span>
-                      {categoryName && (
-                        <Badge variant='secondary' className='text-xs'>
-                          {categoryName}
-                        </Badge>
-                      )}
+                    key={tx.id}
+                    className='hover:bg-card-overlay flex items-center gap-3 rounded-lg p-2.5'>
+                    <div
+                      className={`bg-card-overlay flex h-9 w-9 items-center justify-center rounded-full ${config.colorClass}`}>
+                      <Icon className='h-4 w-4' />
+                    </div>
+                    <div className='min-w-0 flex-1'>
+                      <p className='text-foreground truncate text-sm font-medium'>
+                        {tx.description}
+                      </p>
+                      <div className='text-muted-foreground flex items-center gap-2 text-xs'>
+                        <span>{accountName}</span>
+                        {categoryName && (
+                          <>
+                            <span>·</span>
+                            <Badge variant='secondary' className='h-5 px-1.5 text-[10px]'>
+                              {categoryName}
+                            </Badge>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                    <div className='text-right'>
+                      <p className={`text-sm font-semibold ${config.colorClass}`}>
+                        {tx.type === 'expense' ? '-' : tx.type === 'income' ? '+' : ''}
+                        {formatCurrency(tx.amount)}
+                      </p>
+                      <p className='text-muted-foreground text-xs'>
+                        {formatTimeForDisplay(tx.time)}
+                      </p>
                     </div>
                   </div>
-                  <div className='text-right'>
-                    <p className={`text-sm font-semibold ${config.colorClass}`}>
-                      {tx.type === 'expense' ? '-' : tx.type === 'income' ? '+' : ''}
-                      {formatCurrency(tx.amount)}
-                    </p>
-                    <p className='text-muted-foreground text-xs'>{accountName}</p>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+            <button
+              onClick={(): void => router.push('/transactions')}
+              className='text-muted-foreground hover:text-foreground mt-3 flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-lg py-2 text-sm transition-colors hover:bg-white/5'>
+              View all transactions
+              <ArrowRight className='h-3.5 w-3.5' />
+            </button>
+          </>
         )}
       </CardContent>
     </Card>

@@ -10,6 +10,7 @@ export async function GET(request: NextRequest): Promise<Response> {
     const limit = parseInt(searchParams.get('limit') ?? '20', 10);
     const type = searchParams.get('type');
     const accountId = searchParams.get('account_id');
+    const accountIds = searchParams.get('account_ids');
     const categoryId = searchParams.get('category_id');
     const source = searchParams.get('source');
     const dateFrom = searchParams.get('date_from');
@@ -23,7 +24,8 @@ export async function GET(request: NextRequest): Promise<Response> {
       .order('time', { ascending: false });
 
     if (type) query = query.eq('type', type);
-    if (accountId) query = query.eq('account_id', accountId);
+    if (accountIds) query = query.in('account_id', accountIds.split(','));
+    else if (accountId) query = query.eq('account_id', accountId);
     if (categoryId) query = query.eq('category_id', categoryId);
     if (source) query = query.eq('source', source);
     if (dateFrom) query = query.gte('date', dateFrom);

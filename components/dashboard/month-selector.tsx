@@ -1,0 +1,124 @@
+'use client';
+
+import { useState } from 'react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+
+const MONTH_NAMES = [
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December',
+];
+
+const MONTH_SHORT = [
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'May',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dec',
+];
+
+interface MonthSelectorProps {
+  year: number;
+  month: number;
+  onChange: (year: number, month: number) => void;
+}
+
+export function MonthSelector({ year, month, onChange }: MonthSelectorProps): React.ReactElement {
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [pickerYear, setPickerYear] = useState(year);
+
+  const handlePrev = (): void => {
+    if (month === 0) {
+      onChange(year - 1, 11);
+    } else {
+      onChange(year, month - 1);
+    }
+  };
+
+  const handleNext = (): void => {
+    if (month === 11) {
+      onChange(year + 1, 0);
+    } else {
+      onChange(year, month + 1);
+    }
+  };
+
+  const handleMonthPick = (m: number): void => {
+    onChange(pickerYear, m);
+    setPickerOpen(false);
+  };
+
+  const handlePickerOpen = (open: boolean): void => {
+    if (open) setPickerYear(year);
+    setPickerOpen(open);
+  };
+
+  return (
+    <div className='flex items-center gap-1'>
+      <Button variant='ghost' size='icon' className='h-8 w-8 cursor-pointer' onClick={handlePrev}>
+        <ChevronLeft className='h-4 w-4' />
+      </Button>
+      <Popover open={pickerOpen} onOpenChange={handlePickerOpen}>
+        <PopoverTrigger asChild>
+          <button className='hover:bg-card-overlay min-w-[140px] cursor-pointer rounded-md px-2 py-1 text-center text-sm font-medium transition-colors'>
+            {MONTH_NAMES[month]} {year}
+          </button>
+        </PopoverTrigger>
+        <PopoverContent className='w-64 p-3' align='center'>
+          <div className='mb-3 flex items-center justify-between'>
+            <Button
+              variant='ghost'
+              size='icon'
+              className='h-7 w-7 cursor-pointer'
+              onClick={(): void => setPickerYear(pickerYear - 1)}>
+              <ChevronLeft className='h-4 w-4' />
+            </Button>
+            <span className='text-sm font-semibold'>{pickerYear}</span>
+            <Button
+              variant='ghost'
+              size='icon'
+              className='h-7 w-7 cursor-pointer'
+              onClick={(): void => setPickerYear(pickerYear + 1)}>
+              <ChevronRight className='h-4 w-4' />
+            </Button>
+          </div>
+          <div className='grid grid-cols-3 gap-1'>
+            {MONTH_SHORT.map((name, i) => (
+              <button
+                key={name}
+                onClick={(): void => handleMonthPick(i)}
+                className={`cursor-pointer rounded-md px-2 py-1.5 text-sm transition-colors ${
+                  i === month && pickerYear === year
+                    ? 'bg-primary text-primary-foreground'
+                    : 'hover:bg-card-overlay text-foreground'
+                }`}>
+                {name}
+              </button>
+            ))}
+          </div>
+        </PopoverContent>
+      </Popover>
+      <Button variant='ghost' size='icon' className='h-8 w-8 cursor-pointer' onClick={handleNext}>
+        <ChevronRight className='h-4 w-4' />
+      </Button>
+    </div>
+  );
+}

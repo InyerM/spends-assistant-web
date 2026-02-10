@@ -45,6 +45,7 @@ export interface UpdateTransactionInput extends Partial<CreateTransactionInput> 
 export interface TransactionFilters {
   type?: TransactionType;
   account_id?: string;
+  account_ids?: string[];
   category_id?: string;
   source?: string;
   date_from?: string;

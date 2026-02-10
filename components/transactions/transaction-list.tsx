@@ -1,48 +1,138 @@
 'use client';
 
+import { useEffect, useRef, useCallback } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import { useTransactions } from '@/lib/api/queries/transaction.queries';
+import { useInfiniteTransactions, type MonthPage } from '@/lib/api/queries/transaction.queries';
 import { useCategories } from '@/lib/api/queries/category.queries';
 import { useAccounts } from '@/lib/api/queries/account.queries';
 import { formatCurrency } from '@/lib/utils/formatting';
-import { formatDateForDisplay, formatTimeForDisplay } from '@/lib/utils/date';
-import { ChevronLeft, ChevronRight, Pencil } from 'lucide-react';
-import type { Transaction, TransactionFilters, TransactionType } from '@/types';
+import { formatTimeForDisplay } from '@/lib/utils/date';
+import { ArrowDownLeft, ArrowUpRight, ArrowRightLeft, Loader2 } from 'lucide-react';
+import type { Transaction, TransactionType, TransactionFilters } from '@/types';
 
-const typeBadgeVariant: Record<TransactionType, 'destructive' | 'default' | 'secondary'> = {
-  expense: 'destructive',
-  income: 'default',
-  transfer: 'secondary',
+const MONTH_NAMES = [
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December',
+];
+
+const typeConfig: Record<TransactionType, { icon: typeof ArrowDownLeft; colorClass: string }> = {
+  expense: { icon: ArrowUpRight, colorClass: 'text-destructive' },
+  income: { icon: ArrowDownLeft, colorClass: 'text-success' },
+  transfer: { icon: ArrowRightLeft, colorClass: 'text-transfer' },
 };
 
+interface DateGroup {
+  date: string;
+  displayDate: string;
+  transactions: Transaction[];
+  total: number;
+}
+
+interface MonthSection {
+  label: string;
+  year: number;
+  month: number;
+  dateGroups: DateGroup[];
+  monthTotal: number;
+}
+
+function formatDateLabel(dateStr: string): string {
+  const [year, monthStr, day] = dateStr.split('-');
+  const monthIndex = parseInt(monthStr, 10) - 1;
+  return `${MONTH_NAMES[monthIndex]} ${parseInt(day, 10)}, ${year}`;
+}
+
+function computeDayTotal(transactions: Transaction[]): number {
+  let total = 0;
+  for (const tx of transactions) {
+    if (tx.type === 'expense') total -= tx.amount;
+    else if (tx.type === 'income') total += tx.amount;
+  }
+  return total;
+}
+
+function buildMonthSections(pages: MonthPage[]): MonthSection[] {
+  return pages
+    .filter((page) => page.data.length > 0)
+    .map((page) => {
+      const grouped = new Map<string, Transaction[]>();
+      for (const tx of page.data) {
+        const existing = grouped.get(tx.date) ?? [];
+        existing.push(tx);
+        grouped.set(tx.date, existing);
+      }
+
+      const dateGroups: DateGroup[] = Array.from(grouped.entries())
+        .sort(([a], [b]) => b.localeCompare(a))
+        .map(([date, txs]) => ({
+          date,
+          displayDate: formatDateLabel(date),
+          transactions: txs,
+          total: computeDayTotal(txs),
+        }));
+
+      const monthTotal = dateGroups.reduce((sum, g) => sum + g.total, 0);
+
+      return {
+        label: `${MONTH_NAMES[page.month]} ${page.year}`,
+        year: page.year,
+        month: page.month,
+        dateGroups,
+        monthTotal,
+      };
+    });
+}
+
 interface TransactionListProps {
-  filters: TransactionFilters;
-  onFiltersChange: (filters: TransactionFilters) => void;
+  filters: Omit<TransactionFilters, 'page' | 'limit' | 'date_from' | 'date_to'>;
   onEdit: (transaction: Transaction) => void;
+  year?: number;
+  month?: number;
 }
 
 export function TransactionList({
   filters,
-  onFiltersChange,
   onEdit,
+  year,
+  month,
 }: TransactionListProps): React.ReactElement {
-  const { data: result, isLoading } = useTransactions(filters);
+  const { data, isLoading, hasNextPage, fetchNextPage, isFetchingNextPage } =
+    useInfiniteTransactions(filters, year, month);
   const { data: categories } = useCategories();
   const { data: accounts } = useAccounts();
+  const bottomRef = useRef<HTMLDivElement>(null);
 
-  const page = filters.page ?? 1;
-  const limit = filters.limit ?? 20;
-  const totalPages = Math.ceil((result?.count ?? 0) / limit);
+  const handleObserver = useCallback(
+    (entries: IntersectionObserverEntry[]) => {
+      const [entry] = entries;
+      if (entry.isIntersecting && hasNextPage && !isFetchingNextPage) {
+        void fetchNextPage();
+      }
+    },
+    [hasNextPage, isFetchingNextPage, fetchNextPage],
+  );
+
+  useEffect(() => {
+    const el = bottomRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(handleObserver, { threshold: 0.1 });
+    observer.observe(el);
+    return (): void => observer.disconnect();
+  }, [handleObserver]);
+
+  const sections = buildMonthSections(data?.pages ?? []);
 
   const getCategoryName = (categoryId: string | null): string | null => {
     if (!categoryId || !categories) return null;
@@ -57,118 +147,99 @@ export function TransactionList({
   if (isLoading) {
     return (
       <div className='space-y-3'>
-        {Array.from({ length: 10 }).map((_, i) => (
-          <Skeleton key={i} className='h-12 w-full' />
+        {Array.from({ length: 8 }).map((_, i) => (
+          <Skeleton key={i} className='h-14 w-full rounded-lg' />
         ))}
       </div>
     );
   }
 
-  const transactions = result?.data ?? [];
+  if (sections.length === 0) {
+    return (
+      <div className='text-muted-foreground py-16 text-center text-sm'>No transactions found</div>
+    );
+  }
 
   return (
-    <div>
-      <div className='border-border rounded-lg border'>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Date</TableHead>
-              <TableHead>Description</TableHead>
-              <TableHead>Type</TableHead>
-              <TableHead>Category</TableHead>
-              <TableHead>Account</TableHead>
-              <TableHead className='text-right'>Amount</TableHead>
-              <TableHead>Source</TableHead>
-              <TableHead className='w-[50px]' />
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {transactions.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={8} className='text-muted-foreground py-8 text-center'>
-                  No transactions found
-                </TableCell>
-              </TableRow>
-            ) : (
-              transactions.map((tx) => {
-                const categoryName = getCategoryName(tx.category_id);
-                return (
-                  <TableRow key={tx.id} className='hover:bg-card-overlay'>
-                    <TableCell className='text-xs'>
-                      <div>{formatDateForDisplay(tx.date)}</div>
-                      <div className='text-muted-foreground'>{formatTimeForDisplay(tx.time)}</div>
-                    </TableCell>
-                    <TableCell>
-                      <div className='max-w-[200px] truncate text-sm'>{tx.description}</div>
-                      {tx.notes && (
-                        <div className='text-muted-foreground max-w-[200px] truncate text-xs'>
-                          {tx.notes}
-                        </div>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={typeBadgeVariant[tx.type]}>{tx.type}</Badge>
-                    </TableCell>
-                    <TableCell className='text-sm'>{categoryName ?? '-'}</TableCell>
-                    <TableCell className='text-sm'>{getAccountName(tx.account_id)}</TableCell>
-                    <TableCell
-                      className={`text-right text-sm font-semibold ${
-                        tx.type === 'expense'
-                          ? 'text-destructive'
-                          : tx.type === 'income'
-                            ? 'text-success'
-                            : 'text-transfer'
-                      }`}>
-                      {tx.type === 'expense' ? '-' : tx.type === 'income' ? '+' : ''}
-                      {formatCurrency(tx.amount)}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant='outline' className='text-xs'>
-                        {tx.source}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Button
-                        variant='ghost'
-                        size='sm'
-                        onClick={(): void => onEdit(tx)}
-                        className='h-8 w-8 p-0'>
-                        <Pencil className='h-4 w-4' />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                );
-              })
-            )}
-          </TableBody>
-        </Table>
-      </div>
+    <div className='space-y-6'>
+      {sections.map((section) => (
+        <div key={`${section.year}-${section.month}`}>
+          {section.dateGroups.map((group) => (
+            <div key={group.date} className='mb-4'>
+              <div className='border-border mb-2 flex items-center justify-between border-b pb-2'>
+                <span className='text-muted-foreground text-sm font-medium'>
+                  {group.displayDate}
+                </span>
+                <span
+                  className={`text-sm font-semibold ${group.total >= 0 ? 'text-success' : 'text-destructive'}`}>
+                  {group.total >= 0 ? '+' : ''}
+                  {formatCurrency(group.total)}
+                </span>
+              </div>
 
-      {totalPages > 1 && (
-        <div className='mt-4 flex items-center justify-between'>
-          <p className='text-muted-foreground text-sm'>
-            Page {page} of {totalPages} ({result?.count ?? 0} total)
-          </p>
-          <div className='flex gap-2'>
-            <Button
-              variant='outline'
-              size='sm'
-              disabled={page <= 1}
-              onClick={(): void => onFiltersChange({ ...filters, page: page - 1 })}>
-              <ChevronLeft className='h-4 w-4' />
-              Previous
-            </Button>
-            <Button
-              variant='outline'
-              size='sm'
-              disabled={page >= totalPages}
-              onClick={(): void => onFiltersChange({ ...filters, page: page + 1 })}>
-              Next
-              <ChevronRight className='h-4 w-4' />
-            </Button>
-          </div>
+              <div className='space-y-0.5'>
+                {group.transactions.map((tx) => {
+                  const config = typeConfig[tx.type];
+                  const Icon = config.icon;
+                  const categoryName = getCategoryName(tx.category_id);
+                  const accountName = getAccountName(tx.account_id);
+
+                  return (
+                    <button
+                      key={tx.id}
+                      onClick={(): void => onEdit(tx)}
+                      className='hover:bg-card-overlay flex w-full cursor-pointer items-center gap-3 rounded-lg p-3 text-left transition-colors'>
+                      <div
+                        className={`bg-card-overlay flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${config.colorClass}`}>
+                        <Icon className='h-4 w-4' />
+                      </div>
+
+                      <div className='min-w-0 flex-1'>
+                        <p className='text-foreground truncate text-sm font-medium'>
+                          {tx.description}
+                        </p>
+                        <div className='text-muted-foreground flex items-center gap-1.5 text-xs'>
+                          <span className='truncate'>{accountName}</span>
+                          {categoryName && (
+                            <>
+                              <span>·</span>
+                              <Badge
+                                variant='secondary'
+                                className='h-5 shrink-0 px-1.5 text-[10px]'>
+                                {categoryName}
+                              </Badge>
+                            </>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className='shrink-0 text-right'>
+                        <p className={`text-sm font-semibold ${config.colorClass}`}>
+                          {tx.type === 'expense' ? '-' : tx.type === 'income' ? '+' : ''}
+                          {formatCurrency(tx.amount)}
+                        </p>
+                        <p className='text-muted-foreground text-xs'>
+                          {formatTimeForDisplay(tx.time)}
+                        </p>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
         </div>
-      )}
+      ))}
+
+      <div ref={bottomRef} className='flex justify-center py-4'>
+        {isFetchingNextPage ? (
+          <Loader2 className='text-muted-foreground h-5 w-5 animate-spin' />
+        ) : hasNextPage ? (
+          <Button variant='ghost' size='sm' onClick={(): void => void fetchNextPage()}>
+            Load more
+          </Button>
+        ) : null}
+      </div>
     </div>
   );
 }
