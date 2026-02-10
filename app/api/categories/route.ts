@@ -9,6 +9,7 @@ export async function GET(): Promise<Response> {
       .from('categories')
       .select('*')
       .eq('is_active', true)
+      .is('deleted_at', null)
       .order('name');
 
     if (error) return errorResponse(error.message, 400);

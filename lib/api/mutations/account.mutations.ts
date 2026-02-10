@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { accountKeys } from '@/lib/api/queries/account.queries';
+import { transactionKeys } from '@/lib/api/queries/transaction.queries';
 import type { Account, CreateAccountInput, UpdateAccountInput } from '@/types';
 
 async function createAccount(input: CreateAccountInput): Promise<Account> {
@@ -50,6 +51,26 @@ export function useUpdateAccount(): ReturnType<
     mutationFn: updateAccount,
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: accountKeys.all });
+    },
+  });
+}
+
+async function deleteAccount(id: string): Promise<void> {
+  const res = await fetch(`/api/accounts/${id}`, { method: 'DELETE' });
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error((error as { error: string }).error || 'Failed to delete account');
+  }
+}
+
+export function useDeleteAccount(): ReturnType<typeof useMutation<void, Error, string>> {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: deleteAccount,
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: accountKeys.all });
+      void queryClient.invalidateQueries({ queryKey: transactionKeys.all });
     },
   });
 }

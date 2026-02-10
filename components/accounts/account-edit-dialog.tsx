@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -23,7 +23,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { useUpdateAccount } from '@/lib/api/mutations/account.mutations';
+import { ConfirmDeleteDialog } from '@/components/shared/confirm-delete-dialog';
+import { useUpdateAccount, useDeleteAccount } from '@/lib/api/mutations/account.mutations';
+import { useTransactions } from '@/lib/api/queries/transaction.queries';
 import type { Account, AccountType } from '@/types';
 
 const accountTypes: { value: AccountType; label: string }[] = [
@@ -60,6 +62,10 @@ export function AccountEditDialog({
   onOpenChange,
 }: AccountEditDialogProps): React.ReactElement {
   const updateMutation = useUpdateAccount();
+  const deleteMutation = useDeleteAccount();
+  const { data: txResult } = useTransactions(account ? { account_id: account.id, limit: 1 } : {});
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const txCount = txResult?.count ?? 0;
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -99,6 +105,18 @@ export function AccountEditDialog({
       onOpenChange(false);
     } catch {
       toast.error('Failed to update account');
+    }
+  }
+
+  async function handleDelete(): Promise<void> {
+    if (!account) return;
+    try {
+      await deleteMutation.mutateAsync(account.id);
+      toast.success('Account deleted');
+      setConfirmDeleteOpen(false);
+      onOpenChange(false);
+    } catch {
+      toast.error('Failed to delete account');
     }
   }
 
@@ -203,17 +221,49 @@ export function AccountEditDialog({
                 )}
               />
             </div>
-            <div className='flex justify-end gap-3 pt-4'>
-              <Button type='button' variant='outline' onClick={(): void => onOpenChange(false)}>
-                Cancel
+            <div className='flex justify-between gap-3 pt-4'>
+              <Button
+                type='button'
+                variant='ghost'
+                className='text-destructive cursor-pointer'
+                onClick={(): void => setConfirmDeleteOpen(true)}>
+                Delete
               </Button>
-              <Button type='submit' disabled={updateMutation.isPending}>
-                {updateMutation.isPending ? 'Saving...' : 'Update'}
-              </Button>
+              <div className='flex gap-3'>
+                <Button type='button' variant='outline' onClick={(): void => onOpenChange(false)}>
+                  Cancel
+                </Button>
+                <Button type='submit' disabled={updateMutation.isPending}>
+                  {updateMutation.isPending ? 'Saving...' : 'Update'}
+                </Button>
+              </div>
             </div>
           </form>
         </Form>
       </DialogContent>
+
+      {account && (
+        <ConfirmDeleteDialog
+          open={confirmDeleteOpen}
+          onOpenChange={setConfirmDeleteOpen}
+          title='Delete Account'
+          description={
+            <p className='text-muted-foreground text-sm'>
+              This will permanently delete <strong>{account.name}</strong>
+              {txCount > 0 && (
+                <>
+                  {' '}
+                  and its <strong>{txCount}</strong> transaction{txCount !== 1 && 's'}
+                </>
+              )}
+              . This action cannot be undone.
+            </p>
+          }
+          confirmText={account.name}
+          onConfirm={handleDelete}
+          isPending={deleteMutation.isPending}
+        />
+      )}
     </Dialog>
   );
 }

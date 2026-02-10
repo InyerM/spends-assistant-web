@@ -6,15 +6,19 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { toast } from 'sonner';
 import { useAccount } from '@/lib/api/queries/account.queries';
 import { useTransactions } from '@/lib/api/queries/transaction.queries';
 import { useCategories } from '@/lib/api/queries/category.queries';
+import { useDeleteAccount } from '@/lib/api/mutations/account.mutations';
 import { AccountEditDialog } from '@/components/accounts/account-edit-dialog';
+import { ConfirmDeleteDialog } from '@/components/shared/confirm-delete-dialog';
 import { formatCurrency } from '@/lib/utils/formatting';
 import { formatDateForDisplay, formatTimeForDisplay } from '@/lib/utils/date';
 import {
   ArrowLeft,
   Pencil,
+  Trash2,
   ArrowDownLeft,
   ArrowUpRight,
   ArrowRightLeft,
@@ -68,6 +72,21 @@ export default function AccountDetailPage({
   const { data: txResult } = useTransactions({ account_id: id, limit: 100 });
   const { data: categories } = useCategories();
   const [editOpen, setEditOpen] = useState(false);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const deleteMutation = useDeleteAccount();
+  const txCount = txResult?.count ?? 0;
+
+  async function handleDelete(): Promise<void> {
+    if (!account) return;
+    try {
+      await deleteMutation.mutateAsync(account.id);
+      toast.success('Account deleted');
+      setConfirmDeleteOpen(false);
+      router.push('/accounts');
+    } catch {
+      toast.error('Failed to delete account');
+    }
+  }
 
   const getCategoryName = (categoryId: string | null): string | null => {
     if (!categoryId || !categories) return null;
@@ -107,13 +126,22 @@ export default function AccountDetailPage({
           </Button>
           <h2 className='text-foreground text-2xl font-bold'>Account Detail</h2>
         </div>
-        <Button
-          variant='outline'
-          className='cursor-pointer'
-          onClick={(): void => setEditOpen(true)}>
-          <Pencil className='mr-2 h-4 w-4' />
-          Edit
-        </Button>
+        <div className='flex gap-2'>
+          <Button
+            variant='outline'
+            className='cursor-pointer'
+            onClick={(): void => setEditOpen(true)}>
+            <Pencil className='mr-2 h-4 w-4' />
+            Edit
+          </Button>
+          <Button
+            variant='outline'
+            className='text-destructive cursor-pointer'
+            onClick={(): void => setConfirmDeleteOpen(true)}>
+            <Trash2 className='mr-2 h-4 w-4' />
+            Delete
+          </Button>
+        </div>
       </div>
 
       <Card className='border-border bg-card'>
@@ -209,6 +237,27 @@ export default function AccountDetailPage({
       </Tabs>
 
       <AccountEditDialog account={account} open={editOpen} onOpenChange={setEditOpen} />
+
+      <ConfirmDeleteDialog
+        open={confirmDeleteOpen}
+        onOpenChange={setConfirmDeleteOpen}
+        title='Delete Account'
+        description={
+          <p className='text-muted-foreground text-sm'>
+            This will permanently delete <strong>{account.name}</strong>
+            {txCount > 0 && (
+              <>
+                {' '}
+                and its <strong>{txCount}</strong> transaction{txCount !== 1 && 's'}
+              </>
+            )}
+            . This action cannot be undone.
+          </p>
+        }
+        confirmText={account.name}
+        onConfirm={handleDelete}
+        isPending={deleteMutation.isPending}
+      />
     </div>
   );
 }

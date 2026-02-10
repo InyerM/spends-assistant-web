@@ -17,6 +17,7 @@ export async function PATCH(request: NextRequest): Promise<Response> {
       .from('transactions')
       .update(body.updates)
       .in('id', body.ids)
+      .is('deleted_at', null)
       .select();
 
     if (error) return errorResponse(error.message, 400);

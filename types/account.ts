@@ -18,6 +18,7 @@ export interface Account {
   is_active: boolean;
   color: string | null;
   icon: string | null;
+  deleted_at: string | null;
   created_at: string;
   updated_at: string;
 }

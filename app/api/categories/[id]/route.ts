@@ -10,7 +10,12 @@ export async function GET(_request: NextRequest, { params }: RouteParams): Promi
     const { id } = await params;
     const supabase = getAdminClient();
 
-    const { data, error } = await supabase.from('categories').select('*').eq('id', id).single();
+    const { data, error } = await supabase
+      .from('categories')
+      .select('*')
+      .eq('id', id)
+      .is('deleted_at', null)
+      .single();
 
     if (error) return errorResponse(error.message, 404);
     return jsonResponse(data);

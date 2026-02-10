@@ -10,7 +10,12 @@ export async function GET(_request: NextRequest, { params }: RouteParams): Promi
     const { id } = await params;
     const supabase = getAdminClient();
 
-    const { data, error } = await supabase.from('transactions').select('*').eq('id', id).single();
+    const { data, error } = await supabase
+      .from('transactions')
+      .select('*')
+      .eq('id', id)
+      .is('deleted_at', null)
+      .single();
 
     if (error) return errorResponse(error.message, 404);
     return jsonResponse(data);
@@ -44,7 +49,10 @@ export async function DELETE(_request: NextRequest, { params }: RouteParams): Pr
     const { id } = await params;
     const supabase = getAdminClient();
 
-    const { error } = await supabase.from('transactions').delete().eq('id', id);
+    const { error } = await supabase
+      .from('transactions')
+      .update({ deleted_at: new Date().toISOString() })
+      .eq('id', id);
 
     if (error) return errorResponse(error.message, 400);
     return jsonResponse({ success: true });

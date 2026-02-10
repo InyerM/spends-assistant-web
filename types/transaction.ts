@@ -20,6 +20,7 @@ export interface Transaction {
   reconciliation_id: string | null;
   raw_text: string | null;
   parsed_data: Record<string, unknown> | null;
+  deleted_at: string | null;
   created_at: string;
   updated_at: string;
 }

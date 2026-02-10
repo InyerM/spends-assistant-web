@@ -23,7 +23,10 @@ export async function GET(request: NextRequest): Promise<Response> {
 
     const ascending = sortOrder === 'asc';
 
-    let query = supabase.from('transactions').select('*', { count: 'exact' });
+    let query = supabase
+      .from('transactions')
+      .select('*', { count: 'exact' })
+      .is('deleted_at', null);
 
     if (sortBy === 'amount') {
       query = query.order('amount', { ascending }).order('date', { ascending: false });

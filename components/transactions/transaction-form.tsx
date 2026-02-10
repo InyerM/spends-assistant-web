@@ -1,12 +1,13 @@
 'use client';
 
-import { useEffect, Fragment } from 'react';
+import { useEffect, Fragment, useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { ConfirmDeleteDialog } from '@/components/shared/confirm-delete-dialog';
 import {
   Form,
   FormControl,
@@ -29,8 +30,11 @@ import {
 } from '@/components/ui/select';
 import { useAccounts } from '@/lib/api/queries/account.queries';
 import { useCategories } from '@/lib/api/queries/category.queries';
-import { useCreateTransaction } from '@/lib/api/mutations/transaction.mutations';
-import { useUpdateTransaction } from '@/lib/api/mutations/transaction.mutations';
+import {
+  useCreateTransaction,
+  useUpdateTransaction,
+  useDeleteTransaction,
+} from '@/lib/api/mutations/transaction.mutations';
 import { getCurrentColombiaTimes } from '@/lib/utils/date';
 import type { Transaction, Category } from '@/types';
 
@@ -63,6 +67,8 @@ export function TransactionForm({
   const { data: categories } = useCategories();
   const createMutation = useCreateTransaction();
   const updateMutation = useUpdateTransaction();
+  const deleteMutation = useDeleteTransaction();
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
 
   const colombiaTimes = getCurrentColombiaTimes();
   const isEditing = !!transaction;
@@ -149,6 +155,18 @@ export function TransactionForm({
       form.reset();
     } catch {
       toast.error(isEditing ? 'Failed to update transaction' : 'Failed to create transaction');
+    }
+  }
+
+  async function handleDelete(): Promise<void> {
+    if (!transaction) return;
+    try {
+      await deleteMutation.mutateAsync(transaction.id);
+      toast.success('Transaction deleted');
+      setConfirmDeleteOpen(false);
+      onOpenChange(false);
+    } catch {
+      toast.error('Failed to delete transaction');
     }
   }
 
@@ -370,21 +388,48 @@ export function TransactionForm({
               )}
             />
 
-            <div className='flex justify-end gap-3 pt-4'>
-              <Button type='button' variant='outline' onClick={(): void => onOpenChange(false)}>
-                Cancel
-              </Button>
-              <Button type='submit' disabled={createMutation.isPending || updateMutation.isPending}>
-                {createMutation.isPending || updateMutation.isPending
-                  ? 'Saving...'
-                  : isEditing
-                    ? 'Update'
-                    : 'Create'}
-              </Button>
+            <div className={`flex ${isEditing ? 'justify-between' : 'justify-end'} gap-3 pt-4`}>
+              {isEditing && (
+                <Button
+                  type='button'
+                  variant='ghost'
+                  className='text-destructive cursor-pointer'
+                  onClick={(): void => setConfirmDeleteOpen(true)}>
+                  Delete
+                </Button>
+              )}
+              <div className='flex gap-3'>
+                <Button type='button' variant='outline' onClick={(): void => onOpenChange(false)}>
+                  Cancel
+                </Button>
+                <Button
+                  type='submit'
+                  disabled={createMutation.isPending || updateMutation.isPending}>
+                  {createMutation.isPending || updateMutation.isPending
+                    ? 'Saving...'
+                    : isEditing
+                      ? 'Update'
+                      : 'Create'}
+                </Button>
+              </div>
             </div>
           </form>
         </Form>
       </DialogContent>
+
+      {isEditing && (
+        <ConfirmDeleteDialog
+          open={confirmDeleteOpen}
+          onOpenChange={setConfirmDeleteOpen}
+          title='Delete Transaction'
+          description={
+            <p className='text-muted-foreground text-sm'>This action cannot be undone.</p>
+          }
+          confirmText='Delete Transaction'
+          onConfirm={handleDelete}
+          isPending={deleteMutation.isPending}
+        />
+      )}
     </Dialog>
   );
 }
