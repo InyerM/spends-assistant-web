@@ -227,7 +227,7 @@ export function TransactionForm({
                   <FormItem>
                     <FormLabel>Date</FormLabel>
                     <FormControl>
-                      <Input type='date' {...field} />
+                      <Input type='date' className='appearance-none' {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -240,7 +240,7 @@ export function TransactionForm({
                   <FormItem>
                     <FormLabel>Time</FormLabel>
                     <FormControl>
-                      <Input type='time' step='1' {...field} />
+                      <Input type='time' step='1' className='appearance-none' {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
