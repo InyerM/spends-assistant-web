@@ -280,6 +280,7 @@ export function TransactionForm({
                   <FormControl>
                     <Input
                       type='number'
+                      inputMode='numeric'
                       step='1'
                       min='0'
                       placeholder='0'
@@ -299,7 +300,12 @@ export function TransactionForm({
                 <FormItem>
                   <FormLabel>Description</FormLabel>
                   <FormControl>
-                    <Input placeholder='What was this for?' {...field} />
+                    <Textarea
+                      placeholder='What was this for?'
+                      rows={2}
+                      className='resize-none sm:min-h-9 sm:py-1'
+                      {...field}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

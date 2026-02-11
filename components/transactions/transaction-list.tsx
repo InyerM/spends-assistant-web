@@ -15,6 +15,10 @@ import { useAccounts } from '@/lib/api/queries/account.queries';
 import { formatCurrency } from '@/lib/utils/formatting';
 import { formatTimeForDisplay } from '@/lib/utils/date';
 import { ArrowDownLeft, ArrowUpRight, ArrowRightLeft, Loader2, Info } from 'lucide-react';
+import { useDeleteTransaction } from '@/lib/api/mutations/transaction.mutations';
+import { SwipeableRow } from '@/components/transactions/swipeable-row';
+import { ConfirmDeleteDialog } from '@/components/shared/confirm-delete-dialog';
+import { toast } from 'sonner';
 import type { Transaction, TransactionType, TransactionFilters } from '@/types';
 
 const MONTH_NAMES = [
@@ -144,6 +148,8 @@ export function TransactionList({
   const { data: accounts } = useAccounts();
   const bottomRef = useRef<HTMLDivElement>(null);
   const [metadataTx, setMetadataTx] = useState<Transaction | null>(null);
+  const [deleteTx, setDeleteTx] = useState<Transaction | null>(null);
+  const deleteMutation = useDeleteTransaction();
 
   const handleObserver = useCallback(
     (entries: IntersectionObserverEntry[]) => {
@@ -162,6 +168,17 @@ export function TransactionList({
     observer.observe(el);
     return (): void => observer.disconnect();
   }, [handleObserver]);
+
+  async function handleSwipeDelete(): Promise<void> {
+    if (!deleteTx) return;
+    try {
+      await deleteMutation.mutateAsync(deleteTx.id);
+      toast.success('Transaction deleted');
+      setDeleteTx(null);
+    } catch {
+      toast.error('Failed to delete transaction');
+    }
+  }
 
   const dateGroups = buildDateGroups(data?.pages ?? [], filters.sort_by, filters.sort_order);
 
@@ -223,9 +240,8 @@ export function TransactionList({
 
               const isSelected = selectedIds?.has(tx.id) ?? false;
 
-              return (
+              const rowContent = (
                 <div
-                  key={tx.id}
                   className={`hover:bg-card-overlay flex items-center gap-3 rounded-lg p-3 transition-colors ${isSelected ? 'bg-card-overlay' : ''}`}>
                   {selectMode && onToggleSelect && (
                     <Checkbox
@@ -297,6 +313,19 @@ export function TransactionList({
                   )}
                 </div>
               );
+
+              return (
+                <div key={tx.id}>
+                  <div className='hidden md:block'>{rowContent}</div>
+                  <div className='md:hidden'>
+                    <SwipeableRow
+                      onEdit={(): void => onEdit(tx)}
+                      onDelete={(): void => setDeleteTx(tx)}>
+                      {rowContent}
+                    </SwipeableRow>
+                  </div>
+                </div>
+              );
             })}
           </div>
         </div>
@@ -345,6 +374,18 @@ export function TransactionList({
           )}
         </DialogContent>
       </Dialog>
+
+      <ConfirmDeleteDialog
+        open={deleteTx !== null}
+        onOpenChange={(o): void => {
+          if (!o) setDeleteTx(null);
+        }}
+        title='Delete Transaction'
+        description={<p className='text-muted-foreground text-sm'>This action cannot be undone.</p>}
+        confirmText='Delete Transaction'
+        onConfirm={(): void => void handleSwipeDelete()}
+        isPending={deleteMutation.isPending}
+      />
     </div>
   );
 }

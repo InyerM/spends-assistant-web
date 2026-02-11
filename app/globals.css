@@ -79,6 +79,10 @@
   --radius-xl: calc(var(--radius) + 4px);
 }
 
+@utility h-screen-safe {
+  height: 100dvh;
+}
+
 @utility scrollbar-none {
   -ms-overflow-style: none;
   scrollbar-width: none;

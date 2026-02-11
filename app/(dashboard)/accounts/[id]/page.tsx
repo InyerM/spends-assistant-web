@@ -121,7 +121,7 @@ export default function AccountDetailPage({
             variant='ghost'
             size='icon'
             className='cursor-pointer'
-            onClick={(): void => router.push('/accounts')}>
+            onClick={(): void => router.back()}>
             <ArrowLeft className='h-5 w-5' />
           </Button>
           <h2 className='text-foreground text-2xl font-bold'>Account Detail</h2>

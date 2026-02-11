@@ -72,6 +72,7 @@ export function AccountEditDialog({
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [adjustMode, setAdjustMode] = useState<'none' | 'direct' | 'transaction'>('none');
   const [newBalance, setNewBalance] = useState('');
+  const [balanceSign, setBalanceSign] = useState<'+' | '-'>('+');
   const { openNew } = useTransactionFormStore();
   const txCount = txResult?.count ?? 0;
 
@@ -101,6 +102,7 @@ export function AccountEditDialog({
       });
       setAdjustMode('none');
       setNewBalance('');
+      setBalanceSign('+');
     }
   }, [account, open, form]);
 
@@ -130,9 +132,15 @@ export function AccountEditDialog({
     }
   }
 
+  function getSignedBalance(): number {
+    const raw = parseFloat(newBalance);
+    if (isNaN(raw)) return NaN;
+    return balanceSign === '-' ? -Math.abs(raw) : Math.abs(raw);
+  }
+
   async function handleDirectAdjust(): Promise<void> {
     if (!account) return;
-    const target = parseFloat(newBalance);
+    const target = getSignedBalance();
     if (isNaN(target)) {
       toast.error('Enter a valid number');
       return;
@@ -148,7 +156,7 @@ export function AccountEditDialog({
 
   async function handleTransactionAdjust(): Promise<void> {
     if (!account) return;
-    const target = parseFloat(newBalance);
+    const target = getSignedBalance();
     if (isNaN(target)) {
       toast.error('Enter a valid number');
       return;
@@ -315,13 +323,28 @@ export function AccountEditDialog({
                       <label className='text-muted-foreground mb-1 block text-xs'>
                         New balance
                       </label>
-                      <Input
-                        type='number'
-                        step='1'
-                        value={newBalance}
-                        onChange={(e): void => setNewBalance(e.target.value)}
-                        placeholder={String(account.balance)}
-                      />
+                      <div className='flex gap-2'>
+                        <Button
+                          type='button'
+                          variant='outline'
+                          className={`h-14 w-14 shrink-0 cursor-pointer text-xl font-bold sm:h-11 sm:w-11 sm:text-base ${
+                            balanceSign === '+'
+                              ? 'border-success text-success'
+                              : 'border-destructive text-destructive'
+                          }`}
+                          onClick={(): void => setBalanceSign((s) => (s === '+' ? '-' : '+'))}>
+                          {balanceSign}
+                        </Button>
+                        <Input
+                          type='number'
+                          inputMode='numeric'
+                          step='1'
+                          value={newBalance}
+                          onChange={(e): void => setNewBalance(e.target.value)}
+                          placeholder={String(Math.abs(account.balance))}
+                          className='h-14 text-2xl font-semibold sm:h-11 sm:text-base sm:font-normal'
+                        />
+                      </div>
                     </div>
                     <div className='flex gap-2'>
                       <Button
