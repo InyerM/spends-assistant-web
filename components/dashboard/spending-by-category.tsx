@@ -85,12 +85,12 @@ export function SpendingByCategory({ year, month }: SpendingByCategoryProps): Re
   }
 
   return (
-    <Card className='border-border bg-card'>
+    <Card className='border-border bg-card overflow-hidden'>
       <CardHeader className='pb-3'>
         <CardTitle className='text-base font-medium'>Spending by Categories</CardTitle>
         <p className='text-destructive text-2xl font-bold'>-{formatCurrency(totalSpending)}</p>
       </CardHeader>
-      <CardContent>
+      <CardContent className='min-w-0'>
         {spending.length === 0 ? (
           <p className='text-muted-foreground py-4 text-center text-sm'>No expenses this month</p>
         ) : (
@@ -99,9 +99,11 @@ export function SpendingByCategory({ year, month }: SpendingByCategoryProps): Re
               const percentage = totalSpending > 0 ? (cat.amount / totalSpending) * 100 : 0;
               return (
                 <div key={cat.id}>
-                  <div className='mb-1.5 flex items-center justify-between text-sm'>
-                    <span className='text-foreground'>{cat.name}</span>
-                    <span className='text-muted-foreground'>{formatCurrency(cat.amount)}</span>
+                  <div className='mb-1.5 flex items-center justify-between gap-2 text-sm'>
+                    <span className='text-foreground min-w-0 truncate'>{cat.name}</span>
+                    <span className='text-muted-foreground shrink-0'>
+                      {formatCurrency(cat.amount)}
+                    </span>
                   </div>
                   <div className='bg-muted h-2 overflow-hidden rounded-full'>
                     <div

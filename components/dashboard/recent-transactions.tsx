@@ -24,9 +24,13 @@ export function RecentTransactions(): React.ReactElement {
   const { data: categories } = useCategories();
   const { data: accounts } = useAccounts();
 
-  const getCategoryName = (categoryId: string | null): string | null => {
+  const getCategory = (
+    categoryId: string | null,
+  ): { name: string; color: string | null } | null => {
     if (!categoryId || !categories) return null;
-    return categories.find((c) => c.id === categoryId)?.name ?? null;
+    const cat = categories.find((c) => c.id === categoryId);
+    if (!cat) return null;
+    return { name: cat.name, color: cat.color };
   };
 
   const getAccountName = (accountId: string): string => {
@@ -59,11 +63,11 @@ export function RecentTransactions(): React.ReactElement {
   const transactions = result?.data ?? [];
 
   return (
-    <Card className='border-border bg-card'>
+    <Card className='border-border bg-card overflow-hidden'>
       <CardHeader className='pb-3'>
         <CardTitle className='text-base font-medium'>Recent Transactions</CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className='min-w-0'>
         {transactions.length === 0 ? (
           <p className='text-muted-foreground py-8 text-center text-sm'>No transactions yet</p>
         ) : (
@@ -72,13 +76,13 @@ export function RecentTransactions(): React.ReactElement {
               {transactions.map((tx) => {
                 const config = typeConfig[tx.type];
                 const Icon = config.icon;
-                const categoryName = getCategoryName(tx.category_id);
+                const category = getCategory(tx.category_id);
                 const accountName = getAccountName(tx.account_id);
 
                 return (
                   <div
                     key={tx.id}
-                    className='hover:bg-card-overlay flex items-center gap-3 rounded-lg p-2.5'>
+                    className='hover:bg-card-overlay flex min-w-0 items-center gap-3 rounded-lg p-2.5'>
                     <div
                       className={`bg-card-overlay flex h-9 w-9 items-center justify-center rounded-full ${config.colorClass}`}>
                       <Icon className='h-4 w-4' />
@@ -89,18 +93,28 @@ export function RecentTransactions(): React.ReactElement {
                       </p>
                       <div className='text-muted-foreground flex items-center gap-2 text-xs'>
                         <span>{accountName}</span>
-                        {categoryName && (
+                        {category && (
                           <>
                             <span>·</span>
-                            <Badge variant='secondary' className='h-5 px-1.5 text-[10px]'>
-                              {categoryName}
+                            <Badge
+                              variant='secondary'
+                              className='h-5 px-1.5 text-[10px]'
+                              style={
+                                category.color
+                                  ? {
+                                      backgroundColor: `${category.color}20`,
+                                      color: category.color,
+                                    }
+                                  : undefined
+                              }>
+                              {category.name}
                             </Badge>
                           </>
                         )}
                       </div>
                     </div>
-                    <div className='text-right'>
-                      <p className={`text-sm font-semibold ${config.colorClass}`}>
+                    <div className='shrink-0 text-right'>
+                      <p className={`text-sm font-semibold whitespace-nowrap ${config.colorClass}`}>
                         {tx.type === 'expense' ? '-' : tx.type === 'income' ? '+' : ''}
                         {formatCurrency(tx.amount)}
                       </p>
