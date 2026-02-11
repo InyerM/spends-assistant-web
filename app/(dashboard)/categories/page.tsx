@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { ConfirmDeleteDialog } from '@/components/shared/confirm-delete-dialog';
 import {
   Form,
   FormControl,
@@ -27,8 +28,14 @@ import {
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useCategoryTree, useCategories } from '@/lib/api/queries/category.queries';
-import { useCreateCategory, useUpdateCategory } from '@/lib/api/mutations/category.mutations';
-import { Plus, Pencil, ChevronDown, ChevronRight } from 'lucide-react';
+import {
+  useCreateCategory,
+  useUpdateCategory,
+  useDeleteCategory,
+  fetchCategoryWithCounts,
+} from '@/lib/api/mutations/category.mutations';
+import { slugify } from '@/lib/utils/slugify';
+import { Plus, Pencil, Trash2, ChevronDown, ChevronRight } from 'lucide-react';
 import type { Category, CategoryType } from '@/types';
 
 const formSchema = z.object({
@@ -53,9 +60,16 @@ export default function CategoriesPage(): React.ReactElement {
   const { data: allCategories } = useCategories();
   const createMutation = useCreateCategory();
   const updateMutation = useUpdateCategory();
+  const deleteMutation = useDeleteCategory();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+  const [deleteTarget, setDeleteTarget] = useState<Category | null>(null);
+  const [deleteInfo, setDeleteInfo] = useState<{
+    transaction_count: number;
+    children_count: number;
+  } | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -68,6 +82,31 @@ export default function CategoriesPage(): React.ReactElement {
       color: '',
     },
   });
+
+  const watchName = form.watch('name');
+
+  const generateUniqueSlug = useCallback(
+    (name: string): string => {
+      const base = slugify(name);
+      if (!base) return '';
+      const existingSlugs = new Set(
+        (allCategories ?? [])
+          .filter((c) => !editingCategory || c.id !== editingCategory.id)
+          .map((c) => c.slug),
+      );
+      if (!existingSlugs.has(base)) return base;
+      let i = 2;
+      while (existingSlugs.has(`${base}-${i}`)) i++;
+      return `${base}-${i}`;
+    },
+    [allCategories, editingCategory],
+  );
+
+  useEffect(() => {
+    if (!editingCategory && watchName) {
+      form.setValue('slug', generateUniqueSlug(watchName));
+    }
+  }, [watchName, editingCategory, form, generateUniqueSlug]);
 
   const toggleExpanded = (id: string): void => {
     setExpandedIds((prev) => {
@@ -107,6 +146,33 @@ export default function CategoriesPage(): React.ReactElement {
     setDialogOpen(true);
   };
 
+  const handleDeleteClick = async (category: Category): Promise<void> => {
+    setDeleteTarget(category);
+    setDeleteInfo(null);
+    setDeleteDialogOpen(true);
+    try {
+      const counts = await fetchCategoryWithCounts(category.id);
+      setDeleteInfo({
+        transaction_count: counts.transaction_count,
+        children_count: counts.children_count,
+      });
+    } catch {
+      setDeleteInfo({ transaction_count: 0, children_count: 0 });
+    }
+  };
+
+  const handleDeleteConfirm = async (): Promise<void> => {
+    if (!deleteTarget) return;
+    try {
+      await deleteMutation.mutateAsync(deleteTarget.id);
+      toast.success('Category deleted');
+      setDeleteDialogOpen(false);
+      setDeleteTarget(null);
+    } catch {
+      toast.error('Failed to delete category');
+    }
+  };
+
   async function onSubmit(values: FormValues): Promise<void> {
     try {
       if (editingCategory) {
@@ -125,15 +191,17 @@ export default function CategoriesPage(): React.ReactElement {
   const parentCategories = allCategories?.filter((c) => !c.parent_id) ?? [];
 
   return (
-    <div className='space-y-6 p-6'>
+    <div className='space-y-4 p-4 sm:space-y-6 sm:p-6'>
       <div className='flex items-center justify-between'>
-        <div>
-          <h2 className='text-foreground text-2xl font-bold'>Categories</h2>
-          <p className='text-muted-foreground text-sm'>Organize your transactions by category</p>
+        <div className='min-w-0'>
+          <h2 className='text-foreground text-xl font-bold sm:text-2xl'>Categories</h2>
+          <p className='text-muted-foreground hidden text-sm sm:block'>
+            Organize your transactions by category
+          </p>
         </div>
-        <Button onClick={(): void => handleCreate()}>
-          <Plus className='mr-2 h-4 w-4' />
-          New Category
+        <Button className='cursor-pointer' onClick={(): void => handleCreate()}>
+          <Plus className='h-4 w-4 sm:mr-2' />
+          <span className='hidden sm:inline'>New Category</span>
         </Button>
       </div>
 
@@ -151,7 +219,7 @@ export default function CategoriesPage(): React.ReactElement {
 
             return (
               <Card key={parent.id} className='border-border bg-card'>
-                <CardHeader className='flex flex-row items-center gap-3 space-y-0 py-3'>
+                <CardHeader className='flex flex-row flex-wrap items-center gap-2 space-y-0 py-3 sm:gap-3'>
                   {hasChildren ? (
                     <button
                       onClick={(): void => toggleExpanded(parent.id)}
@@ -167,11 +235,13 @@ export default function CategoriesPage(): React.ReactElement {
                   )}
 
                   <span className='text-lg'>{parent.icon ?? '📁'}</span>
-                  <CardTitle className='flex-1 text-base font-medium'>{parent.name}</CardTitle>
+                  <CardTitle className='min-w-0 flex-1 truncate text-base font-medium'>
+                    {parent.name}
+                  </CardTitle>
                   <Badge variant={typeBadgeVariant[parent.type]}>{parent.type}</Badge>
                   {parent.color && (
                     <div
-                      className='h-4 w-4 rounded-full'
+                      className='hidden h-4 w-4 rounded-full sm:block'
                       style={{ backgroundColor: parent.color }}
                     />
                   )}
@@ -179,7 +249,7 @@ export default function CategoriesPage(): React.ReactElement {
                     variant='ghost'
                     size='sm'
                     onClick={(): void => handleCreate(parent.id, parent.type)}
-                    className='h-8 w-8 p-0'
+                    className='h-8 w-8 cursor-pointer p-0'
                     title='Add subcategory'>
                     <Plus className='h-4 w-4' />
                   </Button>
@@ -187,27 +257,43 @@ export default function CategoriesPage(): React.ReactElement {
                     variant='ghost'
                     size='sm'
                     onClick={(): void => handleEdit(parent)}
-                    className='h-8 w-8 p-0'>
+                    className='h-8 w-8 cursor-pointer p-0'>
                     <Pencil className='h-4 w-4' />
+                  </Button>
+                  <Button
+                    variant='ghost'
+                    size='sm'
+                    onClick={(): void => void handleDeleteClick(parent)}
+                    className='text-destructive h-8 w-8 cursor-pointer p-0'>
+                    <Trash2 className='h-4 w-4' />
                   </Button>
                 </CardHeader>
 
                 {isExpanded && hasChildren && (
                   <CardContent className='pt-0 pb-3'>
-                    <div className='ml-8 space-y-1'>
+                    <div className='ml-4 space-y-1 sm:ml-8'>
                       {parent.children.map((child) => (
                         <div
                           key={child.id}
-                          className='hover:bg-card-overlay flex items-center gap-3 rounded-lg px-3 py-2'>
+                          className='hover:bg-card-overlay flex items-center gap-2 rounded-lg px-3 py-2 sm:gap-3'>
                           <span>{child.icon ?? '📄'}</span>
-                          <span className='flex-1 text-sm'>{child.name}</span>
-                          <span className='text-muted-foreground text-xs'>{child.slug}</span>
+                          <span className='min-w-0 flex-1 truncate text-sm'>{child.name}</span>
+                          <span className='text-muted-foreground hidden text-xs sm:inline'>
+                            {child.slug}
+                          </span>
                           <Button
                             variant='ghost'
                             size='sm'
                             onClick={(): void => handleEdit(child)}
-                            className='h-7 w-7 p-0'>
+                            className='h-7 w-7 cursor-pointer p-0'>
                             <Pencil className='h-3 w-3' />
+                          </Button>
+                          <Button
+                            variant='ghost'
+                            size='sm'
+                            onClick={(): void => void handleDeleteClick(child)}
+                            className='text-destructive h-7 w-7 cursor-pointer p-0'>
+                            <Trash2 className='h-3 w-3' />
                           </Button>
                         </div>
                       ))}
@@ -248,7 +334,12 @@ export default function CategoriesPage(): React.ReactElement {
                   <FormItem>
                     <FormLabel>Slug</FormLabel>
                     <FormControl>
-                      <Input placeholder='category-slug' {...field} />
+                      <Input
+                        placeholder='category-slug'
+                        {...field}
+                        readOnly
+                        className='text-muted-foreground bg-muted'
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -351,6 +442,38 @@ export default function CategoriesPage(): React.ReactElement {
           </Form>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDeleteDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        title='Delete Category'
+        description={
+          <div className='text-muted-foreground space-y-1 text-sm'>
+            {deleteInfo ? (
+              <>
+                {deleteInfo.transaction_count > 0 && (
+                  <p>
+                    {deleteInfo.transaction_count} linked transaction
+                    {deleteInfo.transaction_count !== 1 ? 's' : ''} will be uncategorized.
+                  </p>
+                )}
+                {deleteInfo.children_count > 0 && (
+                  <p>
+                    {deleteInfo.children_count} child categor
+                    {deleteInfo.children_count !== 1 ? 'ies' : 'y'} will also be deleted.
+                  </p>
+                )}
+                <p>This action cannot be undone.</p>
+              </>
+            ) : (
+              <p>Loading category info...</p>
+            )}
+          </div>
+        }
+        confirmText={deleteTarget?.name ?? ''}
+        onConfirm={(): void => void handleDeleteConfirm()}
+        isPending={deleteMutation.isPending}
+      />
     </div>
   );
 }

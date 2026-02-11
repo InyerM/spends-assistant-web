@@ -4,18 +4,29 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { TransactionList } from '@/components/transactions/transaction-list';
 import { TransactionFiltersBar } from '@/components/transactions/transaction-filters';
-import { TransactionForm } from '@/components/transactions/transaction-form';
 import { BulkEditDialog } from '@/components/transactions/bulk-edit-dialog';
+
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Plus, Upload, Download, MoreVertical, CheckSquare, X, Pencil } from 'lucide-react';
+import {
+  Plus,
+  Upload,
+  Download,
+  MoreVertical,
+  CheckSquare,
+  X,
+  Pencil,
+  Sparkles,
+} from 'lucide-react';
 import { ImportDialog } from '@/components/transactions/import-dialog';
+import { AiParseDialog } from '@/components/transactions/ai-parse-dialog';
 import { exportTransactionsCsv } from '@/lib/utils/export';
 import { useTransactions } from '@/lib/api/queries/transaction.queries';
+import { useTransactionFormStore } from '@/lib/stores/transaction-form.store';
 import type { Transaction, TransactionFilters } from '@/types';
 
 type ListFilters = Omit<TransactionFilters, 'page' | 'limit'>;
@@ -33,23 +44,17 @@ function getInitialDates(): { date_from: string; date_to: string } {
 
 export default function TransactionsPage(): React.ReactElement {
   const [filters, setFilters] = useState<ListFilters>(getInitialDates);
-  const [formOpen, setFormOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
-  const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
+  const [aiParseOpen, setAiParseOpen] = useState(false);
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkEditOpen, setBulkEditOpen] = useState(false);
+  const { openNew, openWith } = useTransactionFormStore();
 
   const { data: exportData } = useTransactions({ ...filters, limit: 500 });
 
   const handleEdit = (transaction: Transaction): void => {
-    setEditingTransaction(transaction);
-    setFormOpen(true);
-  };
-
-  const handleFormClose = (open: boolean): void => {
-    setFormOpen(open);
-    if (!open) setEditingTransaction(null);
+    openWith(transaction);
   };
 
   const handleExport = (): void => {
@@ -136,7 +141,15 @@ export default function TransactionsPage(): React.ReactElement {
               <Download className='mr-1.5 h-4 w-4' />
               Export
             </Button>
-            <Button size='sm' className='cursor-pointer' onClick={(): void => setFormOpen(true)}>
+            <Button
+              variant='outline'
+              size='sm'
+              className='ai-gradient-btn cursor-pointer border-purple-500/50 text-purple-400 hover:border-purple-400 hover:text-purple-300'
+              onClick={(): void => setAiParseOpen(true)}>
+              <Sparkles className='h-4 w-4 sm:mr-1.5' />
+              <span className='hidden sm:inline'>AI</span>
+            </Button>
+            <Button size='sm' className='cursor-pointer' onClick={openNew}>
               <Plus className='mr-1 h-4 w-4' />
               <span className='hidden sm:inline'>New Transaction</span>
               <span className='sm:hidden'>New</span>
@@ -177,13 +190,9 @@ export default function TransactionsPage(): React.ReactElement {
         onToggleSelect={toggleSelect}
       />
 
-      <TransactionForm
-        open={formOpen}
-        onOpenChange={handleFormClose}
-        transaction={editingTransaction}
-      />
-
       <ImportDialog open={importOpen} onOpenChange={setImportOpen} />
+
+      <AiParseDialog open={aiParseOpen} onOpenChange={setAiParseOpen} />
 
       <BulkEditDialog
         open={bulkEditOpen}

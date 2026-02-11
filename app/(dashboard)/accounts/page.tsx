@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -78,32 +79,38 @@ export default function AccountsPage(): React.ReactElement {
       ) : (
         <div className='grid gap-4 md:grid-cols-2 lg:grid-cols-3'>
           {accounts?.map((account) => (
-            <Card key={account.id} className='border-border bg-card'>
-              <CardHeader className='flex flex-row items-center justify-between space-y-0'>
-                <CardTitle className='text-base font-medium'>
-                  <AccountTypeIcon type={account.type} className='mr-2 inline h-4 w-4' />
-                  {account.name}
-                </CardTitle>
-                <Button
-                  variant='ghost'
-                  size='sm'
-                  onClick={(): void => setEditingAccount(account)}
-                  className='h-8 w-8 p-0'>
-                  <Pencil className='h-4 w-4' />
-                </Button>
-              </CardHeader>
-              <CardContent>
-                <div
-                  className={`text-2xl font-bold ${account.balance >= 0 ? 'text-success' : 'text-destructive'}`}>
-                  {formatCurrency(account.balance, account.currency)}
-                </div>
-                <div className='text-muted-foreground mt-2 flex items-center gap-2 text-sm'>
-                  <span className='capitalize'>{account.type.replace('_', ' ')}</span>
-                  {account.institution && <span>· {account.institution}</span>}
-                  {account.last_four && <span>· •••• {account.last_four}</span>}
-                </div>
-              </CardContent>
-            </Card>
+            <Link key={account.id} href={`/accounts/${account.id}`}>
+              <Card className='border-border bg-card hover:border-primary/50 cursor-pointer transition-colors'>
+                <CardHeader className='flex flex-row items-center justify-between space-y-0'>
+                  <CardTitle className='text-base font-medium'>
+                    <AccountTypeIcon type={account.type} className='mr-2 inline h-4 w-4' />
+                    {account.name}
+                  </CardTitle>
+                  <Button
+                    variant='ghost'
+                    size='sm'
+                    onClick={(e): void => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setEditingAccount(account);
+                    }}
+                    className='h-8 w-8 p-0'>
+                    <Pencil className='h-4 w-4' />
+                  </Button>
+                </CardHeader>
+                <CardContent>
+                  <div
+                    className={`text-2xl font-bold ${account.balance >= 0 ? 'text-success' : 'text-destructive'}`}>
+                    {formatCurrency(account.balance, account.currency)}
+                  </div>
+                  <div className='text-muted-foreground mt-2 flex items-center gap-2 text-sm'>
+                    <span className='capitalize'>{account.type.replace('_', ' ')}</span>
+                    {account.institution && <span>· {account.institution}</span>}
+                    {account.last_four && <span>· •••• {account.last_four}</span>}
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
           ))}
         </div>
       )}

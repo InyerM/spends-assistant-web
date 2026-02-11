@@ -1,29 +1,83 @@
 'use client';
 
+import { useState } from 'react';
+import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Skeleton } from '@/components/ui/skeleton';
+import { ConfirmDeleteDialog } from '@/components/shared/confirm-delete-dialog';
+import { AutomationForm } from '@/components/automation/automation-form';
 import { useAutomationRules } from '@/lib/api/queries/automation.queries';
 import { useAccounts } from '@/lib/api/queries/account.queries';
-import { Zap } from 'lucide-react';
+import {
+  useToggleAutomationRule,
+  useDeleteAutomationRule,
+} from '@/lib/api/mutations/automation.mutations';
+import { Plus, Pencil, Trash2, Zap } from 'lucide-react';
+import type { AutomationRule } from '@/types';
 
 export default function AutomationPage(): React.ReactElement {
   const { data: rules, isLoading } = useAutomationRules();
   const { data: accounts } = useAccounts();
+  const toggleMutation = useToggleAutomationRule();
+  const deleteMutation = useDeleteAutomationRule();
+
+  const [formOpen, setFormOpen] = useState(false);
+  const [editingRule, setEditingRule] = useState<AutomationRule | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<AutomationRule | null>(null);
 
   const getAccountName = (accountId: string | null): string | null => {
     if (!accountId || !accounts) return null;
     return accounts.find((a) => a.id === accountId)?.name ?? null;
   };
 
+  const handleToggle = (rule: AutomationRule, checked: boolean): void => {
+    toggleMutation.mutate(
+      { id: rule.id, is_active: checked },
+      {
+        onError: () => {
+          toast.error('Failed to toggle rule');
+        },
+      },
+    );
+  };
+
+  const handleEdit = (rule: AutomationRule): void => {
+    setEditingRule(rule);
+    setFormOpen(true);
+  };
+
+  const handleCreate = (): void => {
+    setEditingRule(null);
+    setFormOpen(true);
+  };
+
+  const handleDeleteConfirm = async (): Promise<void> => {
+    if (!deleteTarget) return;
+    try {
+      await deleteMutation.mutateAsync(deleteTarget.id);
+      toast.success('Rule deleted');
+      setDeleteTarget(null);
+    } catch {
+      toast.error('Failed to delete rule');
+    }
+  };
+
   return (
-    <div className='space-y-6 p-6'>
-      <div>
-        <h2 className='text-foreground text-2xl font-bold'>Automation Rules</h2>
-        <p className='text-muted-foreground text-sm'>
-          Rules that automatically categorize and process transactions
-        </p>
+    <div className='space-y-4 p-4 sm:space-y-6 sm:p-6'>
+      <div className='flex items-center justify-between'>
+        <div className='min-w-0'>
+          <h2 className='text-foreground text-xl font-bold sm:text-2xl'>Automation Rules</h2>
+          <p className='text-muted-foreground hidden text-sm sm:block'>
+            Rules that automatically categorize and process transactions
+          </p>
+        </div>
+        <Button className='cursor-pointer' onClick={handleCreate}>
+          <Plus className='h-4 w-4 sm:mr-2' />
+          <span className='hidden sm:inline'>New Rule</span>
+        </Button>
       </div>
 
       {isLoading ? (
@@ -46,20 +100,45 @@ export default function AutomationPage(): React.ReactElement {
 
             return (
               <Card key={rule.id} className='border-border bg-card'>
-                <CardHeader className='flex flex-row items-center gap-4 space-y-0'>
-                  <div className='flex-1'>
+                <CardHeader className='flex flex-col gap-3 space-y-0 sm:flex-row sm:items-center sm:gap-4'>
+                  <div className='min-w-0 flex-1'>
                     <CardTitle className='text-base font-medium'>{rule.name}</CardTitle>
-                    <div className='mt-1 flex items-center gap-2'>
+                    <div className='mt-1 flex flex-wrap items-center gap-1.5 sm:gap-2'>
                       <Badge variant='outline'>Priority: {rule.priority}</Badge>
                       {rule.match_phone && (
-                        <Badge variant='secondary'>Phone: {rule.match_phone}</Badge>
+                        <Badge variant='secondary'>
+                          <span className='hidden sm:inline'>Phone: </span>
+                          {rule.match_phone}
+                        </Badge>
                       )}
                       {transferAccount && (
-                        <Badge variant='secondary'>Transfer to: {transferAccount}</Badge>
+                        <Badge variant='secondary'>
+                          <span className='hidden sm:inline'>Transfer to: </span>
+                          {transferAccount}
+                        </Badge>
                       )}
                     </div>
                   </div>
-                  <Switch checked={rule.is_active} disabled />
+                  <div className='flex items-center gap-2'>
+                    <Button
+                      variant='ghost'
+                      size='sm'
+                      onClick={(): void => handleEdit(rule)}
+                      className='h-8 w-8 cursor-pointer p-0'>
+                      <Pencil className='h-4 w-4' />
+                    </Button>
+                    <Button
+                      variant='ghost'
+                      size='sm'
+                      onClick={(): void => setDeleteTarget(rule)}
+                      className='text-destructive h-8 w-8 cursor-pointer p-0'>
+                      <Trash2 className='h-4 w-4' />
+                    </Button>
+                    <Switch
+                      checked={rule.is_active}
+                      onCheckedChange={(checked): void => handleToggle(rule, checked)}
+                    />
+                  </div>
                 </CardHeader>
                 <CardContent className='space-y-3'>
                   {Object.keys(rule.conditions).length > 0 && (
@@ -122,7 +201,9 @@ export default function AutomationPage(): React.ReactElement {
                   {rule.prompt_text && (
                     <div>
                       <p className='text-muted-foreground mb-1 text-xs font-medium'>AI Prompt</p>
-                      <p className='text-muted-foreground text-xs'>{rule.prompt_text}</p>
+                      <p className='text-muted-foreground line-clamp-2 text-xs'>
+                        {rule.prompt_text}
+                      </p>
                     </div>
                   )}
                 </CardContent>
@@ -131,6 +212,24 @@ export default function AutomationPage(): React.ReactElement {
           })}
         </div>
       )}
+
+      <AutomationForm open={formOpen} onOpenChange={setFormOpen} rule={editingRule} />
+
+      <ConfirmDeleteDialog
+        open={deleteTarget !== null}
+        onOpenChange={(open): void => {
+          if (!open) setDeleteTarget(null);
+        }}
+        title='Delete Rule'
+        description={
+          <p className='text-muted-foreground text-sm'>
+            This will permanently delete this automation rule.
+          </p>
+        }
+        confirmText={deleteTarget?.name ?? ''}
+        onConfirm={(): void => void handleDeleteConfirm()}
+        isPending={deleteMutation.isPending}
+      />
     </div>
   );
 }

@@ -25,7 +25,11 @@ import {
 } from '@/components/ui/select';
 import { ConfirmDeleteDialog } from '@/components/shared/confirm-delete-dialog';
 import { useUpdateAccount, useDeleteAccount } from '@/lib/api/mutations/account.mutations';
+import { useCreateTransaction } from '@/lib/api/mutations/transaction.mutations';
 import { useTransactions } from '@/lib/api/queries/transaction.queries';
+import { useTransactionFormStore } from '@/lib/stores/transaction-form.store';
+import { formatCurrency } from '@/lib/utils/formatting';
+import { getCurrentColombiaTimes } from '@/lib/utils/date';
 import type { Account, AccountType } from '@/types';
 
 const accountTypes: { value: AccountType; label: string }[] = [
@@ -63,8 +67,12 @@ export function AccountEditDialog({
 }: AccountEditDialogProps): React.ReactElement {
   const updateMutation = useUpdateAccount();
   const deleteMutation = useDeleteAccount();
+  const createTxMutation = useCreateTransaction();
   const { data: txResult } = useTransactions(account ? { account_id: account.id, limit: 1 } : {});
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const [adjustMode, setAdjustMode] = useState<'none' | 'direct' | 'transaction'>('none');
+  const [newBalance, setNewBalance] = useState('');
+  const { openNew } = useTransactionFormStore();
   const txCount = txResult?.count ?? 0;
 
   const form = useForm<FormValues>({
@@ -91,6 +99,8 @@ export function AccountEditDialog({
         color: account.color ?? '',
         icon: account.icon ?? '',
       });
+      setAdjustMode('none');
+      setNewBalance('');
     }
   }, [account, open, form]);
 
@@ -120,9 +130,63 @@ export function AccountEditDialog({
     }
   }
 
+  async function handleDirectAdjust(): Promise<void> {
+    if (!account) return;
+    const target = parseFloat(newBalance);
+    if (isNaN(target)) {
+      toast.error('Enter a valid number');
+      return;
+    }
+    try {
+      await updateMutation.mutateAsync({ id: account.id, balance: target });
+      toast.success('Balance adjusted');
+      setAdjustMode('none');
+      setNewBalance('');
+    } catch {
+      toast.error('Failed to adjust balance');
+    }
+  }
+
+  async function handleTransactionAdjust(): Promise<void> {
+    if (!account) return;
+    const target = parseFloat(newBalance);
+    if (isNaN(target)) {
+      toast.error('Enter a valid number');
+      return;
+    }
+    const diff = target - account.balance;
+    if (diff === 0) {
+      toast.error('Balance is already at the target');
+      return;
+    }
+    const times = getCurrentColombiaTimes();
+    try {
+      await createTxMutation.mutateAsync({
+        date: times.date,
+        time: times.time,
+        amount: Math.abs(diff),
+        description: 'Balance adjustment',
+        account_id: account.id,
+        type: diff > 0 ? 'income' : 'expense',
+        source: 'web',
+      });
+      toast.success('Adjustment transaction created');
+      setAdjustMode('none');
+      setNewBalance('');
+    } catch {
+      toast.error('Failed to create adjustment');
+    }
+  }
+
+  function handleOpenTransactionForm(): void {
+    if (!account) return;
+    onOpenChange(false);
+    openNew();
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className='border-border bg-card sm:max-w-[425px]'>
+      <DialogContent className='border-border bg-card max-h-[90vh] overflow-y-auto sm:max-w-[425px]'>
         <DialogHeader>
           <DialogTitle>Edit Account</DialogTitle>
         </DialogHeader>
@@ -221,6 +285,82 @@ export function AccountEditDialog({
                 )}
               />
             </div>
+
+            {/* Balance adjustment section */}
+            {account && (
+              <div className='border-border space-y-3 rounded-lg border p-3'>
+                <div className='flex items-center justify-between'>
+                  <div>
+                    <p className='text-sm font-medium'>Balance</p>
+                    <p
+                      className={`text-lg font-bold ${account.balance >= 0 ? 'text-success' : 'text-destructive'}`}>
+                      {formatCurrency(account.balance, account.currency)}
+                    </p>
+                  </div>
+                  {adjustMode === 'none' && (
+                    <Button
+                      type='button'
+                      variant='outline'
+                      size='sm'
+                      className='cursor-pointer'
+                      onClick={(): void => setAdjustMode('direct')}>
+                      Adjust
+                    </Button>
+                  )}
+                </div>
+
+                {adjustMode !== 'none' && (
+                  <div className='space-y-3'>
+                    <div>
+                      <label className='text-muted-foreground mb-1 block text-xs'>
+                        New balance
+                      </label>
+                      <Input
+                        type='number'
+                        step='1'
+                        value={newBalance}
+                        onChange={(e): void => setNewBalance(e.target.value)}
+                        placeholder={String(account.balance)}
+                      />
+                    </div>
+                    <div className='flex gap-2'>
+                      <Button
+                        type='button'
+                        size='sm'
+                        variant='outline'
+                        className='cursor-pointer'
+                        onClick={(): void => setAdjustMode('none')}>
+                        Cancel
+                      </Button>
+                      <Button
+                        type='button'
+                        size='sm'
+                        className='cursor-pointer'
+                        disabled={updateMutation.isPending}
+                        onClick={handleDirectAdjust}>
+                        {updateMutation.isPending ? 'Saving...' : 'Set balance'}
+                      </Button>
+                      <Button
+                        type='button'
+                        size='sm'
+                        variant='secondary'
+                        className='cursor-pointer'
+                        disabled={createTxMutation.isPending}
+                        onClick={handleTransactionAdjust}>
+                        {createTxMutation.isPending ? 'Creating...' : 'With transaction'}
+                      </Button>
+                    </div>
+                    <button
+                      type='button'
+                      className='text-muted-foreground hover:text-foreground cursor-pointer text-xs underline'
+                      onClick={handleOpenTransactionForm}>
+                      Or create a custom transaction
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+
             <div className='flex justify-between gap-3 pt-4'>
               <Button
                 type='button'

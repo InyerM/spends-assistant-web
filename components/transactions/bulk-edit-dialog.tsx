@@ -1,23 +1,22 @@
 'use client';
 
-import { Fragment, useState } from 'react';
+import { useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import {
   Select,
   SelectContent,
-  SelectGroup,
   SelectItem,
-  SelectLabel,
   SelectSeparator,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { CategorySelectItems } from '@/components/shared/category-select-items';
 import { useAccounts } from '@/lib/api/queries/account.queries';
 import { useCategories } from '@/lib/api/queries/category.queries';
 import { useBulkUpdateTransactions } from '@/lib/api/mutations/transaction.mutations';
-import type { TransactionType, Category } from '@/types';
+import type { TransactionType } from '@/types';
 
 interface BulkEditDialogProps {
   open: boolean;
@@ -44,11 +43,6 @@ export function BulkEditDialog({
   const [accountId, setAccountId] = useState(UNCHANGED);
 
   const currentType = type === UNCHANGED ? undefined : (type as TransactionType);
-  const filteredCategories =
-    categories?.filter((c) => (currentType ? c.type === currentType : true)) ?? [];
-  const parentCategories = filteredCategories.filter((c) => !c.parent_id);
-  const getChildren = (parentId: string): Category[] =>
-    filteredCategories.filter((c) => c.parent_id === parentId);
 
   const hasChanges = type !== UNCHANGED || categoryId !== UNCHANGED || accountId !== UNCHANGED;
 
@@ -139,37 +133,7 @@ export function BulkEditDialog({
                 <SelectItem value={UNCHANGED}>No change</SelectItem>
                 <SelectItem value={NONE}>None (remove category)</SelectItem>
                 <SelectSeparator />
-                {parentCategories.map((parent, idx) => {
-                  const children = getChildren(parent.id);
-                  if (children.length === 0) {
-                    return (
-                      <SelectItem key={parent.id} value={parent.id}>
-                        {parent.icon ? `${parent.icon} ` : ''}
-                        {parent.name}
-                      </SelectItem>
-                    );
-                  }
-                  return (
-                    <Fragment key={parent.id}>
-                      {idx > 0 && <SelectSeparator />}
-                      <SelectGroup>
-                        <SelectLabel>
-                          {parent.icon ? `${parent.icon} ` : ''}
-                          {parent.name}
-                        </SelectLabel>
-                        <SelectItem value={parent.id} className='pl-4'>
-                          All {parent.name}
-                        </SelectItem>
-                        {children.map((child) => (
-                          <SelectItem key={child.id} value={child.id} className='pl-6'>
-                            {child.icon ? `${child.icon} ` : ''}
-                            {child.name}
-                          </SelectItem>
-                        ))}
-                      </SelectGroup>
-                    </Fragment>
-                  );
-                })}
+                <CategorySelectItems categories={categories ?? []} filterType={currentType} />
               </SelectContent>
             </Select>
           </div>

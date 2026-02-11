@@ -36,7 +36,11 @@ export interface CreateTransactionInput {
   type: TransactionType;
   payment_method?: string;
   source: string;
+  confidence?: number;
   transfer_to_account_id?: string;
+  transfer_id?: string;
+  raw_text?: string;
+  parsed_data?: Record<string, unknown>;
 }
 
 export interface UpdateTransactionInput extends Partial<CreateTransactionInput> {

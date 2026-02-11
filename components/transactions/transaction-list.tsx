@@ -165,9 +165,18 @@ export function TransactionList({
 
   const dateGroups = buildDateGroups(data?.pages ?? [], filters.sort_by, filters.sort_order);
 
-  const getCategoryName = (categoryId: string | null): string | null => {
+  const getCategory = (
+    categoryId: string | null,
+  ): { name: string; color: string | null } | null => {
     if (!categoryId || !categories) return null;
-    return categories.find((c) => c.id === categoryId)?.name ?? null;
+    const cat = categories.find((c) => c.id === categoryId);
+    if (!cat) return null;
+    // If child category, inherit parent color if not set
+    if (!cat.color && cat.parent_id) {
+      const parent = categories.find((c) => c.id === cat.parent_id);
+      return { name: cat.name, color: parent?.color ?? null };
+    }
+    return { name: cat.name, color: cat.color };
   };
 
   const getAccountName = (accountId: string): string => {
@@ -208,7 +217,7 @@ export function TransactionList({
             {group.transactions.map((tx) => {
               const config = typeConfig[tx.type];
               const Icon = config.icon;
-              const categoryName = getCategoryName(tx.category_id);
+              const categoryInfo = getCategory(tx.category_id);
               const accountName = getAccountName(tx.account_id);
               const hasMetadata = tx.raw_text || tx.parsed_data || tx.notes;
 
@@ -245,13 +254,22 @@ export function TransactionList({
                       </p>
                       <div className='text-muted-foreground flex items-center gap-1.5 text-xs'>
                         <span className='truncate'>{accountName}</span>
-                        {categoryName && (
+                        {categoryInfo && (
                           <>
                             <span>·</span>
                             <Badge
                               variant='secondary'
-                              className='h-5 max-w-[100px] shrink-0 truncate px-1.5 text-[10px]'>
-                              {categoryName}
+                              className='h-5 shrink-0 px-1.5 text-[10px]'
+                              style={
+                                categoryInfo.color
+                                  ? {
+                                      backgroundColor: `${categoryInfo.color}20`,
+                                      color: categoryInfo.color,
+                                      borderColor: `${categoryInfo.color}40`,
+                                    }
+                                  : undefined
+                              }>
+                              {categoryInfo.name}
                             </Badge>
                           </>
                         )}

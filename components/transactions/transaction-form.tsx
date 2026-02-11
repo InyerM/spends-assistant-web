@@ -1,11 +1,12 @@
 'use client';
 
-import { useEffect, Fragment, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ConfirmDeleteDialog } from '@/components/shared/confirm-delete-dialog';
 import {
@@ -21,13 +22,11 @@ import { Textarea } from '@/components/ui/textarea';
 import {
   Select,
   SelectContent,
-  SelectGroup,
   SelectItem,
-  SelectLabel,
-  SelectSeparator,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { CategorySelectItems } from '@/components/shared/category-select-items';
 import { useAccounts } from '@/lib/api/queries/account.queries';
 import { useCategories } from '@/lib/api/queries/category.queries';
 import {
@@ -36,7 +35,7 @@ import {
   useDeleteTransaction,
 } from '@/lib/api/mutations/transaction.mutations';
 import { getCurrentColombiaTimes } from '@/lib/utils/date';
-import type { Transaction, Category } from '@/types';
+import type { Transaction } from '@/types';
 
 const formSchema = z.object({
   date: z.string().min(1, 'Date is required'),
@@ -69,9 +68,11 @@ export function TransactionForm({
   const updateMutation = useUpdateTransaction();
   const deleteMutation = useDeleteTransaction();
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const [addAnother, setAddAnother] = useState(false);
+  const addAnotherRef = useRef(false);
 
   const colombiaTimes = getCurrentColombiaTimes();
-  const isEditing = !!transaction;
+  const isEditing = !!transaction?.id;
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -142,16 +143,40 @@ export function TransactionForm({
           transfer_to_account_id: values.transfer_to_account_id ?? undefined,
         });
         toast.success('Transaction updated');
+        onOpenChange(false);
       } else {
+        const aiSource = transaction?.source === 'web-ai' ? transaction : null;
         await createMutation.mutateAsync({
           ...values,
-          source: 'web',
+          source: aiSource ? 'web-ai' : 'web',
           category_id: values.category_id ?? undefined,
           transfer_to_account_id: values.transfer_to_account_id ?? undefined,
+          ...(aiSource
+            ? {
+                raw_text: aiSource.raw_text ?? undefined,
+                confidence: aiSource.confidence ?? undefined,
+                parsed_data: aiSource.parsed_data ?? undefined,
+              }
+            : {}),
         });
         toast.success('Transaction created');
+        if (addAnotherRef.current) {
+          const times = getCurrentColombiaTimes();
+          form.reset({
+            date: times.date,
+            time: times.time,
+            amount: 0,
+            description: '',
+            notes: '',
+            type: values.type,
+            account_id: values.account_id,
+            category_id: values.category_id,
+            transfer_to_account_id: undefined,
+          });
+          return;
+        }
+        onOpenChange(false);
       }
-      onOpenChange(false);
       form.reset();
     } catch {
       toast.error(isEditing ? 'Failed to update transaction' : 'Failed to create transaction');
@@ -170,10 +195,7 @@ export function TransactionForm({
     }
   }
 
-  const filteredCategories = categories?.filter((c) => c.type === watchType) ?? [];
-  const parentCategories = filteredCategories.filter((c) => !c.parent_id);
-  const getChildren = (parentId: string): Category[] =>
-    filteredCategories.filter((c) => c.parent_id === parentId);
+  const allCategories = categories ?? [];
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -219,7 +241,7 @@ export function TransactionForm({
               render={({ field }): React.ReactElement => (
                 <FormItem>
                   <FormLabel>Type</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder='Select type' />
@@ -277,7 +299,7 @@ export function TransactionForm({
               render={({ field }): React.ReactElement => (
                 <FormItem>
                   <FormLabel>Account</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder='Select account' />
@@ -303,7 +325,7 @@ export function TransactionForm({
                 render={({ field }): React.ReactElement => (
                   <FormItem>
                     <FormLabel>Transfer To</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder='Select destination account' />
@@ -329,44 +351,14 @@ export function TransactionForm({
               render={({ field }): React.ReactElement => (
                 <FormItem>
                   <FormLabel>Category</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder='Select category' />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {parentCategories.map((parent, idx) => {
-                        const children = getChildren(parent.id);
-                        if (children.length === 0) {
-                          return (
-                            <SelectItem key={parent.id} value={parent.id}>
-                              {parent.icon ? `${parent.icon} ` : ''}
-                              {parent.name}
-                            </SelectItem>
-                          );
-                        }
-                        return (
-                          <Fragment key={parent.id}>
-                            {idx > 0 && <SelectSeparator />}
-                            <SelectGroup>
-                              <SelectLabel>
-                                {parent.icon ? `${parent.icon} ` : ''}
-                                {parent.name}
-                              </SelectLabel>
-                              <SelectItem value={parent.id} className='pl-4'>
-                                All {parent.name}
-                              </SelectItem>
-                              {children.map((child) => (
-                                <SelectItem key={child.id} value={child.id} className='pl-6'>
-                                  {child.icon ? `${child.icon} ` : ''}
-                                  {child.name}
-                                </SelectItem>
-                              ))}
-                            </SelectGroup>
-                          </Fragment>
-                        );
-                      })}
+                      <CategorySelectItems categories={allCategories} filterType={watchType} />
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -397,6 +389,19 @@ export function TransactionForm({
                   onClick={(): void => setConfirmDeleteOpen(true)}>
                   Delete
                 </Button>
+              )}
+              {!isEditing && (
+                <label className='flex flex-1 items-center gap-2'>
+                  <Checkbox
+                    checked={addAnother}
+                    onCheckedChange={(checked): void => {
+                      const val = checked === true;
+                      setAddAnother(val);
+                      addAnotherRef.current = val;
+                    }}
+                  />
+                  <span className='text-muted-foreground text-sm'>Add another</span>
+                </label>
               )}
               <div className='flex gap-3'>
                 <Button type='button' variant='outline' onClick={(): void => onOpenChange(false)}>
