@@ -124,10 +124,27 @@ export async function applyAutomationRules(
   if (!rules) return transaction;
 
   let result = transaction;
+  const appliedRules: { rule_id: string; rule_name: string; actions: Record<string, unknown> }[] =
+    [];
+
   for (const rule of rules as AutomationRule[]) {
     if (matchesConditions(result, rule.conditions)) {
-      result = applyActions(result, rule.actions);
+      const actions = { ...rule.actions };
+      if (rule.transfer_to_account_id && !actions.link_to_account) {
+        actions.link_to_account = rule.transfer_to_account_id;
+      }
+      result = applyActions(result, actions);
+      appliedRules.push({
+        rule_id: rule.id,
+        rule_name: rule.name,
+        actions: rule.actions as Record<string, unknown>,
+      });
     }
   }
+
+  if (appliedRules.length > 0) {
+    result.applied_rules = appliedRules;
+  }
+
   return result;
 }

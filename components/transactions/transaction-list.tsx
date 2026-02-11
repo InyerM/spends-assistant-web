@@ -113,7 +113,7 @@ function MetadataField({
     <div>
       <p className='text-muted-foreground text-xs font-medium'>{label}</p>
       {isObject ? (
-        <pre className='bg-card-overlay mt-1 max-h-[200px] overflow-auto rounded-md p-2 text-xs'>
+        <pre className='bg-card-overlay mt-1 max-h-[150px] overflow-auto rounded-md p-2 text-xs'>
           {JSON.stringify(value, null, 2)}
         </pre>
       ) : (
@@ -320,12 +320,12 @@ export function TransactionList({
         onOpenChange={(o): void => {
           if (!o) setMetadataTx(null);
         }}>
-        <DialogContent className='border-border bg-card max-h-[80vh] overflow-y-auto sm:max-w-[500px]'>
+        <DialogContent className='border-border bg-card max-h-[80vh] overflow-hidden sm:max-w-[500px]'>
           <DialogHeader>
             <DialogTitle>Transaction Details</DialogTitle>
           </DialogHeader>
           {metadataTx && (
-            <div className='space-y-4'>
+            <div className='min-h-0 space-y-4 overflow-y-auto'>
               <div className='grid grid-cols-2 gap-4'>
                 <MetadataField label='Source' value={metadataTx.source} />
                 <MetadataField label='Confidence' value={metadataTx.confidence} />

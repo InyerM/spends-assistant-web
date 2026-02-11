@@ -90,7 +90,6 @@
 /* AI gradient button */
 .ai-gradient-btn {
   position: relative;
-  background: linear-gradient(135deg, rgba(168, 85, 247, 0.1), rgba(59, 130, 246, 0.1));
 }
 
 .ai-gradient-btn::before {

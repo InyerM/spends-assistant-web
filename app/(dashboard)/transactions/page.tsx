@@ -23,7 +23,6 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { ImportDialog } from '@/components/transactions/import-dialog';
-import { AiParseDialog } from '@/components/transactions/ai-parse-dialog';
 import { exportTransactionsCsv } from '@/lib/utils/export';
 import { useTransactions } from '@/lib/api/queries/transaction.queries';
 import { useTransactionFormStore } from '@/lib/stores/transaction-form.store';
@@ -45,11 +44,10 @@ function getInitialDates(): { date_from: string; date_to: string } {
 export default function TransactionsPage(): React.ReactElement {
   const [filters, setFilters] = useState<ListFilters>(getInitialDates);
   const [importOpen, setImportOpen] = useState(false);
-  const [aiParseOpen, setAiParseOpen] = useState(false);
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkEditOpen, setBulkEditOpen] = useState(false);
-  const { openNew, openWith } = useTransactionFormStore();
+  const { openNew, openWith, openAi } = useTransactionFormStore();
 
   const { data: exportData } = useTransactions({ ...filters, limit: 500 });
 
@@ -144,8 +142,8 @@ export default function TransactionsPage(): React.ReactElement {
             <Button
               variant='outline'
               size='sm'
-              className='ai-gradient-btn cursor-pointer border-purple-500/50 text-purple-400 hover:border-purple-400 hover:text-purple-300'
-              onClick={(): void => setAiParseOpen(true)}>
+              className='ai-gradient-btn cursor-pointer border-purple-500/50 bg-purple-500/10 text-purple-400 hover:border-purple-400 hover:text-purple-300'
+              onClick={openAi}>
               <Sparkles className='h-4 w-4 sm:mr-1.5' />
               <span className='hidden sm:inline'>AI</span>
             </Button>
@@ -191,8 +189,6 @@ export default function TransactionsPage(): React.ReactElement {
       />
 
       <ImportDialog open={importOpen} onOpenChange={setImportOpen} />
-
-      <AiParseDialog open={aiParseOpen} onOpenChange={setAiParseOpen} />
 
       <BulkEditDialog
         open={bulkEditOpen}

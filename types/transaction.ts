@@ -1,5 +1,11 @@
 export type TransactionType = 'expense' | 'income' | 'transfer';
 
+export interface AppliedRule {
+  rule_id: string;
+  rule_name: string;
+  actions: Record<string, unknown>;
+}
+
 export interface Transaction {
   id: string;
   date: string;
@@ -20,6 +26,7 @@ export interface Transaction {
   reconciliation_id: string | null;
   raw_text: string | null;
   parsed_data: Record<string, unknown> | null;
+  applied_rules: AppliedRule[] | null;
   deleted_at: string | null;
   created_at: string;
   updated_at: string;
@@ -41,6 +48,7 @@ export interface CreateTransactionInput {
   transfer_id?: string;
   raw_text?: string;
   parsed_data?: Record<string, unknown>;
+  applied_rules?: AppliedRule[];
 }
 
 export interface UpdateTransactionInput extends Partial<CreateTransactionInput> {

@@ -4,12 +4,15 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
-import { Loader2, Sparkles, Pencil } from 'lucide-react';
+import { Loader2, Sparkles, Pencil, Zap } from 'lucide-react';
 import { useCreateTransaction } from '@/lib/api/mutations/transaction.mutations';
+import { useAccounts } from '@/lib/api/queries/account.queries';
+import { useCategories } from '@/lib/api/queries/category.queries';
 import { useTransactionFormStore } from '@/lib/stores/transaction-form.store';
 import { getCurrentColombiaTimes } from '@/lib/utils/date';
-import type { Transaction } from '@/types';
+import type { AppliedRule, Transaction } from '@/types';
 
 interface ParsedExpense {
   amount: number;
@@ -28,7 +31,11 @@ interface ParseResponse {
   resolved: {
     account_id?: string;
     category_id?: string;
+    transfer_to_account_id?: string;
+    transfer_id?: string;
+    type?: string;
   };
+  applied_rules: AppliedRule[];
 }
 
 function parseDateString(dateStr: string): string {
@@ -43,6 +50,10 @@ function parseTimeString(timeStr: string): string {
   return timeStr.length === 5 ? `${timeStr}:00` : timeStr;
 }
 
+function findCategoryName(categories: { id: string; name: string }[], id: string): string | null {
+  return categories.find((c) => c.id === id)?.name ?? null;
+}
+
 interface AiParseDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -53,6 +64,8 @@ export function AiParseDialog({ open, onOpenChange }: AiParseDialogProps): React
   const [parsing, setParsing] = useState(false);
   const [result, setResult] = useState<ParseResponse | null>(null);
   const createMutation = useCreateTransaction();
+  const { data: accounts } = useAccounts();
+  const { data: categories } = useCategories();
   const { openWith } = useTransactionFormStore();
 
   function resetState(): void {
@@ -74,6 +87,8 @@ export function AiParseDialog({ open, onOpenChange }: AiParseDialogProps): React
     account_id: string;
     category_id: string | undefined;
     payment_method: string | undefined;
+    transfer_to_account_id: string | undefined;
+    transfer_id: string | undefined;
   } | null {
     if (!result) return null;
     const { parsed, resolved } = result;
@@ -81,8 +96,7 @@ export function AiParseDialog({ open, onOpenChange }: AiParseDialogProps): React
 
     const date = parsed.original_date ? parseDateString(parsed.original_date) : times.date;
     const time = parsed.original_time ? parseTimeString(parsed.original_time) : times.time;
-    const type =
-      parsed.type === 'transfer' ? 'transfer' : parsed.type === 'income' ? 'income' : 'expense';
+    const type = resolved.type ?? parsed.type ?? 'expense';
 
     return {
       date,
@@ -93,6 +107,8 @@ export function AiParseDialog({ open, onOpenChange }: AiParseDialogProps): React
       account_id: resolved.account_id ?? '',
       category_id: resolved.category_id,
       payment_method: parsed.payment_type,
+      transfer_to_account_id: resolved.transfer_to_account_id,
+      transfer_id: resolved.transfer_id,
     };
   }
 
@@ -131,9 +147,10 @@ export function AiParseDialog({ open, onOpenChange }: AiParseDialogProps): React
         raw_text: text,
         confidence: result.parsed.confidence,
         parsed_data: result.parsed as unknown as Record<string, unknown>,
+        applied_rules: result.applied_rules.length > 0 ? result.applied_rules : undefined,
       });
       toast.success('Transaction created from AI');
-      resetState();
+      handleClose(false);
     } catch {
       toast.error('Failed to create transaction');
     }
@@ -151,6 +168,7 @@ export function AiParseDialog({ open, onOpenChange }: AiParseDialogProps): React
         raw_text: text,
         confidence: result.parsed.confidence,
         parsed_data: result.parsed as unknown as Record<string, unknown>,
+        applied_rules: result.applied_rules.length > 0 ? result.applied_rules : undefined,
       });
       toast.success('Transaction created from AI');
       resetState();
@@ -163,7 +181,6 @@ export function AiParseDialog({ open, onOpenChange }: AiParseDialogProps): React
     const fields = buildTransactionFields();
     if (!fields || !result) return;
 
-    // Open the TransactionForm pre-filled with parsed data as a partial Transaction
     const partial = {
       ...fields,
       notes: '',
@@ -171,11 +188,32 @@ export function AiParseDialog({ open, onOpenChange }: AiParseDialogProps): React
       raw_text: text,
       confidence: result.parsed.confidence,
       parsed_data: result.parsed as unknown as Record<string, unknown>,
+      applied_rules: result.applied_rules.length > 0 ? result.applied_rules : undefined,
     } as unknown as Transaction;
 
     openWith(partial);
     handleClose(false);
   }
+
+  const hasRules = result && result.applied_rules.length > 0;
+  const resolvedType = result?.resolved.type ?? result?.parsed.type;
+
+  // Resolve names from UUIDs
+  const resolvedCategoryName = result?.resolved.category_id
+    ? findCategoryName(categories ?? [], result.resolved.category_id)
+    : null;
+  const resolvedAccountName = result?.resolved.transfer_to_account_id
+    ? accounts?.find((a) => a.id === result.resolved.transfer_to_account_id)?.name
+    : null;
+  const sourceAccountName = result?.resolved.account_id
+    ? accounts?.find((a) => a.id === result.resolved.account_id)?.name
+    : null;
+
+  // Check if category was overridden by a rule
+  const categoryOverridden =
+    hasRules &&
+    resolvedCategoryName &&
+    result.parsed.category !== resolvedCategoryName.toLowerCase().replace(/\s+/g, '-');
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -232,9 +270,33 @@ export function AiParseDialog({ open, onOpenChange }: AiParseDialogProps): React
                   </div>
                   <div>
                     <span className='text-muted-foreground text-xs'>Category</span>
-                    <p>{result.parsed.category}</p>
+                    {categoryOverridden ? (
+                      <div>
+                        <p className='text-muted-foreground text-xs line-through'>
+                          {result.parsed.category}
+                        </p>
+                        <p className='flex items-center gap-1'>
+                          <Zap className='text-warning h-3 w-3' />
+                          {resolvedCategoryName}
+                        </p>
+                      </div>
+                    ) : (
+                      <p>{resolvedCategoryName ?? result.parsed.category}</p>
+                    )}
                   </div>
-                  {result.parsed.bank && (
+                  {resolvedType && (
+                    <div>
+                      <span className='text-muted-foreground text-xs'>Type</span>
+                      <p className='capitalize'>{resolvedType}</p>
+                    </div>
+                  )}
+                  {sourceAccountName && (
+                    <div>
+                      <span className='text-muted-foreground text-xs'>Account</span>
+                      <p>{sourceAccountName}</p>
+                    </div>
+                  )}
+                  {result.parsed.bank && !sourceAccountName && (
                     <div>
                       <span className='text-muted-foreground text-xs'>Bank</span>
                       <p>{result.parsed.bank}</p>
@@ -252,7 +314,57 @@ export function AiParseDialog({ open, onOpenChange }: AiParseDialogProps): React
                       <p>{result.parsed.original_time}</p>
                     </div>
                   )}
+                  {resolvedAccountName && (
+                    <div className='col-span-2'>
+                      <span className='text-muted-foreground text-xs'>Transfer To</span>
+                      <p className='flex items-center gap-1'>
+                        <Zap className='text-warning h-3 w-3' />
+                        {resolvedAccountName}
+                      </p>
+                    </div>
+                  )}
                 </div>
+
+                {hasRules && (
+                  <div className='border-border border-t pt-2'>
+                    <div className='mb-1 flex items-center gap-1.5'>
+                      <Zap className='text-warning h-3.5 w-3.5' />
+                      <span className='text-muted-foreground text-xs font-medium'>
+                        Automation rules applied
+                      </span>
+                    </div>
+                    <div className='space-y-1'>
+                      {result.applied_rules.map((rule) => {
+                        const actions = rule.actions as Record<string, string | undefined>;
+                        const details: string[] = [];
+                        if (actions.set_type) details.push(`type: ${actions.set_type}`);
+                        if (actions.set_category) {
+                          const name = findCategoryName(categories ?? [], actions.set_category);
+                          details.push(`category: ${name ?? actions.set_category}`);
+                        }
+                        if (actions.link_to_account) {
+                          const name = accounts?.find(
+                            (a) => a.id === actions.link_to_account,
+                          )?.name;
+                          details.push(`transfer to: ${name ?? 'account'}`);
+                        }
+                        return (
+                          <div key={rule.rule_id}>
+                            <Badge variant='secondary' className='text-xs'>
+                              {rule.rule_name}
+                            </Badge>
+                            {details.length > 0 && (
+                              <p className='text-muted-foreground mt-0.5 text-xs'>
+                                {details.join(' · ')}
+                              </p>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
                 {!result.resolved.account_id && (
                   <p className='text-destructive text-xs'>
                     No matching account found. Use &quot;Edit &amp; Create&quot; to select one.

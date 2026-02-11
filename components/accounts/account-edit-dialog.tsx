@@ -139,9 +139,8 @@ export function AccountEditDialog({
     }
     try {
       await updateMutation.mutateAsync({ id: account.id, balance: target });
-      toast.success('Balance adjusted');
-      setAdjustMode('none');
-      setNewBalance('');
+      toast.success(`Balance set to ${formatCurrency(target, account.currency)}`);
+      onOpenChange(false);
     } catch {
       toast.error('Failed to adjust balance');
     }
@@ -170,9 +169,10 @@ export function AccountEditDialog({
         type: diff > 0 ? 'income' : 'expense',
         source: 'web',
       });
-      toast.success('Adjustment transaction created');
-      setAdjustMode('none');
-      setNewBalance('');
+      toast.success(
+        `Adjustment transaction created (${diff > 0 ? '+' : ''}${formatCurrency(diff, account.currency)})`,
+      );
+      onOpenChange(false);
     } catch {
       toast.error('Failed to create adjustment');
     }

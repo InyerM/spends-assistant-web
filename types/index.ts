@@ -1,6 +1,7 @@
 export type {
   Transaction,
   TransactionType,
+  AppliedRule,
   CreateTransactionInput,
   UpdateTransactionInput,
   BulkUpdateTransactionInput,

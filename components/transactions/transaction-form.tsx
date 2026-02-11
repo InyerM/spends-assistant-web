@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ConfirmDeleteDialog } from '@/components/shared/confirm-delete-dialog';
+import { Sparkles } from 'lucide-react';
 import {
   Form,
   FormControl,
@@ -35,6 +36,7 @@ import {
   useDeleteTransaction,
 } from '@/lib/api/mutations/transaction.mutations';
 import { getCurrentColombiaTimes } from '@/lib/utils/date';
+import { useTransactionFormStore } from '@/lib/stores/transaction-form.store';
 import type { Transaction } from '@/types';
 
 const formSchema = z.object({
@@ -67,6 +69,7 @@ export function TransactionForm({
   const createMutation = useCreateTransaction();
   const updateMutation = useUpdateTransaction();
   const deleteMutation = useDeleteTransaction();
+  const { openAi } = useTransactionFormStore();
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [addAnother, setAddAnother] = useState(false);
   const addAnotherRef = useRef(false);
@@ -203,6 +206,16 @@ export function TransactionForm({
         <DialogHeader>
           <DialogTitle>{isEditing ? 'Edit Transaction' : 'New Transaction'}</DialogTitle>
         </DialogHeader>
+
+        {!isEditing && !transaction && (
+          <button
+            type='button'
+            className='ai-gradient-btn flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg border border-purple-500/50 px-3 py-2 text-sm text-purple-400 transition-colors hover:border-purple-400 hover:text-purple-300'
+            onClick={openAi}>
+            <Sparkles className='h-4 w-4' />
+            Or create with AI
+          </button>
+        )}
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className='space-y-4'>

@@ -160,6 +160,9 @@ export function AutomationForm({
     if (values.add_note?.trim()) {
       actions.add_note = values.add_note.trim();
     }
+    if (values.transfer_to_account_id && values.transfer_to_account_id !== 'none') {
+      actions.link_to_account = values.transfer_to_account_id;
+    }
 
     return {
       name: values.name,
