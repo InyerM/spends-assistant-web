@@ -27,7 +27,8 @@ import {
 } from '@/components/ui/select';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Info } from 'lucide-react';
-import { CategorySelectItems } from '@/components/shared/category-select-items';
+import { SearchableSelect } from '@/components/shared/searchable-select';
+import { buildAccountItems, buildCategoryItems } from '@/lib/utils/select-items';
 import { useAccounts } from '@/lib/api/queries/account.queries';
 import { useCategories } from '@/lib/api/queries/category.queries';
 import {
@@ -451,17 +452,18 @@ export function AutomationForm({
                   render={({ field }): React.ReactElement => (
                     <FormItem>
                       <FormLabel>Set Category</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value ?? 'none'}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder='None' />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value='none'>None</SelectItem>
-                          <CategorySelectItems categories={categories ?? []} />
-                        </SelectContent>
-                      </Select>
+                      <FormControl>
+                        <SearchableSelect
+                          value={field.value ?? 'none'}
+                          onValueChange={field.onChange}
+                          placeholder='None'
+                          searchPlaceholder='Search categories...'
+                          items={[
+                            { value: 'none', label: 'None' },
+                            ...buildCategoryItems(categories ?? []),
+                          ]}
+                        />
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -475,21 +477,18 @@ export function AutomationForm({
                         Set Account
                         <InfoTip text='Override the source account. Useful when the AI picks the wrong account from SMS.' />
                       </FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value ?? 'none'}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder='None' />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value='none'>None</SelectItem>
-                          {accounts?.map((a) => (
-                            <SelectItem key={a.id} value={a.id}>
-                              {a.icon ?? '💳'} {a.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <FormControl>
+                        <SearchableSelect
+                          value={field.value ?? 'none'}
+                          onValueChange={field.onChange}
+                          placeholder='None'
+                          searchPlaceholder='Search accounts...'
+                          items={[
+                            { value: 'none', label: 'None' },
+                            ...buildAccountItems(accounts ?? []),
+                          ]}
+                        />
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -503,21 +502,18 @@ export function AutomationForm({
                         Transfer To Account
                         <InfoTip text='Link matched transactions to a destination account, creating a transfer pair.' />
                       </FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value ?? 'none'}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder='None' />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value='none'>None</SelectItem>
-                          {accounts?.map((a) => (
-                            <SelectItem key={a.id} value={a.id}>
-                              {a.icon ?? '💳'} {a.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <FormControl>
+                        <SearchableSelect
+                          value={field.value ?? 'none'}
+                          onValueChange={field.onChange}
+                          placeholder='None'
+                          searchPlaceholder='Search accounts...'
+                          items={[
+                            { value: 'none', label: 'None' },
+                            ...buildAccountItems(accounts ?? []),
+                          ]}
+                        />
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}

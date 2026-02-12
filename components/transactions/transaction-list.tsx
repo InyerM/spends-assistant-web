@@ -14,7 +14,14 @@ import { useCategories } from '@/lib/api/queries/category.queries';
 import { useAccounts } from '@/lib/api/queries/account.queries';
 import { formatCurrency } from '@/lib/utils/formatting';
 import { formatTimeForDisplay } from '@/lib/utils/date';
-import { ArrowDownLeft, ArrowUpRight, ArrowRightLeft, Loader2, Info } from 'lucide-react';
+import {
+  ArrowDownLeft,
+  ArrowUpRight,
+  ArrowRightLeft,
+  Loader2,
+  Info,
+  AlertTriangle,
+} from 'lucide-react';
 import { useDeleteTransaction } from '@/lib/api/mutations/transaction.mutations';
 import { SwipeableRow } from '@/components/transactions/swipeable-row';
 import { ConfirmDeleteDialog } from '@/components/shared/confirm-delete-dialog';
@@ -265,9 +272,16 @@ export function TransactionList({
                     </div>
 
                     <div className='min-w-0 flex-1'>
-                      <p className='text-foreground truncate text-sm font-medium'>
-                        {tx.description}
-                      </p>
+                      <div className='flex items-center gap-1.5'>
+                        <p className='text-foreground truncate text-sm font-medium'>
+                          {tx.description}
+                        </p>
+                        {tx.duplicate_status === 'pending_review' && (
+                          <span title='Possible duplicate'>
+                            <AlertTriangle className='text-warning h-3.5 w-3.5 shrink-0' />
+                          </span>
+                        )}
+                      </div>
                       <div className='text-muted-foreground flex items-center gap-1.5 text-xs'>
                         <span className='truncate'>{accountName}</span>
                         {categoryInfo && (

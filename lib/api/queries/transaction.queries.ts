@@ -39,6 +39,7 @@ async function fetchTransactions(filters: TransactionFilters): Promise<Transacti
   if (filters.search) params.set('search', filters.search);
   if (filters.sort_by) params.set('sort_by', filters.sort_by);
   if (filters.sort_order) params.set('sort_order', filters.sort_order);
+  if (filters.duplicate_status) params.set('duplicate_status', filters.duplicate_status);
 
   const res = await fetch(`/api/transactions?${params.toString()}`);
   if (!res.ok) throw new Error('Failed to fetch transactions');

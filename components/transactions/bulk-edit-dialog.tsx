@@ -12,7 +12,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { CategorySelectItems } from '@/components/shared/category-select-items';
+import { SearchableSelect } from '@/components/shared/searchable-select';
+import { buildAccountItems, buildCategoryItems } from '@/lib/utils/select-items';
 import { useAccounts } from '@/lib/api/queries/account.queries';
 import { useCategories } from '@/lib/api/queries/category.queries';
 import { useBulkUpdateTransactions } from '@/lib/api/mutations/transaction.mutations';
@@ -107,35 +108,31 @@ export function BulkEditDialog({
 
           <div className='space-y-2'>
             <label className='text-sm font-medium'>Account</label>
-            <Select value={accountId} onValueChange={setAccountId}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={UNCHANGED}>No change</SelectItem>
-                <SelectSeparator />
-                {accounts?.map((account) => (
-                  <SelectItem key={account.id} value={account.id}>
-                    {account.icon ?? '💳'} {account.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <SearchableSelect
+              value={accountId}
+              onValueChange={setAccountId}
+              placeholder='No change'
+              searchPlaceholder='Search accounts...'
+              items={[
+                { value: UNCHANGED, label: 'No change' },
+                ...buildAccountItems(accounts ?? []),
+              ]}
+            />
           </div>
 
           <div className='space-y-2'>
             <label className='text-sm font-medium'>Category</label>
-            <Select value={categoryId} onValueChange={(v): void => setCategoryId(v)}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={UNCHANGED}>No change</SelectItem>
-                <SelectItem value={NONE}>None (remove category)</SelectItem>
-                <SelectSeparator />
-                <CategorySelectItems categories={categories ?? []} filterType={currentType} />
-              </SelectContent>
-            </Select>
+            <SearchableSelect
+              value={categoryId}
+              onValueChange={setCategoryId}
+              placeholder='No change'
+              searchPlaceholder='Search categories...'
+              items={[
+                { value: UNCHANGED, label: 'No change' },
+                { value: NONE, label: 'None (remove category)' },
+                ...buildCategoryItems(categories ?? [], currentType),
+              ]}
+            />
           </div>
 
           <div className='flex justify-end gap-3 pt-4'>

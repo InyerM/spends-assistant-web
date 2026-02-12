@@ -91,6 +91,14 @@
   }
 }
 
+@utility scrollbar-subtle {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
+  &:hover {
+    scrollbar-color: color-mix(in srgb, var(--color-muted-foreground) 40%, transparent) transparent;
+  }
+}
+
 /* AI gradient button */
 .ai-gradient-btn {
   position: relative;

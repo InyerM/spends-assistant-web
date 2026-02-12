@@ -27,6 +27,8 @@ export interface Transaction {
   raw_text: string | null;
   parsed_data: Record<string, unknown> | null;
   applied_rules: AppliedRule[] | null;
+  duplicate_status: 'pending_review' | 'confirmed' | null;
+  duplicate_of: string | null;
   deleted_at: string | null;
   created_at: string;
   updated_at: string;
@@ -49,6 +51,8 @@ export interface CreateTransactionInput {
   raw_text?: string;
   parsed_data?: Record<string, unknown>;
   applied_rules?: AppliedRule[];
+  duplicate_status?: 'pending_review' | 'confirmed' | null;
+  duplicate_of?: string;
 }
 
 export interface UpdateTransactionInput extends Partial<CreateTransactionInput> {
@@ -79,4 +83,5 @@ export interface TransactionFilters {
   limit?: number;
   sort_by?: 'date' | 'amount';
   sort_order?: 'asc' | 'desc';
+  duplicate_status?: 'pending_review';
 }

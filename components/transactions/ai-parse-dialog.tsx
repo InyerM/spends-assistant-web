@@ -7,12 +7,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Loader2, Sparkles, Pencil, Zap } from 'lucide-react';
-import { useCreateTransaction } from '@/lib/api/mutations/transaction.mutations';
+import { useCreateTransaction, DuplicateError } from '@/lib/api/mutations/transaction.mutations';
+import { DuplicateWarningDialog } from '@/components/transactions/duplicate-warning-dialog';
 import { useAccounts } from '@/lib/api/queries/account.queries';
 import { useCategories } from '@/lib/api/queries/category.queries';
 import { useTransactionFormStore } from '@/lib/stores/transaction-form.store';
 import { getCurrentColombiaTimes } from '@/lib/utils/date';
-import type { AppliedRule, Transaction } from '@/types';
+import type { AppliedRule, CreateTransactionInput, Transaction } from '@/types';
 
 interface ParsedExpense {
   amount: number;
@@ -72,6 +73,10 @@ export function AiParseDialog({ open, onOpenChange }: AiParseDialogProps): React
   const { data: accounts } = useAccounts();
   const { data: categories } = useCategories();
   const { openWith } = useTransactionFormStore();
+  const [duplicateConflict, setDuplicateConflict] = useState<{
+    match: Transaction;
+    input: CreateTransactionInput;
+  } | null>(null);
 
   function resetState(): void {
     setText('');
@@ -158,7 +163,11 @@ export function AiParseDialog({ open, onOpenChange }: AiParseDialogProps): React
       });
       toast.success('Transaction created from AI');
       handleClose(false);
-    } catch {
+    } catch (err) {
+      if (err instanceof DuplicateError) {
+        setDuplicateConflict({ match: err.match, input: err.input });
+        return;
+      }
       toast.error('Failed to create transaction');
     }
   }
@@ -179,7 +188,11 @@ export function AiParseDialog({ open, onOpenChange }: AiParseDialogProps): React
       });
       toast.success('Transaction created from AI');
       resetState();
-    } catch {
+    } catch (err) {
+      if (err instanceof DuplicateError) {
+        setDuplicateConflict({ match: err.match, input: err.input });
+        return;
+      }
       toast.error('Failed to create transaction');
     }
   }
@@ -448,6 +461,21 @@ export function AiParseDialog({ open, onOpenChange }: AiParseDialogProps): React
           )}
         </div>
       </DialogContent>
+
+      {duplicateConflict && (
+        <DuplicateWarningDialog
+          open={!!duplicateConflict}
+          onOpenChange={(o): void => {
+            if (!o) setDuplicateConflict(null);
+          }}
+          existingTransaction={duplicateConflict.match}
+          newInput={duplicateConflict.input}
+          onResolved={(): void => {
+            setDuplicateConflict(null);
+            handleClose(false);
+          }}
+        />
+      )}
     </Dialog>
   );
 }

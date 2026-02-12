@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ConfirmDeleteDialog } from '@/components/shared/confirm-delete-dialog';
-import { Sparkles } from 'lucide-react';
+import { Sparkles, AlertTriangle } from 'lucide-react';
 import {
   Form,
   FormControl,
@@ -27,17 +27,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { CategorySelectItems } from '@/components/shared/category-select-items';
+import { SearchableSelect } from '@/components/shared/searchable-select';
+import { buildAccountItems, buildCategoryItems } from '@/lib/utils/select-items';
 import { useAccounts } from '@/lib/api/queries/account.queries';
 import { useCategories } from '@/lib/api/queries/category.queries';
 import {
   useCreateTransaction,
   useUpdateTransaction,
   useDeleteTransaction,
+  useResolveDuplicate,
+  DuplicateError,
 } from '@/lib/api/mutations/transaction.mutations';
+import { DuplicateWarningDialog } from '@/components/transactions/duplicate-warning-dialog';
 import { getCurrentColombiaTimes } from '@/lib/utils/date';
 import { useTransactionFormStore } from '@/lib/stores/transaction-form.store';
-import type { Transaction } from '@/types';
+import type { Transaction, CreateTransactionInput } from '@/types';
 
 const formSchema = z.object({
   date: z.string().min(1, 'Date is required'),
@@ -69,10 +73,15 @@ export function TransactionForm({
   const createMutation = useCreateTransaction();
   const updateMutation = useUpdateTransaction();
   const deleteMutation = useDeleteTransaction();
+  const resolveDuplicate = useResolveDuplicate();
   const { openAi } = useTransactionFormStore();
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [addAnother, setAddAnother] = useState(false);
   const addAnotherRef = useRef(false);
+  const [duplicateConflict, setDuplicateConflict] = useState<{
+    match: Transaction;
+    input: CreateTransactionInput;
+  } | null>(null);
 
   const colombiaTimes = getCurrentColombiaTimes();
   const isEditing = !!transaction?.id;
@@ -181,7 +190,11 @@ export function TransactionForm({
         onOpenChange(false);
       }
       form.reset();
-    } catch {
+    } catch (err) {
+      if (err instanceof DuplicateError) {
+        setDuplicateConflict({ match: err.match, input: err.input });
+        return;
+      }
       toast.error(isEditing ? 'Failed to update transaction' : 'Failed to create transaction');
     }
   }
@@ -206,6 +219,57 @@ export function TransactionForm({
         <DialogHeader>
           <DialogTitle>{isEditing ? 'Edit Transaction' : 'New Transaction'}</DialogTitle>
         </DialogHeader>
+
+        {isEditing && transaction.duplicate_status === 'pending_review' && (
+          <div className='border-warning/30 bg-warning/5 flex items-start gap-3 rounded-lg border p-3'>
+            <AlertTriangle className='text-warning mt-0.5 h-4 w-4 shrink-0' />
+            <div className='flex-1'>
+              <p className='text-sm font-medium'>Possible duplicate</p>
+              <p className='text-muted-foreground text-xs'>
+                This transaction was flagged as a possible duplicate.
+              </p>
+              <div className='mt-2 flex gap-2'>
+                <Button
+                  type='button'
+                  size='sm'
+                  variant='outline'
+                  disabled={resolveDuplicate.isPending}
+                  onClick={(): void => {
+                    resolveDuplicate.mutate(
+                      { id: transaction.id, action: 'keep' },
+                      {
+                        onSuccess: () => {
+                          toast.success('Marked as not duplicate');
+                          onOpenChange(false);
+                        },
+                      },
+                    );
+                  }}>
+                  Keep both
+                </Button>
+                <Button
+                  type='button'
+                  size='sm'
+                  variant='ghost'
+                  className='text-destructive'
+                  disabled={resolveDuplicate.isPending}
+                  onClick={(): void => {
+                    resolveDuplicate.mutate(
+                      { id: transaction.id, action: 'delete' },
+                      {
+                        onSuccess: () => {
+                          toast.success('Duplicate deleted');
+                          onOpenChange(false);
+                        },
+                      },
+                    );
+                  }}>
+                  Delete this one
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {!isEditing && !transaction && (
           <button
@@ -318,20 +382,15 @@ export function TransactionForm({
               render={({ field }): React.ReactElement => (
                 <FormItem>
                   <FormLabel>Account</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder='Select account' />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {accounts?.map((account) => (
-                        <SelectItem key={account.id} value={account.id}>
-                          {account.icon ?? '💳'} {account.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <FormControl>
+                    <SearchableSelect
+                      value={field.value}
+                      onValueChange={field.onChange}
+                      placeholder='Select account'
+                      searchPlaceholder='Search accounts...'
+                      items={buildAccountItems(accounts ?? [])}
+                    />
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
@@ -344,20 +403,15 @@ export function TransactionForm({
                 render={({ field }): React.ReactElement => (
                   <FormItem>
                     <FormLabel>Transfer To</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder='Select destination account' />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {accounts?.map((account) => (
-                          <SelectItem key={account.id} value={account.id}>
-                            {account.icon ?? '💳'} {account.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <FormControl>
+                      <SearchableSelect
+                        value={field.value}
+                        onValueChange={field.onChange}
+                        placeholder='Select destination account'
+                        searchPlaceholder='Search accounts...'
+                        items={buildAccountItems(accounts ?? [])}
+                      />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -370,16 +424,15 @@ export function TransactionForm({
               render={({ field }): React.ReactElement => (
                 <FormItem>
                   <FormLabel>Category</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder='Select category' />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <CategorySelectItems categories={allCategories} filterType={watchType} />
-                    </SelectContent>
-                  </Select>
+                  <FormControl>
+                    <SearchableSelect
+                      value={field.value}
+                      onValueChange={field.onChange}
+                      placeholder='Select category'
+                      searchPlaceholder='Search categories...'
+                      items={buildCategoryItems(allCategories, watchType)}
+                    />
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
@@ -452,6 +505,22 @@ export function TransactionForm({
           confirmText='Delete Transaction'
           onConfirm={handleDelete}
           isPending={deleteMutation.isPending}
+        />
+      )}
+
+      {duplicateConflict && (
+        <DuplicateWarningDialog
+          open={!!duplicateConflict}
+          onOpenChange={(o): void => {
+            if (!o) setDuplicateConflict(null);
+          }}
+          existingTransaction={duplicateConflict.match}
+          newInput={duplicateConflict.input}
+          onResolved={(): void => {
+            setDuplicateConflict(null);
+            onOpenChange(false);
+            form.reset();
+          }}
         />
       )}
     </Dialog>
