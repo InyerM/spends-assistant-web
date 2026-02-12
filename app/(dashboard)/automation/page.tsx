@@ -155,6 +155,11 @@ export default function AutomationPage(): React.ReactElement {
                             regex: {rule.conditions.description_regex}
                           </Badge>
                         )}
+                        {rule.conditions.raw_text_contains?.map((term) => (
+                          <Badge key={term} variant='outline' className='text-xs'>
+                            raw text: &quot;{term}&quot;
+                          </Badge>
+                        ))}
                         {rule.conditions.amount_between && (
                           <Badge variant='outline' className='text-xs'>
                             amount: {rule.conditions.amount_between[0]} -{' '}
@@ -182,6 +187,11 @@ export default function AutomationPage(): React.ReactElement {
                         {rule.actions.set_category && (
                           <Badge variant='default' className='text-xs'>
                             set category
+                          </Badge>
+                        )}
+                        {rule.actions.set_account && (
+                          <Badge variant='default' className='text-xs'>
+                            set account: {getAccountName(rule.actions.set_account) ?? 'unknown'}
                           </Badge>
                         )}
                         {rule.actions.auto_reconcile && (

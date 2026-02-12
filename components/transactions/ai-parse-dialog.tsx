@@ -34,6 +34,11 @@ interface ParseResponse {
     transfer_to_account_id?: string;
     transfer_id?: string;
     type?: string;
+    notes?: string;
+  };
+  original?: {
+    account_id?: string;
+    category_id?: string;
   };
   applied_rules: AppliedRule[];
 }
@@ -89,6 +94,7 @@ export function AiParseDialog({ open, onOpenChange }: AiParseDialogProps): React
     payment_method: string | undefined;
     transfer_to_account_id: string | undefined;
     transfer_id: string | undefined;
+    notes: string | undefined;
   } | null {
     if (!result) return null;
     const { parsed, resolved } = result;
@@ -109,6 +115,7 @@ export function AiParseDialog({ open, onOpenChange }: AiParseDialogProps): React
       payment_method: parsed.payment_type,
       transfer_to_account_id: resolved.transfer_to_account_id,
       transfer_id: resolved.transfer_id,
+      notes: resolved.notes,
     };
   }
 
@@ -183,7 +190,7 @@ export function AiParseDialog({ open, onOpenChange }: AiParseDialogProps): React
 
     const partial = {
       ...fields,
-      notes: '',
+      notes: fields.notes ?? '',
       source: 'web-ai',
       raw_text: text,
       confidence: result.parsed.confidence,
@@ -209,11 +216,15 @@ export function AiParseDialog({ open, onOpenChange }: AiParseDialogProps): React
     ? accounts?.find((a) => a.id === result.resolved.account_id)?.name
     : null;
 
-  // Check if category was overridden by a rule
+  // Check if fields were overridden by automation rules
   const categoryOverridden =
     hasRules &&
-    resolvedCategoryName &&
-    result.parsed.category !== resolvedCategoryName.toLowerCase().replace(/\s+/g, '-');
+    result.original?.category_id !== undefined &&
+    result.original.category_id !== result.resolved.category_id;
+  const accountOverridden =
+    hasRules &&
+    result.original?.account_id !== undefined &&
+    result.original.account_id !== result.resolved.account_id;
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -293,7 +304,20 @@ export function AiParseDialog({ open, onOpenChange }: AiParseDialogProps): React
                   {sourceAccountName && (
                     <div>
                       <span className='text-muted-foreground text-xs'>Account</span>
-                      <p>{sourceAccountName}</p>
+                      {accountOverridden ? (
+                        <div>
+                          <p className='text-muted-foreground text-xs line-through'>
+                            {accounts?.find((a) => a.id === result.original?.account_id)?.name ??
+                              result.parsed.bank}
+                          </p>
+                          <p className='flex items-center gap-1'>
+                            <Zap className='text-warning h-3 w-3' />
+                            {sourceAccountName}
+                          </p>
+                        </div>
+                      ) : (
+                        <p>{sourceAccountName}</p>
+                      )}
                     </div>
                   )}
                   {result.parsed.bank && !sourceAccountName && (
@@ -312,6 +336,15 @@ export function AiParseDialog({ open, onOpenChange }: AiParseDialogProps): React
                     <div>
                       <span className='text-muted-foreground text-xs'>Time</span>
                       <p>{result.parsed.original_time}</p>
+                    </div>
+                  )}
+                  {result.resolved.notes && (
+                    <div className='col-span-2'>
+                      <span className='text-muted-foreground text-xs'>Notes</span>
+                      <p className='flex items-center gap-1 text-sm'>
+                        <Zap className='text-warning h-3 w-3 shrink-0' />
+                        {result.resolved.notes}
+                      </p>
                     </div>
                   )}
                   {resolvedAccountName && (
@@ -342,11 +375,18 @@ export function AiParseDialog({ open, onOpenChange }: AiParseDialogProps): React
                           const name = findCategoryName(categories ?? [], actions.set_category);
                           details.push(`category: ${name ?? actions.set_category}`);
                         }
+                        if (actions.set_account) {
+                          const name = accounts?.find((a) => a.id === actions.set_account)?.name;
+                          details.push(`account: ${name ?? 'account'}`);
+                        }
                         if (actions.link_to_account) {
                           const name = accounts?.find(
                             (a) => a.id === actions.link_to_account,
                           )?.name;
                           details.push(`transfer to: ${name ?? 'account'}`);
+                        }
+                        if (actions.add_note) {
+                          details.push(`note: ${actions.add_note}`);
                         }
                         return (
                           <div key={rule.rule_id}>

@@ -68,6 +68,7 @@ export async function POST(request: NextRequest): Promise<Response> {
       source: data.parsed.source || 'manual',
       type: data.parsed.type ?? 'expense',
       category_id: data.resolved.category_id,
+      raw_text: text,
     };
 
     const processed = await applyAutomationRules(supabase, txForRules);
@@ -80,6 +81,11 @@ export async function POST(request: NextRequest): Promise<Response> {
         transfer_to_account_id: processed.transfer_to_account_id,
         transfer_id: processed.transfer_id,
         type: processed.type,
+        notes: processed.notes,
+      },
+      original: {
+        account_id: data.resolved.account_id,
+        category_id: data.resolved.category_id,
       },
       applied_rules: processed.applied_rules ?? [],
     });

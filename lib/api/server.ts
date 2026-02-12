@@ -60,6 +60,7 @@ interface TransactionForRules {
   transfer_to_account_id?: string;
   transfer_id?: string;
   notes?: string;
+  raw_text?: string;
   [key: string]: unknown;
 }
 
@@ -83,6 +84,11 @@ function matchesConditions(tx: TransactionForRules, conditions: AutomationRuleCo
   if (conditions.from_account) {
     if (tx.account_id !== conditions.from_account) return false;
   }
+  if (conditions.raw_text_contains) {
+    const rawText = (tx.raw_text ?? '').toLowerCase();
+    const matches = conditions.raw_text_contains.some((kw) => rawText.includes(kw.toLowerCase()));
+    if (!matches) return false;
+  }
   if (conditions.source) {
     if (!conditions.source.includes(tx.source)) return false;
   }
@@ -99,6 +105,9 @@ function applyActions(
   }
   if (actions.set_category !== undefined) {
     result.category_id = actions.set_category ?? undefined;
+  }
+  if (actions.set_account) {
+    result.account_id = actions.set_account;
   }
   if (actions.link_to_account) {
     result.transfer_to_account_id = actions.link_to_account;
