@@ -2,7 +2,9 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { automationKeys } from '@/lib/api/queries/automation.queries';
 import type { AutomationRule, CreateAutomationRuleInput, UpdateAutomationRuleInput } from '@/types';
 
-async function createAutomationRule(input: CreateAutomationRuleInput): Promise<AutomationRule> {
+export async function createAutomationRule(
+  input: CreateAutomationRuleInput,
+): Promise<AutomationRule> {
   const res = await fetch('/api/automation-rules', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -15,7 +17,7 @@ async function createAutomationRule(input: CreateAutomationRuleInput): Promise<A
   return res.json() as Promise<AutomationRule>;
 }
 
-async function updateAutomationRule({
+export async function updateAutomationRule({
   id,
   ...input
 }: UpdateAutomationRuleInput): Promise<AutomationRule> {
@@ -31,7 +33,7 @@ async function updateAutomationRule({
   return res.json() as Promise<AutomationRule>;
 }
 
-async function deleteAutomationRule(id: string): Promise<{ success: boolean }> {
+export async function deleteAutomationRule(id: string): Promise<{ success: boolean }> {
   const res = await fetch(`/api/automation-rules/${id}`, { method: 'DELETE' });
   if (!res.ok) {
     const error = await res.json();
@@ -40,7 +42,7 @@ async function deleteAutomationRule(id: string): Promise<{ success: boolean }> {
   return res.json() as Promise<{ success: boolean }>;
 }
 
-async function toggleAutomationRule({
+export async function toggleAutomationRule({
   id,
   is_active,
 }: {

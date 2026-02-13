@@ -8,13 +8,13 @@ export const categoryKeys = {
   tree: () => [...categoryKeys.all, 'tree'] as const,
 };
 
-async function fetchCategories(): Promise<Category[]> {
+export async function fetchCategories(): Promise<Category[]> {
   const res = await fetch('/api/categories');
   if (!res.ok) throw new Error('Failed to fetch categories');
   return res.json() as Promise<Category[]>;
 }
 
-function buildCategoryTree(categories: Category[]): CategoryWithChildren[] {
+export function buildCategoryTree(categories: Category[]): CategoryWithChildren[] {
   const parentCategories = categories.filter((c) => !c.parent_id);
   return parentCategories.map((parent) => ({
     ...parent,

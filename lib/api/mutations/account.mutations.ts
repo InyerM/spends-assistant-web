@@ -3,7 +3,7 @@ import { accountKeys } from '@/lib/api/queries/account.queries';
 import { transactionKeys } from '@/lib/api/queries/transaction.queries';
 import type { Account, CreateAccountInput, UpdateAccountInput } from '@/types';
 
-async function createAccount(input: CreateAccountInput): Promise<Account> {
+export async function createAccount(input: CreateAccountInput): Promise<Account> {
   const res = await fetch('/api/accounts', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -16,7 +16,7 @@ async function createAccount(input: CreateAccountInput): Promise<Account> {
   return res.json() as Promise<Account>;
 }
 
-async function updateAccount({ id, ...input }: UpdateAccountInput): Promise<Account> {
+export async function updateAccount({ id, ...input }: UpdateAccountInput): Promise<Account> {
   const res = await fetch(`/api/accounts/${id}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
@@ -55,7 +55,7 @@ export function useUpdateAccount(): ReturnType<
   });
 }
 
-async function deleteAccount(id: string): Promise<void> {
+export async function deleteAccount(id: string): Promise<void> {
   const res = await fetch(`/api/accounts/${id}`, { method: 'DELETE' });
   if (!res.ok) {
     const error = await res.json();

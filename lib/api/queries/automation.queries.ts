@@ -7,7 +7,7 @@ export const automationKeys = {
   list: () => [...automationKeys.lists()] as const,
 };
 
-async function fetchAutomationRules(): Promise<AutomationRule[]> {
+export async function fetchAutomationRules(): Promise<AutomationRule[]> {
   const res = await fetch('/api/automation-rules');
   if (!res.ok) throw new Error('Failed to fetch automation rules');
   return res.json() as Promise<AutomationRule[]>;

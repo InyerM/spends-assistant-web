@@ -9,13 +9,13 @@ export const accountKeys = {
   detail: (id: string) => [...accountKeys.details(), id] as const,
 };
 
-async function fetchAccounts(): Promise<Account[]> {
+export async function fetchAccounts(): Promise<Account[]> {
   const res = await fetch('/api/accounts');
   if (!res.ok) throw new Error('Failed to fetch accounts');
   return res.json() as Promise<Account[]>;
 }
 
-async function fetchAccount(id: string): Promise<Account> {
+export async function fetchAccount(id: string): Promise<Account> {
   const res = await fetch(`/api/accounts/${id}`);
   if (!res.ok) throw new Error('Failed to fetch account');
   return res.json() as Promise<Account>;

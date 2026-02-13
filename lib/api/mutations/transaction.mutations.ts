@@ -24,7 +24,7 @@ export class DuplicateError extends Error {
   }
 }
 
-async function createTransaction(input: CreateTransactionInput): Promise<Transaction> {
+export async function createTransaction(input: CreateTransactionInput): Promise<Transaction> {
   const res = await fetch('/api/transactions', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -72,7 +72,10 @@ export async function replaceTransaction(
   return res.json() as Promise<Transaction>;
 }
 
-async function updateTransaction({ id, ...input }: UpdateTransactionInput): Promise<Transaction> {
+export async function updateTransaction({
+  id,
+  ...input
+}: UpdateTransactionInput): Promise<Transaction> {
   const res = await fetch(`/api/transactions/${id}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
@@ -85,7 +88,7 @@ async function updateTransaction({ id, ...input }: UpdateTransactionInput): Prom
   return res.json() as Promise<Transaction>;
 }
 
-async function deleteTransaction(id: string): Promise<void> {
+export async function deleteTransaction(id: string): Promise<void> {
   const res = await fetch(`/api/transactions/${id}`, { method: 'DELETE' });
   if (!res.ok) {
     const error = await res.json();
@@ -121,7 +124,9 @@ export function useUpdateTransaction(): ReturnType<
   });
 }
 
-async function bulkUpdateTransactions(input: BulkUpdateTransactionInput): Promise<Transaction[]> {
+export async function bulkUpdateTransactions(
+  input: BulkUpdateTransactionInput,
+): Promise<Transaction[]> {
   const res = await fetch('/api/transactions/bulk', {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
@@ -160,7 +165,7 @@ export function useDeleteTransaction(): ReturnType<typeof useMutation<void, Erro
   });
 }
 
-async function resolveDuplicate(id: string, action: 'keep' | 'delete'): Promise<void> {
+export async function resolveDuplicate(id: string, action: 'keep' | 'delete'): Promise<void> {
   if (action === 'keep') {
     const res = await fetch(`/api/transactions/${id}`, {
       method: 'PATCH',

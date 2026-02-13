@@ -13,7 +13,7 @@ interface CategoryWithCounts extends Category {
   children_count: number;
 }
 
-async function createCategory(input: CreateCategoryInput): Promise<Category> {
+export async function createCategory(input: CreateCategoryInput): Promise<Category> {
   const res = await fetch('/api/categories', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -26,7 +26,7 @@ async function createCategory(input: CreateCategoryInput): Promise<Category> {
   return res.json() as Promise<Category>;
 }
 
-async function updateCategory({ id, ...input }: UpdateCategoryInput): Promise<Category> {
+export async function updateCategory({ id, ...input }: UpdateCategoryInput): Promise<Category> {
   const res = await fetch(`/api/categories/${id}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
@@ -39,7 +39,7 @@ async function updateCategory({ id, ...input }: UpdateCategoryInput): Promise<Ca
   return res.json() as Promise<Category>;
 }
 
-async function deleteCategory(id: string): Promise<DeleteCategoryResult> {
+export async function deleteCategory(id: string): Promise<DeleteCategoryResult> {
   const res = await fetch(`/api/categories/${id}`, { method: 'DELETE' });
   if (!res.ok) {
     const error = await res.json();

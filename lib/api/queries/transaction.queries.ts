@@ -23,7 +23,7 @@ export interface TransactionsPage {
 
 const PAGE_SIZE = 50;
 
-async function fetchTransactions(filters: TransactionFilters): Promise<TransactionsResult> {
+export async function fetchTransactions(filters: TransactionFilters): Promise<TransactionsResult> {
   const params = new URLSearchParams();
   if (filters.page) params.set('page', String(filters.page));
   if (filters.limit) params.set('limit', String(filters.limit));
@@ -46,7 +46,7 @@ async function fetchTransactions(filters: TransactionFilters): Promise<Transacti
   return res.json() as Promise<TransactionsResult>;
 }
 
-async function fetchTransaction(id: string): Promise<Transaction> {
+export async function fetchTransaction(id: string): Promise<Transaction> {
   const res = await fetch(`/api/transactions/${id}`);
   if (!res.ok) throw new Error('Failed to fetch transaction');
   return res.json() as Promise<Transaction>;
