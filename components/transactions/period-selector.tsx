@@ -270,13 +270,17 @@ export function PeriodSelector({
   return (
     <div className='flex items-center gap-1'>
       {mode !== 'custom' && (
-        <Button variant='ghost' size='icon' className='h-8 w-8 cursor-pointer' onClick={handlePrev}>
+        <Button
+          variant='ghost'
+          size='icon'
+          className='h-9 w-9 cursor-pointer sm:h-8 sm:w-8'
+          onClick={handlePrev}>
           <ChevronLeft className='h-4 w-4' />
         </Button>
       )}
       <Popover open={open} onOpenChange={handleOpenChange}>
         <PopoverTrigger asChild>
-          <button className='hover:bg-card-overlay flex cursor-pointer items-center gap-1.5 rounded-md px-2 py-1 text-sm font-medium transition-colors'>
+          <button className='hover:bg-card-overlay flex cursor-pointer items-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium transition-colors sm:px-2 sm:py-1'>
             <Calendar className='text-muted-foreground h-3.5 w-3.5' />
             {label}
           </button>
@@ -303,7 +307,7 @@ export function PeriodSelector({
                 <Button
                   variant='ghost'
                   size='icon'
-                  className='h-7 w-7 cursor-pointer'
+                  className='h-8 w-8 cursor-pointer'
                   onClick={(): void => setPickerYear(pickerYear - 1)}>
                   <ChevronLeft className='h-4 w-4' />
                 </Button>
@@ -311,7 +315,7 @@ export function PeriodSelector({
                 <Button
                   variant='ghost'
                   size='icon'
-                  className='h-7 w-7 cursor-pointer'
+                  className='h-8 w-8 cursor-pointer'
                   onClick={(): void => setPickerYear(pickerYear + 1)}>
                   <ChevronRight className='h-4 w-4' />
                 </Button>
@@ -326,7 +330,7 @@ export function PeriodSelector({
                     <button
                       key={name}
                       onClick={(): void => handleMonthPick(i)}
-                      className={`cursor-pointer rounded-md px-2 py-1.5 text-sm transition-colors ${
+                      className={`cursor-pointer rounded-md px-2 py-2.5 text-sm transition-colors sm:py-1.5 ${
                         isActive
                           ? 'bg-primary text-primary-foreground'
                           : 'hover:bg-card-overlay text-foreground'
@@ -343,7 +347,7 @@ export function PeriodSelector({
                 <Button
                   variant='ghost'
                   size='icon'
-                  className='h-7 w-7 cursor-pointer'
+                  className='h-8 w-8 cursor-pointer'
                   onClick={(): void => setCalendarMonth(subMonths(calendarMonth, 1))}>
                   <ChevronLeft className='h-4 w-4' />
                 </Button>
@@ -353,7 +357,7 @@ export function PeriodSelector({
                 <Button
                   variant='ghost'
                   size='icon'
-                  className='h-7 w-7 cursor-pointer'
+                  className='h-8 w-8 cursor-pointer'
                   onClick={(): void => setCalendarMonth(addMonths(calendarMonth, 1))}>
                   <ChevronRight className='h-4 w-4' />
                 </Button>
@@ -372,7 +376,7 @@ export function PeriodSelector({
                         <button
                           key={toStr(day)}
                           onClick={(): void => handleWeekPick(day)}
-                          className={`cursor-pointer py-1.5 text-xs transition-colors ${
+                          className={`cursor-pointer py-2.5 text-sm transition-colors sm:py-1.5 sm:text-xs ${
                             isSelected
                               ? 'bg-primary text-primary-foreground'
                               : 'hover:bg-card-overlay'
@@ -393,7 +397,7 @@ export function PeriodSelector({
                 <Button
                   variant='ghost'
                   size='icon'
-                  className='h-7 w-7 cursor-pointer'
+                  className='h-8 w-8 cursor-pointer'
                   onClick={(): void => setDecadeStart(decadeStart - 10)}>
                   <ChevronLeft className='h-4 w-4' />
                 </Button>
@@ -403,7 +407,7 @@ export function PeriodSelector({
                 <Button
                   variant='ghost'
                   size='icon'
-                  className='h-7 w-7 cursor-pointer'
+                  className='h-8 w-8 cursor-pointer'
                   onClick={(): void => setDecadeStart(decadeStart + 10)}>
                   <ChevronRight className='h-4 w-4' />
                 </Button>
@@ -416,7 +420,7 @@ export function PeriodSelector({
                     <button
                       key={y}
                       onClick={(): void => handleYearPick(y)}
-                      className={`cursor-pointer rounded-md px-2 py-1.5 text-sm transition-colors ${
+                      className={`cursor-pointer rounded-md px-2 py-2.5 text-sm transition-colors sm:py-1.5 ${
                         isActive
                           ? 'bg-primary text-primary-foreground'
                           : isOutside
@@ -473,7 +477,11 @@ export function PeriodSelector({
         </PopoverContent>
       </Popover>
       {mode !== 'custom' && (
-        <Button variant='ghost' size='icon' className='h-8 w-8 cursor-pointer' onClick={handleNext}>
+        <Button
+          variant='ghost'
+          size='icon'
+          className='h-9 w-9 cursor-pointer sm:h-8 sm:w-8'
+          onClick={handleNext}>
           <ChevronRight className='h-4 w-4' />
         </Button>
       )}

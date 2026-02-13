@@ -349,15 +349,17 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps): React.R
 
       <div className='space-y-2'>
         {FIELD_CONFIGS.map((config) => (
-          <div key={config.field} className='flex items-center gap-3'>
-            <span className='w-32 text-sm'>
+          <div
+            key={config.field}
+            className='flex flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-3'>
+            <span className='text-sm sm:w-32'>
               {config.label}
               {config.required && <span className='text-destructive ml-0.5'>*</span>}
             </span>
             <Select
               value={mapping[config.field]}
               onValueChange={(v): void => handleMappingChange(config.field, v)}>
-              <SelectTrigger size='sm' className='w-48'>
+              <SelectTrigger size='sm' className='w-full sm:w-48'>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -411,22 +413,26 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps): React.R
           <TableHeader>
             <TableRow>
               <TableHead>Date</TableHead>
-              <TableHead>Account</TableHead>
+              <TableHead className='hidden sm:table-cell'>Account</TableHead>
               <TableHead>Description</TableHead>
               <TableHead className='text-right'>Amount</TableHead>
               <TableHead>Type</TableHead>
-              <TableHead>Category</TableHead>
+              <TableHead className='hidden sm:table-cell'>Category</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {previewRows.map((row, i) => (
               <TableRow key={i}>
                 <TableCell className='text-xs'>{row.date}</TableCell>
-                <TableCell className='text-xs'>{row.account}</TableCell>
-                <TableCell className='max-w-[150px] truncate text-xs'>{row.description}</TableCell>
+                <TableCell className='hidden text-xs sm:table-cell'>{row.account}</TableCell>
+                <TableCell className='max-w-[120px] truncate text-xs sm:max-w-[150px]'>
+                  {row.description}
+                </TableCell>
                 <TableCell className='text-right text-xs'>{row.amount.toLocaleString()}</TableCell>
                 <TableCell className='text-xs'>{row.type}</TableCell>
-                <TableCell className='text-xs'>{row.category ?? '—'}</TableCell>
+                <TableCell className='hidden text-xs sm:table-cell'>
+                  {row.category ?? '—'}
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>

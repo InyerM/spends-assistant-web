@@ -95,7 +95,7 @@ export default function AccountDetailPage({
 
   if (isLoading) {
     return (
-      <div className='space-y-6 p-6'>
+      <div className='space-y-4 p-4 sm:space-y-6 sm:p-6'>
         <Skeleton className='h-8 w-48' />
         <Skeleton className='h-24 w-full' />
         <Skeleton className='h-64 w-full' />
@@ -105,7 +105,7 @@ export default function AccountDetailPage({
 
   if (!account) {
     return (
-      <div className='p-6'>
+      <div className='p-4 sm:p-6'>
         <p className='text-muted-foreground'>Account not found</p>
       </div>
     );
@@ -114,7 +114,7 @@ export default function AccountDetailPage({
   const transactions = txResult?.data ?? [];
 
   return (
-    <div className='space-y-6 p-6'>
+    <div className='space-y-4 p-4 sm:space-y-6 sm:p-6'>
       <div className='flex items-center justify-between'>
         <div className='flex items-center gap-3'>
           <Button
@@ -124,22 +124,22 @@ export default function AccountDetailPage({
             onClick={(): void => router.back()}>
             <ArrowLeft className='h-5 w-5' />
           </Button>
-          <h2 className='text-foreground text-2xl font-bold'>Account Detail</h2>
+          <h2 className='text-foreground text-xl font-bold sm:text-2xl'>Account Detail</h2>
         </div>
         <div className='flex gap-2'>
           <Button
             variant='outline'
             className='cursor-pointer'
             onClick={(): void => setEditOpen(true)}>
-            <Pencil className='mr-2 h-4 w-4' />
-            Edit
+            <Pencil className='h-4 w-4 sm:mr-2' />
+            <span className='hidden sm:inline'>Edit</span>
           </Button>
           <Button
             variant='outline'
             className='text-destructive cursor-pointer'
             onClick={(): void => setConfirmDeleteOpen(true)}>
-            <Trash2 className='mr-2 h-4 w-4' />
-            Delete
+            <Trash2 className='h-4 w-4 sm:mr-2' />
+            <span className='hidden sm:inline'>Delete</span>
           </Button>
         </div>
       </div>

@@ -128,7 +128,7 @@ export function RecentTransactions(): React.ReactElement {
             </div>
             <button
               onClick={(): void => router.push('/transactions')}
-              className='text-muted-foreground hover:text-foreground mt-3 flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-lg py-2 text-sm transition-colors hover:bg-white/5'>
+              className='text-muted-foreground hover:text-foreground hover:bg-card-overlay mt-3 flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-lg py-2 text-sm transition-colors'>
               View all transactions
               <ArrowRight className='h-3.5 w-3.5' />
             </button>

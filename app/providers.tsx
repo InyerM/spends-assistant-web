@@ -15,7 +15,7 @@ export function Providers({ children }: ProvidersProps): React.ReactElement {
     <QueryClientProvider client={queryClient}>
       <AuthInitializer>
         {children}
-        <Toaster position='top-right' richColors />
+        <Toaster position='bottom-center' richColors />
       </AuthInitializer>
     </QueryClientProvider>
   );

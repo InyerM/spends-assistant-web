@@ -64,14 +64,14 @@ export function SummaryCards({ year, month }: SummaryCardsProps): React.ReactEle
       value: stats.income,
       colorClass: 'text-success',
       icon: TrendingUp,
-      iconColor: 'text-emerald-400',
+      iconColor: 'text-success',
     },
     {
       label: 'Expenses',
       value: stats.expenses,
       colorClass: 'text-destructive',
       icon: TrendingDown,
-      iconColor: 'text-red-400',
+      iconColor: 'text-destructive',
       prefix: '-',
     },
     {
@@ -79,7 +79,7 @@ export function SummaryCards({ year, month }: SummaryCardsProps): React.ReactEle
       value: stats.cashFlow,
       colorClass: stats.cashFlow >= 0 ? 'text-success' : 'text-destructive',
       icon: Scale,
-      iconColor: 'text-violet-400',
+      iconColor: 'text-transfer',
     },
   ];
 

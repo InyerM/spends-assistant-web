@@ -124,14 +124,14 @@ export default function AutomationPage(): React.ReactElement {
                       variant='ghost'
                       size='sm'
                       onClick={(): void => handleEdit(rule)}
-                      className='h-8 w-8 cursor-pointer p-0'>
+                      className='h-9 w-9 cursor-pointer p-0 sm:h-8 sm:w-8'>
                       <Pencil className='h-4 w-4' />
                     </Button>
                     <Button
                       variant='ghost'
                       size='sm'
                       onClick={(): void => setDeleteTarget(rule)}
-                      className='text-destructive h-8 w-8 cursor-pointer p-0'>
+                      className='text-destructive h-9 w-9 cursor-pointer p-0 sm:h-8 sm:w-8'>
                       <Trash2 className='h-4 w-4' />
                     </Button>
                     <Switch

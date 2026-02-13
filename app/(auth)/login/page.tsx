@@ -84,13 +84,13 @@ export default function LoginPage(): React.ReactElement {
                 name='email'
                 render={({ field }): React.ReactElement => (
                   <FormItem>
-                    <FormLabel className='text-white'>Email</FormLabel>
+                    <FormLabel className='text-foreground'>Email</FormLabel>
                     <FormControl>
                       <Input
                         placeholder='you@example.com'
                         {...field}
                         disabled={isLoading}
-                        className='border-border bg-background h-12 text-white placeholder:text-gray-500'
+                        className='border-border bg-background text-foreground placeholder:text-muted-foreground h-12'
                       />
                     </FormControl>
                     <FormMessage />
@@ -103,14 +103,14 @@ export default function LoginPage(): React.ReactElement {
                 name='password'
                 render={({ field }): React.ReactElement => (
                   <FormItem>
-                    <FormLabel className='text-white'>Password</FormLabel>
+                    <FormLabel className='text-foreground'>Password</FormLabel>
                     <FormControl>
                       <Input
                         type='password'
                         placeholder='Enter your password'
                         {...field}
                         disabled={isLoading}
-                        className='border-border bg-background h-12 text-white placeholder:text-gray-500'
+                        className='border-border bg-background text-foreground placeholder:text-muted-foreground h-12'
                       />
                     </FormControl>
                     <FormMessage />

@@ -59,8 +59,8 @@ export function Sidebar({ className, onClose }: SidebarProps): React.ReactElemen
       {!onClose && (
         <button
           onClick={toggleCollapsed}
-          className='bg-sidebar-bg hover:bg-card-overlay absolute top-11 -right-4 z-50 flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg border border-gray-700 shadow-lg transition-all'>
-          <Menu className='h-4 w-4 text-gray-400' />
+          className='bg-sidebar-bg hover:bg-card-overlay border-border absolute top-11 -right-4 z-50 flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg border shadow-lg transition-all'>
+          <Menu className='text-muted-foreground h-4 w-4' />
         </button>
       )}
 
@@ -71,7 +71,7 @@ export function Sidebar({ className, onClose }: SidebarProps): React.ReactElemen
           </div>
           {!isCollapsed && (
             <div className='flex flex-col'>
-              <span className='text-lg font-semibold text-white'>Spends</span>
+              <span className='text-foreground text-lg font-semibold'>Spends</span>
               <span className='text-muted-foreground text-xs'>Assistant</span>
             </div>
           )}
@@ -87,8 +87,8 @@ export function Sidebar({ className, onClose }: SidebarProps): React.ReactElemen
               'flex w-full cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
               isCollapsed && 'justify-center',
               isActivePath(item.href)
-                ? 'bg-primary text-white'
-                : 'text-gray-400 hover:bg-white/5 hover:text-white',
+                ? 'bg-primary text-primary-foreground'
+                : 'text-muted-foreground hover:bg-card-overlay hover:text-foreground',
             )}
             title={isCollapsed ? item.title : undefined}>
             <item.icon className='h-5 w-5 shrink-0' />
@@ -101,7 +101,7 @@ export function Sidebar({ className, onClose }: SidebarProps): React.ReactElemen
         <button
           onClick={(): void => void handleLogout()}
           className={cn(
-            'flex w-full cursor-pointer items-center gap-3 rounded-lg p-2 text-gray-400 transition-colors hover:bg-white/5 hover:text-red-400',
+            'text-muted-foreground hover:bg-card-overlay hover:text-destructive flex w-full cursor-pointer items-center gap-3 rounded-lg p-2 transition-colors',
             isCollapsed && 'justify-center',
           )}
           title={isCollapsed ? 'Logout' : undefined}>

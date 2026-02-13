@@ -50,15 +50,15 @@ export default function AccountsPage(): React.ReactElement {
   const [editingAccount, setEditingAccount] = useState<Account | null>(null);
 
   return (
-    <div className='space-y-6 p-6'>
+    <div className='space-y-4 p-4 sm:space-y-6 sm:p-6'>
       <div className='flex items-center justify-between'>
         <div>
           <h2 className='text-foreground text-2xl font-bold'>Accounts</h2>
           <p className='text-muted-foreground text-sm'>Manage your financial accounts</p>
         </div>
         <Button onClick={(): void => setCreateOpen(true)}>
-          <Plus className='mr-2 h-4 w-4' />
-          New Account
+          <Plus className='h-4 w-4 sm:mr-2' />
+          <span className='hidden sm:inline'>New Account</span>
         </Button>
       </div>
 
@@ -94,7 +94,7 @@ export default function AccountsPage(): React.ReactElement {
                       e.stopPropagation();
                       setEditingAccount(account);
                     }}
-                    className='h-8 w-8 p-0'>
+                    className='h-9 w-9 p-0 sm:h-8 sm:w-8'>
                     <Pencil className='h-4 w-4' />
                   </Button>
                 </CardHeader>

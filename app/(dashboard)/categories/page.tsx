@@ -223,7 +223,7 @@ export default function CategoriesPage(): React.ReactElement {
                   {hasChildren ? (
                     <button
                       onClick={(): void => toggleExpanded(parent.id)}
-                      className='text-muted-foreground hover:text-foreground cursor-pointer'>
+                      className='text-muted-foreground hover:text-foreground flex h-9 w-9 cursor-pointer items-center justify-center'>
                       {isExpanded ? (
                         <ChevronDown className='h-4 w-4' />
                       ) : (
@@ -249,7 +249,7 @@ export default function CategoriesPage(): React.ReactElement {
                     variant='ghost'
                     size='sm'
                     onClick={(): void => handleCreate(parent.id, parent.type)}
-                    className='h-8 w-8 cursor-pointer p-0'
+                    className='h-9 w-9 cursor-pointer p-0 sm:h-8 sm:w-8'
                     title='Add subcategory'>
                     <Plus className='h-4 w-4' />
                   </Button>
@@ -257,14 +257,14 @@ export default function CategoriesPage(): React.ReactElement {
                     variant='ghost'
                     size='sm'
                     onClick={(): void => handleEdit(parent)}
-                    className='h-8 w-8 cursor-pointer p-0'>
+                    className='h-9 w-9 cursor-pointer p-0 sm:h-8 sm:w-8'>
                     <Pencil className='h-4 w-4' />
                   </Button>
                   <Button
                     variant='ghost'
                     size='sm'
                     onClick={(): void => void handleDeleteClick(parent)}
-                    className='text-destructive h-8 w-8 cursor-pointer p-0'>
+                    className='text-destructive h-9 w-9 cursor-pointer p-0 sm:h-8 sm:w-8'>
                     <Trash2 className='h-4 w-4' />
                   </Button>
                 </CardHeader>
@@ -285,15 +285,15 @@ export default function CategoriesPage(): React.ReactElement {
                             variant='ghost'
                             size='sm'
                             onClick={(): void => handleEdit(child)}
-                            className='h-7 w-7 cursor-pointer p-0'>
-                            <Pencil className='h-3 w-3' />
+                            className='h-9 w-9 cursor-pointer p-0 sm:h-7 sm:w-7'>
+                            <Pencil className='h-4 w-4 sm:h-3 sm:w-3' />
                           </Button>
                           <Button
                             variant='ghost'
                             size='sm'
                             onClick={(): void => void handleDeleteClick(child)}
-                            className='text-destructive h-7 w-7 cursor-pointer p-0'>
-                            <Trash2 className='h-3 w-3' />
+                            className='text-destructive h-9 w-9 cursor-pointer p-0 sm:h-7 sm:w-7'>
+                            <Trash2 className='h-4 w-4 sm:h-3 sm:w-3' />
                           </Button>
                         </div>
                       ))}

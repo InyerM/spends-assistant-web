@@ -26,7 +26,7 @@ export function Header(): React.ReactElement {
 
   return (
     <header className='border-border bg-sidebar-bg/50 flex h-14 shrink-0 items-center gap-4 border-b px-6 backdrop-blur-sm'>
-      <h1 className='text-lg font-semibold text-white'>{title}</h1>
+      <h1 className='text-foreground text-lg font-semibold'>{title}</h1>
       <div className='flex-1' />
     </header>
   );

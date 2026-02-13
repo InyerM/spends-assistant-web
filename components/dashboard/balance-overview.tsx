@@ -90,7 +90,7 @@ function AccountCard({ account, onEdit, onClick }: AccountCardProps): React.Reac
             e.stopPropagation();
             onEdit(account);
           }}
-          className='cursor-pointer rounded-md p-1 text-white/60 opacity-0 transition-opacity group-hover:opacity-100 hover:text-white'>
+          className='cursor-pointer rounded-md p-1 text-white/60 opacity-100 transition-opacity hover:text-white sm:opacity-0 sm:group-hover:opacity-100'>
           <Pencil className='h-3.5 w-3.5' />
         </button>
       )}

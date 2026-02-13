@@ -59,12 +59,12 @@ export function SwipeableRow({
         style={{ opacity: actionsOpacity }}>
         <button
           onClick={handleEdit}
-          className='flex w-20 cursor-pointer items-center justify-center bg-blue-600 text-white transition-colors hover:bg-blue-500'>
+          className='bg-transfer hover:bg-transfer/80 flex w-20 cursor-pointer items-center justify-center text-white transition-colors'>
           <Pencil className='h-5 w-5' />
         </button>
         <button
           onClick={handleDelete}
-          className='flex w-20 cursor-pointer items-center justify-center bg-red-600 text-white transition-colors hover:bg-red-500'>
+          className='bg-destructive hover:bg-destructive/80 flex w-20 cursor-pointer items-center justify-center text-white transition-colors'>
           <Trash2 className='h-5 w-5' />
         </button>
       </motion.div>

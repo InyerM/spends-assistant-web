@@ -73,7 +73,11 @@ export function MonthSelector({ year, month, onChange }: MonthSelectorProps): Re
 
   return (
     <div className='flex items-center gap-1'>
-      <Button variant='ghost' size='icon' className='h-8 w-8 cursor-pointer' onClick={handlePrev}>
+      <Button
+        variant='ghost'
+        size='icon'
+        className='h-9 w-9 cursor-pointer sm:h-8 sm:w-8'
+        onClick={handlePrev}>
         <ChevronLeft className='h-4 w-4' />
       </Button>
       <Popover open={pickerOpen} onOpenChange={handlePickerOpen}>
@@ -116,7 +120,11 @@ export function MonthSelector({ year, month, onChange }: MonthSelectorProps): Re
           </div>
         </PopoverContent>
       </Popover>
-      <Button variant='ghost' size='icon' className='h-8 w-8 cursor-pointer' onClick={handleNext}>
+      <Button
+        variant='ghost'
+        size='icon'
+        className='h-9 w-9 cursor-pointer sm:h-8 sm:w-8'
+        onClick={handleNext}>
         <ChevronRight className='h-4 w-4' />
       </Button>
     </div>
