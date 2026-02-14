@@ -33,11 +33,21 @@ interface WorkerParseResponse {
 
 export async function POST(request: NextRequest): Promise<Response> {
   try {
-    if (!workerConfig.url || !workerConfig.apiKey) {
+    if (!workerConfig.url) {
       return errorResponse('Worker not configured', 503);
     }
 
     const { supabase } = await getUserClient();
+
+    // Get the user's session token to forward to the worker
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
+    const authToken = session?.access_token;
+    if (!authToken) {
+      return errorResponse('No authentication token available', 401);
+    }
 
     const body = await request.json();
     const { text } = body as { text?: string };
@@ -50,14 +60,28 @@ export async function POST(request: NextRequest): Promise<Response> {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${workerConfig.apiKey}`,
+        Authorization: `Bearer ${authToken}`,
       },
       body: JSON.stringify({ text }),
     });
 
     if (!res.ok) {
       const err = await res.json().catch(() => ({ error: 'Worker error' }));
-      return errorResponse((err as { error: string }).error || 'Parse failed', res.status);
+      const errObj = err as { error: string; code?: string; used?: number; limit?: number };
+
+      if (res.status === 429 && errObj.code === 'PARSE_LIMIT_REACHED') {
+        return Response.json(
+          {
+            error: errObj.error,
+            code: errObj.code,
+            used: errObj.used,
+            limit: errObj.limit,
+          },
+          { status: 429 },
+        );
+      }
+
+      return errorResponse(errObj.error || 'Parse failed', res.status);
     }
 
     const data = (await res.json()) as WorkerParseResponse;

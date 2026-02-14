@@ -218,12 +218,17 @@ export default function CategoriesPage(): React.ReactElement {
             const hasChildren = parent.children.length > 0;
 
             return (
-              <Card key={parent.id} className='border-border bg-card'>
-                <CardHeader className='flex flex-row flex-wrap items-center gap-2 space-y-0 py-3 sm:gap-3'>
+              <Card
+                key={parent.id}
+                className='border-border bg-card cursor-pointer sm:cursor-default'
+                onClick={(): void => {
+                  if (window.innerWidth < 640) handleEdit(parent);
+                }}>
+                <CardHeader className='flex flex-row items-center gap-2 space-y-0 py-3 sm:gap-3'>
                   {hasChildren ? (
                     <button
                       onClick={(): void => toggleExpanded(parent.id)}
-                      className='text-muted-foreground hover:text-foreground flex h-9 w-9 cursor-pointer items-center justify-center'>
+                      className='text-muted-foreground hover:text-foreground flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center'>
                       {isExpanded ? (
                         <ChevronDown className='h-4 w-4' />
                       ) : (
@@ -231,42 +236,48 @@ export default function CategoriesPage(): React.ReactElement {
                       )}
                     </button>
                   ) : (
-                    <div className='w-4' />
+                    <div className='w-4 shrink-0' />
                   )}
 
-                  <span className='text-lg'>{parent.icon ?? '📁'}</span>
+                  <span className='shrink-0 text-lg'>{parent.icon ?? '📁'}</span>
                   <CardTitle className='min-w-0 flex-1 truncate text-base font-medium'>
                     {parent.name}
                   </CardTitle>
-                  <Badge variant={typeBadgeVariant[parent.type]}>{parent.type}</Badge>
+                  <Badge
+                    variant={typeBadgeVariant[parent.type]}
+                    className='hidden shrink-0 sm:inline-flex'>
+                    {parent.type}
+                  </Badge>
                   {parent.color && (
                     <div
-                      className='hidden h-4 w-4 rounded-full sm:block'
+                      className='hidden h-4 w-4 shrink-0 rounded-full sm:block'
                       style={{ backgroundColor: parent.color }}
                     />
                   )}
-                  <Button
-                    variant='ghost'
-                    size='sm'
-                    onClick={(): void => handleCreate(parent.id, parent.type)}
-                    className='h-9 w-9 cursor-pointer p-0 sm:h-8 sm:w-8'
-                    title='Add subcategory'>
-                    <Plus className='h-4 w-4' />
-                  </Button>
-                  <Button
-                    variant='ghost'
-                    size='sm'
-                    onClick={(): void => handleEdit(parent)}
-                    className='h-9 w-9 cursor-pointer p-0 sm:h-8 sm:w-8'>
-                    <Pencil className='h-4 w-4' />
-                  </Button>
-                  <Button
-                    variant='ghost'
-                    size='sm'
-                    onClick={(): void => void handleDeleteClick(parent)}
-                    className='text-destructive h-9 w-9 cursor-pointer p-0 sm:h-8 sm:w-8'>
-                    <Trash2 className='h-4 w-4' />
-                  </Button>
+                  <div className='flex shrink-0 items-center'>
+                    <Button
+                      variant='ghost'
+                      size='sm'
+                      onClick={(): void => handleCreate(parent.id, parent.type)}
+                      className='h-9 w-9 cursor-pointer p-0'
+                      title='Add subcategory'>
+                      <Plus className='h-4 w-4' />
+                    </Button>
+                    <Button
+                      variant='ghost'
+                      size='sm'
+                      onClick={(): void => handleEdit(parent)}
+                      className='hidden h-9 w-9 cursor-pointer p-0 sm:flex'>
+                      <Pencil className='h-4 w-4' />
+                    </Button>
+                    <Button
+                      variant='ghost'
+                      size='sm'
+                      onClick={(): void => void handleDeleteClick(parent)}
+                      className='text-destructive hidden h-9 w-9 cursor-pointer p-0 sm:flex'>
+                      <Trash2 className='h-4 w-4' />
+                    </Button>
+                  </div>
                 </CardHeader>
 
                 {isExpanded && hasChildren && (

@@ -41,6 +41,8 @@ import {
 import { DuplicateWarningDialog } from '@/components/transactions/duplicate-warning-dialog';
 import { getCurrentColombiaTimes } from '@/lib/utils/date';
 import { useTransactionFormStore } from '@/lib/stores/transaction-form.store';
+import { useUsage } from '@/hooks/use-usage';
+import { useSubscription } from '@/hooks/use-subscription';
 import type { Transaction, CreateTransactionInput } from '@/types';
 
 const formSchema = z.object({
@@ -70,6 +72,8 @@ export function TransactionForm({
 }: TransactionFormProps): React.ReactElement {
   const { data: accounts } = useAccounts();
   const { data: categories } = useCategories();
+  const { data: usage } = useUsage();
+  const { data: subscription } = useSubscription();
   const createMutation = useCreateTransaction();
   const updateMutation = useUpdateTransaction();
   const deleteMutation = useDeleteTransaction();
@@ -219,6 +223,18 @@ export function TransactionForm({
         <DialogHeader>
           <DialogTitle>{isEditing ? 'Edit Transaction' : 'New Transaction'}</DialogTitle>
         </DialogHeader>
+
+        {!isEditing && subscription?.plan !== 'pro' && usage && (
+          <div className='border-border bg-muted/30 flex items-center justify-between rounded-lg border px-3 py-2 text-xs'>
+            <span className='text-muted-foreground'>
+              Transactions: {usage.transactions_count}/{usage.transactions_limit} · AI Parses:{' '}
+              {usage.ai_parses_used}/{usage.ai_parses_limit}
+            </span>
+            <a href='/settings' className='text-primary font-medium hover:underline'>
+              Upgrade
+            </a>
+          </div>
+        )}
 
         {isEditing && transaction.duplicate_status === 'pending_review' && (
           <div className='border-warning/30 bg-warning/5 flex items-start gap-3 rounded-lg border p-3'>

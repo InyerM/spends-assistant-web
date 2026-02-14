@@ -2,6 +2,9 @@ import { vi } from 'vitest';
 import React from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { Transaction, Account, Category, AutomationRule } from '@/types';
+import type { UserSession } from '@/hooks/use-sessions';
+import type { Subscription } from '@/hooks/use-subscription';
+import type { UsageData } from '@/hooks/use-usage';
 
 export function createMockTransaction(overrides: Partial<Transaction> = {}): Transaction {
   return {
@@ -85,6 +88,42 @@ export function createMockAutomationRule(overrides: Partial<AutomationRule> = {}
     actions: {},
     created_at: '2024-01-01T00:00:00Z',
     updated_at: '2024-01-01T00:00:00Z',
+    ...overrides,
+  };
+}
+
+export function createMockSession(overrides: Partial<UserSession> = {}): UserSession {
+  return {
+    id: 'sess-1',
+    user_id: 'test-user-id',
+    device_name: 'Chrome on macOS',
+    device_type: 'desktop',
+    browser: 'Chrome',
+    os: 'macOS',
+    ip_address: '192.168.1.1',
+    last_active_at: '2024-01-15T10:00:00Z',
+    created_at: '2024-01-01T00:00:00Z',
+    ...overrides,
+  };
+}
+
+export function createMockSubscription(overrides: Partial<Subscription> = {}): Subscription {
+  return {
+    plan: 'free',
+    status: 'active',
+    current_period_start: null,
+    current_period_end: null,
+    ...overrides,
+  };
+}
+
+export function createMockUsage(overrides: Partial<UsageData> = {}): UsageData {
+  return {
+    month: new Date().toISOString().slice(0, 7),
+    ai_parses_used: 5,
+    ai_parses_limit: 15,
+    transactions_count: 10,
+    transactions_limit: 50,
     ...overrides,
   };
 }

@@ -25,3 +25,8 @@ export type {
   CreateAutomationRuleInput,
   UpdateAutomationRuleInput,
 } from './automation-rule';
+
+export type { UserProfile } from '@/hooks/use-profile';
+export type { UserSession } from '@/hooks/use-sessions';
+export type { Subscription } from '@/hooks/use-subscription';
+export type { UsageData } from '@/hooks/use-usage';

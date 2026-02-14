@@ -5,7 +5,24 @@ import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/use-auth';
 import { useUiStore } from '@/store/ui-store';
 import type { LucideIcon } from 'lucide-react';
-import { LayoutDashboard, ArrowRightLeft, Wallet, Tags, Zap, Menu, LogOut } from 'lucide-react';
+import {
+  LayoutDashboard,
+  ArrowRightLeft,
+  Wallet,
+  Tags,
+  Zap,
+  Menu,
+  LogOut,
+  Settings,
+} from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 interface NavItem {
   title: string;
@@ -26,10 +43,15 @@ interface SidebarProps {
   onClose?: () => void;
 }
 
+function getUserInitials(email: string | undefined): string {
+  if (!email) return '?';
+  return email.slice(0, 2).toUpperCase();
+}
+
 export function Sidebar({ className, onClose }: SidebarProps): React.ReactElement {
   const pathname = usePathname();
   const router = useRouter();
-  const { signOut } = useAuth();
+  const { user, signOut } = useAuth();
   const sidebarCollapsed = useUiStore((state) => state.sidebarCollapsed);
   const toggleCollapsed = useUiStore((state) => state.toggleSidebarCollapsed);
   const isCollapsed = !onClose && sidebarCollapsed;
@@ -48,6 +70,9 @@ export function Sidebar({ className, onClose }: SidebarProps): React.ReactElemen
   const isActivePath = (href: string): boolean => {
     return pathname === href || pathname.startsWith(href + '/');
   };
+
+  const avatarUrl = user?.user_metadata.avatar_url as string | undefined;
+  const displayName = (user?.user_metadata.display_name as string | undefined) ?? user?.email;
 
   return (
     <aside
@@ -98,16 +123,37 @@ export function Sidebar({ className, onClose }: SidebarProps): React.ReactElemen
       </nav>
 
       <div className='border-border border-t p-3'>
-        <button
-          onClick={(): void => void handleLogout()}
-          className={cn(
-            'text-muted-foreground hover:bg-card-overlay hover:text-destructive flex w-full cursor-pointer items-center gap-3 rounded-lg p-2 transition-colors',
-            isCollapsed && 'justify-center',
-          )}
-          title={isCollapsed ? 'Logout' : undefined}>
-          <LogOut className='h-5 w-5 shrink-0' />
-          {!isCollapsed && <span className='text-sm font-medium'>Logout</span>}
-        </button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              className={cn(
+                'hover:bg-card-overlay flex w-full cursor-pointer items-center gap-3 rounded-lg p-2 transition-colors',
+                isCollapsed && 'justify-center',
+              )}
+              title={isCollapsed ? (displayName ?? 'User menu') : undefined}>
+              <Avatar size='sm'>
+                {avatarUrl && <AvatarImage src={avatarUrl} alt={displayName ?? ''} />}
+                <AvatarFallback>{getUserInitials(user?.email ?? undefined)}</AvatarFallback>
+              </Avatar>
+              {!isCollapsed && (
+                <span className='text-muted-foreground truncate text-sm font-medium'>
+                  {displayName}
+                </span>
+              )}
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent side='top' align='start' className='w-56'>
+            <DropdownMenuItem onClick={(): void => handleNavigation('/settings')}>
+              <Settings className='h-4 w-4' />
+              Settings
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem variant='destructive' onClick={(): void => void handleLogout()}>
+              <LogOut className='h-4 w-4' />
+              Sign out
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </aside>
   );

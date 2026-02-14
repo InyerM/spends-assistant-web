@@ -34,6 +34,45 @@ function createChainableQuery(data: unknown, error: { message: string } | null =
   return { from: vi.fn().mockReturnValue(chain), _chain: chain };
 }
 
+function createAccountPostMock(
+  insertData: unknown,
+  insertError: { message: string } | null = null,
+  opts: { accountCount?: number } = {},
+) {
+  const { accountCount = 0 } = opts;
+
+  function makeChain(thenResult: unknown, singleResult?: unknown) {
+    const chain: Record<string, ReturnType<typeof vi.fn>> = {};
+    ['select', 'eq', 'is', 'order', 'insert'].forEach((m) => {
+      chain[m] = vi.fn().mockReturnValue(chain);
+    });
+    chain.maybeSingle = vi.fn().mockResolvedValue(thenResult);
+    chain.single = vi.fn().mockResolvedValue(singleResult ?? thenResult);
+    Object.defineProperty(chain, 'then', {
+      value: (resolve: (v: unknown) => void) => resolve(thenResult),
+      enumerable: false,
+      configurable: true,
+    });
+    return chain;
+  }
+
+  const fromMock = vi.fn().mockImplementation((table: string) => {
+    if (table === 'subscriptions') {
+      return makeChain({ data: null, error: null });
+    }
+    if (table === 'app_settings') {
+      return makeChain({ data: null, error: null });
+    }
+    // accounts — used for count query (thenable) and insert query (.single())
+    return makeChain(
+      { data: null, error: null, count: accountCount },
+      { data: insertData, error: insertError },
+    );
+  });
+
+  return { from: fromMock };
+}
+
 describe('GET /api/accounts', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
@@ -77,7 +116,7 @@ describe('POST /api/accounts', () => {
     const { getUserClient } = await import('@/lib/api/server');
     const account = { id: 'acc-new', name: 'New Account' };
     vi.mocked(getUserClient).mockResolvedValue({
-      supabase: createChainableQuery(account) as never,
+      supabase: createAccountPostMock(account) as never,
       userId: 'test-user-id',
     });
 
@@ -92,7 +131,7 @@ describe('POST /api/accounts', () => {
   it('returns 400 on create error', async () => {
     const { getUserClient } = await import('@/lib/api/server');
     vi.mocked(getUserClient).mockResolvedValue({
-      supabase: createChainableQuery(null, { message: 'Duplicate name' }) as never,
+      supabase: createAccountPostMock(null, { message: 'Duplicate name' }) as never,
       userId: 'test-user-id',
     });
 
@@ -102,5 +141,22 @@ describe('POST /api/accounts', () => {
     });
     const response = await POST(request);
     expect(response.status).toBe(400);
+  });
+
+  it('returns 403 when free plan account limit reached', async () => {
+    const { getUserClient } = await import('@/lib/api/server');
+    vi.mocked(getUserClient).mockResolvedValue({
+      supabase: createAccountPostMock(null, null, { accountCount: 4 }) as never,
+      userId: 'test-user-id',
+    });
+
+    const request = new NextRequest('http://localhost/api/accounts', {
+      method: 'POST',
+      body: JSON.stringify({ name: 'Fifth Account', type: 'checking' }),
+    });
+    const response = await POST(request);
+    expect(response.status).toBe(403);
+    const body = await response.json();
+    expect(body.error).toContain('Account limit reached');
   });
 });

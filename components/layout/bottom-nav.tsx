@@ -9,10 +9,12 @@ import {
   Tags,
   MoreHorizontal,
   Zap,
+  Settings,
   LogOut,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/hooks/use-auth';
 import type { LucideIcon } from 'lucide-react';
 
@@ -29,7 +31,10 @@ const mainItems: NavItem[] = [
   { title: 'Categories', href: '/categories', icon: Tags },
 ];
 
-const moreItems: NavItem[] = [{ title: 'Automation', href: '/automation', icon: Zap }];
+const moreItems: NavItem[] = [
+  { title: 'Automation', href: '/automation', icon: Zap },
+  { title: 'Settings', href: '/settings', icon: Settings },
+];
 
 function isActivePath(pathname: string, href: string): boolean {
   return pathname === href || pathname.startsWith(href + '/');
@@ -38,8 +43,11 @@ function isActivePath(pathname: string, href: string): boolean {
 export function BottomNav(): React.ReactElement {
   const pathname = usePathname();
   const router = useRouter();
-  const { signOut } = useAuth();
+  const { user, signOut } = useAuth();
   const [moreOpen, setMoreOpen] = useState(false);
+
+  const avatarUrl = user?.user_metadata.avatar_url as string | undefined;
+  const displayName = (user?.user_metadata.display_name as string | undefined) ?? user?.email;
 
   const moreActive = moreItems.some((item) => isActivePath(pathname, item.href));
 
@@ -91,6 +99,14 @@ export function BottomNav(): React.ReactElement {
             <SheetTitle>More</SheetTitle>
           </SheetHeader>
           <div className='space-y-1 py-4'>
+            <div className='mb-3 flex items-center gap-3 px-3'>
+              <Avatar size='sm'>
+                {avatarUrl && <AvatarImage src={avatarUrl} alt={displayName ?? ''} />}
+                <AvatarFallback>{(user?.email ?? '?').slice(0, 2).toUpperCase()}</AvatarFallback>
+              </Avatar>
+              <span className='text-muted-foreground min-w-0 truncate text-sm'>{displayName}</span>
+            </div>
+            <div className='border-border mb-2 border-t' />
             {moreItems.map((item) => {
               const active = isActivePath(pathname, item.href);
               return (

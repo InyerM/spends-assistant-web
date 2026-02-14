@@ -90,7 +90,11 @@ export default function AutomationPage(): React.ReactElement {
         <Card className='border-border bg-card'>
           <CardContent className='flex flex-col items-center justify-center py-12'>
             <Zap className='text-muted-foreground mb-4 h-12 w-12' />
-            <p className='text-muted-foreground'>No automation rules configured</p>
+            <p className='text-muted-foreground mb-4'>No automation rules yet</p>
+            <Button className='cursor-pointer' onClick={handleCreate}>
+              <Plus className='mr-2 h-4 w-4' />
+              Create your first rule
+            </Button>
           </CardContent>
         </Card>
       ) : (

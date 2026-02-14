@@ -1,5 +1,6 @@
 'use client';
 
+import { usePathname } from 'next/navigation';
 import { AuthGuard } from '@/components/guards/auth-guard';
 import { Sidebar } from '@/components/layout/sidebar';
 import { Header } from '@/components/layout/header';
@@ -10,11 +11,16 @@ import { useTransactionFormStore } from '@/lib/stores/transaction-form.store';
 import { Plus, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
+const FAB_PAGES = ['/dashboard', '/transactions'];
+
 export default function DashboardLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>): React.ReactNode {
+  const pathname = usePathname();
   const { open, transaction, aiOpen, setOpen, openNew, openAi, setAiOpen } =
     useTransactionFormStore();
+
+  const showFabs = FAB_PAGES.some((p) => pathname === p || pathname.startsWith(p + '/'));
 
   return (
     <AuthGuard>
@@ -30,20 +36,22 @@ export default function DashboardLayout({
 
       <BottomNav />
 
-      <div className='fixed right-6 bottom-22 z-50 flex flex-col gap-3 md:bottom-6 md:hidden'>
-        <Button
-          onClick={openAi}
-          size='icon'
-          className='ai-gradient-btn bg-card h-12 w-12 cursor-pointer rounded-full border-0 text-purple-400 shadow-lg hover:text-purple-300'>
-          <Sparkles className='h-5 w-5' />
-        </Button>
-        <Button
-          onClick={openNew}
-          size='icon'
-          className='h-14 w-14 cursor-pointer rounded-full shadow-lg'>
-          <Plus className='h-6 w-6' />
-        </Button>
-      </div>
+      {showFabs && (
+        <div className='fixed right-6 bottom-22 z-50 flex flex-col gap-3 md:bottom-6 md:hidden'>
+          <Button
+            onClick={openAi}
+            size='icon'
+            className='ai-gradient-btn bg-card h-12 w-12 cursor-pointer rounded-full border-0 text-purple-400 shadow-lg hover:text-purple-300'>
+            <Sparkles className='h-5 w-5' />
+          </Button>
+          <Button
+            onClick={openNew}
+            size='icon'
+            className='h-14 w-14 cursor-pointer rounded-full shadow-lg'>
+            <Plus className='h-6 w-6' />
+          </Button>
+        </div>
+      )}
 
       <TransactionForm open={open} onOpenChange={setOpen} transaction={transaction} />
       <AiParseDialog open={aiOpen} onOpenChange={setAiOpen} />

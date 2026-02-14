@@ -171,6 +171,34 @@ export async function POST(request: NextRequest): Promise<Response> {
       data.transfer_to_account_id as string | null,
     );
 
+    // Increment monthly transaction count for usage tracking
+    const month = new Date().toISOString().slice(0, 7);
+    const { data: usageRow } = await supabase
+      .from('usage_tracking')
+      .select('id, transactions_count')
+      .eq('user_id', userId)
+      .eq('month', month)
+      .maybeSingle();
+
+    if (usageRow) {
+      await supabase
+        .from('usage_tracking')
+        .update({
+          transactions_count: (usageRow.transactions_count as number) + 1,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', usageRow.id);
+    } else {
+      await supabase.from('usage_tracking').insert({
+        user_id: userId,
+        month,
+        ai_parses_used: 0,
+        ai_parses_limit: 15,
+        transactions_count: 1,
+        transactions_limit: 50,
+      });
+    }
+
     return jsonResponse(data, 201);
   } catch (error) {
     if (error instanceof AuthError) return errorResponse('Unauthorized', 401);

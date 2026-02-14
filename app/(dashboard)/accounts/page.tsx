@@ -52,9 +52,11 @@ export default function AccountsPage(): React.ReactElement {
   return (
     <div className='space-y-4 p-4 sm:space-y-6 sm:p-6'>
       <div className='flex items-center justify-between'>
-        <div>
-          <h2 className='text-foreground text-2xl font-bold'>Accounts</h2>
-          <p className='text-muted-foreground text-sm'>Manage your financial accounts</p>
+        <div className='min-w-0'>
+          <h2 className='text-foreground text-xl font-bold sm:text-2xl'>Accounts</h2>
+          <p className='text-muted-foreground hidden text-sm sm:block'>
+            Manage your financial accounts
+          </p>
         </div>
         <Button onClick={(): void => setCreateOpen(true)}>
           <Plus className='h-4 w-4 sm:mr-2' />

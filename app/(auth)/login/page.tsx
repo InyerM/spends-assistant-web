@@ -53,7 +53,7 @@ export default function LoginPage(): React.ReactElement {
     setError(null);
     try {
       await signInWithPassword(values.email, values.password);
-      router.push('/dashboard');
+      router.refresh();
     } catch {
       setError('Invalid email or password');
       toast.error('Login failed');

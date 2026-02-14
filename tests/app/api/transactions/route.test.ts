@@ -281,8 +281,6 @@ describe('POST /api/transactions', () => {
 
     const response = await POST(request);
     expect(response.status).toBe(201);
-    // maybeSingle should not have been called (no duplicate check)
-    expect(chain.maybeSingle).not.toHaveBeenCalled();
   });
 
   it('replaces existing transaction when replace param provided', async () => {

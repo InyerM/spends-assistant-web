@@ -25,6 +25,26 @@ export async function POST(request: NextRequest): Promise<Response> {
     const { supabase, userId } = await getUserClient();
     const body = (await request.json()) as Record<string, unknown>;
 
+    // Check account limit for free plan
+    const [{ data: subscription }, accountCountResult, { data: limitSetting }] = await Promise.all([
+      supabase.from('subscriptions').select('plan').eq('user_id', userId).maybeSingle(),
+      supabase
+        .from('accounts')
+        .select('id', { count: 'exact', head: true })
+        .eq('is_active', true)
+        .is('deleted_at', null),
+      supabase.from('app_settings').select('value').eq('key', 'free_accounts_limit').maybeSingle(),
+    ]);
+
+    const plan = (subscription?.plan as string | undefined) ?? 'free';
+    if (plan === 'free') {
+      const limit = (limitSetting?.value as number | undefined) ?? 4;
+      const count = accountCountResult.count ?? 0;
+      if (count >= limit) {
+        return errorResponse(`Account limit reached (${limit} for free plan)`, 403);
+      }
+    }
+
     const { data, error } = await supabase
       .from('accounts')
       .insert({ ...body, user_id: userId })

@@ -22,22 +22,35 @@ vi.mock('@/lib/config', () => ({
   },
 }));
 
+function createMockSupabaseWithSession(): unknown {
+  return {
+    auth: {
+      getSession: vi.fn().mockResolvedValue({
+        data: { session: { access_token: 'test-supabase-jwt' } },
+      }),
+    },
+    from: vi.fn().mockReturnValue({
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      is: vi.fn().mockReturnThis(),
+      order: vi.fn().mockReturnThis(),
+    }),
+  };
+}
+
 describe('POST /api/transactions/parse', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.restoreAllMocks();
+    const { getUserClient } = await import('@/lib/api/server');
+    vi.mocked(getUserClient).mockResolvedValue({
+      supabase: createMockSupabaseWithSession() as never,
+      userId: 'test-user-id',
+    });
   });
 
   it('parses text and returns result with automation rules', async () => {
-    const { getUserClient, applyAutomationRules } = await import('@/lib/api/server');
+    const { applyAutomationRules } = await import('@/lib/api/server');
 
-    const chain: Record<string, ReturnType<typeof vi.fn>> = {};
-    ['select', 'eq', 'is', 'order'].forEach((m) => {
-      chain[m] = vi.fn().mockReturnValue(chain);
-    });
-    vi.mocked(getUserClient).mockResolvedValue({
-      supabase: { from: vi.fn().mockReturnValue(chain) } as never,
-      userId: 'test-user-id',
-    });
     vi.mocked(applyAutomationRules).mockResolvedValue({
       description: 'Almuerzo',
       amount: 15000,

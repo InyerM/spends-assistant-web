@@ -25,7 +25,7 @@ export function Header(): React.ReactElement {
   const title = getPageTitle(pathname);
 
   return (
-    <header className='border-border bg-sidebar-bg/50 flex h-14 shrink-0 items-center gap-4 border-b px-6 backdrop-blur-sm'>
+    <header className='border-border bg-sidebar-bg/50 hidden h-14 shrink-0 items-center gap-4 border-b px-6 backdrop-blur-sm md:flex'>
       <h1 className='text-foreground text-lg font-semibold'>{title}</h1>
       <div className='flex-1' />
     </header>
