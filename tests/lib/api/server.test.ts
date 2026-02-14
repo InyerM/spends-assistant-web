@@ -1,5 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
+  getUserClient,
+  AuthError,
   jsonResponse,
   errorResponse,
   adjustAccountBalance,
@@ -10,8 +12,64 @@ import { createMockAutomationRule } from '@/tests/__test-helpers__/factories';
 
 // Mock the supabase server module
 vi.mock('@/lib/supabase/server', () => ({
+  createClient: vi.fn(),
   createAdminClient: vi.fn(),
 }));
+
+describe('AuthError', () => {
+  it('has the correct name and default message', () => {
+    const error = new AuthError();
+    expect(error.name).toBe('AuthError');
+    expect(error.message).toBe('Unauthorized');
+  });
+
+  it('accepts a custom message', () => {
+    const error = new AuthError('Custom message');
+    expect(error.message).toBe('Custom message');
+  });
+
+  it('is an instance of Error', () => {
+    const error = new AuthError();
+    expect(error).toBeInstanceOf(Error);
+  });
+});
+
+describe('getUserClient', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('returns supabase client and userId when authenticated', async () => {
+    const { createClient } = await import('@/lib/supabase/server');
+    const mockSupabase = {
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: { id: 'user-123' } },
+        }),
+      },
+    };
+    vi.mocked(createClient).mockResolvedValue(mockSupabase as never);
+
+    const result = await getUserClient();
+    expect(result.supabase).toBe(mockSupabase);
+    expect(result.userId).toBe('user-123');
+  });
+
+  it('throws AuthError when user is not authenticated', async () => {
+    const { createClient } = await import('@/lib/supabase/server');
+    const mockSupabase = {
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: null },
+        }),
+      },
+    };
+    vi.mocked(createClient).mockResolvedValue(mockSupabase as never);
+
+    await expect(getUserClient()).rejects.toThrow(AuthError);
+    await expect(getUserClient()).rejects.toThrow('Unauthorized');
+  });
+});
 
 describe('jsonResponse', () => {
   it('returns JSON with default 200 status', async () => {

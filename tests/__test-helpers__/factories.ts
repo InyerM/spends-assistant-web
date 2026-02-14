@@ -6,6 +6,7 @@ import type { Transaction, Account, Category, AutomationRule } from '@/types';
 export function createMockTransaction(overrides: Partial<Transaction> = {}): Transaction {
   return {
     id: 'tx-1',
+    user_id: 'test-user-id',
     date: '2024-01-15',
     time: '14:30',
     amount: 50000,
@@ -37,6 +38,7 @@ export function createMockTransaction(overrides: Partial<Transaction> = {}): Tra
 export function createMockAccount(overrides: Partial<Account> = {}): Account {
   return {
     id: 'acc-1',
+    user_id: 'test-user-id',
     name: 'Bancolombia Savings',
     type: 'savings',
     institution: 'bancolombia',
@@ -56,6 +58,7 @@ export function createMockAccount(overrides: Partial<Account> = {}): Account {
 export function createMockCategory(overrides: Partial<Category> = {}): Category {
   return {
     id: 'cat-1',
+    user_id: 'test-user-id',
     name: 'Food',
     slug: 'food',
     type: 'expense',
@@ -71,6 +74,7 @@ export function createMockCategory(overrides: Partial<Category> = {}): Category 
 export function createMockAutomationRule(overrides: Partial<AutomationRule> = {}): AutomationRule {
   return {
     id: 'rule-1',
+    user_id: 'test-user-id',
     name: 'Test Rule',
     is_active: true,
     priority: 1,

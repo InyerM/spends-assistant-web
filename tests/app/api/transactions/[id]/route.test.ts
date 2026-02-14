@@ -3,7 +3,13 @@ import { GET, PATCH, DELETE } from '@/app/api/transactions/[id]/route';
 import { NextRequest } from 'next/server';
 
 vi.mock('@/lib/api/server', () => ({
-  getAdminClient: vi.fn(),
+  getUserClient: vi.fn(),
+  AuthError: class AuthError extends Error {
+    constructor(m = 'Unauthorized') {
+      super(m);
+      this.name = 'AuthError';
+    }
+  },
   jsonResponse: (data: unknown, status = 200) => Response.json(data, { status }),
   errorResponse: (message: string, status = 500) => Response.json({ error: message }, { status }),
   applyTransactionBalance: vi.fn(),
@@ -28,9 +34,12 @@ describe('GET /api/transactions/[id]', () => {
   });
 
   it('returns transaction when found', async () => {
-    const { getAdminClient } = await import('@/lib/api/server');
+    const { getUserClient } = await import('@/lib/api/server');
     const tx = { id: 'tx-1', description: 'Test' };
-    vi.mocked(getAdminClient).mockReturnValue(createChainableQuery(tx) as never);
+    vi.mocked(getUserClient).mockResolvedValue({
+      supabase: createChainableQuery(tx) as never,
+      userId: 'test-user-id',
+    });
 
     const request = new NextRequest('http://localhost/api/transactions/tx-1');
     const response = await GET(request, makeParams('tx-1'));
@@ -40,10 +49,11 @@ describe('GET /api/transactions/[id]', () => {
   });
 
   it('returns 404 when not found', async () => {
-    const { getAdminClient } = await import('@/lib/api/server');
-    vi.mocked(getAdminClient).mockReturnValue(
-      createChainableQuery(null, { message: 'Not found' }) as never,
-    );
+    const { getUserClient } = await import('@/lib/api/server');
+    vi.mocked(getUserClient).mockResolvedValue({
+      supabase: createChainableQuery(null, { message: 'Not found' }) as never,
+      userId: 'test-user-id',
+    });
 
     const request = new NextRequest('http://localhost/api/transactions/tx-999');
     const response = await GET(request, makeParams('tx-999'));
@@ -57,7 +67,7 @@ describe('PATCH /api/transactions/[id]', () => {
   });
 
   it('updates transaction fields', async () => {
-    const { getAdminClient, applyTransactionBalance } = await import('@/lib/api/server');
+    const { getUserClient, applyTransactionBalance } = await import('@/lib/api/server');
     const old = {
       type: 'expense',
       amount: 50000,
@@ -76,7 +86,10 @@ describe('PATCH /api/transactions/[id]', () => {
       if (singleCallCount === 1) return { data: old, error: null };
       return { data: updated, error: null };
     });
-    vi.mocked(getAdminClient).mockReturnValue({ from: vi.fn().mockReturnValue(chain) } as never);
+    vi.mocked(getUserClient).mockResolvedValue({
+      supabase: { from: vi.fn().mockReturnValue(chain) } as never,
+      userId: 'test-user-id',
+    });
     vi.mocked(applyTransactionBalance).mockResolvedValue();
 
     const request = new NextRequest('http://localhost/api/transactions/tx-1', {
@@ -90,7 +103,7 @@ describe('PATCH /api/transactions/[id]', () => {
   });
 
   it('reverses and reapplies balance on amount change', async () => {
-    const { getAdminClient, applyTransactionBalance } = await import('@/lib/api/server');
+    const { getUserClient, applyTransactionBalance } = await import('@/lib/api/server');
     const old = {
       type: 'expense',
       amount: 50000,
@@ -114,7 +127,10 @@ describe('PATCH /api/transactions/[id]', () => {
       if (singleCallCount === 1) return { data: old, error: null };
       return { data: updated, error: null };
     });
-    vi.mocked(getAdminClient).mockReturnValue({ from: vi.fn().mockReturnValue(chain) } as never);
+    vi.mocked(getUserClient).mockResolvedValue({
+      supabase: { from: vi.fn().mockReturnValue(chain) } as never,
+      userId: 'test-user-id',
+    });
     vi.mocked(applyTransactionBalance).mockResolvedValue();
 
     const request = new NextRequest('http://localhost/api/transactions/tx-1', {
@@ -128,7 +144,7 @@ describe('PATCH /api/transactions/[id]', () => {
   });
 
   it('returns 400 on update error', async () => {
-    const { getAdminClient } = await import('@/lib/api/server');
+    const { getUserClient } = await import('@/lib/api/server');
     const old = {
       type: 'expense',
       amount: 50000,
@@ -146,7 +162,10 @@ describe('PATCH /api/transactions/[id]', () => {
       if (singleCallCount === 1) return { data: old, error: null };
       return { data: null, error: { message: 'Update failed' } };
     });
-    vi.mocked(getAdminClient).mockReturnValue({ from: vi.fn().mockReturnValue(chain) } as never);
+    vi.mocked(getUserClient).mockResolvedValue({
+      supabase: { from: vi.fn().mockReturnValue(chain) } as never,
+      userId: 'test-user-id',
+    });
 
     const request = new NextRequest('http://localhost/api/transactions/tx-1', {
       method: 'PATCH',
@@ -163,7 +182,7 @@ describe('DELETE /api/transactions/[id]', () => {
   });
 
   it('soft-deletes and reverses balance for expense', async () => {
-    const { getAdminClient, applyTransactionBalance } = await import('@/lib/api/server');
+    const { getUserClient, applyTransactionBalance } = await import('@/lib/api/server');
     const tx = {
       type: 'expense',
       amount: 50000,
@@ -186,7 +205,10 @@ describe('DELETE /api/transactions/[id]', () => {
       configurable: true,
     });
 
-    vi.mocked(getAdminClient).mockReturnValue({ from: vi.fn().mockReturnValue(chain) } as never);
+    vi.mocked(getUserClient).mockResolvedValue({
+      supabase: { from: vi.fn().mockReturnValue(chain) } as never,
+      userId: 'test-user-id',
+    });
     vi.mocked(applyTransactionBalance).mockResolvedValue();
 
     const request = new NextRequest('http://localhost/api/transactions/tx-1', {
@@ -205,7 +227,7 @@ describe('DELETE /api/transactions/[id]', () => {
   });
 
   it('returns 400 on delete error', async () => {
-    const { getAdminClient } = await import('@/lib/api/server');
+    const { getUserClient } = await import('@/lib/api/server');
 
     const chain: Record<string, ReturnType<typeof vi.fn>> = {};
     ['select', 'eq', 'is', 'update'].forEach((m) => {
@@ -220,7 +242,10 @@ describe('DELETE /api/transactions/[id]', () => {
       configurable: true,
     });
 
-    vi.mocked(getAdminClient).mockReturnValue({ from: vi.fn().mockReturnValue(chain) } as never);
+    vi.mocked(getUserClient).mockResolvedValue({
+      supabase: { from: vi.fn().mockReturnValue(chain) } as never,
+      userId: 'test-user-id',
+    });
 
     const request = new NextRequest('http://localhost/api/transactions/tx-1', {
       method: 'DELETE',

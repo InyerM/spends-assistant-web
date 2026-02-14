@@ -1,9 +1,9 @@
 import type { NextRequest } from 'next/server';
-import { getAdminClient, jsonResponse, errorResponse } from '@/lib/api/server';
+import { getUserClient, AuthError, jsonResponse, errorResponse } from '@/lib/api/server';
 
 export async function PATCH(request: NextRequest): Promise<Response> {
   try {
-    const supabase = getAdminClient();
+    const { supabase } = await getUserClient();
     const body = (await request.json()) as {
       ids: string[];
       updates: Record<string, unknown>;
@@ -22,7 +22,8 @@ export async function PATCH(request: NextRequest): Promise<Response> {
 
     if (error) return errorResponse(error.message, 400);
     return jsonResponse(data);
-  } catch {
+  } catch (error) {
+    if (error instanceof AuthError) return errorResponse('Unauthorized', 401);
     return errorResponse('Failed to bulk update transactions');
   }
 }

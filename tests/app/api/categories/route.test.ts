@@ -3,7 +3,13 @@ import { GET, POST } from '@/app/api/categories/route';
 import { NextRequest } from 'next/server';
 
 vi.mock('@/lib/api/server', () => ({
-  getAdminClient: vi.fn(),
+  getUserClient: vi.fn(),
+  AuthError: class AuthError extends Error {
+    constructor(m = 'Unauthorized') {
+      super(m);
+      this.name = 'AuthError';
+    }
+  },
   jsonResponse: (data: unknown, status = 200) => Response.json(data, { status }),
   errorResponse: (message: string, status = 500) => Response.json({ error: message }, { status }),
 }));
@@ -34,12 +40,15 @@ describe('GET /api/categories', () => {
   });
 
   it('returns list of categories', async () => {
-    const { getAdminClient } = await import('@/lib/api/server');
+    const { getUserClient } = await import('@/lib/api/server');
     const categories = [
       { id: 'cat-1', name: 'Food' },
       { id: 'cat-2', name: 'Transport' },
     ];
-    vi.mocked(getAdminClient).mockReturnValue(createChainableQuery(categories) as never);
+    vi.mocked(getUserClient).mockResolvedValue({
+      supabase: createChainableQuery(categories) as never,
+      userId: 'test-user-id',
+    });
 
     const response = await GET();
     expect(response.status).toBe(200);
@@ -48,10 +57,11 @@ describe('GET /api/categories', () => {
   });
 
   it('returns 400 on error', async () => {
-    const { getAdminClient } = await import('@/lib/api/server');
-    vi.mocked(getAdminClient).mockReturnValue(
-      createChainableQuery(null, { message: 'DB error' }) as never,
-    );
+    const { getUserClient } = await import('@/lib/api/server');
+    vi.mocked(getUserClient).mockResolvedValue({
+      supabase: createChainableQuery(null, { message: 'DB error' }) as never,
+      userId: 'test-user-id',
+    });
 
     const response = await GET();
     expect(response.status).toBe(400);
@@ -64,9 +74,12 @@ describe('POST /api/categories', () => {
   });
 
   it('creates a category', async () => {
-    const { getAdminClient } = await import('@/lib/api/server');
+    const { getUserClient } = await import('@/lib/api/server');
     const category = { id: 'cat-new', name: 'New Category' };
-    vi.mocked(getAdminClient).mockReturnValue(createChainableQuery(category) as never);
+    vi.mocked(getUserClient).mockResolvedValue({
+      supabase: createChainableQuery(category) as never,
+      userId: 'test-user-id',
+    });
 
     const request = new NextRequest('http://localhost/api/categories', {
       method: 'POST',
@@ -77,10 +90,11 @@ describe('POST /api/categories', () => {
   });
 
   it('returns 400 on create error', async () => {
-    const { getAdminClient } = await import('@/lib/api/server');
-    vi.mocked(getAdminClient).mockReturnValue(
-      createChainableQuery(null, { message: 'Insert failed' }) as never,
-    );
+    const { getUserClient } = await import('@/lib/api/server');
+    vi.mocked(getUserClient).mockResolvedValue({
+      supabase: createChainableQuery(null, { message: 'Insert failed' }) as never,
+      userId: 'test-user-id',
+    });
 
     const request = new NextRequest('http://localhost/api/categories', {
       method: 'POST',

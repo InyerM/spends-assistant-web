@@ -3,7 +3,13 @@ import { PATCH } from '@/app/api/transactions/bulk/route';
 import { NextRequest } from 'next/server';
 
 vi.mock('@/lib/api/server', () => ({
-  getAdminClient: vi.fn(),
+  getUserClient: vi.fn(),
+  AuthError: class AuthError extends Error {
+    constructor(m = 'Unauthorized') {
+      super(m);
+      this.name = 'AuthError';
+    }
+  },
   jsonResponse: (data: unknown, status = 200) => Response.json(data, { status }),
   errorResponse: (message: string, status = 500) => Response.json({ error: message }, { status }),
 }));
@@ -33,12 +39,15 @@ describe('PATCH /api/transactions/bulk', () => {
   });
 
   it('bulk updates transactions', async () => {
-    const { getAdminClient } = await import('@/lib/api/server');
+    const { getUserClient } = await import('@/lib/api/server');
     const updated = [
       { id: 'tx-1', category_id: 'cat-1' },
       { id: 'tx-2', category_id: 'cat-1' },
     ];
-    vi.mocked(getAdminClient).mockReturnValue(createChainableQuery(updated) as never);
+    vi.mocked(getUserClient).mockResolvedValue({
+      supabase: createChainableQuery(updated) as never,
+      userId: 'test-user-id',
+    });
 
     const request = new NextRequest('http://localhost/api/transactions/bulk', {
       method: 'PATCH',
@@ -54,8 +63,11 @@ describe('PATCH /api/transactions/bulk', () => {
   });
 
   it('returns 400 when ids empty', async () => {
-    const { getAdminClient } = await import('@/lib/api/server');
-    vi.mocked(getAdminClient).mockReturnValue(createChainableQuery([]) as never);
+    const { getUserClient } = await import('@/lib/api/server');
+    vi.mocked(getUserClient).mockResolvedValue({
+      supabase: createChainableQuery([]) as never,
+      userId: 'test-user-id',
+    });
 
     const request = new NextRequest('http://localhost/api/transactions/bulk', {
       method: 'PATCH',
@@ -66,8 +78,11 @@ describe('PATCH /api/transactions/bulk', () => {
   });
 
   it('returns 400 when updates empty', async () => {
-    const { getAdminClient } = await import('@/lib/api/server');
-    vi.mocked(getAdminClient).mockReturnValue(createChainableQuery([]) as never);
+    const { getUserClient } = await import('@/lib/api/server');
+    vi.mocked(getUserClient).mockResolvedValue({
+      supabase: createChainableQuery([]) as never,
+      userId: 'test-user-id',
+    });
 
     const request = new NextRequest('http://localhost/api/transactions/bulk', {
       method: 'PATCH',
@@ -78,10 +93,11 @@ describe('PATCH /api/transactions/bulk', () => {
   });
 
   it('returns 400 on DB error', async () => {
-    const { getAdminClient } = await import('@/lib/api/server');
-    vi.mocked(getAdminClient).mockReturnValue(
-      createChainableQuery(null, { message: 'Bulk update failed' }) as never,
-    );
+    const { getUserClient } = await import('@/lib/api/server');
+    vi.mocked(getUserClient).mockResolvedValue({
+      supabase: createChainableQuery(null, { message: 'Bulk update failed' }) as never,
+      userId: 'test-user-id',
+    });
 
     const request = new NextRequest('http://localhost/api/transactions/bulk', {
       method: 'PATCH',

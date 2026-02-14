@@ -1,6 +1,7 @@
 import type { NextRequest } from 'next/server';
 import {
-  getAdminClient,
+  getUserClient,
+  AuthError,
   jsonResponse,
   errorResponse,
   applyAutomationRules,
@@ -36,6 +37,8 @@ export async function POST(request: NextRequest): Promise<Response> {
       return errorResponse('Worker not configured', 503);
     }
 
+    const { supabase } = await getUserClient();
+
     const body = await request.json();
     const { text } = body as { text?: string };
 
@@ -59,8 +62,7 @@ export async function POST(request: NextRequest): Promise<Response> {
 
     const data = (await res.json()) as WorkerParseResponse;
 
-    // Apply automation rules to the parsed result
-    const supabase = getAdminClient();
+    // Apply automation rules to the parsed result (RLS filters rules to this user)
     const txForRules = {
       description: data.parsed.description,
       amount: data.parsed.amount,
@@ -89,7 +91,8 @@ export async function POST(request: NextRequest): Promise<Response> {
       },
       applied_rules: processed.applied_rules ?? [],
     });
-  } catch {
+  } catch (error) {
+    if (error instanceof AuthError) return errorResponse('Unauthorized', 401);
     return errorResponse('Failed to parse transaction');
   }
 }

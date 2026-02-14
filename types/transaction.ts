@@ -8,6 +8,7 @@ export interface AppliedRule {
 
 export interface Transaction {
   id: string;
+  user_id: string;
   date: string;
   time: string;
   amount: number;

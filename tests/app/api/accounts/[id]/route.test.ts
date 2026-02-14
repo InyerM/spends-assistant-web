@@ -3,7 +3,13 @@ import { GET, PATCH, DELETE } from '@/app/api/accounts/[id]/route';
 import { NextRequest } from 'next/server';
 
 vi.mock('@/lib/api/server', () => ({
-  getAdminClient: vi.fn(),
+  getUserClient: vi.fn(),
+  AuthError: class AuthError extends Error {
+    constructor(m = 'Unauthorized') {
+      super(m);
+      this.name = 'AuthError';
+    }
+  },
   jsonResponse: (data: unknown, status = 200) => Response.json(data, { status }),
   errorResponse: (message: string, status = 500) => Response.json({ error: message }, { status }),
 }));
@@ -34,9 +40,12 @@ describe('GET /api/accounts/[id]', () => {
   });
 
   it('returns account when found', async () => {
-    const { getAdminClient } = await import('@/lib/api/server');
+    const { getUserClient } = await import('@/lib/api/server');
     const account = { id: 'acc-1', name: 'Checking' };
-    vi.mocked(getAdminClient).mockReturnValue(createChainableQuery(account) as never);
+    vi.mocked(getUserClient).mockResolvedValue({
+      supabase: createChainableQuery(account) as never,
+      userId: 'test-user-id',
+    });
 
     const request = new NextRequest('http://localhost/api/accounts/acc-1');
     const response = await GET(request, makeParams('acc-1'));
@@ -46,10 +55,11 @@ describe('GET /api/accounts/[id]', () => {
   });
 
   it('returns 404 when not found', async () => {
-    const { getAdminClient } = await import('@/lib/api/server');
-    vi.mocked(getAdminClient).mockReturnValue(
-      createChainableQuery(null, { message: 'Not found' }) as never,
-    );
+    const { getUserClient } = await import('@/lib/api/server');
+    vi.mocked(getUserClient).mockResolvedValue({
+      supabase: createChainableQuery(null, { message: 'Not found' }) as never,
+      userId: 'test-user-id',
+    });
 
     const request = new NextRequest('http://localhost/api/accounts/acc-999');
     const response = await GET(request, makeParams('acc-999'));
@@ -63,9 +73,12 @@ describe('PATCH /api/accounts/[id]', () => {
   });
 
   it('updates account', async () => {
-    const { getAdminClient } = await import('@/lib/api/server');
+    const { getUserClient } = await import('@/lib/api/server');
     const updated = { id: 'acc-1', name: 'Updated' };
-    vi.mocked(getAdminClient).mockReturnValue(createChainableQuery(updated) as never);
+    vi.mocked(getUserClient).mockResolvedValue({
+      supabase: createChainableQuery(updated) as never,
+      userId: 'test-user-id',
+    });
 
     const request = new NextRequest('http://localhost/api/accounts/acc-1', {
       method: 'PATCH',
@@ -76,10 +89,11 @@ describe('PATCH /api/accounts/[id]', () => {
   });
 
   it('returns 400 on update error', async () => {
-    const { getAdminClient } = await import('@/lib/api/server');
-    vi.mocked(getAdminClient).mockReturnValue(
-      createChainableQuery(null, { message: 'Update failed' }) as never,
-    );
+    const { getUserClient } = await import('@/lib/api/server');
+    vi.mocked(getUserClient).mockResolvedValue({
+      supabase: createChainableQuery(null, { message: 'Update failed' }) as never,
+      userId: 'test-user-id',
+    });
 
     const request = new NextRequest('http://localhost/api/accounts/acc-1', {
       method: 'PATCH',
@@ -96,7 +110,7 @@ describe('DELETE /api/accounts/[id]', () => {
   });
 
   it('soft-deletes account and cascades to transactions', async () => {
-    const { getAdminClient } = await import('@/lib/api/server');
+    const { getUserClient } = await import('@/lib/api/server');
 
     const chain: Record<string, ReturnType<typeof vi.fn>> = {};
     ['select', 'eq', 'is', 'update'].forEach((m) => {
@@ -110,7 +124,10 @@ describe('DELETE /api/accounts/[id]', () => {
       configurable: true,
     });
 
-    vi.mocked(getAdminClient).mockReturnValue({ from: vi.fn().mockReturnValue(chain) } as never);
+    vi.mocked(getUserClient).mockResolvedValue({
+      supabase: { from: vi.fn().mockReturnValue(chain) } as never,
+      userId: 'test-user-id',
+    });
 
     const request = new NextRequest('http://localhost/api/accounts/acc-1', { method: 'DELETE' });
     const response = await DELETE(request, makeParams('acc-1'));
@@ -120,7 +137,7 @@ describe('DELETE /api/accounts/[id]', () => {
   });
 
   it('returns 400 on account delete error', async () => {
-    const { getAdminClient } = await import('@/lib/api/server');
+    const { getUserClient } = await import('@/lib/api/server');
 
     const chain: Record<string, ReturnType<typeof vi.fn>> = {};
     ['select', 'eq', 'is', 'update'].forEach((m) => {
@@ -133,7 +150,10 @@ describe('DELETE /api/accounts/[id]', () => {
       configurable: true,
     });
 
-    vi.mocked(getAdminClient).mockReturnValue({ from: vi.fn().mockReturnValue(chain) } as never);
+    vi.mocked(getUserClient).mockResolvedValue({
+      supabase: { from: vi.fn().mockReturnValue(chain) } as never,
+      userId: 'test-user-id',
+    });
 
     const request = new NextRequest('http://localhost/api/accounts/acc-1', { method: 'DELETE' });
     const response = await DELETE(request, makeParams('acc-1'));

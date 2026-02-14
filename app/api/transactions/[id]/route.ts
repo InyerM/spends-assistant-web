@@ -1,6 +1,7 @@
 import type { NextRequest } from 'next/server';
 import {
-  getAdminClient,
+  getUserClient,
+  AuthError,
   jsonResponse,
   errorResponse,
   applyTransactionBalance,
@@ -13,7 +14,7 @@ interface RouteParams {
 export async function GET(_request: NextRequest, { params }: RouteParams): Promise<Response> {
   try {
     const { id } = await params;
-    const supabase = getAdminClient();
+    const { supabase } = await getUserClient();
 
     const { data, error } = await supabase
       .from('transactions')
@@ -24,7 +25,8 @@ export async function GET(_request: NextRequest, { params }: RouteParams): Promi
 
     if (error) return errorResponse(error.message, 404);
     return jsonResponse(data);
-  } catch {
+  } catch (error) {
+    if (error instanceof AuthError) return errorResponse('Unauthorized', 401);
     return errorResponse('Failed to fetch transaction');
   }
 }
@@ -32,7 +34,7 @@ export async function GET(_request: NextRequest, { params }: RouteParams): Promi
 export async function PATCH(request: NextRequest, { params }: RouteParams): Promise<Response> {
   try {
     const { id } = await params;
-    const supabase = getAdminClient();
+    const { supabase } = await getUserClient();
     const body = await request.json();
 
     // Fetch old transaction to reverse its balance effect
@@ -82,7 +84,8 @@ export async function PATCH(request: NextRequest, { params }: RouteParams): Prom
     }
 
     return jsonResponse(data);
-  } catch {
+  } catch (error) {
+    if (error instanceof AuthError) return errorResponse('Unauthorized', 401);
     return errorResponse('Failed to update transaction');
   }
 }
@@ -90,7 +93,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams): Prom
 export async function DELETE(_request: NextRequest, { params }: RouteParams): Promise<Response> {
   try {
     const { id } = await params;
-    const supabase = getAdminClient();
+    const { supabase } = await getUserClient();
 
     // Fetch transaction before deleting to reverse balance
     const { data: tx } = await supabase
@@ -120,7 +123,8 @@ export async function DELETE(_request: NextRequest, { params }: RouteParams): Pr
     }
 
     return jsonResponse({ success: true });
-  } catch {
+  } catch (error) {
+    if (error instanceof AuthError) return errorResponse('Unauthorized', 401);
     return errorResponse('Failed to delete transaction');
   }
 }

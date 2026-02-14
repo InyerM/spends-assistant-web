@@ -3,7 +3,13 @@ import { GET, PATCH, DELETE } from '@/app/api/categories/[id]/route';
 import { NextRequest } from 'next/server';
 
 vi.mock('@/lib/api/server', () => ({
-  getAdminClient: vi.fn(),
+  getUserClient: vi.fn(),
+  AuthError: class AuthError extends Error {
+    constructor(m = 'Unauthorized') {
+      super(m);
+      this.name = 'AuthError';
+    }
+  },
   jsonResponse: (data: unknown, status = 200) => Response.json(data, { status }),
   errorResponse: (message: string, status = 500) => Response.json({ error: message }, { status }),
 }));
@@ -26,13 +32,16 @@ describe('GET /api/categories/[id]', () => {
   });
 
   it('returns category when found', async () => {
-    const { getAdminClient } = await import('@/lib/api/server');
+    const { getUserClient } = await import('@/lib/api/server');
     const category = { id: 'cat-1', name: 'Food' };
 
     const chain = createCategoryChain();
     chain.single = vi.fn().mockResolvedValue({ data: category, error: null });
 
-    vi.mocked(getAdminClient).mockReturnValue({ from: vi.fn().mockReturnValue(chain) } as never);
+    vi.mocked(getUserClient).mockResolvedValue({
+      supabase: { from: vi.fn().mockReturnValue(chain) } as never,
+      userId: 'test-user-id',
+    });
 
     const request = new NextRequest('http://localhost/api/categories/cat-1');
     const response = await GET(request, makeParams('cat-1'));
@@ -42,11 +51,14 @@ describe('GET /api/categories/[id]', () => {
   });
 
   it('returns 404 when not found', async () => {
-    const { getAdminClient } = await import('@/lib/api/server');
+    const { getUserClient } = await import('@/lib/api/server');
     const chain = createCategoryChain();
     chain.single = vi.fn().mockResolvedValue({ data: null, error: { message: 'Not found' } });
 
-    vi.mocked(getAdminClient).mockReturnValue({ from: vi.fn().mockReturnValue(chain) } as never);
+    vi.mocked(getUserClient).mockResolvedValue({
+      supabase: { from: vi.fn().mockReturnValue(chain) } as never,
+      userId: 'test-user-id',
+    });
 
     const request = new NextRequest('http://localhost/api/categories/cat-999');
     const response = await GET(request, makeParams('cat-999'));
@@ -54,7 +66,7 @@ describe('GET /api/categories/[id]', () => {
   });
 
   it('includes counts when requested', async () => {
-    const { getAdminClient } = await import('@/lib/api/server');
+    const { getUserClient } = await import('@/lib/api/server');
     const category = { id: 'cat-1', name: 'Food' };
 
     const chain = createCategoryChain();
@@ -67,7 +79,10 @@ describe('GET /api/categories/[id]', () => {
       configurable: true,
     });
 
-    vi.mocked(getAdminClient).mockReturnValue({ from: vi.fn().mockReturnValue(chain) } as never);
+    vi.mocked(getUserClient).mockResolvedValue({
+      supabase: { from: vi.fn().mockReturnValue(chain) } as never,
+      userId: 'test-user-id',
+    });
 
     const request = new NextRequest('http://localhost/api/categories/cat-1?include_counts=true');
     const response = await GET(request, makeParams('cat-1'));
@@ -84,12 +99,15 @@ describe('PATCH /api/categories/[id]', () => {
   });
 
   it('updates category', async () => {
-    const { getAdminClient } = await import('@/lib/api/server');
+    const { getUserClient } = await import('@/lib/api/server');
     const updated = { id: 'cat-1', name: 'Updated' };
     const chain = createCategoryChain();
     chain.single = vi.fn().mockResolvedValue({ data: updated, error: null });
 
-    vi.mocked(getAdminClient).mockReturnValue({ from: vi.fn().mockReturnValue(chain) } as never);
+    vi.mocked(getUserClient).mockResolvedValue({
+      supabase: { from: vi.fn().mockReturnValue(chain) } as never,
+      userId: 'test-user-id',
+    });
 
     const request = new NextRequest('http://localhost/api/categories/cat-1', {
       method: 'PATCH',
@@ -100,11 +118,14 @@ describe('PATCH /api/categories/[id]', () => {
   });
 
   it('returns 400 on update error', async () => {
-    const { getAdminClient } = await import('@/lib/api/server');
+    const { getUserClient } = await import('@/lib/api/server');
     const chain = createCategoryChain();
     chain.single = vi.fn().mockResolvedValue({ data: null, error: { message: 'Update failed' } });
 
-    vi.mocked(getAdminClient).mockReturnValue({ from: vi.fn().mockReturnValue(chain) } as never);
+    vi.mocked(getUserClient).mockResolvedValue({
+      supabase: { from: vi.fn().mockReturnValue(chain) } as never,
+      userId: 'test-user-id',
+    });
 
     const request = new NextRequest('http://localhost/api/categories/cat-1', {
       method: 'PATCH',
@@ -121,7 +142,7 @@ describe('DELETE /api/categories/[id]', () => {
   });
 
   it('soft-deletes category with cascade', async () => {
-    const { getAdminClient } = await import('@/lib/api/server');
+    const { getUserClient } = await import('@/lib/api/server');
 
     const chain = createCategoryChain();
 
@@ -145,7 +166,10 @@ describe('DELETE /api/categories/[id]', () => {
       configurable: true,
     });
 
-    vi.mocked(getAdminClient).mockReturnValue({ from: vi.fn().mockReturnValue(chain) } as never);
+    vi.mocked(getUserClient).mockResolvedValue({
+      supabase: { from: vi.fn().mockReturnValue(chain) } as never,
+      userId: 'test-user-id',
+    });
 
     const request = new NextRequest('http://localhost/api/categories/cat-1', { method: 'DELETE' });
     const response = await DELETE(request, makeParams('cat-1'));
@@ -156,7 +180,7 @@ describe('DELETE /api/categories/[id]', () => {
   });
 
   it('handles category with no children', async () => {
-    const { getAdminClient } = await import('@/lib/api/server');
+    const { getUserClient } = await import('@/lib/api/server');
 
     const chain = createCategoryChain();
 
@@ -174,7 +198,10 @@ describe('DELETE /api/categories/[id]', () => {
       configurable: true,
     });
 
-    vi.mocked(getAdminClient).mockReturnValue({ from: vi.fn().mockReturnValue(chain) } as never);
+    vi.mocked(getUserClient).mockResolvedValue({
+      supabase: { from: vi.fn().mockReturnValue(chain) } as never,
+      userId: 'test-user-id',
+    });
 
     const request = new NextRequest('http://localhost/api/categories/cat-1', { method: 'DELETE' });
     const response = await DELETE(request, makeParams('cat-1'));
@@ -184,7 +211,7 @@ describe('DELETE /api/categories/[id]', () => {
   });
 
   it('returns 400 on delete error', async () => {
-    const { getAdminClient } = await import('@/lib/api/server');
+    const { getUserClient } = await import('@/lib/api/server');
 
     const chain = createCategoryChain();
 
@@ -201,7 +228,10 @@ describe('DELETE /api/categories/[id]', () => {
       configurable: true,
     });
 
-    vi.mocked(getAdminClient).mockReturnValue({ from: vi.fn().mockReturnValue(chain) } as never);
+    vi.mocked(getUserClient).mockResolvedValue({
+      supabase: { from: vi.fn().mockReturnValue(chain) } as never,
+      userId: 'test-user-id',
+    });
 
     const request = new NextRequest('http://localhost/api/categories/cat-1', { method: 'DELETE' });
     const response = await DELETE(request, makeParams('cat-1'));

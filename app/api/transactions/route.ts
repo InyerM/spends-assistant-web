@@ -1,6 +1,7 @@
 import type { NextRequest } from 'next/server';
 import {
-  getAdminClient,
+  getUserClient,
+  AuthError,
   jsonResponse,
   errorResponse,
   applyTransactionBalance,
@@ -9,7 +10,7 @@ import {
 
 export async function GET(request: NextRequest): Promise<Response> {
   try {
-    const supabase = getAdminClient();
+    const { supabase } = await getUserClient();
     const { searchParams } = request.nextUrl;
 
     const page = parseInt(searchParams.get('page') ?? '1', 10);
@@ -62,14 +63,15 @@ export async function GET(request: NextRequest): Promise<Response> {
     if (error) return errorResponse(error.message, 400);
 
     return jsonResponse({ data, count });
-  } catch {
+  } catch (error) {
+    if (error instanceof AuthError) return errorResponse('Unauthorized', 401);
     return errorResponse('Failed to fetch transactions');
   }
 }
 
 export async function POST(request: NextRequest): Promise<Response> {
   try {
-    const supabase = getAdminClient();
+    const { supabase, userId } = await getUserClient();
     const { searchParams } = request.nextUrl;
     const force = searchParams.get('force') === 'true';
     const replaceId = searchParams.get('replace');
@@ -154,6 +156,9 @@ export async function POST(request: NextRequest): Promise<Response> {
       (processed as Record<string, unknown>).duplicate_status = 'confirmed';
     }
 
+    // Add user_id to the insert
+    (processed as Record<string, unknown>).user_id = userId;
+
     const { data, error } = await supabase.from('transactions').insert(processed).select().single();
 
     if (error) return errorResponse(error.message, 400);
@@ -167,7 +172,8 @@ export async function POST(request: NextRequest): Promise<Response> {
     );
 
     return jsonResponse(data, 201);
-  } catch {
+  } catch (error) {
+    if (error instanceof AuthError) return errorResponse('Unauthorized', 401);
     return errorResponse('Failed to create transaction');
   }
 }

@@ -1,9 +1,9 @@
 import type { NextRequest } from 'next/server';
-import { getAdminClient, jsonResponse, errorResponse } from '@/lib/api/server';
+import { getUserClient, AuthError, jsonResponse, errorResponse } from '@/lib/api/server';
 
 export async function GET(): Promise<Response> {
   try {
-    const supabase = getAdminClient();
+    const { supabase } = await getUserClient();
 
     const { data, error } = await supabase
       .from('accounts')
@@ -14,21 +14,27 @@ export async function GET(): Promise<Response> {
 
     if (error) return errorResponse(error.message, 400);
     return jsonResponse(data);
-  } catch {
+  } catch (error) {
+    if (error instanceof AuthError) return errorResponse('Unauthorized', 401);
     return errorResponse('Failed to fetch accounts');
   }
 }
 
 export async function POST(request: NextRequest): Promise<Response> {
   try {
-    const supabase = getAdminClient();
-    const body = await request.json();
+    const { supabase, userId } = await getUserClient();
+    const body = (await request.json()) as Record<string, unknown>;
 
-    const { data, error } = await supabase.from('accounts').insert(body).select().single();
+    const { data, error } = await supabase
+      .from('accounts')
+      .insert({ ...body, user_id: userId })
+      .select()
+      .single();
 
     if (error) return errorResponse(error.message, 400);
     return jsonResponse(data, 201);
-  } catch {
+  } catch (error) {
+    if (error instanceof AuthError) return errorResponse('Unauthorized', 401);
     return errorResponse('Failed to create account');
   }
 }

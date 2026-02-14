@@ -3,7 +3,13 @@ import { POST } from '@/app/api/transactions/import/route';
 import { NextRequest } from 'next/server';
 
 vi.mock('@/lib/api/server', () => ({
-  getAdminClient: vi.fn(),
+  getUserClient: vi.fn(),
+  AuthError: class AuthError extends Error {
+    constructor(m = 'Unauthorized') {
+      super(m);
+      this.name = 'AuthError';
+    }
+  },
   jsonResponse: (data: unknown, status = 200) => Response.json(data, { status }),
   errorResponse: (message: string, status = 500) => Response.json({ error: message }, { status }),
 }));
@@ -22,7 +28,7 @@ describe('POST /api/transactions/import', () => {
   });
 
   it('imports transactions directly', async () => {
-    const { getAdminClient } = await import('@/lib/api/server');
+    const { getUserClient } = await import('@/lib/api/server');
     const chain = createImportChain();
 
     Object.defineProperty(chain, 'then', {
@@ -32,7 +38,10 @@ describe('POST /api/transactions/import', () => {
       configurable: true,
     });
 
-    vi.mocked(getAdminClient).mockReturnValue({ from: vi.fn().mockReturnValue(chain) } as never);
+    vi.mocked(getUserClient).mockResolvedValue({
+      supabase: { from: vi.fn().mockReturnValue(chain) } as never,
+      userId: 'test-user-id',
+    });
 
     const request = new NextRequest('http://localhost/api/transactions/import', {
       method: 'POST',
@@ -76,7 +85,7 @@ describe('POST /api/transactions/import', () => {
   });
 
   it('resolves names when resolve_names is true', async () => {
-    const { getAdminClient } = await import('@/lib/api/server');
+    const { getUserClient } = await import('@/lib/api/server');
     const chain = createImportChain();
 
     let thenCallCount = 0;
@@ -96,7 +105,10 @@ describe('POST /api/transactions/import', () => {
       configurable: true,
     });
 
-    vi.mocked(getAdminClient).mockReturnValue({ from: vi.fn().mockReturnValue(chain) } as never);
+    vi.mocked(getUserClient).mockResolvedValue({
+      supabase: { from: vi.fn().mockReturnValue(chain) } as never,
+      userId: 'test-user-id',
+    });
 
     const request = new NextRequest('http://localhost/api/transactions/import', {
       method: 'POST',
@@ -125,7 +137,7 @@ describe('POST /api/transactions/import', () => {
   });
 
   it('returns error when all accounts unresolved', async () => {
-    const { getAdminClient } = await import('@/lib/api/server');
+    const { getUserClient } = await import('@/lib/api/server');
     const chain = createImportChain();
 
     let thenCallCount = 0;
@@ -140,7 +152,10 @@ describe('POST /api/transactions/import', () => {
       configurable: true,
     });
 
-    vi.mocked(getAdminClient).mockReturnValue({ from: vi.fn().mockReturnValue(chain) } as never);
+    vi.mocked(getUserClient).mockResolvedValue({
+      supabase: { from: vi.fn().mockReturnValue(chain) } as never,
+      userId: 'test-user-id',
+    });
 
     const request = new NextRequest('http://localhost/api/transactions/import', {
       method: 'POST',
@@ -167,7 +182,7 @@ describe('POST /api/transactions/import', () => {
   });
 
   it('returns 400 on DB insert error', async () => {
-    const { getAdminClient } = await import('@/lib/api/server');
+    const { getUserClient } = await import('@/lib/api/server');
     const chain = createImportChain();
 
     Object.defineProperty(chain, 'then', {
@@ -177,7 +192,10 @@ describe('POST /api/transactions/import', () => {
       configurable: true,
     });
 
-    vi.mocked(getAdminClient).mockReturnValue({ from: vi.fn().mockReturnValue(chain) } as never);
+    vi.mocked(getUserClient).mockResolvedValue({
+      supabase: { from: vi.fn().mockReturnValue(chain) } as never,
+      userId: 'test-user-id',
+    });
 
     const request = new NextRequest('http://localhost/api/transactions/import', {
       method: 'POST',

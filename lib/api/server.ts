@@ -1,6 +1,22 @@
-import { createAdminClient } from '@/lib/supabase/server';
+import { createClient, createAdminClient } from '@/lib/supabase/server';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { AutomationRule, AutomationRuleConditions, AutomationRuleActions } from '@/types';
+
+export class AuthError extends Error {
+  public constructor(message = 'Unauthorized') {
+    super(message);
+    this.name = 'AuthError';
+  }
+}
+
+export async function getUserClient(): Promise<{ supabase: SupabaseClient; userId: string }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new AuthError();
+  return { supabase, userId: user.id };
+}
 
 export function getAdminClient(): SupabaseClient {
   return createAdminClient();

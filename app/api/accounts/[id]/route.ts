@@ -1,5 +1,5 @@
 import type { NextRequest } from 'next/server';
-import { getAdminClient, jsonResponse, errorResponse } from '@/lib/api/server';
+import { getUserClient, AuthError, jsonResponse, errorResponse } from '@/lib/api/server';
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -8,7 +8,7 @@ interface RouteParams {
 export async function GET(_request: NextRequest, { params }: RouteParams): Promise<Response> {
   try {
     const { id } = await params;
-    const supabase = getAdminClient();
+    const { supabase } = await getUserClient();
 
     const { data, error } = await supabase
       .from('accounts')
@@ -19,7 +19,8 @@ export async function GET(_request: NextRequest, { params }: RouteParams): Promi
 
     if (error) return errorResponse(error.message, 404);
     return jsonResponse(data);
-  } catch {
+  } catch (error) {
+    if (error instanceof AuthError) return errorResponse('Unauthorized', 401);
     return errorResponse('Failed to fetch account');
   }
 }
@@ -27,7 +28,7 @@ export async function GET(_request: NextRequest, { params }: RouteParams): Promi
 export async function PATCH(request: NextRequest, { params }: RouteParams): Promise<Response> {
   try {
     const { id } = await params;
-    const supabase = getAdminClient();
+    const { supabase } = await getUserClient();
     const body = await request.json();
 
     const { data, error } = await supabase
@@ -39,7 +40,8 @@ export async function PATCH(request: NextRequest, { params }: RouteParams): Prom
 
     if (error) return errorResponse(error.message, 400);
     return jsonResponse(data);
-  } catch {
+  } catch (error) {
+    if (error instanceof AuthError) return errorResponse('Unauthorized', 401);
     return errorResponse('Failed to update account');
   }
 }
@@ -47,7 +49,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams): Prom
 export async function DELETE(_request: NextRequest, { params }: RouteParams): Promise<Response> {
   try {
     const { id } = await params;
-    const supabase = getAdminClient();
+    const { supabase } = await getUserClient();
     const now = new Date().toISOString();
 
     const { error: accountError } = await supabase
@@ -66,7 +68,8 @@ export async function DELETE(_request: NextRequest, { params }: RouteParams): Pr
     if (txError) return errorResponse(txError.message, 400);
 
     return jsonResponse({ success: true });
-  } catch {
+  } catch (error) {
+    if (error instanceof AuthError) return errorResponse('Unauthorized', 401);
     return errorResponse('Failed to delete account');
   }
 }

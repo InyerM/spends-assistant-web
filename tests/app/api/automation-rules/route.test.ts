@@ -3,7 +3,13 @@ import { GET, POST } from '@/app/api/automation-rules/route';
 import { NextRequest } from 'next/server';
 
 vi.mock('@/lib/api/server', () => ({
-  getAdminClient: vi.fn(),
+  getUserClient: vi.fn(),
+  AuthError: class AuthError extends Error {
+    constructor(m = 'Unauthorized') {
+      super(m);
+      this.name = 'AuthError';
+    }
+  },
   jsonResponse: (data: unknown, status = 200) => Response.json(data, { status }),
   errorResponse: (message: string, status = 500) => Response.json({ error: message }, { status }),
 }));
@@ -34,13 +40,16 @@ describe('GET /api/automation-rules', () => {
   });
 
   it('returns list of rules ordered by priority', async () => {
-    const { getAdminClient } = await import('@/lib/api/server');
+    const { getUserClient } = await import('@/lib/api/server');
     const rules = [
       { id: 'rule-1', name: 'Rule 1', priority: 10 },
       { id: 'rule-2', name: 'Rule 2', priority: 5 },
     ];
     const mock = createChainableQuery(rules);
-    vi.mocked(getAdminClient).mockReturnValue(mock as never);
+    vi.mocked(getUserClient).mockResolvedValue({
+      supabase: mock as never,
+      userId: 'test-user-id',
+    });
 
     const response = await GET();
     expect(response.status).toBe(200);
@@ -49,10 +58,11 @@ describe('GET /api/automation-rules', () => {
   });
 
   it('returns 400 on error', async () => {
-    const { getAdminClient } = await import('@/lib/api/server');
-    vi.mocked(getAdminClient).mockReturnValue(
-      createChainableQuery(null, { message: 'DB error' }) as never,
-    );
+    const { getUserClient } = await import('@/lib/api/server');
+    vi.mocked(getUserClient).mockResolvedValue({
+      supabase: createChainableQuery(null, { message: 'DB error' }) as never,
+      userId: 'test-user-id',
+    });
 
     const response = await GET();
     expect(response.status).toBe(400);
@@ -65,9 +75,12 @@ describe('POST /api/automation-rules', () => {
   });
 
   it('creates an automation rule', async () => {
-    const { getAdminClient } = await import('@/lib/api/server');
+    const { getUserClient } = await import('@/lib/api/server');
     const rule = { id: 'rule-new', name: 'New Rule' };
-    vi.mocked(getAdminClient).mockReturnValue(createChainableQuery(rule) as never);
+    vi.mocked(getUserClient).mockResolvedValue({
+      supabase: createChainableQuery(rule) as never,
+      userId: 'test-user-id',
+    });
 
     const request = new NextRequest('http://localhost/api/automation-rules', {
       method: 'POST',
@@ -78,10 +91,11 @@ describe('POST /api/automation-rules', () => {
   });
 
   it('returns 400 on create error', async () => {
-    const { getAdminClient } = await import('@/lib/api/server');
-    vi.mocked(getAdminClient).mockReturnValue(
-      createChainableQuery(null, { message: 'Insert failed' }) as never,
-    );
+    const { getUserClient } = await import('@/lib/api/server');
+    vi.mocked(getUserClient).mockResolvedValue({
+      supabase: createChainableQuery(null, { message: 'Insert failed' }) as never,
+      userId: 'test-user-id',
+    });
 
     const request = new NextRequest('http://localhost/api/automation-rules', {
       method: 'POST',

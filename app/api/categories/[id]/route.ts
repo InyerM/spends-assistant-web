@@ -1,5 +1,5 @@
 import type { NextRequest } from 'next/server';
-import { getAdminClient, jsonResponse, errorResponse } from '@/lib/api/server';
+import { getUserClient, AuthError, jsonResponse, errorResponse } from '@/lib/api/server';
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -8,7 +8,7 @@ interface RouteParams {
 export async function GET(request: NextRequest, { params }: RouteParams): Promise<Response> {
   try {
     const { id } = await params;
-    const supabase = getAdminClient();
+    const { supabase } = await getUserClient();
     const includeCounts = request.nextUrl.searchParams.get('include_counts') === 'true';
 
     const { data, error } = await supabase
@@ -40,7 +40,8 @@ export async function GET(request: NextRequest, { params }: RouteParams): Promis
     }
 
     return jsonResponse(data);
-  } catch {
+  } catch (error) {
+    if (error instanceof AuthError) return errorResponse('Unauthorized', 401);
     return errorResponse('Failed to fetch category');
   }
 }
@@ -48,7 +49,7 @@ export async function GET(request: NextRequest, { params }: RouteParams): Promis
 export async function PATCH(request: NextRequest, { params }: RouteParams): Promise<Response> {
   try {
     const { id } = await params;
-    const supabase = getAdminClient();
+    const { supabase } = await getUserClient();
     const body = await request.json();
 
     const { data, error } = await supabase
@@ -60,7 +61,8 @@ export async function PATCH(request: NextRequest, { params }: RouteParams): Prom
 
     if (error) return errorResponse(error.message, 400);
     return jsonResponse(data);
-  } catch {
+  } catch (error) {
+    if (error instanceof AuthError) return errorResponse('Unauthorized', 401);
     return errorResponse('Failed to update category');
   }
 }
@@ -68,7 +70,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams): Prom
 export async function DELETE(_request: NextRequest, { params }: RouteParams): Promise<Response> {
   try {
     const { id } = await params;
-    const supabase = getAdminClient();
+    const { supabase } = await getUserClient();
     const now = new Date().toISOString();
 
     // Count and unlink transactions from this category
@@ -109,7 +111,8 @@ export async function DELETE(_request: NextRequest, { params }: RouteParams): Pr
       success: true,
       unlinked_transactions: (unlinkedCount ?? 0) + childUnlinked,
     });
-  } catch {
+  } catch (error) {
+    if (error instanceof AuthError) return errorResponse('Unauthorized', 401);
     return errorResponse('Failed to delete category');
   }
 }

@@ -11,6 +11,7 @@ export interface AuthState {
 export interface AuthActions {
   setSupabaseUser: (user: SupabaseUser | null) => void;
   setLoading: (loading: boolean) => void;
+  signUp: (email: string, password: string) => Promise<void>;
   signInWithPassword: (email: string, password: string) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
@@ -35,6 +36,26 @@ export const useAuthStore = create<AuthStore>((set) => ({
     }),
 
   setLoading: (loading): void => set({ isLoading: loading }),
+
+  signUp: async (email, password): Promise<void> => {
+    set({ isLoading: true });
+    try {
+      const { data, error } = await supabaseClient.auth.signUp({
+        email,
+        password,
+      });
+      if (error) throw error;
+
+      set({
+        supabaseUser: data.user,
+        isAuthenticated: !!data.user,
+        isLoading: false,
+      });
+    } catch (error) {
+      set({ ...initialState, isLoading: false });
+      throw error;
+    }
+  },
 
   signInWithPassword: async (email, password): Promise<void> => {
     set({ isLoading: true });

@@ -3,7 +3,13 @@ import { POST } from '@/app/api/transactions/parse/route';
 import { NextRequest } from 'next/server';
 
 vi.mock('@/lib/api/server', () => ({
-  getAdminClient: vi.fn(),
+  getUserClient: vi.fn(),
+  AuthError: class AuthError extends Error {
+    constructor(m = 'Unauthorized') {
+      super(m);
+      this.name = 'AuthError';
+    }
+  },
   jsonResponse: (data: unknown, status = 200) => Response.json(data, { status }),
   errorResponse: (message: string, status = 500) => Response.json({ error: message }, { status }),
   applyAutomationRules: vi.fn((_, tx) => Promise.resolve(tx)),
@@ -22,13 +28,16 @@ describe('POST /api/transactions/parse', () => {
   });
 
   it('parses text and returns result with automation rules', async () => {
-    const { getAdminClient, applyAutomationRules } = await import('@/lib/api/server');
+    const { getUserClient, applyAutomationRules } = await import('@/lib/api/server');
 
     const chain: Record<string, ReturnType<typeof vi.fn>> = {};
     ['select', 'eq', 'is', 'order'].forEach((m) => {
       chain[m] = vi.fn().mockReturnValue(chain);
     });
-    vi.mocked(getAdminClient).mockReturnValue({ from: vi.fn().mockReturnValue(chain) } as never);
+    vi.mocked(getUserClient).mockResolvedValue({
+      supabase: { from: vi.fn().mockReturnValue(chain) } as never,
+      userId: 'test-user-id',
+    });
     vi.mocked(applyAutomationRules).mockResolvedValue({
       description: 'Almuerzo',
       amount: 15000,

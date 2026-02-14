@@ -4,7 +4,13 @@ import { NextRequest } from 'next/server';
 
 // Mock server utilities
 vi.mock('@/lib/api/server', () => ({
-  getAdminClient: vi.fn(),
+  getUserClient: vi.fn(),
+  AuthError: class AuthError extends Error {
+    constructor(m = 'Unauthorized') {
+      super(m);
+      this.name = 'AuthError';
+    }
+  },
   jsonResponse: (data: unknown, status = 200) => Response.json(data, { status }),
   errorResponse: (message: string, status = 500) => Response.json({ error: message }, { status }),
   applyTransactionBalance: vi.fn(),
@@ -54,9 +60,12 @@ describe('GET /api/transactions', () => {
   });
 
   it('returns paginated transactions', async () => {
-    const { getAdminClient } = await import('@/lib/api/server');
+    const { getUserClient } = await import('@/lib/api/server');
     const mockSb = createChainableQuery([{ id: 'tx-1' }, { id: 'tx-2' }]);
-    vi.mocked(getAdminClient).mockReturnValue(mockSb as never);
+    vi.mocked(getUserClient).mockResolvedValue({
+      supabase: mockSb as never,
+      userId: 'test-user-id',
+    });
 
     const request = new NextRequest('http://localhost/api/transactions?page=1&limit=20');
     const response = await GET(request);
@@ -66,9 +75,12 @@ describe('GET /api/transactions', () => {
   });
 
   it('filters by type', async () => {
-    const { getAdminClient } = await import('@/lib/api/server');
+    const { getUserClient } = await import('@/lib/api/server');
     const mockSb = createChainableQuery([]);
-    vi.mocked(getAdminClient).mockReturnValue(mockSb as never);
+    vi.mocked(getUserClient).mockResolvedValue({
+      supabase: mockSb as never,
+      userId: 'test-user-id',
+    });
 
     const request = new NextRequest('http://localhost/api/transactions?type=expense');
     await GET(request);
@@ -76,9 +88,12 @@ describe('GET /api/transactions', () => {
   });
 
   it('filters by types (comma-separated)', async () => {
-    const { getAdminClient } = await import('@/lib/api/server');
+    const { getUserClient } = await import('@/lib/api/server');
     const mockSb = createChainableQuery([]);
-    vi.mocked(getAdminClient).mockReturnValue(mockSb as never);
+    vi.mocked(getUserClient).mockResolvedValue({
+      supabase: mockSb as never,
+      userId: 'test-user-id',
+    });
 
     const request = new NextRequest('http://localhost/api/transactions?types=expense,income');
     await GET(request);
@@ -86,9 +101,12 @@ describe('GET /api/transactions', () => {
   });
 
   it('filters by date range', async () => {
-    const { getAdminClient } = await import('@/lib/api/server');
+    const { getUserClient } = await import('@/lib/api/server');
     const mockSb = createChainableQuery([]);
-    vi.mocked(getAdminClient).mockReturnValue(mockSb as never);
+    vi.mocked(getUserClient).mockResolvedValue({
+      supabase: mockSb as never,
+      userId: 'test-user-id',
+    });
 
     const request = new NextRequest(
       'http://localhost/api/transactions?date_from=2024-01-01&date_to=2024-01-31',
@@ -99,9 +117,12 @@ describe('GET /api/transactions', () => {
   });
 
   it('filters by search', async () => {
-    const { getAdminClient } = await import('@/lib/api/server');
+    const { getUserClient } = await import('@/lib/api/server');
     const mockSb = createChainableQuery([]);
-    vi.mocked(getAdminClient).mockReturnValue(mockSb as never);
+    vi.mocked(getUserClient).mockResolvedValue({
+      supabase: mockSb as never,
+      userId: 'test-user-id',
+    });
 
     const request = new NextRequest('http://localhost/api/transactions?search=restaurante');
     await GET(request);
@@ -109,9 +130,12 @@ describe('GET /api/transactions', () => {
   });
 
   it('sorts by amount', async () => {
-    const { getAdminClient } = await import('@/lib/api/server');
+    const { getUserClient } = await import('@/lib/api/server');
     const mockSb = createChainableQuery([]);
-    vi.mocked(getAdminClient).mockReturnValue(mockSb as never);
+    vi.mocked(getUserClient).mockResolvedValue({
+      supabase: mockSb as never,
+      userId: 'test-user-id',
+    });
 
     const request = new NextRequest(
       'http://localhost/api/transactions?sort_by=amount&sort_order=asc',
@@ -121,9 +145,12 @@ describe('GET /api/transactions', () => {
   });
 
   it('returns error when query fails', async () => {
-    const { getAdminClient } = await import('@/lib/api/server');
+    const { getUserClient } = await import('@/lib/api/server');
     const mockSb = createChainableQuery(null, { message: 'DB error' });
-    vi.mocked(getAdminClient).mockReturnValue(mockSb as never);
+    vi.mocked(getUserClient).mockResolvedValue({
+      supabase: mockSb as never,
+      userId: 'test-user-id',
+    });
 
     const request = new NextRequest('http://localhost/api/transactions');
     const response = await GET(request);
@@ -137,7 +164,7 @@ describe('POST /api/transactions', () => {
   });
 
   it('creates a transaction', async () => {
-    const { getAdminClient, applyTransactionBalance } = await import('@/lib/api/server');
+    const { getUserClient, applyTransactionBalance } = await import('@/lib/api/server');
     const tx = {
       id: 'tx-new',
       type: 'expense',
@@ -154,7 +181,10 @@ describe('POST /api/transactions', () => {
     chain.maybeSingle = vi.fn().mockResolvedValue({ data: null, error: null });
 
     const mockSb = { from: vi.fn().mockReturnValue(chain) };
-    vi.mocked(getAdminClient).mockReturnValue(mockSb as never);
+    vi.mocked(getUserClient).mockResolvedValue({
+      supabase: mockSb as never,
+      userId: 'test-user-id',
+    });
     vi.mocked(applyTransactionBalance).mockResolvedValue();
 
     const request = new NextRequest('http://localhost/api/transactions', {
@@ -175,7 +205,7 @@ describe('POST /api/transactions', () => {
   });
 
   it('returns 409 for duplicate', async () => {
-    const { getAdminClient } = await import('@/lib/api/server');
+    const { getUserClient } = await import('@/lib/api/server');
     const existingTx = { id: 'tx-existing' };
 
     const chain: Record<string, ReturnType<typeof vi.fn>> = {};
@@ -187,7 +217,10 @@ describe('POST /api/transactions', () => {
     chain.maybeSingle = vi.fn().mockResolvedValue({ data: existingTx, error: null });
 
     const mockSb = { from: vi.fn().mockReturnValue(chain) };
-    vi.mocked(getAdminClient).mockReturnValue(mockSb as never);
+    vi.mocked(getUserClient).mockResolvedValue({
+      supabase: mockSb as never,
+      userId: 'test-user-id',
+    });
 
     const request = new NextRequest('http://localhost/api/transactions', {
       method: 'POST',
@@ -210,7 +243,7 @@ describe('POST /api/transactions', () => {
   });
 
   it('skips duplicate check with force=true', async () => {
-    const { getAdminClient, applyTransactionBalance } = await import('@/lib/api/server');
+    const { getUserClient, applyTransactionBalance } = await import('@/lib/api/server');
     const tx = {
       id: 'tx-new',
       type: 'expense',
@@ -227,7 +260,10 @@ describe('POST /api/transactions', () => {
     chain.maybeSingle = vi.fn().mockResolvedValue({ data: null, error: null });
 
     const mockSb = { from: vi.fn().mockReturnValue(chain) };
-    vi.mocked(getAdminClient).mockReturnValue(mockSb as never);
+    vi.mocked(getUserClient).mockResolvedValue({
+      supabase: mockSb as never,
+      userId: 'test-user-id',
+    });
     vi.mocked(applyTransactionBalance).mockResolvedValue();
 
     const request = new NextRequest('http://localhost/api/transactions?force=true', {
@@ -250,7 +286,7 @@ describe('POST /api/transactions', () => {
   });
 
   it('replaces existing transaction when replace param provided', async () => {
-    const { getAdminClient, applyTransactionBalance } = await import('@/lib/api/server');
+    const { getUserClient, applyTransactionBalance } = await import('@/lib/api/server');
     const original = {
       type: 'expense',
       amount: 30000,
@@ -278,7 +314,10 @@ describe('POST /api/transactions', () => {
     chain.maybeSingle = vi.fn().mockResolvedValue({ data: null, error: null });
 
     const mockSb = { from: vi.fn().mockReturnValue(chain) };
-    vi.mocked(getAdminClient).mockReturnValue(mockSb as never);
+    vi.mocked(getUserClient).mockResolvedValue({
+      supabase: mockSb as never,
+      userId: 'test-user-id',
+    });
     vi.mocked(applyTransactionBalance).mockResolvedValue();
 
     const request = new NextRequest('http://localhost/api/transactions?replace=old-tx-id', {

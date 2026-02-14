@@ -1,5 +1,5 @@
 import type { NextRequest } from 'next/server';
-import { getAdminClient, jsonResponse, errorResponse } from '@/lib/api/server';
+import { getUserClient, AuthError, jsonResponse, errorResponse } from '@/lib/api/server';
 
 interface ImportTransaction {
   date: string;
@@ -23,8 +23,8 @@ interface ImportBody {
 
 async function resolveNames(
   transactions: ImportTransaction[],
+  supabase: Awaited<ReturnType<typeof getUserClient>>['supabase'],
 ): Promise<{ resolved: Record<string, unknown>[]; errors: string[] }> {
-  const supabase = getAdminClient();
   const errors: string[] = [];
 
   const { data: accounts } = await supabase.from('accounts').select('id, name');
@@ -74,7 +74,7 @@ async function resolveNames(
 
 export async function POST(request: NextRequest): Promise<Response> {
   try {
-    const supabase = getAdminClient();
+    const { supabase, userId } = await getUserClient();
     const body = (await request.json()) as ImportBody;
 
     if (!Array.isArray(body.transactions) || body.transactions.length === 0) {
@@ -82,7 +82,7 @@ export async function POST(request: NextRequest): Promise<Response> {
     }
 
     if (body.resolve_names) {
-      const { resolved, errors } = await resolveNames(body.transactions);
+      const { resolved, errors } = await resolveNames(body.transactions, supabase);
 
       if (resolved.length === 0) {
         return errorResponse(
@@ -91,7 +91,10 @@ export async function POST(request: NextRequest): Promise<Response> {
         );
       }
 
-      const { data, error } = await supabase.from('transactions').insert(resolved).select();
+      // Add user_id to each resolved transaction
+      const withUserId = resolved.map((tx) => ({ ...tx, user_id: userId }));
+
+      const { data, error } = await supabase.from('transactions').insert(withUserId).select();
 
       if (error) return errorResponse(error.message, 400);
 
@@ -99,14 +102,18 @@ export async function POST(request: NextRequest): Promise<Response> {
       return jsonResponse({ imported: data.length, skipped, errors }, 201);
     }
 
-    const { data, error } = await supabase
-      .from('transactions')
-      .insert(body.transactions as unknown as Record<string, unknown>[])
-      .select();
+    // Add user_id to each transaction
+    const withUserId = (body.transactions as unknown as Record<string, unknown>[]).map((tx) => ({
+      ...tx,
+      user_id: userId,
+    }));
+
+    const { data, error } = await supabase.from('transactions').insert(withUserId).select();
 
     if (error) return errorResponse(error.message, 400);
     return jsonResponse({ imported: data.length, skipped: 0, errors: [] }, 201);
-  } catch {
+  } catch (error) {
+    if (error instanceof AuthError) return errorResponse('Unauthorized', 401);
     return errorResponse('Failed to import transactions');
   }
 }
