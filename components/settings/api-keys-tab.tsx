@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -26,6 +27,8 @@ interface NewKeyResponse extends ApiKey {
 }
 
 export function ApiKeysTab(): React.ReactElement {
+  const t = useTranslations('settings');
+  const tc = useTranslations('common');
   const [keys, setKeys] = useState<ApiKey[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
@@ -40,11 +43,11 @@ export function ApiKeysTab(): React.ReactElement {
       const data = (await res.json()) as ApiKey[];
       setKeys(data);
     } catch {
-      toast.error('Failed to load API keys');
+      toast.error(t('failedToLoadApiKeys'));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     void fetchKeys();
@@ -65,7 +68,7 @@ export function ApiKeysTab(): React.ReactElement {
       setNewKeyName('');
       void fetchKeys();
     } catch {
-      toast.error('Failed to create API key');
+      toast.error(t('failedToCreateApiKey'));
     } finally {
       setCreating(false);
     }
@@ -75,17 +78,17 @@ export function ApiKeysTab(): React.ReactElement {
     try {
       const res = await fetch(`/api/api-keys?id=${id}`, { method: 'DELETE' });
       if (!res.ok) throw new Error('Failed to delete');
-      toast.success('API key deleted');
+      toast.success(t('apiKeyDeleted'));
       void fetchKeys();
     } catch {
-      toast.error('Failed to delete API key');
+      toast.error(t('failedToDeleteApiKey'));
     }
   }
 
   function handleCopy(): void {
     if (newKey) {
       void navigator.clipboard.writeText(newKey);
-      toast.success('Copied to clipboard');
+      toast.success(t('copiedToClipboard'));
     }
   }
 
@@ -93,28 +96,25 @@ export function ApiKeysTab(): React.ReactElement {
     <>
       <Card>
         <CardHeader>
-          <CardTitle>API Keys</CardTitle>
-          <CardDescription>
-            Manage API keys for the Cloudflare Worker backend. Keys are used to authenticate
-            requests from external services.
-          </CardDescription>
+          <CardTitle>{t('apiKeysTitle')}</CardTitle>
+          <CardDescription>{t('apiKeysDescription')}</CardDescription>
         </CardHeader>
         <CardContent className='space-y-4'>
           <div className='flex gap-2'>
             <Input
-              placeholder='Key name (e.g. "My Worker")'
+              placeholder={t('keyNamePlaceholder')}
               value={newKeyName}
               onChange={(e): void => setNewKeyName(e.target.value)}
             />
             <Button onClick={(): void => void handleCreate()} disabled={creating}>
-              {creating ? 'Creating...' : 'Generate Key'}
+              {creating ? t('creatingKey') : t('generateKey')}
             </Button>
           </div>
 
           {loading ? (
-            <p className='text-muted-foreground text-sm'>Loading...</p>
+            <p className='text-muted-foreground text-sm'>{t('loadingKeys')}</p>
           ) : keys.length === 0 ? (
-            <p className='text-muted-foreground text-sm'>No API keys yet.</p>
+            <p className='text-muted-foreground text-sm'>{t('noApiKeys')}</p>
           ) : (
             <div className='space-y-2'>
               {keys.map((key) => (
@@ -124,16 +124,18 @@ export function ApiKeysTab(): React.ReactElement {
                   <div>
                     <p className='font-medium'>{key.name}</p>
                     <p className='text-muted-foreground text-xs'>
-                      Created {new Date(key.created_at).toLocaleDateString()}
+                      {t('createdDate', {
+                        date: new Date(key.created_at).toLocaleDateString(),
+                      })}
                       {key.last_used_at &&
-                        ` · Last used ${new Date(key.last_used_at).toLocaleDateString()}`}
+                        ` · ${t('lastUsedDate', { date: new Date(key.last_used_at).toLocaleDateString() })}`}
                     </p>
                   </div>
                   <Button
                     variant='destructive'
                     size='sm'
                     onClick={(): void => void handleDelete(key.id)}>
-                    Delete
+                    {tc('delete')}
                   </Button>
                 </div>
               ))}
@@ -143,17 +145,15 @@ export function ApiKeysTab(): React.ReactElement {
       </Card>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent>
+        <DialogContent className='border-border bg-card'>
           <DialogHeader>
-            <DialogTitle>API Key Created</DialogTitle>
-            <DialogDescription>
-              Copy this key now. You won&apos;t be able to see it again.
-            </DialogDescription>
+            <DialogTitle>{t('apiKeyCreated')}</DialogTitle>
+            <DialogDescription>{t('apiKeyCreatedDescription')}</DialogDescription>
           </DialogHeader>
           <div className='space-y-4'>
             <code className='bg-muted block rounded p-3 text-sm break-all'>{newKey}</code>
             <Button onClick={handleCopy} className='w-full'>
-              Copy to Clipboard
+              {t('copyToClipboard')}
             </Button>
           </div>
         </DialogContent>

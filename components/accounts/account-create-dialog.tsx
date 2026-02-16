@@ -174,7 +174,7 @@ export function AccountCreateDialog({
                 <FormItem>
                   <FormLabel>{t('lastFour')}</FormLabel>
                   <FormControl>
-                    <Input placeholder='7799' maxLength={4} inputMode='numeric' {...field} />
+                    <Input placeholder='1234' maxLength={4} inputMode='numeric' {...field} />
                   </FormControl>
                   <FormDescription>{t('lastFourDescription')}</FormDescription>
                   <FormMessage />

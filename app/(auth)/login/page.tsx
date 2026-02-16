@@ -7,6 +7,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { toast } from 'sonner';
+import { Eye, EyeOff } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -31,6 +32,7 @@ export default function LoginPage(): React.ReactElement {
   const router = useRouter();
   const { signInWithPassword, signInWithGoogle, isLoading, isAuthenticated } = useAuth();
   const [error, setError] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -112,13 +114,28 @@ export default function LoginPage(): React.ReactElement {
                   <FormItem>
                     <FormLabel className='text-foreground'>Password</FormLabel>
                     <FormControl>
-                      <Input
-                        type='password'
-                        placeholder='Enter your password'
-                        {...field}
-                        disabled={isLoading}
-                        className='border-border bg-background text-foreground placeholder:text-muted-foreground h-12'
-                      />
+                      <div className='relative'>
+                        <Input
+                          type={showPassword ? 'text' : 'password'}
+                          placeholder='Enter your password'
+                          {...field}
+                          disabled={isLoading}
+                          className='border-border bg-background text-foreground placeholder:text-muted-foreground h-12 pr-10'
+                        />
+                        <Button
+                          type='button'
+                          variant='ghost'
+                          size='sm'
+                          className='absolute top-1/2 right-3 h-auto -translate-y-1/2 p-0'
+                          onClick={(): void => setShowPassword((prev) => !prev)}
+                          tabIndex={-1}>
+                          {showPassword ? (
+                            <EyeOff className='text-muted-foreground h-4 w-4' />
+                          ) : (
+                            <Eye className='text-muted-foreground h-4 w-4' />
+                          )}
+                        </Button>
+                      </div>
                     </FormControl>
                     <FormMessage />
                   </FormItem>

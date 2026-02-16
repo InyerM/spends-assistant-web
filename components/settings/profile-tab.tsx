@@ -3,19 +3,47 @@
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
+import { Settings2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useProfile, useUpdateProfile } from '@/hooks/use-profile';
+import { useUserSettings, useUpdateUserSettings } from '@/hooks/use-user-settings';
 import { supabaseClient } from '@/lib/supabase/client';
+
+function GoogleIcon(): React.ReactElement {
+  return (
+    <svg className='mr-2 h-4 w-4' viewBox='0 0 24 24'>
+      <path
+        d='M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z'
+        fill='#4285F4'
+      />
+      <path
+        d='M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z'
+        fill='#34A853'
+      />
+      <path
+        d='M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z'
+        fill='#FBBC05'
+      />
+      <path
+        d='M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z'
+        fill='#EA4335'
+      />
+    </svg>
+  );
+}
 
 export function ProfileTab(): React.ReactElement {
   const t = useTranslations('settings');
   const { data: profile, isLoading } = useProfile();
   const updateProfile = useUpdateProfile();
+  const { data: userSettings } = useUserSettings();
+  const updateUserSettings = useUpdateUserSettings();
   const [displayName, setDisplayName] = useState<string | null>(null);
 
   const currentName = displayName ?? profile?.display_name ?? '';
@@ -40,6 +68,14 @@ export function ProfileTab(): React.ReactElement {
     } catch {
       toast.error(t('linkGoogleFailed'));
     }
+  };
+
+  const handleToggleApiKeys = (checked: boolean): void => {
+    updateUserSettings.mutate({ show_api_keys: checked });
+  };
+
+  const handleToggleHourFormat = (checked: boolean): void => {
+    updateUserSettings.mutate({ hour_format: checked ? '24h' : '12h' });
   };
 
   if (isLoading) {
@@ -77,7 +113,7 @@ export function ProfileTab(): React.ReactElement {
             </Avatar>
             <div>
               <p className='text-foreground font-medium'>
-                {profile?.display_name ?? 'No name set'}
+                {profile?.display_name ?? t('noNameSet')}
               </p>
               <p className='text-muted-foreground text-sm'>{profile?.email}</p>
             </div>
@@ -89,7 +125,7 @@ export function ProfileTab(): React.ReactElement {
               id='display-name'
               value={currentName}
               onChange={(e): void => setDisplayName(e.target.value)}
-              placeholder='Enter your name'
+              placeholder={t('displayName')}
             />
           </div>
 
@@ -99,7 +135,7 @@ export function ProfileTab(): React.ReactElement {
           </div>
 
           <Button onClick={handleSave} disabled={updateProfile.isPending}>
-            {updateProfile.isPending ? 'Saving...' : t('saveChanges')}
+            {updateProfile.isPending ? t('savingProfile') : t('saveChanges')}
           </Button>
         </CardContent>
       </Card>
@@ -118,10 +154,48 @@ export function ProfileTab(): React.ReactElement {
               </p>
             </div>
             {!hasGoogle && (
-              <Button variant='outline' onClick={(): void => void handleLinkGoogle()}>
+              <Button
+                variant='outline'
+                className='cursor-pointer border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
+                onClick={(): void => void handleLinkGoogle()}>
+                <GoogleIcon />
                 {t('linkGoogle')}
               </Button>
             )}
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className='flex items-center gap-2'>
+            <Settings2 className='h-5 w-5' />
+            {t('preferences')}
+          </CardTitle>
+          <CardDescription>{t('preferencesDescription')}</CardDescription>
+        </CardHeader>
+        <CardContent className='space-y-4'>
+          <div className='flex items-center justify-between'>
+            <div>
+              <p className='text-sm font-medium'>{t('hourFormat')}</p>
+              <p className='text-muted-foreground text-sm'>{t('hourFormatDescription')}</p>
+            </div>
+            <Switch
+              checked={userSettings?.hour_format === '24h'}
+              onCheckedChange={handleToggleHourFormat}
+              disabled={updateUserSettings.isPending}
+            />
+          </div>
+          <div className='flex items-center justify-between'>
+            <div>
+              <p className='text-sm font-medium'>{t('showApiKeysTab')}</p>
+              <p className='text-muted-foreground text-sm'>{t('showApiKeysTabDescription')}</p>
+            </div>
+            <Switch
+              checked={userSettings?.show_api_keys ?? false}
+              onCheckedChange={handleToggleApiKeys}
+              disabled={updateUserSettings.isPending}
+            />
           </div>
         </CardContent>
       </Card>

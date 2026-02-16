@@ -37,6 +37,14 @@ export function ConfirmDeleteDialog({
   const tCommon = useTranslations('common');
   const resolvedConfirmLabel = confirmLabel ?? tCommon('delete');
   const [inputValue, setInputValue] = useState('');
+  const [prevConfirmText, setPrevConfirmText] = useState(confirmText);
+
+  // Reset input when confirmText changes (pattern recommended by React docs)
+  if (confirmText !== prevConfirmText) {
+    setPrevConfirmText(confirmText);
+    setInputValue('');
+  }
+
   const isMatch = inputValue === confirmText;
 
   function handleOpenChange(next: boolean): void {

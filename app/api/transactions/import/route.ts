@@ -81,6 +81,38 @@ export async function POST(request: NextRequest): Promise<Response> {
       return errorResponse('No transactions provided', 400);
     }
 
+    // Check transaction limit for free plan
+    const [{ data: subscription }, { data: usageData }, { data: limitSetting }] = await Promise.all(
+      [
+        supabase.from('subscriptions').select('plan').eq('user_id', userId).maybeSingle(),
+        supabase
+          .from('usage_tracking')
+          .select('transactions_count')
+          .eq('month', new Date().toISOString().slice(0, 7))
+          .maybeSingle(),
+        supabase
+          .from('app_settings')
+          .select('value')
+          .eq('key', 'free_transactions_limit')
+          .maybeSingle(),
+      ],
+    );
+
+    const plan = (subscription?.plan as string | undefined) ?? 'free';
+    if (plan === 'free') {
+      const txLimit = (limitSetting?.value as number | undefined) ?? 50;
+      const txCountVal = usageData?.transactions_count as number | undefined;
+      const currentCount = txCountVal ?? 0;
+      const importCount = body.transactions.length;
+      if (currentCount + importCount > txLimit) {
+        const remaining = Math.max(0, txLimit - currentCount);
+        return errorResponse(
+          `Transaction limit exceeded. You have ${remaining} transactions remaining this month (limit: ${txLimit}).`,
+          403,
+        );
+      }
+    }
+
     if (body.resolve_names) {
       const { resolved, errors } = await resolveNames(body.transactions, supabase);
 

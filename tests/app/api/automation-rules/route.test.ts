@@ -20,6 +20,7 @@ function createChainableQuery(data: unknown, error: { message: string } | null =
     chain[m] = vi.fn().mockReturnValue(chain);
   });
   chain.single = vi.fn().mockResolvedValue({ data, error });
+  chain.maybeSingle = vi.fn().mockResolvedValue({ data: null, error: null });
 
   Object.defineProperty(chain, 'then', {
     value: (resolve: (v: unknown) => void) =>

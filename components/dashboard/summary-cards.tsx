@@ -10,15 +10,12 @@ import { formatCurrency } from '@/lib/utils/formatting';
 import { TrendingUp, TrendingDown, Scale, Wallet } from 'lucide-react';
 
 interface SummaryCardsProps {
-  year: number;
-  month: number;
+  dateFrom: string;
+  dateTo: string;
 }
 
-export function SummaryCards({ year, month }: SummaryCardsProps): React.ReactElement {
+export function SummaryCards({ dateFrom, dateTo }: SummaryCardsProps): React.ReactElement {
   const t = useTranslations('dashboard');
-  const dateFrom = `${year}-${String(month + 1).padStart(2, '0')}-01`;
-  const lastDay = new Date(year, month + 1, 0).getDate();
-  const dateTo = `${year}-${String(month + 1).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
 
   const { data: accounts, isLoading: accLoading } = useAccounts();
   const { data: txResult, isLoading: txLoading } = useTransactions({

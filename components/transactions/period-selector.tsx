@@ -17,7 +17,7 @@ import {
 } from 'date-fns';
 import { ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { DatePicker } from '@/components/ui/date-picker';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
@@ -30,15 +30,17 @@ interface PeriodSelectorProps {
 }
 
 function getMonthNames(locale: string): string[] {
-  return Array.from({ length: 12 }, (_, i) =>
-    new Intl.DateTimeFormat(locale, { month: 'long' }).format(new Date(2024, i, 1)),
-  );
+  return Array.from({ length: 12 }, (_, i) => {
+    const name = new Intl.DateTimeFormat(locale, { month: 'long' }).format(new Date(2024, i, 1));
+    return name.charAt(0).toUpperCase() + name.slice(1);
+  });
 }
 
 function getMonthShort(locale: string): string[] {
-  return Array.from({ length: 12 }, (_, i) =>
-    new Intl.DateTimeFormat(locale, { month: 'short' }).format(new Date(2024, i, 1)),
-  );
+  return Array.from({ length: 12 }, (_, i) => {
+    const name = new Intl.DateTimeFormat(locale, { month: 'short' }).format(new Date(2024, i, 1));
+    return name.charAt(0).toUpperCase() + name.slice(1);
+  });
 }
 
 function getDayHeaders(locale: string): string[] {
@@ -143,8 +145,31 @@ export function PeriodSelector({
     () => Math.floor(toDate(dateFrom).getFullYear() / 10) * 10,
   );
 
-  const label = getLabel(dateFrom, dateTo, mode, monthNames, monthShort);
+  const baseLabel = getLabel(dateFrom, dateTo, mode, monthNames, monthShort);
   const fromDate = toDate(dateFrom);
+
+  const label = useMemo((): string => {
+    const now = new Date();
+    if (mode === 'month') {
+      const nowStart = startOfMonth(now);
+      if (
+        fromDate.getFullYear() === nowStart.getFullYear() &&
+        fromDate.getMonth() === nowStart.getMonth()
+      ) {
+        return t('thisMonth');
+      }
+    } else if (mode === 'week') {
+      const nowWeekStart = startOfWeek(now, { weekStartsOn: 1 });
+      if (toStr(nowWeekStart) === dateFrom) {
+        return t('thisWeek');
+      }
+    } else if (mode === 'year') {
+      if (fromDate.getFullYear() === now.getFullYear()) {
+        return t('thisYear');
+      }
+    }
+    return baseLabel;
+  }, [baseLabel, mode, fromDate, dateFrom, t]);
 
   const handlePrev = (): void => {
     const from = toDate(dateFrom);
@@ -440,23 +465,13 @@ export function PeriodSelector({
                   <label className='text-muted-foreground text-xs font-medium'>
                     {t('periodFrom')}
                   </label>
-                  <Input
-                    type='date'
-                    value={customFrom}
-                    onChange={(e): void => setCustomFrom(e.target.value)}
-                    className='h-9 text-sm'
-                  />
+                  <DatePicker value={customFrom} onChange={setCustomFrom} className='h-9 text-sm' />
                 </div>
                 <div className='space-y-1.5'>
                   <label className='text-muted-foreground text-xs font-medium'>
                     {t('periodTo')}
                   </label>
-                  <Input
-                    type='date'
-                    value={customTo}
-                    onChange={(e): void => setCustomTo(e.target.value)}
-                    className='h-9 text-sm'
-                  />
+                  <DatePicker value={customTo} onChange={setCustomTo} className='h-9 text-sm' />
                 </div>
                 <Button
                   onClick={handleCustomApply}

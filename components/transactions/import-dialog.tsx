@@ -22,7 +22,10 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { transactionKeys } from '@/lib/api/queries/transaction.queries';
+import { useUsage, usageKeys } from '@/hooks/use-usage';
+import { useSubscription } from '@/hooks/use-subscription';
 import { Upload, FileText, ArrowLeft, ArrowRight, AlertTriangle } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface ImportDialogProps {
   open: boolean;
@@ -223,10 +226,13 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps): React.R
   const [file, setFile] = useState<File | null>(null);
   const [csvHeaders, setCsvHeaders] = useState<string[]>([]);
   const [mapping, setMapping] = useState<Record<AppField, string>>({} as Record<AppField, string>);
+  const [isDragging, setIsDragging] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
   const parsedRowsRef = useRef<Record<string, string>[]>([]);
+  const { data: usage } = useUsage();
+  const { data: subscription } = useSubscription();
 
   const resetState = (): void => {
     setStep('upload');
@@ -279,6 +285,12 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps): React.R
     [mapping, step],
   );
 
+  const isFree = subscription?.plan !== 'pro';
+  const importCount = parsedRowsRef.current.length;
+  const txRemaining =
+    usage && isFree ? Math.max(0, usage.transactions_limit - usage.transactions_count) : Infinity;
+  const importExceedsLimit = isFree && importCount > txRemaining;
+
   const handleImport = async (): Promise<void> => {
     if (parsedRowsRef.current.length === 0) return;
 
@@ -289,7 +301,12 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps): React.R
       const res = await fetch('/api/transactions/import', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ transactions, resolve_names: true }),
+        body: JSON.stringify({
+          transactions,
+          resolve_names: true,
+          file_name: file?.name ?? 'import.csv',
+          row_count: parsedRowsRef.current.length,
+        }),
       });
 
       if (!res.ok) {
@@ -307,7 +324,30 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps): React.R
         toast.success(t('importedCount', { count: result.imported }));
       }
 
+      // Upload CSV file to Supabase storage in the background
+      if (file) {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('row_count', String(parsedRowsRef.current.length));
+        formData.append('imported_count', String(result.imported));
+        void fetch('/api/transactions/imports', {
+          method: 'POST',
+          body: formData,
+        });
+      }
+
       void queryClient.invalidateQueries({ queryKey: transactionKeys.all });
+      void queryClient.invalidateQueries({ queryKey: usageKeys.all });
+
+      toast(t('importHistory'), {
+        action: {
+          label: tCommon('more'),
+          onClick: (): void => {
+            window.location.href = '/transactions/imports';
+          },
+        },
+      });
+
       onOpenChange(false);
       resetState();
     } catch (error) {
@@ -334,9 +374,38 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps): React.R
 
       <button
         onClick={(): void => fileRef.current?.click()}
-        className='border-border hover:bg-card-overlay flex w-full cursor-pointer flex-col items-center gap-2 rounded-lg border-2 border-dashed p-8 transition-colors'>
+        onDragOver={(e): void => {
+          e.preventDefault();
+          e.stopPropagation();
+          setIsDragging(true);
+        }}
+        onDragEnter={(e): void => {
+          e.preventDefault();
+          e.stopPropagation();
+          setIsDragging(true);
+        }}
+        onDragLeave={(e): void => {
+          e.preventDefault();
+          e.stopPropagation();
+          setIsDragging(false);
+        }}
+        onDrop={(e): void => {
+          e.preventDefault();
+          e.stopPropagation();
+          setIsDragging(false);
+          const droppedFile = e.dataTransfer.files[0];
+          if (droppedFile.name.endsWith('.csv')) {
+            void handleFileSelect(droppedFile);
+          } else {
+            toast.error(t('csvEmptyError'));
+          }
+        }}
+        className={cn(
+          'flex w-full cursor-pointer flex-col items-center gap-2 rounded-lg border-2 border-dashed p-8 transition-colors',
+          isDragging ? 'border-primary bg-primary/5' : 'border-border hover:bg-card-overlay',
+        )}>
         <Upload className='text-muted-foreground h-8 w-8' />
-        <span className='text-muted-foreground text-sm'>{t('clickToSelect')}</span>
+        <span className='text-muted-foreground text-sm'>{t('dragDropCsv')}</span>
       </button>
 
       <div className='flex justify-end'>
@@ -420,7 +489,7 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps): React.R
         })}
       </p>
 
-      <div className='max-h-64 overflow-auto rounded border'>
+      <div className='border-border max-h-64 overflow-auto rounded border'>
         <Table>
           <TableHeader>
             <TableRow>
@@ -451,6 +520,15 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps): React.R
         </Table>
       </div>
 
+      {importExceedsLimit && (
+        <div className='border-destructive/30 bg-destructive/5 flex items-center gap-2 rounded-lg border p-3'>
+          <AlertTriangle className='text-destructive h-4 w-4 shrink-0' />
+          <p className='text-destructive text-sm'>
+            {t('importLimitExceeded', { remaining: txRemaining })}
+          </p>
+        </div>
+      )}
+
       <div className='flex justify-between'>
         <Button variant='outline' onClick={(): void => setStep('map')}>
           <ArrowLeft className='mr-1 h-4 w-4' />
@@ -458,7 +536,7 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps): React.R
         </Button>
         <Button
           onClick={(): void => void handleImport()}
-          disabled={isImporting}
+          disabled={isImporting || importExceedsLimit}
           className='cursor-pointer'>
           {isImporting
             ? tCommon('importing')

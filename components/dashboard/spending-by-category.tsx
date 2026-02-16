@@ -19,8 +19,8 @@ const BAR_COLORS = [
 ];
 
 interface SpendingByCategoryProps {
-  year: number;
-  month: number;
+  dateFrom: string;
+  dateTo: string;
 }
 
 interface CategorySpending {
@@ -30,11 +30,11 @@ interface CategorySpending {
   color: string;
 }
 
-export function SpendingByCategory({ year, month }: SpendingByCategoryProps): React.ReactElement {
+export function SpendingByCategory({
+  dateFrom,
+  dateTo,
+}: SpendingByCategoryProps): React.ReactElement {
   const t = useTranslations('dashboard');
-  const dateFrom = `${year}-${String(month + 1).padStart(2, '0')}-01`;
-  const lastDay = new Date(year, month + 1, 0).getDate();
-  const dateTo = `${year}-${String(month + 1).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
 
   const { data: result, isLoading: txLoading } = useTransactions({
     type: 'expense',

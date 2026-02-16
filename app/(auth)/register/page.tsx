@@ -4,9 +4,10 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { toast } from 'sonner';
+import { Eye, EyeOff, Mail } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -18,6 +19,7 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/hooks/use-auth';
 
 const GoogleIcon = (): React.ReactElement => (
@@ -55,9 +57,13 @@ const formSchema = z
 type FormValues = z.infer<typeof formSchema>;
 
 export default function RegisterPage(): React.ReactElement {
-  const router = useRouter();
+  const t = useTranslations('settings');
   const { signUp, signInWithGoogle, isLoading } = useAuth();
   const [error, setError] = useState<string | null>(null);
+  const [emailSent, setEmailSent] = useState(false);
+  const [sentEmail, setSentEmail] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -72,7 +78,8 @@ export default function RegisterPage(): React.ReactElement {
     setError(null);
     try {
       await signUp(values.email, values.password);
-      router.push('/dashboard');
+      setSentEmail(values.email);
+      setEmailSent(true);
     } catch {
       setError('Failed to create account. Please try again.');
       toast.error('Sign up failed');
@@ -86,6 +93,37 @@ export default function RegisterPage(): React.ReactElement {
     } catch {
       toast.error('Google sign-up failed');
     }
+  }
+
+  if (emailSent) {
+    return (
+      <div className='bg-login-bg flex min-h-screen w-full items-center justify-center p-4'>
+        <div className='w-full max-w-md'>
+          <div className='mb-8 text-center'>
+            <div className='bg-primary mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-3xl shadow-lg'>
+              <span className='text-primary-foreground text-3xl font-bold'>$</span>
+            </div>
+          </div>
+
+          <Card className='border-border bg-card/80 shadow-2xl backdrop-blur-sm'>
+            <CardHeader className='text-center'>
+              <div className='bg-primary/10 mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full'>
+                <Mail className='text-primary h-8 w-8' />
+              </div>
+              <CardTitle className='text-xl'>{t('checkYourEmail')}</CardTitle>
+            </CardHeader>
+            <CardContent className='space-y-6 text-center'>
+              <p className='text-muted-foreground text-sm'>
+                {t('verificationSent', { email: sentEmail })}
+              </p>
+              <Button asChild variant='outline' className='w-full'>
+                <Link href='/login'>{t('backToLogin')}</Link>
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -134,13 +172,28 @@ export default function RegisterPage(): React.ReactElement {
                   <FormItem>
                     <FormLabel className='text-foreground'>Password</FormLabel>
                     <FormControl>
-                      <Input
-                        type='password'
-                        placeholder='At least 6 characters'
-                        {...field}
-                        disabled={isLoading}
-                        className='border-border bg-background text-foreground placeholder:text-muted-foreground h-12'
-                      />
+                      <div className='relative'>
+                        <Input
+                          type={showPassword ? 'text' : 'password'}
+                          placeholder='At least 6 characters'
+                          {...field}
+                          disabled={isLoading}
+                          className='border-border bg-background text-foreground placeholder:text-muted-foreground h-12 pr-10'
+                        />
+                        <Button
+                          type='button'
+                          variant='ghost'
+                          size='sm'
+                          className='absolute top-1/2 right-3 h-auto -translate-y-1/2 p-0'
+                          onClick={(): void => setShowPassword((prev) => !prev)}
+                          tabIndex={-1}>
+                          {showPassword ? (
+                            <EyeOff className='text-muted-foreground h-4 w-4' />
+                          ) : (
+                            <Eye className='text-muted-foreground h-4 w-4' />
+                          )}
+                        </Button>
+                      </div>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -154,13 +207,28 @@ export default function RegisterPage(): React.ReactElement {
                   <FormItem>
                     <FormLabel className='text-foreground'>Confirm Password</FormLabel>
                     <FormControl>
-                      <Input
-                        type='password'
-                        placeholder='Confirm your password'
-                        {...field}
-                        disabled={isLoading}
-                        className='border-border bg-background text-foreground placeholder:text-muted-foreground h-12'
-                      />
+                      <div className='relative'>
+                        <Input
+                          type={showConfirmPassword ? 'text' : 'password'}
+                          placeholder='Confirm your password'
+                          {...field}
+                          disabled={isLoading}
+                          className='border-border bg-background text-foreground placeholder:text-muted-foreground h-12 pr-10'
+                        />
+                        <Button
+                          type='button'
+                          variant='ghost'
+                          size='sm'
+                          className='absolute top-1/2 right-3 h-auto -translate-y-1/2 p-0'
+                          onClick={(): void => setShowConfirmPassword((prev) => !prev)}
+                          tabIndex={-1}>
+                          {showConfirmPassword ? (
+                            <EyeOff className='text-muted-foreground h-4 w-4' />
+                          ) : (
+                            <Eye className='text-muted-foreground h-4 w-4' />
+                          )}
+                        </Button>
+                      </div>
                     </FormControl>
                     <FormMessage />
                   </FormItem>

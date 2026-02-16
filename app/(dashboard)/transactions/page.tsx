@@ -13,8 +13,17 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Plus, Upload, Download, MoreVertical, CheckSquare, X, Pencil } from 'lucide-react';
-import { AiGlowButton } from '@/components/ui/ai-glow-button';
+import {
+  Plus,
+  Upload,
+  Download,
+  MoreVertical,
+  CheckSquare,
+  X,
+  Pencil,
+  History,
+} from 'lucide-react';
+import Link from 'next/link';
 import { ImportDialog } from '@/components/transactions/import-dialog';
 import { exportTransactionsCsv } from '@/lib/utils/export';
 import { useTransactions } from '@/lib/api/queries/transaction.queries';
@@ -42,7 +51,7 @@ export default function TransactionsPage(): React.ReactElement {
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkEditOpen, setBulkEditOpen] = useState(false);
-  const { openNew, openWith, openAi } = useTransactionFormStore();
+  const { openNew, openWith } = useTransactionFormStore();
 
   const { data: exportData } = useTransactions({ ...filters, limit: 500 });
 
@@ -103,66 +112,71 @@ export default function TransactionsPage(): React.ReactElement {
           </Button>
         </div>
       ) : (
-        <div className='flex items-center justify-between gap-2'>
-          <div className='min-w-0'>
-            <h2 className='text-foreground text-xl font-bold sm:text-2xl'>{t('title')}</h2>
-            <p className='text-muted-foreground hidden text-sm sm:block'>{t('subtitle')}</p>
-          </div>
-          <div className='flex shrink-0 gap-2'>
-            <Button
-              variant='outline'
-              size='sm'
-              className='cursor-pointer'
-              onClick={(): void => setSelectMode(true)}>
-              <CheckSquare className='h-4 w-4 sm:mr-1.5' />
-              <span className='hidden sm:inline'>{tCommon('select')}</span>
-            </Button>
-            <Button
-              variant='outline'
-              size='sm'
-              className='hidden cursor-pointer sm:flex'
-              onClick={(): void => setImportOpen(true)}>
-              <Upload className='mr-1.5 h-4 w-4' />
-              {tCommon('import')}
-            </Button>
-            <Button
-              variant='outline'
-              size='sm'
-              className='hidden cursor-pointer sm:flex'
-              onClick={handleExport}
-              disabled={!exportData?.data.length}>
-              <Download className='mr-1.5 h-4 w-4' />
-              {tCommon('export')}
-            </Button>
-            <AiGlowButton onClick={openAi} />
-            <Button size='sm' className='cursor-pointer' onClick={openNew}>
-              <Plus className='mr-1 h-4 w-4' />
-              <span className='hidden sm:inline'>{t('newTransaction')}</span>
-              <span className='sm:hidden'>{tCommon('new')}</span>
-            </Button>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant='outline' size='sm' className='cursor-pointer px-2 sm:hidden'>
-                  <MoreVertical className='h-4 w-4' />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align='end'>
-                <DropdownMenuItem
-                  className='cursor-pointer'
-                  onClick={(): void => setImportOpen(true)}>
-                  <Upload className='mr-2 h-4 w-4' />
-                  {tCommon('import')}
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  className='cursor-pointer'
-                  onClick={handleExport}
-                  disabled={!exportData?.data.length}>
-                  <Download className='mr-2 h-4 w-4' />
-                  {tCommon('export')}
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
+        <div className='flex shrink-0 justify-end gap-2'>
+          <Button
+            variant='outline'
+            size='sm'
+            className='cursor-pointer'
+            onClick={(): void => setSelectMode(true)}>
+            <CheckSquare className='h-4 w-4 sm:mr-1.5' />
+            <span className='hidden sm:inline'>{tCommon('select')}</span>
+          </Button>
+          <Button
+            variant='outline'
+            size='sm'
+            className='hidden cursor-pointer sm:flex'
+            onClick={(): void => setImportOpen(true)}>
+            <Upload className='mr-1.5 h-4 w-4' />
+            {tCommon('import')}
+          </Button>
+          <Button
+            variant='outline'
+            size='sm'
+            className='hidden cursor-pointer sm:flex'
+            onClick={handleExport}
+            disabled={!exportData?.data.length}>
+            <Download className='mr-1.5 h-4 w-4' />
+            {tCommon('export')}
+          </Button>
+          <Button variant='ghost' size='sm' className='hidden cursor-pointer sm:flex' asChild>
+            <Link href='/transactions/imports'>
+              <History className='mr-1.5 h-4 w-4' />
+              {t('importHistory')}
+            </Link>
+          </Button>
+          <Button size='sm' className='cursor-pointer' onClick={openNew}>
+            <Plus className='mr-1 h-4 w-4' />
+            <span className='hidden sm:inline'>{t('newTransaction')}</span>
+            <span className='sm:hidden'>{tCommon('new')}</span>
+          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant='outline' size='sm' className='cursor-pointer px-2 sm:hidden'>
+                <MoreVertical className='h-4 w-4' />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align='end'>
+              <DropdownMenuItem
+                className='cursor-pointer'
+                onClick={(): void => setImportOpen(true)}>
+                <Upload className='mr-2 h-4 w-4' />
+                {tCommon('import')}
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                className='cursor-pointer'
+                onClick={handleExport}
+                disabled={!exportData?.data.length}>
+                <Download className='mr-2 h-4 w-4' />
+                {tCommon('export')}
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild className='cursor-pointer'>
+                <Link href='/transactions/imports'>
+                  <History className='mr-2 h-4 w-4' />
+                  {t('importHistory')}
+                </Link>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       )}
 

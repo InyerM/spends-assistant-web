@@ -146,7 +146,9 @@ describe('DELETE /api/categories/[id]', () => {
 
     const chain = createCategoryChain();
 
-    // Track from() calls to differentiate tables
+    // First .single() call is for is_default check
+    chain.single = vi.fn().mockResolvedValue({ data: { is_default: false }, error: null });
+
     let thenCallCount = 0;
     Object.defineProperty(chain, 'then', {
       value: (resolve: (v: unknown) => void) => {
@@ -179,10 +181,27 @@ describe('DELETE /api/categories/[id]', () => {
     expect(body.unlinked_transactions).toBe(5);
   });
 
+  it('returns 403 when deleting default category', async () => {
+    const { getUserClient } = await import('@/lib/api/server');
+
+    const chain = createCategoryChain();
+    chain.single = vi.fn().mockResolvedValue({ data: { is_default: true }, error: null });
+
+    vi.mocked(getUserClient).mockResolvedValue({
+      supabase: { from: vi.fn().mockReturnValue(chain) } as never,
+      userId: 'test-user-id',
+    });
+
+    const request = new NextRequest('http://localhost/api/categories/cat-1', { method: 'DELETE' });
+    const response = await DELETE(request, makeParams('cat-1'));
+    expect(response.status).toBe(403);
+  });
+
   it('handles category with no children', async () => {
     const { getUserClient } = await import('@/lib/api/server');
 
     const chain = createCategoryChain();
+    chain.single = vi.fn().mockResolvedValue({ data: { is_default: false }, error: null });
 
     let thenCallCount = 0;
     Object.defineProperty(chain, 'then', {
@@ -214,6 +233,7 @@ describe('DELETE /api/categories/[id]', () => {
     const { getUserClient } = await import('@/lib/api/server');
 
     const chain = createCategoryChain();
+    chain.single = vi.fn().mockResolvedValue({ data: { is_default: false }, error: null });
 
     let thenCallCount = 0;
     Object.defineProperty(chain, 'then', {

@@ -279,7 +279,7 @@ export function AccountEditDialog({
                 <FormItem>
                   <FormLabel>{t('lastFour')}</FormLabel>
                   <FormControl>
-                    <Input placeholder='7799' maxLength={4} inputMode='numeric' {...field} />
+                    <Input placeholder='1234' maxLength={4} inputMode='numeric' {...field} />
                   </FormControl>
                   <FormDescription>{t('lastFourDescription')}</FormDescription>
                   <FormMessage />
@@ -406,13 +406,16 @@ export function AccountEditDialog({
             )}
 
             <div className='flex justify-between gap-3 pt-4'>
-              <Button
-                type='button'
-                variant='ghost'
-                className='text-destructive cursor-pointer'
-                onClick={(): void => setConfirmDeleteOpen(true)}>
-                {tCommon('delete')}
-              </Button>
+              {!account?.is_default && (
+                <Button
+                  type='button'
+                  variant='ghost'
+                  className='text-destructive cursor-pointer'
+                  onClick={(): void => setConfirmDeleteOpen(true)}>
+                  {tCommon('delete')}
+                </Button>
+              )}
+              {account?.is_default && <div />}
               <div className='flex gap-3'>
                 <Button type='button' variant='outline' onClick={(): void => onOpenChange(false)}>
                   {tCommon('cancel')}

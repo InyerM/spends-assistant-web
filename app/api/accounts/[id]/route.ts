@@ -50,6 +50,18 @@ export async function DELETE(_request: NextRequest, { params }: RouteParams): Pr
   try {
     const { id } = await params;
     const { supabase } = await getUserClient();
+
+    // Check if the account is a default account
+    const { data: account } = await supabase
+      .from('accounts')
+      .select('is_default')
+      .eq('id', id)
+      .single();
+
+    if (account?.is_default) {
+      return errorResponse('Default accounts cannot be deleted', 403);
+    }
+
     const now = new Date().toISOString();
 
     const { error: accountError } = await supabase

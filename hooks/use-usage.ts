@@ -6,6 +6,12 @@ export interface UsageData {
   ai_parses_limit: number;
   transactions_count: number;
   transactions_limit: number;
+  accounts_count: number;
+  accounts_limit: number;
+  categories_count: number;
+  categories_limit: number;
+  automations_count: number;
+  automations_limit: number;
 }
 
 export const usageKeys = {

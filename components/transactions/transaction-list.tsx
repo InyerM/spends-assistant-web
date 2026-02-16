@@ -223,7 +223,7 @@ export function TransactionList({
 
   return (
     <div className='space-y-6'>
-      {dateGroups.map((group) => (
+      {dateGroups.map((group, groupIndex) => (
         <div key={group.date} className='mb-4'>
           <div className='border-border mb-2 flex items-center justify-between border-b pb-2'>
             <span className='text-muted-foreground text-sm font-medium'>{group.displayDate}</span>
@@ -235,7 +235,7 @@ export function TransactionList({
           </div>
 
           <div className='space-y-0.5'>
-            {group.transactions.map((tx) => {
+            {group.transactions.map((tx, txIndex) => {
               const config = typeConfig[tx.type];
               const Icon = config.icon;
               const categoryInfo = getCategory(tx.category_id);
@@ -331,7 +331,8 @@ export function TransactionList({
                   <div className='md:hidden'>
                     <SwipeableRow
                       onEdit={(): void => onEdit(tx)}
-                      onDelete={(): void => setDeleteTx(tx)}>
+                      onDelete={(): void => setDeleteTx(tx)}
+                      showHint={groupIndex === 0 && txIndex === 0}>
                       {rowContent}
                     </SwipeableRow>
                   </div>

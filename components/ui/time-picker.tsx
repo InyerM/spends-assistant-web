@@ -1,8 +1,9 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useRef, useMemo } from 'react';
 import { Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useUserSettings } from '@/hooks/use-user-settings';
 
 interface TimePickerProps {
   value: string;
@@ -38,13 +39,25 @@ function formatTime(hours24: number, minutes: number): string {
 export function TimePicker({ value, onChange, className }: TimePickerProps): React.ReactElement {
   const { hours, minutes } = useMemo(() => parse24h(value), [value]);
   const { hours12, period } = to12h(hours);
+  const { data: userSettings } = useUserSettings();
+  const is24h = userSettings?.hour_format === '24h';
+  const hoursRef = useRef<HTMLInputElement>(null);
+  const minutesRef = useRef<HTMLInputElement>(null);
+  const periodRef = useRef<HTMLButtonElement>(null);
 
-  function handleHoursChange(raw: string): void {
+  function handleHoursChange12h(raw: string): void {
     const num = parseInt(raw, 10);
     if (isNaN(num)) return;
     const clamped = Math.max(1, Math.min(12, num));
     const h24 = to24h(clamped, period);
     onChange(formatTime(h24, minutes));
+  }
+
+  function handleHoursChange24h(raw: string): void {
+    const num = parseInt(raw, 10);
+    if (isNaN(num)) return;
+    const clamped = Math.max(0, Math.min(23, num));
+    onChange(formatTime(clamped, minutes));
   }
 
   function handleMinutesChange(raw: string): void {
@@ -60,6 +73,63 @@ export function TimePicker({ value, onChange, className }: TimePickerProps): Rea
     onChange(formatTime(h24, minutes));
   }
 
+  function handleHoursKeyDown(e: React.KeyboardEvent<HTMLInputElement>): void {
+    if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      if (is24h) {
+        const next = hours >= 23 ? 0 : hours + 1;
+        onChange(formatTime(next, minutes));
+      } else {
+        const next = hours12 >= 12 ? 1 : hours12 + 1;
+        const h24 = to24h(next, period);
+        onChange(formatTime(h24, minutes));
+      }
+    } else if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      if (is24h) {
+        const next = hours <= 0 ? 23 : hours - 1;
+        onChange(formatTime(next, minutes));
+      } else {
+        const next = hours12 <= 1 ? 12 : hours12 - 1;
+        const h24 = to24h(next, period);
+        onChange(formatTime(h24, minutes));
+      }
+    } else if (e.key === 'ArrowRight') {
+      e.preventDefault();
+      minutesRef.current?.focus();
+    }
+  }
+
+  function handleMinutesKeyDown(e: React.KeyboardEvent<HTMLInputElement>): void {
+    if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      const next = minutes >= 59 ? 0 : minutes + 1;
+      onChange(formatTime(hours, next));
+    } else if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      const next = minutes <= 0 ? 59 : minutes - 1;
+      onChange(formatTime(hours, next));
+    } else if (e.key === 'ArrowRight') {
+      e.preventDefault();
+      if (!is24h) {
+        periodRef.current?.focus();
+      }
+    } else if (e.key === 'ArrowLeft') {
+      e.preventDefault();
+      hoursRef.current?.focus();
+    }
+  }
+
+  function handlePeriodKeyDown(e: React.KeyboardEvent<HTMLButtonElement>): void {
+    if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+      e.preventDefault();
+      togglePeriod();
+    } else if (e.key === 'ArrowLeft') {
+      e.preventDefault();
+      minutesRef.current?.focus();
+    }
+  }
+
   return (
     <div
       className={cn(
@@ -70,12 +140,16 @@ export function TimePicker({ value, onChange, className }: TimePickerProps): Rea
       )}>
       <Clock className='text-muted-foreground ml-3 h-4 w-4 shrink-0 opacity-50' />
       <input
+        ref={hoursRef}
         type='number'
         inputMode='numeric'
-        min={1}
-        max={12}
-        value={hours12}
-        onChange={(e): void => handleHoursChange(e.target.value)}
+        min={is24h ? 0 : 1}
+        max={is24h ? 23 : 12}
+        value={is24h ? hours : hours12}
+        onChange={(e): void =>
+          is24h ? handleHoursChange24h(e.target.value) : handleHoursChange12h(e.target.value)
+        }
+        onKeyDown={handleHoursKeyDown}
         className={cn(
           'h-full w-10 shrink-0 border-0 bg-transparent text-center font-mono text-sm outline-none',
           '[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none',
@@ -85,12 +159,14 @@ export function TimePicker({ value, onChange, className }: TimePickerProps): Rea
       />
       <span className='text-muted-foreground shrink-0 font-mono text-sm font-bold'>:</span>
       <input
+        ref={minutesRef}
         type='number'
         inputMode='numeric'
         min={0}
         max={59}
         value={String(minutes).padStart(2, '0')}
         onChange={(e): void => handleMinutesChange(e.target.value)}
+        onKeyDown={handleMinutesKeyDown}
         className={cn(
           'h-full w-10 shrink-0 border-0 bg-transparent text-center font-mono text-sm outline-none',
           '[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none',
@@ -98,19 +174,23 @@ export function TimePicker({ value, onChange, className }: TimePickerProps): Rea
         )}
         aria-label='Minutes'
       />
-      <div className='mr-1.5 ml-auto flex shrink-0'>
-        <button
-          type='button'
-          onClick={togglePeriod}
-          className={cn(
-            'flex h-7 cursor-pointer items-center rounded px-2 font-mono text-xs font-medium',
-            'transition-colors sm:h-6',
-            'bg-accent text-accent-foreground hover:bg-accent/80',
-          )}
-          aria-label={`Toggle AM/PM, currently ${period}`}>
-          {period}
-        </button>
-      </div>
+      {!is24h && (
+        <div className='mr-1.5 ml-auto flex shrink-0'>
+          <button
+            ref={periodRef}
+            type='button'
+            onClick={togglePeriod}
+            onKeyDown={handlePeriodKeyDown}
+            className={cn(
+              'flex h-7 cursor-pointer items-center rounded px-2 font-mono text-xs font-medium',
+              'transition-colors sm:h-6',
+              'bg-accent text-accent-foreground hover:bg-accent/80',
+            )}
+            aria-label={`Toggle AM/PM, currently ${period}`}>
+            {period}
+          </button>
+        </div>
+      )}
     </div>
   );
 }

@@ -45,7 +45,7 @@ export function createMockAccount(overrides: Partial<Account> = {}): Account {
     name: 'Bancolombia Savings',
     type: 'savings',
     institution: 'bancolombia',
-    last_four: '2651',
+    last_four: '5678',
     currency: 'COP',
     balance: 1000000,
     is_active: true,
@@ -126,6 +126,12 @@ export function createMockUsage(overrides: Partial<UsageData> = {}): UsageData {
     ai_parses_limit: 15,
     transactions_count: 10,
     transactions_limit: 50,
+    accounts_count: 2,
+    accounts_limit: 4,
+    categories_count: 5,
+    categories_limit: 10,
+    automations_count: 3,
+    automations_limit: 10,
     ...overrides,
   };
 }

@@ -16,6 +16,7 @@ export type {
   CategoryWithChildren,
   CreateCategoryInput,
   UpdateCategoryInput,
+  SpendingNature,
 } from './category';
 
 export type {

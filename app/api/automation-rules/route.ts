@@ -41,6 +41,31 @@ export async function POST(request: NextRequest): Promise<Response> {
     const { supabase, userId } = await getUserClient();
     const body = (await request.json()) as Record<string, unknown>;
 
+    // Check automation rule limit for free plan
+    const [{ data: subscription }, automationCountResult, { data: limitSetting }] =
+      await Promise.all([
+        supabase.from('subscriptions').select('plan').eq('user_id', userId).maybeSingle(),
+        supabase
+          .from('automation_rules')
+          .select('id', { count: 'exact', head: true })
+          .is('deleted_at', null),
+        supabase
+          .from('app_settings')
+          .select('value')
+          .eq('key', 'free_automations_limit')
+          .maybeSingle(),
+      ]);
+
+    const plan = (subscription?.plan as string | undefined) ?? 'free';
+    if (plan === 'free') {
+      const limit = (limitSetting?.value as number | undefined) ?? 10;
+      const currentCount = automationCountResult.count ?? 0;
+      const newCount = Array.isArray(body) ? body.length : 1;
+      if (currentCount + newCount > limit) {
+        return errorResponse(`Automation rule limit reached (${limit} for free plan)`, 403);
+      }
+    }
+
     // Support bulk creation (array of rules)
     if (Array.isArray(body)) {
       const rulesWithUser = body.map((rule) => ({

@@ -19,6 +19,7 @@ function createImportChain() {
   ['select', 'eq', 'is', 'in', 'insert', 'update'].forEach((m) => {
     chain[m] = vi.fn().mockReturnValue(chain);
   });
+  chain.maybeSingle = vi.fn().mockResolvedValue({ data: null, error: null });
   return chain;
 }
 

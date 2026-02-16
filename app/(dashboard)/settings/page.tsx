@@ -1,6 +1,7 @@
 'use client';
 
-import { useSearchParams } from 'next/navigation';
+import { useCallback } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ProfileTab } from '@/components/settings/profile-tab';
@@ -8,9 +9,12 @@ import { SecurityTab } from '@/components/settings/security-tab';
 import { SubscriptionTab } from '@/components/settings/subscription-tab';
 import { ApiKeysTab } from '@/components/settings/api-keys-tab';
 import { LanguageSelector } from '@/components/settings/language-selector';
-import { User, Shield, CreditCard, Key } from 'lucide-react';
+import { HelpSection } from '@/components/settings/help-section';
+import { DangerZoneSection } from '@/components/settings/danger-zone-section';
+import { useUserSettings } from '@/hooks/use-user-settings';
+import { User, Shield, CreditCard, Key, LifeBuoy } from 'lucide-react';
 
-const VALID_TABS = ['profile', 'security', 'subscription', 'api-keys'] as const;
+const VALID_TABS = ['profile', 'security', 'subscription', 'api-keys', 'help'] as const;
 type TabValue = (typeof VALID_TABS)[number];
 
 function isValidTab(value: string | null): value is TabValue {
@@ -19,15 +23,24 @@ function isValidTab(value: string | null): value is TabValue {
 
 export default function SettingsPage(): React.ReactElement {
   const t = useTranslations('settings');
+  const router = useRouter();
   const searchParams = useSearchParams();
+  const { data: userSettings } = useUserSettings();
+
   const tabParam = searchParams.get('tab');
-  const defaultTab: TabValue = isValidTab(tabParam) ? tabParam : 'profile';
+  const tab: TabValue = isValidTab(tabParam) ? tabParam : 'profile';
+  const showApiKeys = userSettings?.show_api_keys === true;
+
+  const handleTabChange = useCallback(
+    (value: string): void => {
+      router.replace(`/settings?tab=${value}`, { scroll: false });
+    },
+    [router],
+  );
 
   return (
     <div className='mx-auto max-w-2xl space-y-4 p-4 sm:space-y-6 sm:p-6'>
-      <h1 className='text-xl font-bold sm:text-2xl'>{t('title')}</h1>
-
-      <Tabs defaultValue={defaultTab}>
+      <Tabs value={tab} onValueChange={handleTabChange}>
         <TabsList variant='line' className='scrollbar-none w-full overflow-x-auto'>
           <TabsTrigger value='profile'>
             <User className='h-4 w-4' />
@@ -41,9 +54,15 @@ export default function SettingsPage(): React.ReactElement {
             <CreditCard className='h-4 w-4' />
             <span className='hidden sm:inline'>{t('subscription')}</span>
           </TabsTrigger>
-          <TabsTrigger value='api-keys'>
-            <Key className='h-4 w-4' />
-            <span className='hidden sm:inline'>{t('apiKeys')}</span>
+          {showApiKeys && (
+            <TabsTrigger value='api-keys'>
+              <Key className='h-4 w-4' />
+              <span className='hidden sm:inline'>{t('apiKeys')}</span>
+            </TabsTrigger>
+          )}
+          <TabsTrigger value='help'>
+            <LifeBuoy className='h-4 w-4' />
+            <span className='hidden sm:inline'>{t('help')}</span>
           </TabsTrigger>
         </TabsList>
 
@@ -51,6 +70,7 @@ export default function SettingsPage(): React.ReactElement {
           <div className='space-y-6'>
             <ProfileTab />
             <LanguageSelector />
+            <DangerZoneSection />
           </div>
         </TabsContent>
 
@@ -62,8 +82,14 @@ export default function SettingsPage(): React.ReactElement {
           <SubscriptionTab />
         </TabsContent>
 
-        <TabsContent value='api-keys' className='mt-6'>
-          <ApiKeysTab />
+        {showApiKeys && (
+          <TabsContent value='api-keys' className='mt-6'>
+            <ApiKeysTab />
+          </TabsContent>
+        )}
+
+        <TabsContent value='help' className='mt-6'>
+          <HelpSection />
         </TabsContent>
       </Tabs>
     </div>

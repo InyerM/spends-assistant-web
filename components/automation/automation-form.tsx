@@ -32,6 +32,7 @@ import { SearchableSelect } from '@/components/shared/searchable-select';
 import { buildAccountItems, buildCategoryItems } from '@/lib/utils/select-items';
 import { useAccounts } from '@/lib/api/queries/account.queries';
 import { useCategories } from '@/lib/api/queries/category.queries';
+import { useAppSettings } from '@/hooks/use-app-settings';
 import {
   useCreateAutomationRule,
   useUpdateAutomationRule,
@@ -114,7 +115,7 @@ function InfoTip({ text }: { text: string }): React.ReactElement {
           <Info className='h-3.5 w-3.5' />
         </button>
       </TooltipTrigger>
-      <TooltipContent side='top' className='max-w-56'>
+      <TooltipContent side='top' className='max-w-72 whitespace-pre-line'>
         {text}
       </TooltipContent>
     </Tooltip>
@@ -337,6 +338,8 @@ interface AutomationFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   rule?: AutomationRule | null;
+  initialData?: CreateAutomationRuleInput | null;
+  aiPrompt?: string;
 }
 
 function getDefaults(rule?: AutomationRule | null): FormValues {
@@ -362,11 +365,14 @@ export function AutomationForm({
   open,
   onOpenChange,
   rule,
+  initialData,
+  aiPrompt,
 }: AutomationFormProps): React.ReactElement {
   const t = useTranslations('automation');
   const tCommon = useTranslations('common');
   const { data: accounts } = useAccounts();
   const { data: categories } = useCategories();
+  const { data: appSettings } = useAppSettings();
   const createMutation = useCreateAutomationRule();
   const updateMutation = useUpdateAutomationRule();
   const isEditing = !!rule;
@@ -387,6 +393,9 @@ export function AutomationForm({
     if (rule) {
       setConditionRows(conditionsToRows(rule.conditions));
       setActionRows(actionsToRows(rule.actions, rule.transfer_to_account_id));
+    } else if (initialData) {
+      setConditionRows(conditionsToRows(initialData.conditions));
+      setActionRows(actionsToRows(initialData.actions, initialData.transfer_to_account_id ?? null));
     } else {
       setConditionRows([]);
       setActionRows([]);
@@ -401,9 +410,19 @@ export function AutomationForm({
   // Reset form values when dialog opens
   useEffect(() => {
     if (open) {
-      form.reset(getDefaults(rule));
+      if (initialData && !rule) {
+        form.reset({
+          name: initialData.name,
+          is_active: initialData.is_active ?? true,
+          priority: initialData.priority ?? 0,
+          rule_type: initialData.rule_type ?? 'general',
+          condition_logic: initialData.condition_logic ?? 'and',
+        });
+      } else {
+        form.reset(getDefaults(rule));
+      }
     }
-  }, [open, rule, form]);
+  }, [open, rule, initialData, form]);
 
   // ── Condition row management ──────────────────────────────────────────
 
@@ -519,6 +538,9 @@ export function AutomationForm({
   async function onSubmit(values: FormValues): Promise<void> {
     try {
       const payload = buildPayload(values);
+      if (aiPrompt) {
+        (payload as unknown as Record<string, unknown>).ai_prompt = aiPrompt;
+      }
       if (isEditing) {
         await updateMutation.mutateAsync({ id: rule.id, ...payload });
         toast.success(t('ruleUpdated'));
@@ -599,7 +621,12 @@ export function AutomationForm({
                   name='rule_type'
                   render={({ field }): React.ReactElement => (
                     <FormItem>
-                      <FormLabel>{t('ruleType')}</FormLabel>
+                      <FormLabel className='inline-flex items-center gap-1.5'>
+                        {t('ruleType')}
+                        <InfoTip
+                          text={`${t('general')}: ${t('ruleTypeGeneralTooltip')}\n${t('accountDetection')}: ${t('ruleTypeAccountDetectionTooltip')}\n${t('transferRule')}: ${t('ruleTypeTransferTooltip')}`}
+                        />
+                      </FormLabel>
                       <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger>
@@ -637,7 +664,10 @@ export function AutomationForm({
               {/* ── Conditions section ──────────────────────────────── */}
               <div className='border-border space-y-3 rounded-lg border p-3'>
                 <div className='flex items-center justify-between'>
-                  <p className='text-sm font-medium'>{t('conditions')}</p>
+                  <div className='flex items-center gap-1.5'>
+                    <p className='text-sm font-medium'>{t('conditions')}</p>
+                    <InfoTip text={`${t('conditionsHelp')}. ${t('conditionsExample')}`} />
+                  </div>
 
                   {/* AND / OR toggle */}
                   <FormField
@@ -742,7 +772,10 @@ export function AutomationForm({
 
               {/* ── Actions section ─────────────────────────────────── */}
               <div className='border-border space-y-3 rounded-lg border p-3'>
-                <p className='text-sm font-medium'>{t('actions')}</p>
+                <div className='flex items-center gap-1.5'>
+                  <p className='text-sm font-medium'>{t('actions')}</p>
+                  <InfoTip text={`${t('actionsHelp')}. ${t('actionsExample')}`} />
+                </div>
 
                 {/* Existing actions as compact rows */}
                 {actionRows.length > 0 && (
@@ -808,6 +841,17 @@ export function AutomationForm({
                   )
                 )}
               </div>
+
+              {/* ── FAQ link ─────────────────────────────────────────── */}
+              {appSettings?.automation_faq_url && (
+                <a
+                  href={appSettings.automation_faq_url}
+                  target='_blank'
+                  rel='noopener noreferrer'
+                  className='text-primary text-xs hover:underline'>
+                  {t('automationFaqLink')}
+                </a>
+              )}
 
               {/* ── Submit ──────────────────────────────────────────── */}
               <div className='flex justify-end gap-3 pt-4'>

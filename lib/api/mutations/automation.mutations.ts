@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { automationKeys } from '@/lib/api/queries/automation.queries';
+import { usageKeys } from '@/hooks/use-usage';
 import type { AutomationRule, CreateAutomationRuleInput, UpdateAutomationRuleInput } from '@/types';
 
 export async function createAutomationRule(
@@ -70,6 +71,7 @@ export function useCreateAutomationRule(): ReturnType<
     mutationFn: createAutomationRule,
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: automationKeys.all });
+      void queryClient.invalidateQueries({ queryKey: usageKeys.all });
     },
   });
 }
@@ -96,6 +98,7 @@ export function useDeleteAutomationRule(): ReturnType<
     mutationFn: deleteAutomationRule,
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: automationKeys.all });
+      void queryClient.invalidateQueries({ queryKey: usageKeys.all });
     },
   });
 }
@@ -139,6 +142,7 @@ export function useGenerateAccountRules(): ReturnType<
     mutationFn: generateAccountRules,
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: automationKeys.all });
+      void queryClient.invalidateQueries({ queryKey: usageKeys.all });
     },
   });
 }

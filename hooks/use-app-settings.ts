@@ -6,6 +6,9 @@ export interface AppSettings {
   free_accounts_limit: number;
   free_automations_limit: number;
   free_categories_limit: number;
+  support_email?: string;
+  faq_url?: string;
+  automation_faq_url?: string;
 }
 
 const DEFAULTS: AppSettings = {

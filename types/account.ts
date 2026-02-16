@@ -17,6 +17,7 @@ export interface Account {
   currency: string;
   balance: number;
   is_active: boolean;
+  is_default?: boolean;
   color: string | null;
   icon: string | null;
   deleted_at: string | null;

@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { categoryKeys } from '@/lib/api/queries/category.queries';
 import { transactionKeys } from '@/lib/api/queries/transaction.queries';
+import { usageKeys } from '@/hooks/use-usage';
 import type { Category, CreateCategoryInput, UpdateCategoryInput } from '@/types';
 
 interface DeleteCategoryResult {
@@ -63,6 +64,7 @@ export function useCreateCategory(): ReturnType<
     mutationFn: createCategory,
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: categoryKeys.all });
+      void queryClient.invalidateQueries({ queryKey: usageKeys.all });
     },
   });
 }
@@ -90,6 +92,7 @@ export function useDeleteCategory(): ReturnType<
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: categoryKeys.all });
       void queryClient.invalidateQueries({ queryKey: transactionKeys.all });
+      void queryClient.invalidateQueries({ queryKey: usageKeys.all });
     },
   });
 }

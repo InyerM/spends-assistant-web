@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
 import Link from 'next/link';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -26,6 +26,7 @@ import {
   HandCoins,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
+import { getAccountDisplayName } from '@/lib/utils/account-translations';
 import type { Account, AccountType } from '@/types';
 
 const ACCOUNT_TYPE_ICONS: Record<AccountType, LucideIcon> = {
@@ -51,6 +52,7 @@ function AccountTypeIcon({
 
 export default function AccountsPage(): React.ReactElement {
   const t = useTranslations('accounts');
+  const locale = useLocale();
   const { data: accounts, isLoading } = useAccounts();
   const deleteMutation = useDeleteAccount();
   const [createOpen, setCreateOpen] = useState(false);
@@ -70,11 +72,7 @@ export default function AccountsPage(): React.ReactElement {
 
   return (
     <div className='space-y-4 p-4 sm:space-y-6 sm:p-6'>
-      <div className='flex items-center justify-between'>
-        <div className='min-w-0'>
-          <h2 className='text-foreground text-xl font-bold sm:text-2xl'>{t('title')}</h2>
-          <p className='text-muted-foreground hidden text-sm sm:block'>{t('subtitle')}</p>
-        </div>
+      <div className='flex justify-end'>
         <Button onClick={(): void => setCreateOpen(true)}>
           <Plus className='h-4 w-4 sm:mr-2' />
           <span className='hidden sm:inline'>{t('newAccount')}</span>
@@ -103,7 +101,9 @@ export default function AccountsPage(): React.ReactElement {
                 <CardHeader className='flex flex-row items-center justify-between space-y-0'>
                   <CardTitle className='text-base font-medium'>
                     <AccountTypeIcon type={account.type} className='mr-2 inline h-4 w-4' />
-                    {account.name}
+                    {account.is_default
+                      ? getAccountDisplayName(account.name, locale)
+                      : account.name}
                   </CardTitle>
                   <Button
                     variant='ghost'
@@ -143,7 +143,9 @@ export default function AccountsPage(): React.ReactElement {
                 <div className='sm:hidden'>
                   <SwipeableRow
                     onEdit={(): void => setEditingAccount(account)}
-                    onDelete={(): void => setDeleteTarget(account)}>
+                    onDelete={
+                      account.is_default ? undefined : (): void => setDeleteTarget(account)
+                    }>
                     <Link href={`/accounts/${account.id}`}>{cardContent}</Link>
                   </SwipeableRow>
                 </div>

@@ -7,7 +7,6 @@ describe('useTransactionFormStore', () => {
     useTransactionFormStore.setState({
       open: false,
       transaction: null,
-      aiOpen: false,
     });
   });
 
@@ -15,7 +14,6 @@ describe('useTransactionFormStore', () => {
     const state = useTransactionFormStore.getState();
     expect(state.open).toBe(false);
     expect(state.transaction).toBeNull();
-    expect(state.aiOpen).toBe(false);
   });
 
   it('openNew opens form with no transaction', () => {
@@ -41,13 +39,6 @@ describe('useTransactionFormStore', () => {
     expect(state.transaction).toBeNull();
   });
 
-  it('openAi opens AI dialog', () => {
-    useTransactionFormStore.getState().openAi();
-    const state = useTransactionFormStore.getState();
-    expect(state.aiOpen).toBe(true);
-    expect(state.open).toBe(false);
-  });
-
   it('setOpen(false) clears transaction', () => {
     const tx = createMockTransaction();
     useTransactionFormStore.getState().openWith(tx);
@@ -55,11 +46,5 @@ describe('useTransactionFormStore', () => {
     const state = useTransactionFormStore.getState();
     expect(state.open).toBe(false);
     expect(state.transaction).toBeNull();
-  });
-
-  it('setAiOpen(false) closes AI dialog', () => {
-    useTransactionFormStore.getState().openAi();
-    useTransactionFormStore.getState().setAiOpen(false);
-    expect(useTransactionFormStore.getState().aiOpen).toBe(false);
   });
 });

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
+import { useLocale } from 'next-intl';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm, useWatch } from 'react-hook-form';
 import { z } from 'zod';
@@ -11,6 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ConfirmDeleteDialog } from '@/components/shared/confirm-delete-dialog';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import {
   Form,
   FormControl,
@@ -28,8 +30,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useCategoryTree, useCategories } from '@/lib/api/queries/category.queries';
+import { useAllCategoryTree, useAllCategories } from '@/lib/api/queries/category.queries';
 import {
   useCreateCategory,
   useUpdateCategory,
@@ -38,8 +41,15 @@ import {
 } from '@/lib/api/mutations/category.mutations';
 import { SwipeableRow } from '@/components/transactions/swipeable-row';
 import { slugify } from '@/lib/utils/slugify';
-import { Plus, Pencil, Trash2, ChevronDown, ChevronRight } from 'lucide-react';
-import type { Category, CategoryType } from '@/types';
+import { Plus, Pencil, Trash2, ChevronDown, ChevronRight, Eye, EyeOff, Info } from 'lucide-react';
+import type { Category, CategoryType, SpendingNature } from '@/types';
+
+const spendingNatureTooltipKey: Record<SpendingNature, string> = {
+  none: 'spendingNatureNoneTooltip',
+  want: 'spendingNatureWantTooltip',
+  need: 'spendingNatureNeedTooltip',
+  must: 'spendingNatureMustTooltip',
+};
 
 const formSchema = z.object({
   name: z.string().min(1, 'Name is required'),
@@ -48,6 +58,7 @@ const formSchema = z.object({
   parent_id: z.string().optional(),
   icon: z.string().optional(),
   color: z.string().optional(),
+  spending_nature: z.enum(['none', 'want', 'need', 'must']).optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -58,11 +69,29 @@ const typeBadgeVariant: Record<CategoryType, 'destructive' | 'default' | 'second
   transfer: 'secondary',
 };
 
+const spendingNatureBadgeVariant: Record<
+  SpendingNature,
+  'outline' | 'default' | 'secondary' | 'destructive'
+> = {
+  none: 'outline',
+  want: 'secondary',
+  need: 'default',
+  must: 'destructive',
+};
+
+function getCategoryDisplayName(category: Category, locale: string): string {
+  if (category.translations && category.translations[locale]) {
+    return category.translations[locale];
+  }
+  return category.name;
+}
+
 export default function CategoriesPage(): React.ReactElement {
   const t = useTranslations('categories');
   const tCommon = useTranslations('common');
-  const { data: categoryTree, isLoading } = useCategoryTree();
-  const { data: allCategories } = useCategories();
+  const locale = useLocale();
+  const { data: categoryTree, isLoading } = useAllCategoryTree();
+  const { data: allCategories } = useAllCategories();
   const createMutation = useCreateCategory();
   const updateMutation = useUpdateCategory();
   const deleteMutation = useDeleteCategory();
@@ -75,6 +104,7 @@ export default function CategoriesPage(): React.ReactElement {
     children_count: number;
   } | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [showHidden, setShowHidden] = useState(false);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -85,6 +115,7 @@ export default function CategoriesPage(): React.ReactElement {
       parent_id: undefined,
       icon: '',
       color: '',
+      spending_nature: 'none',
     },
   });
 
@@ -134,6 +165,7 @@ export default function CategoriesPage(): React.ReactElement {
       parent_id: parentId ?? undefined,
       icon: '',
       color: '',
+      spending_nature: 'none',
     });
     setDialogOpen(true);
   };
@@ -147,6 +179,7 @@ export default function CategoriesPage(): React.ReactElement {
       parent_id: category.parent_id ?? undefined,
       icon: category.icon ?? '',
       color: category.color ?? '',
+      spending_nature: category.spending_nature ?? 'none',
     });
     setDialogOpen(true);
   };
@@ -178,13 +211,28 @@ export default function CategoriesPage(): React.ReactElement {
     }
   };
 
+  const handleToggleVisibility = (category: Category): void => {
+    updateMutation.mutate(
+      { id: category.id, is_active: !category.is_active } as { id: string; is_active: boolean },
+      {
+        onError: () => {
+          toast.error(t('failedToUpdate'));
+        },
+      },
+    );
+  };
+
   async function onSubmit(values: FormValues): Promise<void> {
     try {
+      const payload = {
+        ...values,
+        parent_id: values.parent_id === 'none' ? undefined : values.parent_id,
+      };
       if (editingCategory) {
-        await updateMutation.mutateAsync({ id: editingCategory.id, ...values });
+        await updateMutation.mutateAsync({ id: editingCategory.id, ...payload });
         toast.success(t('categoryUpdated'));
       } else {
-        await createMutation.mutateAsync(values);
+        await createMutation.mutateAsync(payload);
         toast.success(t('categoryCreated'));
       }
       setDialogOpen(false);
@@ -195,330 +243,508 @@ export default function CategoriesPage(): React.ReactElement {
 
   const parentCategories = allCategories?.filter((c) => !c.parent_id) ?? [];
 
+  // Filter tree based on showHidden toggle
+  const filteredTree = showHidden
+    ? categoryTree
+    : categoryTree
+        ?.map((parent) => ({
+          ...parent,
+          children: parent.children.filter((child) => child.is_active),
+        }))
+        .filter((parent) => parent.is_active);
+
   return (
-    <div className='space-y-4 p-4 sm:space-y-6 sm:p-6'>
-      <div className='flex items-center justify-between'>
-        <div className='min-w-0'>
-          <h2 className='text-foreground text-xl font-bold sm:text-2xl'>{t('title')}</h2>
-          <p className='text-muted-foreground hidden text-sm sm:block'>{t('subtitle')}</p>
+    <TooltipProvider>
+      <div className='space-y-4 p-4 sm:space-y-6 sm:p-6'>
+        <div className='flex justify-end'>
+          <Button className='cursor-pointer' onClick={(): void => handleCreate()}>
+            <Plus className='h-4 w-4 sm:mr-2' />
+            <span className='hidden sm:inline'>{t('newCategory')}</span>
+          </Button>
         </div>
-        <Button className='cursor-pointer' onClick={(): void => handleCreate()}>
-          <Plus className='h-4 w-4 sm:mr-2' />
-          <span className='hidden sm:inline'>{t('newCategory')}</span>
-        </Button>
-      </div>
 
-      {isLoading ? (
-        <div className='space-y-4'>
-          {Array.from({ length: 6 }).map((_, i) => (
-            <Skeleton key={i} className='h-16 w-full' />
-          ))}
+        {/* Show hidden toggle */}
+        <div className='flex items-center gap-2'>
+          <Switch checked={showHidden} onCheckedChange={setShowHidden} id='show-hidden' />
+          <label htmlFor='show-hidden' className='text-muted-foreground cursor-pointer text-sm'>
+            {t('showHidden')}
+          </label>
         </div>
-      ) : (
-        <div className='space-y-2'>
-          {categoryTree?.map((parent) => {
-            const isExpanded = expandedIds.has(parent.id);
-            const hasChildren = parent.children.length > 0;
 
-            const parentCardContent = (
-              <Card className='border-border bg-card'>
-                <CardHeader className='flex flex-row items-center gap-2 space-y-0 py-3 sm:gap-3'>
-                  {hasChildren ? (
-                    <button
-                      onClick={(e): void => {
-                        e.stopPropagation();
-                        toggleExpanded(parent.id);
-                      }}
-                      className='text-muted-foreground hover:text-foreground flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center'>
-                      {isExpanded ? (
-                        <ChevronDown className='h-4 w-4' />
-                      ) : (
-                        <ChevronRight className='h-4 w-4' />
-                      )}
-                    </button>
-                  ) : (
-                    <div className='w-4 shrink-0' />
-                  )}
-
-                  <span className='shrink-0 text-lg'>{parent.icon ?? '📁'}</span>
-                  <CardTitle className='min-w-0 flex-1 truncate text-base font-medium'>
-                    {parent.name}
-                  </CardTitle>
-                  <Badge
-                    variant={typeBadgeVariant[parent.type]}
-                    className='hidden shrink-0 sm:inline-flex'>
-                    {parent.type}
-                  </Badge>
-                  {parent.color && (
-                    <div
-                      className='hidden h-4 w-4 shrink-0 rounded-full sm:block'
-                      style={{ backgroundColor: parent.color }}
-                    />
-                  )}
-                  <div className='flex shrink-0 items-center'>
-                    <Button
-                      variant='ghost'
-                      size='sm'
-                      onClick={(e): void => {
-                        e.stopPropagation();
-                        handleCreate(parent.id, parent.type);
-                      }}
-                      className='h-9 w-9 cursor-pointer p-0'
-                      title={t('addSubcategory')}>
-                      <Plus className='h-4 w-4' />
-                    </Button>
-                    <Button
-                      variant='ghost'
-                      size='sm'
-                      onClick={(e): void => {
-                        e.stopPropagation();
-                        handleEdit(parent);
-                      }}
-                      className='hidden h-9 w-9 cursor-pointer p-0 sm:flex'>
-                      <Pencil className='h-4 w-4' />
-                    </Button>
-                    <Button
-                      variant='ghost'
-                      size='sm'
-                      onClick={(e): void => {
-                        e.stopPropagation();
-                        void handleDeleteClick(parent);
-                      }}
-                      className='text-destructive hidden h-9 w-9 cursor-pointer p-0 sm:flex'>
-                      <Trash2 className='h-4 w-4' />
-                    </Button>
-                  </div>
-                </CardHeader>
-
-                {isExpanded && hasChildren && (
-                  <CardContent className='pt-0 pb-3'>
-                    <div className='ml-4 space-y-1 sm:ml-8'>
-                      {parent.children.map((child) => {
-                        const childRowContent = (
-                          <div className='hover:bg-card-overlay flex items-center gap-2 rounded-lg px-3 py-2 sm:gap-3'>
-                            <span>{child.icon ?? '📄'}</span>
-                            <span className='min-w-0 flex-1 truncate text-sm'>{child.name}</span>
-                            <span className='text-muted-foreground hidden text-xs sm:inline'>
-                              {child.slug}
-                            </span>
-                            <Button
-                              variant='ghost'
-                              size='sm'
-                              onClick={(): void => handleEdit(child)}
-                              className='hidden h-9 w-9 cursor-pointer p-0 sm:flex sm:h-7 sm:w-7'>
-                              <Pencil className='h-4 w-4 sm:h-3 sm:w-3' />
-                            </Button>
-                            <Button
-                              variant='ghost'
-                              size='sm'
-                              onClick={(): void => void handleDeleteClick(child)}
-                              className='text-destructive hidden h-9 w-9 cursor-pointer p-0 sm:flex sm:h-7 sm:w-7'>
-                              <Trash2 className='h-4 w-4 sm:h-3 sm:w-3' />
-                            </Button>
-                          </div>
-                        );
-
-                        return (
-                          <div key={child.id}>
-                            {/* Desktop: regular row */}
-                            <div className='hidden sm:block'>{childRowContent}</div>
-                            {/* Mobile: swipeable row */}
-                            <div className='sm:hidden'>
-                              <SwipeableRow
-                                onEdit={(): void => handleEdit(child)}
-                                onDelete={(): void => void handleDeleteClick(child)}>
-                                {childRowContent}
-                              </SwipeableRow>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </CardContent>
-                )}
-              </Card>
-            );
-
-            return (
-              <div key={parent.id}>
-                {/* Desktop: regular card */}
-                <div className='hidden sm:block'>{parentCardContent}</div>
-                {/* Mobile: swipeable card */}
-                <div className='sm:hidden'>
-                  <SwipeableRow
-                    onEdit={(): void => handleEdit(parent)}
-                    onDelete={(): void => void handleDeleteClick(parent)}>
-                    {parentCardContent}
-                  </SwipeableRow>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className='border-border bg-card max-h-[85dvh] overflow-y-auto sm:max-w-[425px]'>
-          <DialogHeader>
-            <DialogTitle>{editingCategory ? t('editCategory') : t('newCategory')}</DialogTitle>
-          </DialogHeader>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className='space-y-4'>
-              <FormField
-                control={form.control}
-                name='name'
-                render={({ field }): React.ReactElement => (
-                  <FormItem>
-                    <FormLabel>{t('name')}</FormLabel>
-                    <FormControl>
-                      <Input placeholder={t('namePlaceholder')} {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name='slug'
-                render={({ field }): React.ReactElement => (
-                  <FormItem>
-                    <FormLabel>{t('slug')}</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder={t('slugPlaceholder')}
-                        {...field}
-                        readOnly
-                        className='text-muted-foreground bg-muted'
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name='type'
-                render={({ field }): React.ReactElement => (
-                  <FormItem>
-                    <FormLabel>{t('type')}</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder={t('type')} />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value='expense'>{t('expense')}</SelectItem>
-                        <SelectItem value='income'>{t('income')}</SelectItem>
-                        <SelectItem value='transfer'>{t('transfer')}</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name='parent_id'
-                render={({ field }): React.ReactElement => (
-                  <FormItem>
-                    <FormLabel>{t('parent')}</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value ?? 'none'}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder={t('noneTopLevel')} />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value='none'>{t('noneTopLevel')}</SelectItem>
-                        {parentCategories.map((cat) => (
-                          <SelectItem key={cat.id} value={cat.id}>
-                            {cat.icon ?? ''} {cat.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <div className='grid grid-cols-2 gap-4'>
-                <FormField
-                  control={form.control}
-                  name='icon'
-                  render={({ field }): React.ReactElement => (
-                    <FormItem>
-                      <FormLabel>{t('icon')}</FormLabel>
-                      <FormControl>
-                        <Input placeholder='🍔' {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name='color'
-                  render={({ field }): React.ReactElement => (
-                    <FormItem>
-                      <FormLabel>{t('color')}</FormLabel>
-                      <FormControl>
-                        <ColorPicker value={field.value ?? ''} onChange={field.onChange} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              <div className='flex justify-end gap-3 pt-4'>
-                <Button type='button' variant='outline' onClick={(): void => setDialogOpen(false)}>
-                  {tCommon('cancel')}
-                </Button>
-                <Button
-                  type='submit'
-                  disabled={createMutation.isPending || updateMutation.isPending}>
-                  {createMutation.isPending || updateMutation.isPending
-                    ? tCommon('saving')
-                    : editingCategory
-                      ? tCommon('update')
-                      : tCommon('create')}
-                </Button>
-              </div>
-            </form>
-          </Form>
-        </DialogContent>
-      </Dialog>
-
-      <ConfirmDeleteDialog
-        open={deleteDialogOpen}
-        onOpenChange={setDeleteDialogOpen}
-        title={t('deleteCategory')}
-        description={
-          <div className='text-muted-foreground space-y-1 text-sm'>
-            {deleteInfo ? (
-              <>
-                {deleteInfo.transaction_count > 0 && (
-                  <p>{t('linkedTransactions', { count: deleteInfo.transaction_count })}</p>
-                )}
-                {deleteInfo.children_count > 0 && (
-                  <p>{t('childCategories', { count: deleteInfo.children_count })}</p>
-                )}
-                <p>{tCommon('actionCannotBeUndone')}</p>
-              </>
-            ) : (
-              <p>{t('loadingCategoryInfo')}</p>
-            )}
+        {isLoading ? (
+          <div className='space-y-4'>
+            {Array.from({ length: 6 }).map((_, i) => (
+              <Skeleton key={i} className='h-16 w-full' />
+            ))}
           </div>
-        }
-        confirmText={deleteTarget?.name ?? ''}
-        onConfirm={(): void => void handleDeleteConfirm()}
-        isPending={deleteMutation.isPending}
-      />
-    </div>
+        ) : (
+          <div className='space-y-2'>
+            {filteredTree?.map((parent) => {
+              const isExpanded = expandedIds.has(parent.id);
+              const hasChildren = parent.children.length > 0;
+              const displayName = getCategoryDisplayName(parent, locale);
+
+              const parentCardContent = (
+                <Card className={`border-border bg-card ${!parent.is_active ? 'opacity-50' : ''}`}>
+                  <CardHeader className='flex flex-row items-center gap-2 space-y-0 py-3 sm:gap-3'>
+                    {hasChildren ? (
+                      <button
+                        onClick={(e): void => {
+                          e.stopPropagation();
+                          toggleExpanded(parent.id);
+                        }}
+                        className='text-muted-foreground hover:text-foreground flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center'>
+                        {isExpanded ? (
+                          <ChevronDown className='h-4 w-4' />
+                        ) : (
+                          <ChevronRight className='h-4 w-4' />
+                        )}
+                      </button>
+                    ) : (
+                      <div className='w-4 shrink-0' />
+                    )}
+
+                    <span className='shrink-0 text-lg'>{parent.icon ?? '📁'}</span>
+                    <div className='min-w-0 flex-1'>
+                      <CardTitle className='truncate text-base font-medium'>
+                        {displayName}
+                      </CardTitle>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <p className='text-muted-foreground truncate text-xs'>{parent.slug}</p>
+                        </TooltipTrigger>
+                        <TooltipContent side='top'>{t('slugTooltip')}</TooltipContent>
+                      </Tooltip>
+                    </div>
+                    <Badge
+                      variant={typeBadgeVariant[parent.type]}
+                      className='hidden shrink-0 sm:inline-flex'>
+                      {parent.type}
+                    </Badge>
+                    {parent.spending_nature && parent.spending_nature !== 'none' && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Badge
+                            variant={spendingNatureBadgeVariant[parent.spending_nature]}
+                            className='hidden shrink-0 cursor-default text-xs sm:inline-flex'>
+                            {t(parent.spending_nature)}
+                          </Badge>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          {t(spendingNatureTooltipKey[parent.spending_nature])}
+                        </TooltipContent>
+                      </Tooltip>
+                    )}
+                    {parent.is_default && (
+                      <Badge variant='outline' className='hidden shrink-0 text-xs sm:inline-flex'>
+                        {t('isDefault')}
+                      </Badge>
+                    )}
+                    {parent.color && (
+                      <div
+                        className='hidden h-4 w-4 shrink-0 rounded-full sm:block'
+                        style={{ backgroundColor: parent.color }}
+                      />
+                    )}
+                    <div className='flex shrink-0 items-center'>
+                      {/* Add subcategory - only on top-level categories */}
+                      {!parent.parent_id && (
+                        <Button
+                          variant='ghost'
+                          size='sm'
+                          onClick={(e): void => {
+                            e.stopPropagation();
+                            handleCreate(parent.id, parent.type);
+                          }}
+                          className='h-9 w-9 cursor-pointer p-0'
+                          title={t('addSubcategory')}>
+                          <Plus className='h-4 w-4' />
+                        </Button>
+                      )}
+                      {/* Visibility toggle */}
+                      <Button
+                        variant='ghost'
+                        size='sm'
+                        onClick={(e): void => {
+                          e.stopPropagation();
+                          handleToggleVisibility(parent);
+                        }}
+                        className='hidden h-9 w-9 cursor-pointer p-0 sm:flex'
+                        title={t('hideCategory')}>
+                        {parent.is_active ? (
+                          <Eye className='h-4 w-4' />
+                        ) : (
+                          <EyeOff className='text-muted-foreground h-4 w-4' />
+                        )}
+                      </Button>
+                      <Button
+                        variant='ghost'
+                        size='sm'
+                        onClick={(e): void => {
+                          e.stopPropagation();
+                          handleEdit(parent);
+                        }}
+                        className='hidden h-9 w-9 cursor-pointer p-0 sm:flex'>
+                        <Pencil className='h-4 w-4' />
+                      </Button>
+                      {/* Delete button: hidden for default categories */}
+                      {parent.is_default ? (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span className='hidden sm:inline-flex'>
+                              <Button
+                                variant='ghost'
+                                size='sm'
+                                disabled
+                                className='text-muted-foreground hidden h-9 w-9 p-0 sm:flex'>
+                                <Trash2 className='h-4 w-4' />
+                              </Button>
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent>{t('cannotDeleteDefault')}</TooltipContent>
+                        </Tooltip>
+                      ) : (
+                        <Button
+                          variant='ghost'
+                          size='sm'
+                          onClick={(e): void => {
+                            e.stopPropagation();
+                            void handleDeleteClick(parent);
+                          }}
+                          className='text-destructive hidden h-9 w-9 cursor-pointer p-0 sm:flex'>
+                          <Trash2 className='h-4 w-4' />
+                        </Button>
+                      )}
+                    </div>
+                  </CardHeader>
+
+                  {isExpanded && hasChildren && (
+                    <CardContent className='pt-0 pb-3'>
+                      <div className='ml-4 space-y-1 sm:ml-8'>
+                        {parent.children.map((child) => {
+                          const childDisplayName = getCategoryDisplayName(child, locale);
+
+                          const childRowContent = (
+                            <div
+                              className={`hover:bg-card-overlay flex items-center gap-2 rounded-lg px-3 py-2 sm:gap-3 ${!child.is_active ? 'opacity-50' : ''}`}>
+                              <span>{child.icon ?? '📄'}</span>
+                              <div className='min-w-0 flex-1'>
+                                <span className='block truncate text-sm'>{childDisplayName}</span>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <p className='text-muted-foreground hidden truncate text-xs sm:block'>
+                                      {child.slug}
+                                    </p>
+                                  </TooltipTrigger>
+                                  <TooltipContent>{t('slugTooltip')}</TooltipContent>
+                                </Tooltip>
+                              </div>
+                              {child.spending_nature && child.spending_nature !== 'none' && (
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Badge
+                                      variant={spendingNatureBadgeVariant[child.spending_nature]}
+                                      className='hidden shrink-0 cursor-default text-xs sm:inline-flex'>
+                                      {t(child.spending_nature)}
+                                    </Badge>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    {t(spendingNatureTooltipKey[child.spending_nature])}
+                                  </TooltipContent>
+                                </Tooltip>
+                              )}
+                              {child.is_default && (
+                                <Badge
+                                  variant='outline'
+                                  className='hidden shrink-0 text-xs sm:inline-flex'>
+                                  {t('isDefault')}
+                                </Badge>
+                              )}
+                              {/* Visibility toggle */}
+                              <Button
+                                variant='ghost'
+                                size='sm'
+                                onClick={(): void => handleToggleVisibility(child)}
+                                className='hidden h-9 w-9 cursor-pointer p-0 sm:flex sm:h-7 sm:w-7'>
+                                {child.is_active ? (
+                                  <Eye className='h-4 w-4 sm:h-3 sm:w-3' />
+                                ) : (
+                                  <EyeOff className='text-muted-foreground h-4 w-4 sm:h-3 sm:w-3' />
+                                )}
+                              </Button>
+                              <Button
+                                variant='ghost'
+                                size='sm'
+                                onClick={(): void => handleEdit(child)}
+                                className='hidden h-9 w-9 cursor-pointer p-0 sm:flex sm:h-7 sm:w-7'>
+                                <Pencil className='h-4 w-4 sm:h-3 sm:w-3' />
+                              </Button>
+                              {child.is_default ? (
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <span className='hidden sm:inline-flex'>
+                                      <Button
+                                        variant='ghost'
+                                        size='sm'
+                                        disabled
+                                        className='text-muted-foreground hidden h-9 w-9 p-0 sm:flex sm:h-7 sm:w-7'>
+                                        <Trash2 className='h-4 w-4 sm:h-3 sm:w-3' />
+                                      </Button>
+                                    </span>
+                                  </TooltipTrigger>
+                                  <TooltipContent>{t('cannotDeleteDefault')}</TooltipContent>
+                                </Tooltip>
+                              ) : (
+                                <Button
+                                  variant='ghost'
+                                  size='sm'
+                                  onClick={(): void => void handleDeleteClick(child)}
+                                  className='text-destructive hidden h-9 w-9 cursor-pointer p-0 sm:flex sm:h-7 sm:w-7'>
+                                  <Trash2 className='h-4 w-4 sm:h-3 sm:w-3' />
+                                </Button>
+                              )}
+                            </div>
+                          );
+
+                          return (
+                            <div key={child.id}>
+                              {/* Desktop: regular row */}
+                              <div className='hidden sm:block'>{childRowContent}</div>
+                              {/* Mobile: swipeable row */}
+                              <div className='sm:hidden'>
+                                <SwipeableRow
+                                  onEdit={(): void => handleEdit(child)}
+                                  onDelete={
+                                    child.is_default
+                                      ? undefined
+                                      : (): void => void handleDeleteClick(child)
+                                  }>
+                                  {childRowContent}
+                                </SwipeableRow>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </CardContent>
+                  )}
+                </Card>
+              );
+
+              return (
+                <div key={parent.id}>
+                  {/* Desktop: regular card */}
+                  <div className='hidden sm:block'>{parentCardContent}</div>
+                  {/* Mobile: swipeable card */}
+                  <div className='sm:hidden'>
+                    <SwipeableRow
+                      onEdit={(): void => handleEdit(parent)}
+                      onDelete={
+                        parent.is_default ? undefined : (): void => void handleDeleteClick(parent)
+                      }>
+                      {parentCardContent}
+                    </SwipeableRow>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <DialogContent className='border-border bg-card max-h-[85dvh] overflow-y-auto sm:max-w-[425px]'>
+            <DialogHeader>
+              <DialogTitle>{editingCategory ? t('editCategory') : t('newCategory')}</DialogTitle>
+            </DialogHeader>
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className='space-y-4'>
+                <FormField
+                  control={form.control}
+                  name='name'
+                  render={({ field }): React.ReactElement => (
+                    <FormItem>
+                      <FormLabel>{t('name')}</FormLabel>
+                      <FormControl>
+                        <Input placeholder={t('namePlaceholder')} {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name='type'
+                  render={({ field }): React.ReactElement => (
+                    <FormItem>
+                      <FormLabel>{t('type')}</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder={t('type')} />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value='expense'>{t('expense')}</SelectItem>
+                          <SelectItem value='income'>{t('income')}</SelectItem>
+                          <SelectItem value='transfer'>{t('transfer')}</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name='parent_id'
+                  render={({ field }): React.ReactElement => (
+                    <FormItem>
+                      <FormLabel>{t('parent')}</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value ?? 'none'}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder={t('noneTopLevel')} />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value='none'>{t('noneTopLevel')}</SelectItem>
+                          {parentCategories.map((cat) => (
+                            <SelectItem key={cat.id} value={cat.id}>
+                              {cat.icon ?? ''} {getCategoryDisplayName(cat, locale)}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name='spending_nature'
+                  render={({ field }): React.ReactElement => (
+                    <FormItem>
+                      <FormLabel className='inline-flex items-center gap-1.5'>
+                        {t('spendingNature')}
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button
+                              type='button'
+                              className='text-muted-foreground hover:text-foreground inline-flex cursor-help'
+                              tabIndex={-1}>
+                              <Info className='h-3.5 w-3.5' />
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent side='top' className='max-w-64'>
+                            {t('spendingNatureHelp')}
+                          </TooltipContent>
+                        </Tooltip>
+                      </FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value ?? 'none'}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value='none'>
+                            {tCommon('none')} - {t('spendingNatureNoneTooltip')}
+                          </SelectItem>
+                          <SelectItem value='want'>
+                            {t('want')} - {t('spendingNatureWantTooltip')}
+                          </SelectItem>
+                          <SelectItem value='need'>
+                            {t('need')} - {t('spendingNatureNeedTooltip')}
+                          </SelectItem>
+                          <SelectItem value='must'>
+                            {t('must')} - {t('spendingNatureMustTooltip')}
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <div className='grid grid-cols-2 gap-4'>
+                  <FormField
+                    control={form.control}
+                    name='icon'
+                    render={({ field }): React.ReactElement => (
+                      <FormItem>
+                        <FormLabel>{t('icon')}</FormLabel>
+                        <FormControl>
+                          <Input placeholder='🍔' {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name='color'
+                    render={({ field }): React.ReactElement => (
+                      <FormItem>
+                        <FormLabel>{t('color')}</FormLabel>
+                        <FormControl>
+                          <ColorPicker value={field.value ?? ''} onChange={field.onChange} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <div className='flex justify-end gap-3 pt-4'>
+                  <Button
+                    type='button'
+                    variant='outline'
+                    onClick={(): void => setDialogOpen(false)}>
+                    {tCommon('cancel')}
+                  </Button>
+                  <Button
+                    type='submit'
+                    disabled={createMutation.isPending || updateMutation.isPending}>
+                    {createMutation.isPending || updateMutation.isPending
+                      ? tCommon('saving')
+                      : editingCategory
+                        ? tCommon('update')
+                        : tCommon('create')}
+                  </Button>
+                </div>
+              </form>
+            </Form>
+          </DialogContent>
+        </Dialog>
+
+        <ConfirmDeleteDialog
+          open={deleteDialogOpen}
+          onOpenChange={setDeleteDialogOpen}
+          title={t('deleteCategory')}
+          description={
+            <div className='text-muted-foreground space-y-1 text-sm'>
+              {deleteInfo ? (
+                <>
+                  {deleteInfo.transaction_count > 0 && (
+                    <p>{t('linkedTransactions', { count: deleteInfo.transaction_count })}</p>
+                  )}
+                  {deleteInfo.children_count > 0 && (
+                    <p>{t('childCategories', { count: deleteInfo.children_count })}</p>
+                  )}
+                  <p>{tCommon('actionCannotBeUndone')}</p>
+                </>
+              ) : (
+                <p>{t('loadingCategoryInfo')}</p>
+              )}
+            </div>
+          }
+          confirmText={deleteTarget?.name ?? ''}
+          onConfirm={(): void => void handleDeleteConfirm()}
+          isPending={deleteMutation.isPending}
+        />
+      </div>
+    </TooltipProvider>
   );
 }

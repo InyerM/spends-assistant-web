@@ -27,6 +27,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { ConfirmDeleteDialog } from '@/components/shared/confirm-delete-dialog';
 import { AutomationForm } from '@/components/automation/automation-form';
+import { AiAutomationDialog } from '@/components/automation/ai-automation-dialog';
 import { SwipeableRow } from '@/components/transactions/swipeable-row';
 import { useInfiniteAutomationRules } from '@/lib/api/queries/automation.queries';
 import { useAccounts } from '@/lib/api/queries/account.queries';
@@ -35,8 +36,8 @@ import {
   useDeleteAutomationRule,
   useGenerateAccountRules,
 } from '@/lib/api/mutations/automation.mutations';
-import { Plus, Pencil, Trash2, Zap, Loader2, Wand2 } from 'lucide-react';
-import type { AutomationRule, RuleType } from '@/types';
+import { Plus, Pencil, Trash2, Zap, Loader2, Wand2, Sparkles } from 'lucide-react';
+import type { AutomationRule, CreateAutomationRuleInput, RuleType } from '@/types';
 
 type RuleTypeFilter = 'all' | RuleType;
 type ActiveFilter = 'all' | 'active' | 'inactive';
@@ -69,6 +70,9 @@ export default function AutomationPage(): React.ReactElement {
   const [editingRule, setEditingRule] = useState<AutomationRule | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<AutomationRule | null>(null);
   const [generateConfirmOpen, setGenerateConfirmOpen] = useState(false);
+  const [aiDialogOpen, setAiDialogOpen] = useState(false);
+  const [aiInitialData, setAiInitialData] = useState<CreateAutomationRuleInput | null>(null);
+  const [aiPromptText, setAiPromptText] = useState<string>('');
 
   const filters = {
     ...(ruleTypeFilter !== 'all' ? { rule_type: ruleTypeFilter } : {}),
@@ -104,6 +108,21 @@ export default function AutomationPage(): React.ReactElement {
 
   const allRules = data?.pages.flatMap((p) => p.data) ?? [];
 
+  // Hide auto-generate when user has no non-default accounts or all active ones are covered
+  const allActiveAccountsCovered = ((): boolean => {
+    if (!accounts) return false;
+    const nonDefaultAccounts = accounts.filter((a) => !a.is_default);
+    if (nonDefaultAccounts.length === 0) return true;
+    const activeAccounts = nonDefaultAccounts.filter((a) => a.is_active);
+    if (activeAccounts.length === 0) return true;
+    const coveredAccountIds = new Set(
+      allRules
+        .filter((r) => r.rule_type === 'account_detection' && r.actions.set_account)
+        .map((r) => r.actions.set_account),
+    );
+    return activeAccounts.every((a) => coveredAccountIds.has(a.id));
+  })();
+
   const getAccountName = (accountId: string | null): string | null => {
     if (!accountId || !accounts) return null;
     return accounts.find((a) => a.id === accountId)?.name ?? null;
@@ -122,11 +141,15 @@ export default function AutomationPage(): React.ReactElement {
 
   const handleEdit = (rule: AutomationRule): void => {
     setEditingRule(rule);
+    setAiInitialData(null);
+    setAiPromptText('');
     setFormOpen(true);
   };
 
   const handleCreate = (): void => {
     setEditingRule(null);
+    setAiInitialData(null);
+    setAiPromptText('');
     setFormOpen(true);
   };
 
@@ -141,6 +164,13 @@ export default function AutomationPage(): React.ReactElement {
     }
   };
 
+  const handleAiRuleSelected = (rule: CreateAutomationRuleInput, prompt: string): void => {
+    setAiInitialData(rule);
+    setAiPromptText(prompt);
+    setEditingRule(null);
+    setFormOpen(true);
+  };
+
   const handleGenerateAccountRules = async (): Promise<void> => {
     try {
       const result = await generateMutation.mutateAsync();
@@ -153,12 +183,16 @@ export default function AutomationPage(): React.ReactElement {
 
   return (
     <div className='space-y-4 p-4 sm:space-y-6 sm:p-6'>
-      <div className='flex items-center justify-between'>
-        <div className='min-w-0'>
-          <h2 className='text-foreground text-xl font-bold sm:text-2xl'>{t('title')}</h2>
-          <p className='text-muted-foreground hidden text-sm sm:block'>{t('subtitle')}</p>
-        </div>
-        <div className='flex gap-2'>
+      <div className='flex justify-end gap-2'>
+        <Button
+          variant='outline'
+          size='sm'
+          className='ai-gradient-btn hidden cursor-pointer sm:flex'
+          onClick={(): void => setAiDialogOpen(true)}>
+          <Sparkles className='mr-1.5 h-4 w-4' />
+          {t('createWithAi')}
+        </Button>
+        {!allActiveAccountsCovered && (
           <Button
             variant='outline'
             size='sm'
@@ -167,11 +201,11 @@ export default function AutomationPage(): React.ReactElement {
             <Wand2 className='mr-1.5 h-4 w-4' />
             {t('autoGenerate')}
           </Button>
-          <Button className='cursor-pointer' onClick={handleCreate}>
-            <Plus className='h-4 w-4 sm:mr-2' />
-            <span className='hidden sm:inline'>{t('newRule')}</span>
-          </Button>
-        </div>
+        )}
+        <Button className='cursor-pointer' onClick={handleCreate}>
+          <Plus className='h-4 w-4 sm:mr-2' />
+          <span className='hidden sm:inline'>{t('newRule')}</span>
+        </Button>
       </div>
 
       {/* Filters - matching accounts page style with Select dropdowns */}
@@ -179,7 +213,7 @@ export default function AutomationPage(): React.ReactElement {
         <Select
           value={ruleTypeFilter}
           onValueChange={(v): void => setRuleTypeFilter(v as RuleTypeFilter)}>
-          <SelectTrigger className='w-[160px]'>
+          <SelectTrigger className='w-auto min-w-[140px]'>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -194,7 +228,7 @@ export default function AutomationPage(): React.ReactElement {
         <Select
           value={activeFilter}
           onValueChange={(v): void => setActiveFilter(v as ActiveFilter)}>
-          <SelectTrigger className='w-[140px]'>
+          <SelectTrigger className='w-auto min-w-[140px]'>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -206,15 +240,25 @@ export default function AutomationPage(): React.ReactElement {
           </SelectContent>
         </Select>
 
-        {/* Mobile auto-generate button */}
+        {/* Mobile AI + auto-generate buttons */}
         <Button
           variant='outline'
           size='sm'
-          className='cursor-pointer sm:hidden'
-          onClick={(): void => setGenerateConfirmOpen(true)}>
-          <Wand2 className='mr-1.5 h-4 w-4' />
-          {t('autoGenerate')}
+          className='ai-gradient-btn cursor-pointer sm:hidden'
+          onClick={(): void => setAiDialogOpen(true)}>
+          <Sparkles className='mr-1.5 h-4 w-4' />
+          {t('createWithAi')}
         </Button>
+        {!allActiveAccountsCovered && (
+          <Button
+            variant='outline'
+            size='sm'
+            className='cursor-pointer sm:hidden'
+            onClick={(): void => setGenerateConfirmOpen(true)}>
+            <Wand2 className='mr-1.5 h-4 w-4' />
+            {t('autoGenerate')}
+          </Button>
+        )}
       </div>
 
       {isLoading ? (
@@ -393,7 +437,19 @@ export default function AutomationPage(): React.ReactElement {
         ) : null}
       </div>
 
-      <AutomationForm open={formOpen} onOpenChange={setFormOpen} rule={editingRule} />
+      <AutomationForm
+        open={formOpen}
+        onOpenChange={setFormOpen}
+        rule={editingRule}
+        initialData={aiInitialData}
+        aiPrompt={aiPromptText}
+      />
+
+      <AiAutomationDialog
+        open={aiDialogOpen}
+        onOpenChange={setAiDialogOpen}
+        onUseRule={handleAiRuleSelected}
+      />
 
       <ConfirmDeleteDialog
         open={deleteTarget !== null}
@@ -409,7 +465,7 @@ export default function AutomationPage(): React.ReactElement {
 
       {/* Generate account rules confirmation dialog */}
       <AlertDialog open={generateConfirmOpen} onOpenChange={setGenerateConfirmOpen}>
-        <AlertDialogContent>
+        <AlertDialogContent className='border-border bg-card'>
           <AlertDialogHeader>
             <AlertDialogTitle>{t('autoGenerateTitle')}</AlertDialogTitle>
             <AlertDialogDescription>{t('autoGenerateDescription')}</AlertDialogDescription>

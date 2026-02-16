@@ -117,7 +117,9 @@ describe('DELETE /api/accounts/[id]', () => {
       chain[m] = vi.fn().mockReturnValue(chain);
     });
 
-    // Both update calls succeed
+    // First call is is_default check via .single(), rest are updates via thenable
+    chain.single = vi.fn().mockResolvedValue({ data: { is_default: false }, error: null });
+
     Object.defineProperty(chain, 'then', {
       value: (resolve: (v: unknown) => void) => resolve({ error: null }),
       enumerable: false,
@@ -136,6 +138,26 @@ describe('DELETE /api/accounts/[id]', () => {
     expect(body.success).toBe(true);
   });
 
+  it('returns 403 when deleting default account', async () => {
+    const { getUserClient } = await import('@/lib/api/server');
+
+    const chain: Record<string, ReturnType<typeof vi.fn>> = {};
+    ['select', 'eq', 'is', 'update'].forEach((m) => {
+      chain[m] = vi.fn().mockReturnValue(chain);
+    });
+
+    chain.single = vi.fn().mockResolvedValue({ data: { is_default: true }, error: null });
+
+    vi.mocked(getUserClient).mockResolvedValue({
+      supabase: { from: vi.fn().mockReturnValue(chain) } as never,
+      userId: 'test-user-id',
+    });
+
+    const request = new NextRequest('http://localhost/api/accounts/acc-1', { method: 'DELETE' });
+    const response = await DELETE(request, makeParams('acc-1'));
+    expect(response.status).toBe(403);
+  });
+
   it('returns 400 on account delete error', async () => {
     const { getUserClient } = await import('@/lib/api/server');
 
@@ -143,6 +165,9 @@ describe('DELETE /api/accounts/[id]', () => {
     ['select', 'eq', 'is', 'update'].forEach((m) => {
       chain[m] = vi.fn().mockReturnValue(chain);
     });
+
+    // is_default check passes
+    chain.single = vi.fn().mockResolvedValue({ data: { is_default: false }, error: null });
 
     Object.defineProperty(chain, 'then', {
       value: (resolve: (v: unknown) => void) => resolve({ error: { message: 'Cannot delete' } }),

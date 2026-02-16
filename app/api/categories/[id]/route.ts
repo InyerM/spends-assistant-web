@@ -71,6 +71,18 @@ export async function DELETE(_request: NextRequest, { params }: RouteParams): Pr
   try {
     const { id } = await params;
     const { supabase } = await getUserClient();
+
+    // Check if the category is a default category
+    const { data: category } = await supabase
+      .from('categories')
+      .select('is_default')
+      .eq('id', id)
+      .single();
+
+    if (category?.is_default) {
+      return errorResponse('Default categories cannot be deleted', 403);
+    }
+
     const now = new Date().toISOString();
 
     // Count and unlink transactions from this category

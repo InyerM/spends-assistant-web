@@ -20,12 +20,14 @@ function createChainableQuery(data: unknown, error: { message: string } | null =
     chain[m] = vi.fn().mockReturnValue(chain);
   });
   chain.single = vi.fn().mockResolvedValue({ data, error });
+  chain.maybeSingle = vi.fn().mockResolvedValue({ data: null, error: null });
 
   Object.defineProperty(chain, 'then', {
     value: (resolve: (v: unknown) => void) =>
       resolve({
         data: Array.isArray(data) ? data : data ? [data] : [],
         error,
+        count: 0,
       }),
     enumerable: false,
     configurable: true,
@@ -50,7 +52,8 @@ describe('GET /api/categories', () => {
       userId: 'test-user-id',
     });
 
-    const response = await GET();
+    const request = new NextRequest('http://localhost/api/categories');
+    const response = await GET(request);
     expect(response.status).toBe(200);
     const body = await response.json();
     expect(body).toHaveLength(2);
@@ -63,7 +66,8 @@ describe('GET /api/categories', () => {
       userId: 'test-user-id',
     });
 
-    const response = await GET();
+    const request = new NextRequest('http://localhost/api/categories');
+    const response = await GET(request);
     expect(response.status).toBe(400);
   });
 });

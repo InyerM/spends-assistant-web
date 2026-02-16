@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -10,18 +11,8 @@ import { useSubscription } from '@/hooks/use-subscription';
 import { useUsage } from '@/hooks/use-usage';
 import { Check, Sparkles } from 'lucide-react';
 
-const proFeatures = [
-  'Unlimited AI parses',
-  'Unlimited transactions',
-  'Unlimited accounts',
-  'Unlimited automation rules',
-  'Unlimited categories',
-  'Data export (CSV, PDF)',
-  'Advanced analytics',
-  'Priority support',
-];
-
 export function SubscriptionTab(): React.ReactElement {
+  const t = useTranslations('settings');
   const { data: subscription, isLoading: subLoading } = useSubscription();
   const { data: usage, isLoading: usageLoading } = useUsage();
 
@@ -48,64 +39,112 @@ export function SubscriptionTab(): React.ReactElement {
   const aiLimit = usage?.ai_parses_limit ?? 15;
   const txCount = usage?.transactions_count ?? 0;
   const txLimit = usage?.transactions_limit ?? 50;
+  const accountsCount = usage?.accounts_count ?? 0;
+  const accountsLimit = usage?.accounts_limit ?? 4;
+  const categoriesCount = usage?.categories_count ?? 0;
+  const categoriesLimit = usage?.categories_limit ?? 10;
+  const automationsCount = usage?.automations_count ?? 0;
+  const automationsLimit = usage?.automations_limit ?? 10;
 
   const aiPercent = aiLimit > 0 ? Math.round((aiUsed / aiLimit) * 100) : 0;
   const txPercent = txLimit > 0 ? Math.round((txCount / txLimit) * 100) : 0;
+  const accountsPercent = accountsLimit > 0 ? Math.round((accountsCount / accountsLimit) * 100) : 0;
+  const categoriesPercent =
+    categoriesLimit > 0 ? Math.round((categoriesCount / categoriesLimit) * 100) : 0;
+  const automationsPercent =
+    automationsLimit > 0 ? Math.round((automationsCount / automationsLimit) * 100) : 0;
+
+  const proFeatures = [
+    t('unlimitedAiParses'),
+    t('unlimitedTransactions'),
+    t('unlimitedAccounts'),
+    t('unlimitedAutomationRules'),
+    t('unlimitedCategories'),
+    t('dataExport'),
+    t('advancedAnalytics'),
+    t('prioritySupport'),
+  ];
+
+  const usageBars = [
+    {
+      label: t('aiParses'),
+      used: aiUsed,
+      limit: aiLimit,
+      percent: aiPercent,
+      suffix: t('thisMonth', { used: aiUsed, limit: aiLimit }),
+    },
+    {
+      label: t('transactions'),
+      used: txCount,
+      limit: txLimit,
+      percent: txPercent,
+      suffix: t('thisMonth', { used: txCount, limit: txLimit }),
+    },
+    {
+      label: t('accounts'),
+      used: accountsCount,
+      limit: accountsLimit,
+      percent: accountsPercent,
+      suffix: t('total', { count: accountsCount, limit: accountsLimit }),
+    },
+    {
+      label: t('categories'),
+      used: categoriesCount,
+      limit: categoriesLimit,
+      percent: categoriesPercent,
+      suffix: t('total', { count: categoriesCount, limit: categoriesLimit }),
+    },
+    {
+      label: t('automationRules'),
+      used: automationsCount,
+      limit: automationsLimit,
+      percent: automationsPercent,
+      suffix: t('total', { count: automationsCount, limit: automationsLimit }),
+    },
+  ];
 
   return (
     <div className='space-y-6'>
       <Card>
         <CardHeader>
           <div className='flex items-center gap-3'>
-            <CardTitle>Current plan</CardTitle>
+            <CardTitle>{t('currentPlan')}</CardTitle>
             <Badge variant={plan === 'pro' ? 'default' : 'secondary'}>
-              {plan === 'pro' ? 'Pro' : 'Free'}
+              {plan === 'pro' ? t('pro') : t('free')}
             </Badge>
           </div>
           <CardDescription>
-            {plan === 'free'
-              ? 'You are on the free plan with limited usage'
-              : 'You have access to all Pro features'}
+            {plan === 'free' ? t('freePlanDescription') : t('proPlanDescription')}
           </CardDescription>
         </CardHeader>
         <CardContent className='space-y-6'>
           {plan === 'free' ? (
             <div className='space-y-4'>
-              <div className='space-y-2'>
-                <div className='flex items-center justify-between text-sm'>
-                  <span className='text-muted-foreground'>AI Parses</span>
-                  <span className='font-medium'>
-                    {aiUsed}/{aiLimit} this month
-                  </span>
+              {usageBars.map((bar) => (
+                <div key={bar.label} className='space-y-2'>
+                  <div className='flex items-center justify-between text-sm'>
+                    <span className='text-muted-foreground'>{bar.label}</span>
+                    <span className='font-medium'>{bar.suffix}</span>
+                  </div>
+                  <Progress value={Math.min(bar.percent, 100)} />
                 </div>
-                <Progress value={aiPercent} />
-              </div>
-
-              <div className='space-y-2'>
-                <div className='flex items-center justify-between text-sm'>
-                  <span className='text-muted-foreground'>Transactions</span>
-                  <span className='font-medium'>
-                    {txCount}/{txLimit} this month
-                  </span>
-                </div>
-                <Progress value={txPercent} />
-              </div>
+              ))}
             </div>
           ) : (
             <div className='space-y-3'>
               <div className='flex items-center justify-between text-sm'>
-                <span className='text-muted-foreground'>Status</span>
+                <span className='text-muted-foreground'>{t('status')}</span>
                 <Badge variant='default'>
                   {subscription?.status === 'active'
-                    ? 'Active'
+                    ? t('active')
                     : subscription?.status === 'canceled'
-                      ? 'Canceled'
-                      : 'Past due'}
+                      ? t('canceled')
+                      : t('pastDue')}
                 </Badge>
               </div>
               {subscription?.current_period_start && (
                 <div className='flex items-center justify-between text-sm'>
-                  <span className='text-muted-foreground'>Current period</span>
+                  <span className='text-muted-foreground'>{t('currentPeriod')}</span>
                   <span className='font-medium'>
                     {new Date(subscription.current_period_start).toLocaleDateString('en-US', {
                       month: 'short',
@@ -118,13 +157,13 @@ export function SubscriptionTab(): React.ReactElement {
                           day: 'numeric',
                           year: 'numeric',
                         })
-                      : 'Ongoing'}
+                      : t('ongoing')}
                   </span>
                 </div>
               )}
               <div className='border-border border-t pt-3'>
                 <p className='text-muted-foreground mb-2 text-xs font-medium'>
-                  Included in your plan
+                  {t('includedInPlan')}
                 </p>
                 <ul className='space-y-1.5'>
                   {proFeatures.map((feature) => (
@@ -145,9 +184,9 @@ export function SubscriptionTab(): React.ReactElement {
           <CardHeader>
             <div className='flex items-center gap-2'>
               <Sparkles className='text-primary h-5 w-5' />
-              <CardTitle>Pro Plan</CardTitle>
+              <CardTitle>{t('proPlan')}</CardTitle>
             </div>
-            <CardDescription>Unlock unlimited usage and advanced features</CardDescription>
+            <CardDescription>{t('unlockDescription')}</CardDescription>
           </CardHeader>
           <CardContent className='space-y-4'>
             <ul className='space-y-2'>
@@ -164,11 +203,11 @@ export function SubscriptionTab(): React.ReactElement {
                 <TooltipTrigger asChild>
                   <span className='inline-block'>
                     <Button disabled className='w-full'>
-                      Upgrade to Pro
+                      {t('upgradeToPro')}
                     </Button>
                   </span>
                 </TooltipTrigger>
-                <TooltipContent>Coming Soon</TooltipContent>
+                <TooltipContent>{t('comingSoon')}</TooltipContent>
               </Tooltip>
             </TooltipProvider>
           </CardContent>

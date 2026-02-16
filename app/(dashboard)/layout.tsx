@@ -6,11 +6,9 @@ import { Sidebar } from '@/components/layout/sidebar';
 import { Header } from '@/components/layout/header';
 import { BottomNav } from '@/components/layout/bottom-nav';
 import { TransactionForm } from '@/components/transactions/transaction-form';
-import { AiParseDialog } from '@/components/transactions/ai-parse-dialog';
 import { useTransactionFormStore } from '@/lib/stores/transaction-form.store';
 import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { AiGlowButton } from '@/components/ui/ai-glow-button';
 
 const FAB_PAGES = ['/dashboard', '/transactions'];
 
@@ -18,10 +16,9 @@ export default function DashboardLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>): React.ReactNode {
   const pathname = usePathname();
-  const { open, transaction, aiOpen, setOpen, openNew, openAi, setAiOpen } =
-    useTransactionFormStore();
+  const { open, transaction, setOpen, openNew } = useTransactionFormStore();
 
-  const showFabs = FAB_PAGES.some((p) => pathname === p || pathname.startsWith(p + '/'));
+  const showFab = FAB_PAGES.some((p) => pathname === p || pathname.startsWith(p + '/'));
 
   return (
     <AuthGuard>
@@ -37,9 +34,8 @@ export default function DashboardLayout({
 
       <BottomNav />
 
-      {showFabs && (
-        <div className='fixed right-6 bottom-22 z-50 flex flex-col gap-3 md:bottom-6 md:hidden'>
-          <AiGlowButton onClick={openAi} variant='fab' />
+      {showFab && (
+        <div className='fixed right-6 bottom-22 z-50 md:bottom-6 md:hidden'>
           <Button
             onClick={openNew}
             size='icon'
@@ -50,7 +46,6 @@ export default function DashboardLayout({
       )}
 
       <TransactionForm open={open} onOpenChange={setOpen} transaction={transaction} />
-      <AiParseDialog open={aiOpen} onOpenChange={setAiOpen} />
     </AuthGuard>
   );
 }

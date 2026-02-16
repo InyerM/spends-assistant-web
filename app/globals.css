@@ -110,19 +110,24 @@
   inset: -1px;
   border-radius: inherit;
   padding: 1px;
-  background: linear-gradient(135deg, #a855f7, #3b82f6, #06b6d4, #a855f7);
+  background: linear-gradient(135deg, #06b6d4, #22c55e, #eab308, #06b6d4);
   background-size: 300% 300%;
   animation: ai-gradient-shift 4s ease infinite;
   mask:
     linear-gradient(#fff 0 0) content-box,
     linear-gradient(#fff 0 0);
   mask-composite: exclude;
-  opacity: 0.5;
+  opacity: 1;
   transition: opacity 0.2s ease;
 }
 
-.ai-gradient-btn:hover::before {
-  opacity: 1;
+@media (min-width: 640px) {
+  .ai-gradient-btn::before {
+    opacity: 0.5;
+  }
+  .ai-gradient-btn:hover::before {
+    opacity: 1;
+  }
 }
 
 @keyframes ai-gradient-shift {
@@ -132,6 +137,22 @@
   }
   50% {
     background-position: 100% 50%;
+  }
+}
+
+/* Animated border for AI buttons */
+.animated-border {
+  background-image: linear-gradient(90deg, #06b6d4, #22c55e, #eab308, #06b6d4);
+  background-size: 200% 200%;
+  animation: borderRotate 3s linear infinite;
+}
+
+@keyframes borderRotate {
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 200% 50%;
   }
 }
 

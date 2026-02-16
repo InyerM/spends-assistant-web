@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { accountKeys } from '@/lib/api/queries/account.queries';
 import { transactionKeys } from '@/lib/api/queries/transaction.queries';
+import { usageKeys } from '@/hooks/use-usage';
 import type { Account, CreateAccountInput, UpdateAccountInput } from '@/types';
 
 export async function createAccount(input: CreateAccountInput): Promise<Account> {
@@ -38,6 +39,7 @@ export function useCreateAccount(): ReturnType<
     mutationFn: createAccount,
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: accountKeys.all });
+      void queryClient.invalidateQueries({ queryKey: usageKeys.all });
     },
   });
 }
@@ -71,6 +73,7 @@ export function useDeleteAccount(): ReturnType<typeof useMutation<void, Error, s
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: accountKeys.all });
       void queryClient.invalidateQueries({ queryKey: transactionKeys.all });
+      void queryClient.invalidateQueries({ queryKey: usageKeys.all });
     },
   });
 }

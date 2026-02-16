@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { transactionKeys } from '@/lib/api/queries/transaction.queries';
 import { accountKeys } from '@/lib/api/queries/account.queries';
+import { usageKeys } from '@/hooks/use-usage';
 import type {
   Transaction,
   CreateTransactionInput,
@@ -106,6 +107,7 @@ export function useCreateTransaction(): ReturnType<
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: transactionKeys.all });
       void queryClient.invalidateQueries({ queryKey: accountKeys.all });
+      void queryClient.invalidateQueries({ queryKey: usageKeys.all });
     },
   });
 }
@@ -120,6 +122,7 @@ export function useUpdateTransaction(): ReturnType<
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: transactionKeys.all });
       void queryClient.invalidateQueries({ queryKey: accountKeys.all });
+      void queryClient.invalidateQueries({ queryKey: usageKeys.all });
     },
   });
 }
@@ -149,6 +152,7 @@ export function useBulkUpdateTransactions(): ReturnType<
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: transactionKeys.all });
       void queryClient.invalidateQueries({ queryKey: accountKeys.all });
+      void queryClient.invalidateQueries({ queryKey: usageKeys.all });
     },
   });
 }
@@ -161,6 +165,7 @@ export function useDeleteTransaction(): ReturnType<typeof useMutation<void, Erro
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: transactionKeys.all });
       void queryClient.invalidateQueries({ queryKey: accountKeys.all });
+      void queryClient.invalidateQueries({ queryKey: usageKeys.all });
     },
   });
 }
@@ -188,6 +193,7 @@ export function useResolveDuplicate(): ReturnType<
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: transactionKeys.all });
       void queryClient.invalidateQueries({ queryKey: accountKeys.all });
+      void queryClient.invalidateQueries({ queryKey: usageKeys.all });
     },
   });
 }
