@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 
 interface UiState {
   sidebarOpen: boolean;
@@ -12,11 +13,22 @@ interface UiActions {
 
 type UiStore = UiState & UiActions;
 
-export const useUiStore = create<UiStore>((set) => ({
-  sidebarOpen: false,
-  sidebarCollapsed: false,
+export const useUiStore = create<UiStore>()(
+  persist(
+    (set) => ({
+      sidebarOpen: false,
+      sidebarCollapsed: false,
 
-  setSidebarOpen: (open): void => set({ sidebarOpen: open }),
-  toggleSidebarCollapsed: (): void =>
-    set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed })),
-}));
+      setSidebarOpen: (open): void => {
+        set({ sidebarOpen: open });
+      },
+      toggleSidebarCollapsed: (): void => {
+        set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed }));
+      },
+    }),
+    {
+      name: 'spends-ui-store',
+      partialize: (state) => ({ sidebarCollapsed: state.sidebarCollapsed }),
+    },
+  ),
+);

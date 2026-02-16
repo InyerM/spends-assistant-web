@@ -10,6 +10,7 @@ export interface Category {
   icon: string | null;
   color: string | null;
   is_active: boolean;
+  translations?: Record<string, string>;
   created_at: string;
 }
 

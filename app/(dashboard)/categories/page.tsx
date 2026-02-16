@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslations } from 'next-intl';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { z } from 'zod';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -19,6 +20,7 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
+import { ColorPicker } from '@/components/ui/color-picker';
 import {
   Select,
   SelectContent,
@@ -34,6 +36,7 @@ import {
   useDeleteCategory,
   fetchCategoryWithCounts,
 } from '@/lib/api/mutations/category.mutations';
+import { SwipeableRow } from '@/components/transactions/swipeable-row';
 import { slugify } from '@/lib/utils/slugify';
 import { Plus, Pencil, Trash2, ChevronDown, ChevronRight } from 'lucide-react';
 import type { Category, CategoryType } from '@/types';
@@ -56,6 +59,8 @@ const typeBadgeVariant: Record<CategoryType, 'destructive' | 'default' | 'second
 };
 
 export default function CategoriesPage(): React.ReactElement {
+  const t = useTranslations('categories');
+  const tCommon = useTranslations('common');
   const { data: categoryTree, isLoading } = useCategoryTree();
   const { data: allCategories } = useCategories();
   const createMutation = useCreateCategory();
@@ -83,7 +88,7 @@ export default function CategoriesPage(): React.ReactElement {
     },
   });
 
-  const watchName = form.watch('name');
+  const watchName = useWatch({ control: form.control, name: 'name' });
 
   const generateUniqueSlug = useCallback(
     (name: string): string => {
@@ -165,11 +170,11 @@ export default function CategoriesPage(): React.ReactElement {
     if (!deleteTarget) return;
     try {
       await deleteMutation.mutateAsync(deleteTarget.id);
-      toast.success('Category deleted');
+      toast.success(t('categoryDeleted'));
       setDeleteDialogOpen(false);
       setDeleteTarget(null);
     } catch {
-      toast.error('Failed to delete category');
+      toast.error(t('failedToDelete'));
     }
   };
 
@@ -177,14 +182,14 @@ export default function CategoriesPage(): React.ReactElement {
     try {
       if (editingCategory) {
         await updateMutation.mutateAsync({ id: editingCategory.id, ...values });
-        toast.success('Category updated');
+        toast.success(t('categoryUpdated'));
       } else {
         await createMutation.mutateAsync(values);
-        toast.success('Category created');
+        toast.success(t('categoryCreated'));
       }
       setDialogOpen(false);
     } catch {
-      toast.error(editingCategory ? 'Failed to update category' : 'Failed to create category');
+      toast.error(editingCategory ? t('failedToUpdate') : t('failedToCreate'));
     }
   }
 
@@ -194,14 +199,12 @@ export default function CategoriesPage(): React.ReactElement {
     <div className='space-y-4 p-4 sm:space-y-6 sm:p-6'>
       <div className='flex items-center justify-between'>
         <div className='min-w-0'>
-          <h2 className='text-foreground text-xl font-bold sm:text-2xl'>Categories</h2>
-          <p className='text-muted-foreground hidden text-sm sm:block'>
-            Organize your transactions by category
-          </p>
+          <h2 className='text-foreground text-xl font-bold sm:text-2xl'>{t('title')}</h2>
+          <p className='text-muted-foreground hidden text-sm sm:block'>{t('subtitle')}</p>
         </div>
         <Button className='cursor-pointer' onClick={(): void => handleCreate()}>
           <Plus className='h-4 w-4 sm:mr-2' />
-          <span className='hidden sm:inline'>New Category</span>
+          <span className='hidden sm:inline'>{t('newCategory')}</span>
         </Button>
       </div>
 
@@ -217,17 +220,15 @@ export default function CategoriesPage(): React.ReactElement {
             const isExpanded = expandedIds.has(parent.id);
             const hasChildren = parent.children.length > 0;
 
-            return (
-              <Card
-                key={parent.id}
-                className='border-border bg-card cursor-pointer sm:cursor-default'
-                onClick={(): void => {
-                  if (window.innerWidth < 640) handleEdit(parent);
-                }}>
+            const parentCardContent = (
+              <Card className='border-border bg-card'>
                 <CardHeader className='flex flex-row items-center gap-2 space-y-0 py-3 sm:gap-3'>
                   {hasChildren ? (
                     <button
-                      onClick={(): void => toggleExpanded(parent.id)}
+                      onClick={(e): void => {
+                        e.stopPropagation();
+                        toggleExpanded(parent.id);
+                      }}
                       className='text-muted-foreground hover:text-foreground flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center'>
                       {isExpanded ? (
                         <ChevronDown className='h-4 w-4' />
@@ -258,22 +259,31 @@ export default function CategoriesPage(): React.ReactElement {
                     <Button
                       variant='ghost'
                       size='sm'
-                      onClick={(): void => handleCreate(parent.id, parent.type)}
+                      onClick={(e): void => {
+                        e.stopPropagation();
+                        handleCreate(parent.id, parent.type);
+                      }}
                       className='h-9 w-9 cursor-pointer p-0'
-                      title='Add subcategory'>
+                      title={t('addSubcategory')}>
                       <Plus className='h-4 w-4' />
                     </Button>
                     <Button
                       variant='ghost'
                       size='sm'
-                      onClick={(): void => handleEdit(parent)}
+                      onClick={(e): void => {
+                        e.stopPropagation();
+                        handleEdit(parent);
+                      }}
                       className='hidden h-9 w-9 cursor-pointer p-0 sm:flex'>
                       <Pencil className='h-4 w-4' />
                     </Button>
                     <Button
                       variant='ghost'
                       size='sm'
-                      onClick={(): void => void handleDeleteClick(parent)}
+                      onClick={(e): void => {
+                        e.stopPropagation();
+                        void handleDeleteClick(parent);
+                      }}
                       className='text-destructive hidden h-9 w-9 cursor-pointer p-0 sm:flex'>
                       <Trash2 className='h-4 w-4' />
                     </Button>
@@ -283,44 +293,74 @@ export default function CategoriesPage(): React.ReactElement {
                 {isExpanded && hasChildren && (
                   <CardContent className='pt-0 pb-3'>
                     <div className='ml-4 space-y-1 sm:ml-8'>
-                      {parent.children.map((child) => (
-                        <div
-                          key={child.id}
-                          className='hover:bg-card-overlay flex items-center gap-2 rounded-lg px-3 py-2 sm:gap-3'>
-                          <span>{child.icon ?? '📄'}</span>
-                          <span className='min-w-0 flex-1 truncate text-sm'>{child.name}</span>
-                          <span className='text-muted-foreground hidden text-xs sm:inline'>
-                            {child.slug}
-                          </span>
-                          <Button
-                            variant='ghost'
-                            size='sm'
-                            onClick={(): void => handleEdit(child)}
-                            className='h-9 w-9 cursor-pointer p-0 sm:h-7 sm:w-7'>
-                            <Pencil className='h-4 w-4 sm:h-3 sm:w-3' />
-                          </Button>
-                          <Button
-                            variant='ghost'
-                            size='sm'
-                            onClick={(): void => void handleDeleteClick(child)}
-                            className='text-destructive h-9 w-9 cursor-pointer p-0 sm:h-7 sm:w-7'>
-                            <Trash2 className='h-4 w-4 sm:h-3 sm:w-3' />
-                          </Button>
-                        </div>
-                      ))}
+                      {parent.children.map((child) => {
+                        const childRowContent = (
+                          <div className='hover:bg-card-overlay flex items-center gap-2 rounded-lg px-3 py-2 sm:gap-3'>
+                            <span>{child.icon ?? '📄'}</span>
+                            <span className='min-w-0 flex-1 truncate text-sm'>{child.name}</span>
+                            <span className='text-muted-foreground hidden text-xs sm:inline'>
+                              {child.slug}
+                            </span>
+                            <Button
+                              variant='ghost'
+                              size='sm'
+                              onClick={(): void => handleEdit(child)}
+                              className='hidden h-9 w-9 cursor-pointer p-0 sm:flex sm:h-7 sm:w-7'>
+                              <Pencil className='h-4 w-4 sm:h-3 sm:w-3' />
+                            </Button>
+                            <Button
+                              variant='ghost'
+                              size='sm'
+                              onClick={(): void => void handleDeleteClick(child)}
+                              className='text-destructive hidden h-9 w-9 cursor-pointer p-0 sm:flex sm:h-7 sm:w-7'>
+                              <Trash2 className='h-4 w-4 sm:h-3 sm:w-3' />
+                            </Button>
+                          </div>
+                        );
+
+                        return (
+                          <div key={child.id}>
+                            {/* Desktop: regular row */}
+                            <div className='hidden sm:block'>{childRowContent}</div>
+                            {/* Mobile: swipeable row */}
+                            <div className='sm:hidden'>
+                              <SwipeableRow
+                                onEdit={(): void => handleEdit(child)}
+                                onDelete={(): void => void handleDeleteClick(child)}>
+                                {childRowContent}
+                              </SwipeableRow>
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   </CardContent>
                 )}
               </Card>
+            );
+
+            return (
+              <div key={parent.id}>
+                {/* Desktop: regular card */}
+                <div className='hidden sm:block'>{parentCardContent}</div>
+                {/* Mobile: swipeable card */}
+                <div className='sm:hidden'>
+                  <SwipeableRow
+                    onEdit={(): void => handleEdit(parent)}
+                    onDelete={(): void => void handleDeleteClick(parent)}>
+                    {parentCardContent}
+                  </SwipeableRow>
+                </div>
+              </div>
             );
           })}
         </div>
       )}
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className='border-border bg-card sm:max-w-[425px]'>
+        <DialogContent className='border-border bg-card max-h-[85dvh] overflow-y-auto sm:max-w-[425px]'>
           <DialogHeader>
-            <DialogTitle>{editingCategory ? 'Edit Category' : 'New Category'}</DialogTitle>
+            <DialogTitle>{editingCategory ? t('editCategory') : t('newCategory')}</DialogTitle>
           </DialogHeader>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className='space-y-4'>
@@ -329,9 +369,9 @@ export default function CategoriesPage(): React.ReactElement {
                 name='name'
                 render={({ field }): React.ReactElement => (
                   <FormItem>
-                    <FormLabel>Name</FormLabel>
+                    <FormLabel>{t('name')}</FormLabel>
                     <FormControl>
-                      <Input placeholder='Category name' {...field} />
+                      <Input placeholder={t('namePlaceholder')} {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -343,10 +383,10 @@ export default function CategoriesPage(): React.ReactElement {
                 name='slug'
                 render={({ field }): React.ReactElement => (
                   <FormItem>
-                    <FormLabel>Slug</FormLabel>
+                    <FormLabel>{t('slug')}</FormLabel>
                     <FormControl>
                       <Input
-                        placeholder='category-slug'
+                        placeholder={t('slugPlaceholder')}
                         {...field}
                         readOnly
                         className='text-muted-foreground bg-muted'
@@ -362,17 +402,17 @@ export default function CategoriesPage(): React.ReactElement {
                 name='type'
                 render={({ field }): React.ReactElement => (
                   <FormItem>
-                    <FormLabel>Type</FormLabel>
+                    <FormLabel>{t('type')}</FormLabel>
                     <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder='Select type' />
+                          <SelectValue placeholder={t('type')} />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value='expense'>Expense</SelectItem>
-                        <SelectItem value='income'>Income</SelectItem>
-                        <SelectItem value='transfer'>Transfer</SelectItem>
+                        <SelectItem value='expense'>{t('expense')}</SelectItem>
+                        <SelectItem value='income'>{t('income')}</SelectItem>
+                        <SelectItem value='transfer'>{t('transfer')}</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -385,15 +425,15 @@ export default function CategoriesPage(): React.ReactElement {
                 name='parent_id'
                 render={({ field }): React.ReactElement => (
                   <FormItem>
-                    <FormLabel>Parent Category</FormLabel>
+                    <FormLabel>{t('parent')}</FormLabel>
                     <Select onValueChange={field.onChange} defaultValue={field.value ?? 'none'}>
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder='None (top level)' />
+                          <SelectValue placeholder={t('noneTopLevel')} />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value='none'>None (top level)</SelectItem>
+                        <SelectItem value='none'>{t('noneTopLevel')}</SelectItem>
                         {parentCategories.map((cat) => (
                           <SelectItem key={cat.id} value={cat.id}>
                             {cat.icon ?? ''} {cat.name}
@@ -412,7 +452,7 @@ export default function CategoriesPage(): React.ReactElement {
                   name='icon'
                   render={({ field }): React.ReactElement => (
                     <FormItem>
-                      <FormLabel>Icon</FormLabel>
+                      <FormLabel>{t('icon')}</FormLabel>
                       <FormControl>
                         <Input placeholder='🍔' {...field} />
                       </FormControl>
@@ -425,9 +465,9 @@ export default function CategoriesPage(): React.ReactElement {
                   name='color'
                   render={({ field }): React.ReactElement => (
                     <FormItem>
-                      <FormLabel>Color</FormLabel>
+                      <FormLabel>{t('color')}</FormLabel>
                       <FormControl>
-                        <Input type='color' {...field} />
+                        <ColorPicker value={field.value ?? ''} onChange={field.onChange} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -437,16 +477,16 @@ export default function CategoriesPage(): React.ReactElement {
 
               <div className='flex justify-end gap-3 pt-4'>
                 <Button type='button' variant='outline' onClick={(): void => setDialogOpen(false)}>
-                  Cancel
+                  {tCommon('cancel')}
                 </Button>
                 <Button
                   type='submit'
                   disabled={createMutation.isPending || updateMutation.isPending}>
                   {createMutation.isPending || updateMutation.isPending
-                    ? 'Saving...'
+                    ? tCommon('saving')
                     : editingCategory
-                      ? 'Update'
-                      : 'Create'}
+                      ? tCommon('update')
+                      : tCommon('create')}
                 </Button>
               </div>
             </form>
@@ -457,27 +497,21 @@ export default function CategoriesPage(): React.ReactElement {
       <ConfirmDeleteDialog
         open={deleteDialogOpen}
         onOpenChange={setDeleteDialogOpen}
-        title='Delete Category'
+        title={t('deleteCategory')}
         description={
           <div className='text-muted-foreground space-y-1 text-sm'>
             {deleteInfo ? (
               <>
                 {deleteInfo.transaction_count > 0 && (
-                  <p>
-                    {deleteInfo.transaction_count} linked transaction
-                    {deleteInfo.transaction_count !== 1 ? 's' : ''} will be uncategorized.
-                  </p>
+                  <p>{t('linkedTransactions', { count: deleteInfo.transaction_count })}</p>
                 )}
                 {deleteInfo.children_count > 0 && (
-                  <p>
-                    {deleteInfo.children_count} child categor
-                    {deleteInfo.children_count !== 1 ? 'ies' : 'y'} will also be deleted.
-                  </p>
+                  <p>{t('childCategories', { count: deleteInfo.children_count })}</p>
                 )}
-                <p>This action cannot be undone.</p>
+                <p>{tCommon('actionCannotBeUndone')}</p>
               </>
             ) : (
-              <p>Loading category info...</p>
+              <p>{t('loadingCategoryInfo')}</p>
             )}
           </div>
         }

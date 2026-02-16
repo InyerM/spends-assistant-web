@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -10,12 +11,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
+import { ColorPicker } from '@/components/ui/color-picker';
 import {
   Select,
   SelectContent,
@@ -32,21 +35,25 @@ import { formatCurrency } from '@/lib/utils/formatting';
 import { getCurrentColombiaTimes } from '@/lib/utils/date';
 import type { Account, AccountType } from '@/types';
 
-const accountTypes: { value: AccountType; label: string }[] = [
-  { value: 'checking', label: 'Checking' },
-  { value: 'savings', label: 'Savings' },
-  { value: 'credit_card', label: 'Credit Card' },
-  { value: 'cash', label: 'Cash' },
-  { value: 'investment', label: 'Investment' },
-  { value: 'crypto', label: 'Crypto' },
-  { value: 'credit', label: 'Credit' },
+const accountTypes: { value: AccountType; labelKey: string }[] = [
+  { value: 'checking', labelKey: 'checking' },
+  { value: 'savings', labelKey: 'savings' },
+  { value: 'credit_card', labelKey: 'creditCard' },
+  { value: 'cash', labelKey: 'cash' },
+  { value: 'investment', labelKey: 'investment' },
+  { value: 'crypto', labelKey: 'crypto' },
+  { value: 'credit', labelKey: 'credit' },
 ];
 
 const formSchema = z.object({
   name: z.string().min(1, 'Name is required'),
   type: z.enum(['checking', 'savings', 'credit_card', 'cash', 'investment', 'crypto', 'credit']),
   institution: z.string().optional(),
-  last_four: z.string().max(4).optional(),
+  last_four: z
+    .string()
+    .regex(/^\d{4}$/, 'Must be exactly 4 digits')
+    .or(z.literal(''))
+    .optional(),
   currency: z.string(),
   color: z.string().optional(),
   icon: z.string().optional(),
@@ -65,6 +72,8 @@ export function AccountEditDialog({
   open,
   onOpenChange,
 }: AccountEditDialogProps): React.ReactElement {
+  const t = useTranslations('accounts');
+  const tCommon = useTranslations('common');
   const updateMutation = useUpdateAccount();
   const deleteMutation = useDeleteAccount();
   const createTxMutation = useCreateTransaction();
@@ -89,6 +98,19 @@ export function AccountEditDialog({
     },
   });
 
+  // Reset local state when dialog opens (set state during render pattern)
+  const [prevOpenAccountId, setPrevOpenAccountId] = useState<string | null>(null);
+  const openAccountId = open && account ? account.id : null;
+  if (openAccountId !== prevOpenAccountId) {
+    setPrevOpenAccountId(openAccountId);
+    if (openAccountId) {
+      setAdjustMode('none');
+      setNewBalance('');
+      setBalanceSign('+');
+    }
+  }
+
+  // Reset form values when dialog opens
   useEffect(() => {
     if (account && open) {
       form.reset({
@@ -100,23 +122,21 @@ export function AccountEditDialog({
         color: account.color ?? '',
         icon: account.icon ?? '',
       });
-      setAdjustMode('none');
-      setNewBalance('');
-      setBalanceSign('+');
     }
   }, [account, open, form]);
-
-  const watchType = form.watch('type');
-  const showLastFour = watchType === 'credit_card' || watchType === 'credit';
 
   async function onSubmit(values: FormValues): Promise<void> {
     if (!account) return;
     try {
-      await updateMutation.mutateAsync({ id: account.id, ...values });
-      toast.success('Account updated');
+      const payload = {
+        ...values,
+        last_four: values.last_four?.trim() || null,
+      };
+      await updateMutation.mutateAsync({ id: account.id, ...payload });
+      toast.success(t('accountUpdated'));
       onOpenChange(false);
     } catch {
-      toast.error('Failed to update account');
+      toast.error(t('failedToUpdate'));
     }
   }
 
@@ -124,11 +144,11 @@ export function AccountEditDialog({
     if (!account) return;
     try {
       await deleteMutation.mutateAsync(account.id);
-      toast.success('Account deleted');
+      toast.success(t('accountDeleted'));
       setConfirmDeleteOpen(false);
       onOpenChange(false);
     } catch {
-      toast.error('Failed to delete account');
+      toast.error(t('failedToDelete'));
     }
   }
 
@@ -142,15 +162,15 @@ export function AccountEditDialog({
     if (!account) return;
     const target = getSignedBalance();
     if (isNaN(target)) {
-      toast.error('Enter a valid number');
+      toast.error(t('enterValidNumber'));
       return;
     }
     try {
       await updateMutation.mutateAsync({ id: account.id, balance: target });
-      toast.success(`Balance set to ${formatCurrency(target, account.currency)}`);
+      toast.success(t('balanceSetTo', { balance: formatCurrency(target, account.currency) }));
       onOpenChange(false);
     } catch {
-      toast.error('Failed to adjust balance');
+      toast.error(t('failedToAdjust'));
     }
   }
 
@@ -158,12 +178,12 @@ export function AccountEditDialog({
     if (!account) return;
     const target = getSignedBalance();
     if (isNaN(target)) {
-      toast.error('Enter a valid number');
+      toast.error(t('enterValidNumber'));
       return;
     }
     const diff = target - account.balance;
     if (diff === 0) {
-      toast.error('Balance is already at the target');
+      toast.error(t('balanceAlreadyAtTarget'));
       return;
     }
     const times = getCurrentColombiaTimes();
@@ -172,17 +192,19 @@ export function AccountEditDialog({
         date: times.date,
         time: times.time,
         amount: Math.abs(diff),
-        description: 'Balance adjustment',
+        description: t('balanceAdjustment'),
         account_id: account.id,
         type: diff > 0 ? 'income' : 'expense',
         source: 'web',
       });
       toast.success(
-        `Adjustment transaction created (${diff > 0 ? '+' : ''}${formatCurrency(diff, account.currency)})`,
+        t('adjustmentCreated', {
+          amount: `${diff > 0 ? '+' : ''}${formatCurrency(diff, account.currency)}`,
+        }),
       );
       onOpenChange(false);
     } catch {
-      toast.error('Failed to create adjustment');
+      toast.error(t('failedToCreateAdjustment'));
     }
   }
 
@@ -194,9 +216,9 @@ export function AccountEditDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className='border-border bg-card max-h-[90vh] overflow-y-auto sm:max-w-[425px]'>
+      <DialogContent className='border-border bg-card max-h-[85dvh] overflow-y-auto sm:max-w-[425px]'>
         <DialogHeader>
-          <DialogTitle>Edit Account</DialogTitle>
+          <DialogTitle>{t('editAccount')}</DialogTitle>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className='space-y-4'>
@@ -205,9 +227,9 @@ export function AccountEditDialog({
               name='name'
               render={({ field }): React.ReactElement => (
                 <FormItem>
-                  <FormLabel>Name</FormLabel>
+                  <FormLabel>{t('name')}</FormLabel>
                   <FormControl>
-                    <Input placeholder='Account name' {...field} />
+                    <Input placeholder={t('namePlaceholder')} {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -218,17 +240,17 @@ export function AccountEditDialog({
               name='type'
               render={({ field }): React.ReactElement => (
                 <FormItem>
-                  <FormLabel>Type</FormLabel>
+                  <FormLabel>{t('type')}</FormLabel>
                   <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder='Select type' />
+                        <SelectValue placeholder={t('type')} />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {accountTypes.map((t) => (
-                        <SelectItem key={t.value} value={t.value}>
-                          {t.label}
+                      {accountTypes.map((at) => (
+                        <SelectItem key={at.value} value={at.value}>
+                          {t(at.labelKey)}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -242,36 +264,35 @@ export function AccountEditDialog({
               name='institution'
               render={({ field }): React.ReactElement => (
                 <FormItem>
-                  <FormLabel>Institution</FormLabel>
+                  <FormLabel>{t('institution')}</FormLabel>
                   <FormControl>
-                    <Input placeholder='e.g. Bancolombia' {...field} />
+                    <Input placeholder={t('institutionPlaceholder')} {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
-            {showLastFour && (
-              <FormField
-                control={form.control}
-                name='last_four'
-                render={({ field }): React.ReactElement => (
-                  <FormItem>
-                    <FormLabel>Last 4 Digits</FormLabel>
-                    <FormControl>
-                      <Input placeholder='1234' maxLength={4} {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            )}
+            <FormField
+              control={form.control}
+              name='last_four'
+              render={({ field }): React.ReactElement => (
+                <FormItem>
+                  <FormLabel>{t('lastFour')}</FormLabel>
+                  <FormControl>
+                    <Input placeholder='7799' maxLength={4} inputMode='numeric' {...field} />
+                  </FormControl>
+                  <FormDescription>{t('lastFourDescription')}</FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             <div className='grid grid-cols-2 gap-4'>
               <FormField
                 control={form.control}
                 name='icon'
                 render={({ field }): React.ReactElement => (
                   <FormItem>
-                    <FormLabel>Icon</FormLabel>
+                    <FormLabel>{t('icon')}</FormLabel>
                     <FormControl>
                       <Input placeholder='💳' {...field} />
                     </FormControl>
@@ -284,9 +305,9 @@ export function AccountEditDialog({
                 name='color'
                 render={({ field }): React.ReactElement => (
                   <FormItem>
-                    <FormLabel>Color</FormLabel>
+                    <FormLabel>{t('color')}</FormLabel>
                     <FormControl>
-                      <Input type='color' {...field} />
+                      <ColorPicker value={field.value ?? ''} onChange={field.onChange} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -299,7 +320,7 @@ export function AccountEditDialog({
               <div className='border-border space-y-3 rounded-lg border p-3'>
                 <div className='flex items-center justify-between'>
                   <div>
-                    <p className='text-sm font-medium'>Balance</p>
+                    <p className='text-sm font-medium'>{t('balance')}</p>
                     <p
                       className={`text-lg font-bold ${account.balance >= 0 ? 'text-success' : 'text-destructive'}`}>
                       {formatCurrency(account.balance, account.currency)}
@@ -312,7 +333,7 @@ export function AccountEditDialog({
                       size='sm'
                       className='cursor-pointer'
                       onClick={(): void => setAdjustMode('direct')}>
-                      Adjust
+                      {t('adjust')}
                     </Button>
                   )}
                 </div>
@@ -321,7 +342,7 @@ export function AccountEditDialog({
                   <div className='space-y-3'>
                     <div>
                       <label className='text-muted-foreground mb-1 block text-xs'>
-                        New balance
+                        {t('newBalance')}
                       </label>
                       <div className='flex gap-2'>
                         <Button
@@ -353,7 +374,7 @@ export function AccountEditDialog({
                         variant='outline'
                         className='cursor-pointer'
                         onClick={(): void => setAdjustMode('none')}>
-                        Cancel
+                        {tCommon('cancel')}
                       </Button>
                       <Button
                         type='button'
@@ -361,7 +382,7 @@ export function AccountEditDialog({
                         className='cursor-pointer'
                         disabled={updateMutation.isPending}
                         onClick={handleDirectAdjust}>
-                        {updateMutation.isPending ? 'Saving...' : 'Set balance'}
+                        {updateMutation.isPending ? tCommon('saving') : t('setBalance')}
                       </Button>
                       <Button
                         type='button'
@@ -370,14 +391,14 @@ export function AccountEditDialog({
                         className='cursor-pointer'
                         disabled={createTxMutation.isPending}
                         onClick={handleTransactionAdjust}>
-                        {createTxMutation.isPending ? 'Creating...' : 'With transaction'}
+                        {createTxMutation.isPending ? tCommon('creating') : t('withTransaction')}
                       </Button>
                     </div>
                     <button
                       type='button'
                       className='text-muted-foreground hover:text-foreground cursor-pointer text-xs underline'
                       onClick={handleOpenTransactionForm}>
-                      Or create a custom transaction
+                      {t('orCreateCustomTransaction')}
                     </button>
                   </div>
                 )}
@@ -390,14 +411,14 @@ export function AccountEditDialog({
                 variant='ghost'
                 className='text-destructive cursor-pointer'
                 onClick={(): void => setConfirmDeleteOpen(true)}>
-                Delete
+                {tCommon('delete')}
               </Button>
               <div className='flex gap-3'>
                 <Button type='button' variant='outline' onClick={(): void => onOpenChange(false)}>
-                  Cancel
+                  {tCommon('cancel')}
                 </Button>
                 <Button type='submit' disabled={updateMutation.isPending}>
-                  {updateMutation.isPending ? 'Saving...' : 'Update'}
+                  {updateMutation.isPending ? tCommon('saving') : tCommon('update')}
                 </Button>
               </div>
             </div>
@@ -409,17 +430,13 @@ export function AccountEditDialog({
         <ConfirmDeleteDialog
           open={confirmDeleteOpen}
           onOpenChange={setConfirmDeleteOpen}
-          title='Delete Account'
+          title={t('deleteAccount')}
           description={
             <p className='text-muted-foreground text-sm'>
-              This will permanently delete <strong>{account.name}</strong>
-              {txCount > 0 && (
-                <>
-                  {' '}
-                  and its <strong>{txCount}</strong> transaction{txCount !== 1 && 's'}
-                </>
-              )}
-              . This action cannot be undone.
+              {t('deleteAccountConfirm', {
+                name: account.name,
+                txInfo: txCount > 0 ? t('andTransactions', { count: txCount }) : '',
+              })}
             </p>
           }
           confirmText={account.name}

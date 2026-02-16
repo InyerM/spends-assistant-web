@@ -112,3 +112,33 @@ export function useToggleAutomationRule(): ReturnType<
     },
   });
 }
+
+interface GenerateAccountRulesResult {
+  message: string;
+  created: number;
+  data: AutomationRule[];
+}
+
+export async function generateAccountRules(): Promise<GenerateAccountRulesResult> {
+  const res = await fetch('/api/automation-rules/generate-account-rules', {
+    method: 'POST',
+  });
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error((error as { error: string }).error || 'Failed to generate account rules');
+  }
+  return res.json() as Promise<GenerateAccountRulesResult>;
+}
+
+export function useGenerateAccountRules(): ReturnType<
+  typeof useMutation<GenerateAccountRulesResult, Error, void>
+> {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: generateAccountRules,
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: automationKeys.all });
+    },
+  });
+}

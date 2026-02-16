@@ -1,6 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -19,6 +20,7 @@ const typeConfig: Record<TransactionType, { icon: typeof ArrowDownLeft; colorCla
 };
 
 export function RecentTransactions(): React.ReactElement {
+  const t = useTranslations('dashboard');
   const router = useRouter();
   const { data: result, isLoading } = useTransactions({ limit: 5 });
   const { data: categories } = useCategories();
@@ -65,11 +67,11 @@ export function RecentTransactions(): React.ReactElement {
   return (
     <Card className='border-border bg-card overflow-hidden'>
       <CardHeader className='pb-3'>
-        <CardTitle className='text-base font-medium'>Recent Transactions</CardTitle>
+        <CardTitle className='text-base font-medium'>{t('recentTransactions')}</CardTitle>
       </CardHeader>
       <CardContent className='min-w-0'>
         {transactions.length === 0 ? (
-          <p className='text-muted-foreground py-8 text-center text-sm'>No transactions yet</p>
+          <p className='text-muted-foreground py-8 text-center text-sm'>{t('noTransactions')}</p>
         ) : (
           <>
             <div className='space-y-1'>
@@ -129,7 +131,7 @@ export function RecentTransactions(): React.ReactElement {
             <button
               onClick={(): void => router.push('/transactions')}
               className='text-muted-foreground hover:text-foreground hover:bg-card-overlay mt-3 flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-lg py-2 text-sm transition-colors'>
-              View all transactions
+              {t('viewAllTransactions')}
               <ArrowRight className='h-3.5 w-3.5' />
             </button>
           </>

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -35,6 +36,8 @@ export function BulkEditDialog({
   selectedIds,
   onComplete,
 }: BulkEditDialogProps): React.ReactElement {
+  const t = useTranslations('transactions');
+  const tCommon = useTranslations('common');
   const { data: accounts } = useAccounts();
   const { data: categories } = useCategories();
   const bulkMutation = useBulkUpdateTransactions();
@@ -58,11 +61,11 @@ export function BulkEditDialog({
         ids: Array.from(selectedIds),
         updates,
       });
-      toast.success(`${selectedIds.size} transaction${selectedIds.size > 1 ? 's' : ''} updated`);
+      toast.success(t('transactionsUpdated', { count: selectedIds.size }));
       onOpenChange(false);
       onComplete();
     } catch {
-      toast.error('Failed to update transactions');
+      toast.error(t('failedToBulkUpdate'));
     }
   };
 
@@ -77,59 +80,54 @@ export function BulkEditDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className='border-border bg-card sm:max-w-[425px]'>
+      <DialogContent className='border-border bg-card max-h-[85dvh] overflow-y-auto sm:max-w-[425px]'>
         <DialogHeader>
-          <DialogTitle>
-            Edit {selectedIds.size} transaction{selectedIds.size > 1 ? 's' : ''}
-          </DialogTitle>
+          <DialogTitle>{t('bulkEditTitle', { count: selectedIds.size })}</DialogTitle>
         </DialogHeader>
 
         <div className='space-y-4'>
-          <p className='text-muted-foreground text-sm'>
-            Only changed fields will be updated. Leave as &quot;No change&quot; to keep the current
-            value.
-          </p>
+          <p className='text-muted-foreground text-sm'>{t('bulkEditDescription')}</p>
 
           <div className='space-y-2'>
-            <label className='text-sm font-medium'>Type</label>
+            <label className='text-sm font-medium'>{t('type')}</label>
             <Select value={type} onValueChange={setType}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value={UNCHANGED}>No change</SelectItem>
+                <SelectItem value={UNCHANGED}>{tCommon('noChange')}</SelectItem>
                 <SelectSeparator />
-                <SelectItem value='expense'>Expense</SelectItem>
-                <SelectItem value='income'>Income</SelectItem>
-                <SelectItem value='transfer'>Transfer</SelectItem>
+                <SelectItem value='expense'>{t('expense')}</SelectItem>
+                <SelectItem value='income'>{t('income')}</SelectItem>
+                <SelectItem value='transfer'>{t('transfer')}</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
           <div className='space-y-2'>
-            <label className='text-sm font-medium'>Account</label>
+            <label className='text-sm font-medium'>{t('account')}</label>
             <SearchableSelect
               value={accountId}
               onValueChange={setAccountId}
-              placeholder='No change'
-              searchPlaceholder='Search accounts...'
+              placeholder={tCommon('noChange')}
+              searchPlaceholder={t('searchAccounts')}
               items={[
-                { value: UNCHANGED, label: 'No change' },
+                { value: UNCHANGED, label: tCommon('noChange') },
                 ...buildAccountItems(accounts ?? []),
               ]}
             />
           </div>
 
           <div className='space-y-2'>
-            <label className='text-sm font-medium'>Category</label>
+            <label className='text-sm font-medium'>{t('category')}</label>
             <SearchableSelect
               value={categoryId}
               onValueChange={setCategoryId}
-              placeholder='No change'
-              searchPlaceholder='Search categories...'
+              placeholder={tCommon('noChange')}
+              searchPlaceholder={t('searchCategories')}
               items={[
-                { value: UNCHANGED, label: 'No change' },
-                { value: NONE, label: 'None (remove category)' },
+                { value: UNCHANGED, label: tCommon('noChange') },
+                { value: NONE, label: t('noneRemoveCategory') },
                 ...buildCategoryItems(categories ?? [], currentType),
               ]}
             />
@@ -137,12 +135,12 @@ export function BulkEditDialog({
 
           <div className='flex justify-end gap-3 pt-4'>
             <Button type='button' variant='outline' onClick={(): void => handleOpenChange(false)}>
-              Cancel
+              {tCommon('cancel')}
             </Button>
             <Button
               onClick={(): void => void handleSubmit()}
               disabled={!hasChanges || bulkMutation.isPending}>
-              {bulkMutation.isPending ? 'Updating...' : 'Apply Changes'}
+              {bulkMutation.isPending ? tCommon('updating') : t('applyChanges')}
             </Button>
           </div>
         </div>

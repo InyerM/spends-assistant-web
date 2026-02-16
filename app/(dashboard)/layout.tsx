@@ -8,8 +8,9 @@ import { BottomNav } from '@/components/layout/bottom-nav';
 import { TransactionForm } from '@/components/transactions/transaction-form';
 import { AiParseDialog } from '@/components/transactions/ai-parse-dialog';
 import { useTransactionFormStore } from '@/lib/stores/transaction-form.store';
-import { Plus, Sparkles } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { AiGlowButton } from '@/components/ui/ai-glow-button';
 
 const FAB_PAGES = ['/dashboard', '/transactions'];
 
@@ -38,12 +39,7 @@ export default function DashboardLayout({
 
       {showFabs && (
         <div className='fixed right-6 bottom-22 z-50 flex flex-col gap-3 md:bottom-6 md:hidden'>
-          <Button
-            onClick={openAi}
-            size='icon'
-            className='ai-gradient-btn bg-card h-12 w-12 cursor-pointer rounded-full border-0 text-purple-400 shadow-lg hover:text-purple-300'>
-            <Sparkles className='h-5 w-5' />
-          </Button>
+          <AiGlowButton onClick={openAi} variant='fab' />
           <Button
             onClick={openNew}
             size='icon'

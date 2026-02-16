@@ -84,6 +84,8 @@ export function createMockAutomationRule(overrides: Partial<AutomationRule> = {}
     prompt_text: null,
     match_phone: null,
     transfer_to_account_id: null,
+    rule_type: 'general',
+    condition_logic: 'and',
     conditions: {},
     actions: {},
     created_at: '2024-01-01T00:00:00Z',

@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -28,17 +29,17 @@ interface TransactionFiltersBarProps {
   onFiltersChange: (filters: ListFilters) => void;
 }
 
-const TRANSACTION_TYPES: { value: TransactionType; label: string }[] = [
-  { value: 'expense', label: 'Expense' },
-  { value: 'income', label: 'Income' },
-  { value: 'transfer', label: 'Transfer' },
+const TRANSACTION_TYPES: { value: TransactionType; labelKey: string }[] = [
+  { value: 'expense', labelKey: 'expense' },
+  { value: 'income', labelKey: 'income' },
+  { value: 'transfer', labelKey: 'transfer' },
 ];
 
-const SORT_OPTIONS: { value: string; label: string }[] = [
-  { value: 'date-desc', label: 'Newest first' },
-  { value: 'date-asc', label: 'Oldest first' },
-  { value: 'amount-desc', label: 'Highest amount' },
-  { value: 'amount-asc', label: 'Lowest amount' },
+const SORT_OPTIONS: { value: string; labelKey: string }[] = [
+  { value: 'date-desc', labelKey: 'newestFirst' },
+  { value: 'date-asc', labelKey: 'oldestFirst' },
+  { value: 'amount-desc', labelKey: 'highestAmount' },
+  { value: 'amount-asc', labelKey: 'lowestAmount' },
 ];
 
 function countActiveFilters(filters: ListFilters): number {
@@ -55,6 +56,8 @@ export function TransactionFiltersBar({
   filters,
   onFiltersChange,
 }: TransactionFiltersBarProps): React.ReactElement {
+  const t = useTranslations('transactions');
+  const tCommon = useTranslations('common');
   const { data: accounts } = useAccounts();
   const { data: categories } = useCategories();
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
@@ -218,7 +221,7 @@ export function TransactionFiltersBar({
           {activeFilterCount > 0 && (
             <Badge variant='secondary' className='hidden text-xs sm:flex'>
               <SlidersHorizontal className='mr-1 h-3 w-3' />
-              {activeFilterCount} filter{activeFilterCount > 1 ? 's' : ''} applied
+              {t('filtersApplied', { count: activeFilterCount })}
             </Badge>
           )}
           {activeFilterCount > 0 && (
@@ -228,7 +231,7 @@ export function TransactionFiltersBar({
               className='cursor-pointer text-xs'
               onClick={clearFilters}>
               <X className='mr-1 h-3 w-3' />
-              Clear
+              {t('clear')}
             </Button>
           )}
         </div>
@@ -238,7 +241,7 @@ export function TransactionFiltersBar({
         <div className='relative min-w-[140px] flex-1 sm:min-w-[180px]'>
           <Search className='text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2' />
           <Input
-            placeholder='Search...'
+            placeholder={`${tCommon('search')}...`}
             value={filters.search ?? ''}
             onChange={(e): void =>
               onFiltersChange({ ...filters, search: e.target.value || undefined })
@@ -252,8 +255,8 @@ export function TransactionFiltersBar({
           <PopoverTrigger asChild>
             <Button variant='outline' className='h-9 cursor-pointer text-sm'>
               {selectedTypes.length > 0
-                ? `${selectedTypes.length} type${selectedTypes.length > 1 ? 's' : ''}`
-                : 'All Types'}
+                ? t('typesCount', { count: selectedTypes.length })
+                : t('allTypes')}
             </Button>
           </PopoverTrigger>
           <PopoverContent className='w-44 p-2' align='start'>
@@ -263,18 +266,18 @@ export function TransactionFiltersBar({
                   checked={selectedTypes.length === TRANSACTION_TYPES.length}
                   onCheckedChange={toggleAllTypes}
                 />
-                <span>Select all</span>
+                <span>{tCommon('selectAll')}</span>
               </label>
               <div className='bg-border my-1 h-px' />
-              {TRANSACTION_TYPES.map((t) => (
+              {TRANSACTION_TYPES.map((tt) => (
                 <label
-                  key={t.value}
+                  key={tt.value}
                   className='hover:bg-card-overlay flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm'>
                   <Checkbox
-                    checked={selectedTypes.includes(t.value)}
-                    onCheckedChange={(): void => toggleType(t.value)}
+                    checked={selectedTypes.includes(tt.value)}
+                    onCheckedChange={(): void => toggleType(tt.value)}
                   />
-                  <span>{t.label}</span>
+                  <span>{t(tt.labelKey)}</span>
                 </label>
               ))}
             </div>
@@ -287,8 +290,8 @@ export function TransactionFiltersBar({
             <Button variant='outline' className='h-9 cursor-pointer text-sm'>
               <Wallet className='mr-1.5 h-3.5 w-3.5' />
               {selectedAccountIds.length > 0
-                ? `${selectedAccountIds.length} account${selectedAccountIds.length > 1 ? 's' : ''}`
-                : 'All Accounts'}
+                ? t('accountsCount', { count: selectedAccountIds.length })
+                : t('allAccounts')}
             </Button>
           </PopoverTrigger>
           <PopoverContent className='w-56 p-2' align='start'>
@@ -300,7 +303,7 @@ export function TransactionFiltersBar({
                       checked={selectedAccountIds.length === accounts.length}
                       onCheckedChange={toggleAllAccounts}
                     />
-                    <span>Select all</span>
+                    <span>{tCommon('selectAll')}</span>
                   </label>
                   <div className='bg-border my-1 h-px' />
                 </>
@@ -327,8 +330,8 @@ export function TransactionFiltersBar({
               <Tag className='mr-1.5 h-3.5 w-3.5 shrink-0' />
               <span className='truncate'>
                 {selectedCategoryIds.length > 0
-                  ? `${selectedCategoryIds.length} categor${selectedCategoryIds.length > 1 ? 'ies' : 'y'}`
-                  : 'All Categories'}
+                  ? t('categoriesCount', { count: selectedCategoryIds.length })
+                  : t('allCategories')}
               </span>
             </Button>
           </PopoverTrigger>
@@ -341,7 +344,7 @@ export function TransactionFiltersBar({
                       checked={selectedCategoryIds.length === categories.length}
                       onCheckedChange={toggleAllCategories}
                     />
-                    <span>Select all</span>
+                    <span>{tCommon('selectAll')}</span>
                   </label>
                   <div className='bg-border my-1 h-px' />
                 </>
@@ -408,7 +411,7 @@ export function TransactionFiltersBar({
           <PopoverTrigger asChild>
             <Button variant='outline' className='h-9 cursor-pointer text-sm'>
               <ArrowUpDown className='mr-1.5 h-3.5 w-3.5' />
-              Sort
+              {t('sort')}
             </Button>
           </PopoverTrigger>
           <PopoverContent className='w-48 p-2' align='end'>
@@ -422,7 +425,7 @@ export function TransactionFiltersBar({
                       ? 'bg-primary text-primary-foreground'
                       : 'hover:bg-card-overlay'
                   }`}>
-                  {opt.label}
+                  {t(opt.labelKey)}
                 </button>
               ))}
             </div>

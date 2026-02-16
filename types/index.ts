@@ -22,6 +22,9 @@ export type {
   AutomationRule,
   AutomationRuleConditions,
   AutomationRuleActions,
+  AutomationRuleFilters,
+  RuleType,
+  ConditionLogic,
   CreateAutomationRuleInput,
   UpdateAutomationRuleInput,
 } from './automation-rule';

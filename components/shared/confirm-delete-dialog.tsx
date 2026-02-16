@@ -1,6 +1,7 @@
 'use client';
 
 import { type ReactNode, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -29,10 +30,12 @@ export function ConfirmDeleteDialog({
   title,
   description,
   confirmText,
-  confirmLabel = 'Delete',
+  confirmLabel,
   onConfirm,
   isPending = false,
 }: ConfirmDeleteDialogProps): React.ReactElement {
+  const tCommon = useTranslations('common');
+  const resolvedConfirmLabel = confirmLabel ?? tCommon('delete');
   const [inputValue, setInputValue] = useState('');
   const isMatch = inputValue === confirmText;
 
@@ -52,7 +55,10 @@ export function ConfirmDeleteDialog({
         </DialogHeader>
         <div className='space-y-2 py-2'>
           <p className='text-muted-foreground text-sm'>
-            Type <span className='text-foreground font-semibold'>{confirmText}</span> to confirm.
+            {tCommon.rich('typeToConfirm', {
+              text: confirmText,
+              bold: (chunks) => <span className='text-foreground font-semibold'>{chunks}</span>,
+            })}
           </p>
           <Input
             value={inputValue}
@@ -63,14 +69,14 @@ export function ConfirmDeleteDialog({
         </div>
         <DialogFooter>
           <Button variant='outline' onClick={(): void => handleOpenChange(false)}>
-            Cancel
+            {tCommon('cancel')}
           </Button>
           <Button
             variant='destructive'
             disabled={!isMatch || isPending}
             onClick={onConfirm}
             className='cursor-pointer'>
-            {isPending ? 'Deleting...' : confirmLabel}
+            {isPending ? tCommon('deleting') : resolvedConfirmLabel}
           </Button>
         </DialogFooter>
       </DialogContent>

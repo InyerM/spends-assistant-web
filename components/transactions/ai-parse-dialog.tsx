@@ -1,16 +1,21 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
-import { Loader2, Sparkles, Pencil, Zap } from 'lucide-react';
+import { AlertTriangle, Loader2, Sparkles, Pencil, Zap } from 'lucide-react';
 import { useCreateTransaction, DuplicateError } from '@/lib/api/mutations/transaction.mutations';
 import { DuplicateWarningDialog } from '@/components/transactions/duplicate-warning-dialog';
+import { UsageIndicator } from '@/components/shared/usage-indicator';
 import { useAccounts } from '@/lib/api/queries/account.queries';
 import { useCategories } from '@/lib/api/queries/category.queries';
+import { useUsage } from '@/hooks/use-usage';
+import { useSubscription } from '@/hooks/use-subscription';
 import { useTransactionFormStore } from '@/lib/stores/transaction-form.store';
 import { getCurrentColombiaTimes } from '@/lib/utils/date';
 import type { AppliedRule, CreateTransactionInput, Transaction } from '@/types';
@@ -65,13 +70,29 @@ interface AiParseDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
+const SKIPPED_REASON_KEYS: Record<string, string> = {
+  spending_summary: 'skippedSpendingSummary',
+  balance_inquiry: 'skippedBalanceInquiry',
+  otp_code: 'skippedOtpCode',
+  promotional: 'skippedPromotional',
+  informational: 'skippedInformational',
+};
+
 export function AiParseDialog({ open, onOpenChange }: AiParseDialogProps): React.ReactElement {
+  const t = useTranslations('transactions');
+  const tCommon = useTranslations('common');
+  const router = useRouter();
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [text, setText] = useState('');
   const [parsing, setParsing] = useState(false);
   const [result, setResult] = useState<ParseResponse | null>(null);
+  const [limitReached, setLimitReached] = useState(false);
+  const [skippedReason, setSkippedReason] = useState<string | null>(null);
   const createMutation = useCreateTransaction();
   const { data: accounts } = useAccounts();
   const { data: categories } = useCategories();
+  const { data: usage } = useUsage();
+  const { data: subscription } = useSubscription();
   const { openWith } = useTransactionFormStore();
   const [duplicateConflict, setDuplicateConflict] = useState<{
     match: Transaction;
@@ -81,6 +102,8 @@ export function AiParseDialog({ open, onOpenChange }: AiParseDialogProps): React
   function resetState(): void {
     setText('');
     setResult(null);
+    setLimitReached(false);
+    setSkippedReason(null);
   }
 
   function handleClose(next: boolean): void {
@@ -128,6 +151,8 @@ export function AiParseDialog({ open, onOpenChange }: AiParseDialogProps): React
     if (!text.trim()) return;
     setParsing(true);
     setResult(null);
+    setLimitReached(false);
+    setSkippedReason(null);
     try {
       const res = await fetch('/api/transactions/parse', {
         method: 'POST',
@@ -136,9 +161,18 @@ export function AiParseDialog({ open, onOpenChange }: AiParseDialogProps): React
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({ error: 'Parse failed' }));
-        throw new Error((err as { error: string }).error);
+        const errObj = err as { error: string; code?: string };
+        if (res.status === 429 && errObj.code === 'PARSE_LIMIT_REACHED') {
+          setLimitReached(true);
+          return;
+        }
+        throw new Error(errObj.error);
       }
-      const data = (await res.json()) as ParseResponse;
+      const data = (await res.json()) as ParseResponse & { status?: string; reason?: string };
+      if (data.status === 'skipped') {
+        setSkippedReason(data.reason ?? 'unknown');
+        return;
+      }
       setResult(data);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to parse');
@@ -161,14 +195,14 @@ export function AiParseDialog({ open, onOpenChange }: AiParseDialogProps): React
         parsed_data: result.parsed as unknown as Record<string, unknown>,
         applied_rules: result.applied_rules.length > 0 ? result.applied_rules : undefined,
       });
-      toast.success('Transaction created from AI');
+      toast.success(t('transactionCreatedFromAi'));
       handleClose(false);
     } catch (err) {
       if (err instanceof DuplicateError) {
         setDuplicateConflict({ match: err.match, input: err.input });
         return;
       }
-      toast.error('Failed to create transaction');
+      toast.error(t('failedToCreate'));
     }
   }
 
@@ -186,14 +220,14 @@ export function AiParseDialog({ open, onOpenChange }: AiParseDialogProps): React
         parsed_data: result.parsed as unknown as Record<string, unknown>,
         applied_rules: result.applied_rules.length > 0 ? result.applied_rules : undefined,
       });
-      toast.success('Transaction created from AI');
+      toast.success(t('transactionCreatedFromAi'));
       resetState();
     } catch (err) {
       if (err instanceof DuplicateError) {
         setDuplicateConflict({ match: err.match, input: err.input });
         return;
       }
-      toast.error('Failed to create transaction');
+      toast.error(t('failedToCreate'));
     }
   }
 
@@ -241,18 +275,21 @@ export function AiParseDialog({ open, onOpenChange }: AiParseDialogProps): React
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className='border-border bg-card sm:max-w-[500px]'>
+      <DialogContent className='border-border bg-card max-h-[85dvh] overflow-y-auto sm:max-w-[500px]'>
         <DialogHeader>
           <DialogTitle className='flex items-center gap-2'>
             <Sparkles className='h-5 w-5' />
-            AI Transaction
+            {t('aiTransaction')}
           </DialogTitle>
         </DialogHeader>
+
+        {subscription?.plan !== 'pro' && usage && <UsageIndicator usage={usage} />}
 
         <div className='space-y-4'>
           <div>
             <Textarea
-              placeholder='Paste a bank message, SMS, or describe a transaction...'
+              ref={textareaRef}
+              placeholder={t('aiTextPlaceholder')}
               value={text}
               onChange={(e): void => setText(e.target.value)}
               rows={3}
@@ -260,7 +297,46 @@ export function AiParseDialog({ open, onOpenChange }: AiParseDialogProps): React
             />
           </div>
 
-          {!result && (
+          {limitReached && (
+            <div className='border-destructive/30 bg-destructive/5 space-y-3 rounded-lg border p-4'>
+              <p className='text-destructive text-sm font-medium'>{t('parseLimitReached')}</p>
+              <p className='text-muted-foreground text-xs'>{t('parseLimitDescription')}</p>
+              <Button
+                className='w-full cursor-pointer'
+                onClick={(): void => {
+                  handleClose(false);
+                  router.push('/settings?tab=subscription');
+                }}>
+                {t('viewSubscription')}
+              </Button>
+            </div>
+          )}
+
+          {skippedReason && (
+            <div className='border-warning/30 bg-warning/5 space-y-3 rounded-lg border p-4'>
+              <div className='flex items-center gap-2'>
+                <AlertTriangle className='text-warning h-5 w-5 shrink-0' />
+                <p className='text-sm font-medium'>{t('notTransaction')}</p>
+              </div>
+              <p className='text-muted-foreground text-xs'>
+                {SKIPPED_REASON_KEYS[skippedReason]
+                  ? t(SKIPPED_REASON_KEYS[skippedReason])
+                  : `Reason: ${skippedReason}`}
+              </p>
+              <Button
+                variant='outline'
+                className='w-full cursor-pointer'
+                onClick={(): void => {
+                  setSkippedReason(null);
+                  setText('');
+                  setTimeout(() => textareaRef.current?.focus(), 0);
+                }}>
+                {tCommon('tryAgain')}
+              </Button>
+            </div>
+          )}
+
+          {!result && !limitReached && !skippedReason && (
             <Button
               onClick={handleParse}
               disabled={parsing || !text.trim()}
@@ -268,10 +344,10 @@ export function AiParseDialog({ open, onOpenChange }: AiParseDialogProps): React
               {parsing ? (
                 <>
                   <Loader2 className='mr-2 h-4 w-4 animate-spin' />
-                  Parsing...
+                  {t('parsing')}
                 </>
               ) : (
-                'Parse with AI'
+                t('parseWithAi')
               )}
             </Button>
           )}
@@ -281,19 +357,19 @@ export function AiParseDialog({ open, onOpenChange }: AiParseDialogProps): React
               <div className='border-border space-y-2 rounded-lg border p-3'>
                 <div className='grid grid-cols-2 gap-2 text-sm'>
                   <div>
-                    <span className='text-muted-foreground text-xs'>Amount</span>
+                    <span className='text-muted-foreground text-xs'>{t('amount')}</span>
                     <p className='font-semibold'>${result.parsed.amount.toLocaleString('es-CO')}</p>
                   </div>
                   <div>
-                    <span className='text-muted-foreground text-xs'>Confidence</span>
+                    <span className='text-muted-foreground text-xs'>{t('confidence')}</span>
                     <p className='font-semibold'>{result.parsed.confidence}%</p>
                   </div>
                   <div className='col-span-2'>
-                    <span className='text-muted-foreground text-xs'>Description</span>
+                    <span className='text-muted-foreground text-xs'>{t('description')}</span>
                     <p className='font-medium'>{result.parsed.description}</p>
                   </div>
                   <div>
-                    <span className='text-muted-foreground text-xs'>Category</span>
+                    <span className='text-muted-foreground text-xs'>{t('category')}</span>
                     {categoryOverridden ? (
                       <div>
                         <p className='text-muted-foreground text-xs line-through'>
@@ -310,13 +386,13 @@ export function AiParseDialog({ open, onOpenChange }: AiParseDialogProps): React
                   </div>
                   {resolvedType && (
                     <div>
-                      <span className='text-muted-foreground text-xs'>Type</span>
+                      <span className='text-muted-foreground text-xs'>{t('type')}</span>
                       <p className='capitalize'>{resolvedType}</p>
                     </div>
                   )}
                   {sourceAccountName && (
                     <div>
-                      <span className='text-muted-foreground text-xs'>Account</span>
+                      <span className='text-muted-foreground text-xs'>{t('account')}</span>
                       {accountOverridden ? (
                         <div>
                           <p className='text-muted-foreground text-xs line-through'>
@@ -335,25 +411,25 @@ export function AiParseDialog({ open, onOpenChange }: AiParseDialogProps): React
                   )}
                   {result.parsed.bank && !sourceAccountName && (
                     <div>
-                      <span className='text-muted-foreground text-xs'>Bank</span>
+                      <span className='text-muted-foreground text-xs'>{t('bank')}</span>
                       <p>{result.parsed.bank}</p>
                     </div>
                   )}
                   {result.parsed.original_date && (
                     <div>
-                      <span className='text-muted-foreground text-xs'>Date</span>
+                      <span className='text-muted-foreground text-xs'>{t('date')}</span>
                       <p>{result.parsed.original_date}</p>
                     </div>
                   )}
                   {result.parsed.original_time && (
                     <div>
-                      <span className='text-muted-foreground text-xs'>Time</span>
+                      <span className='text-muted-foreground text-xs'>{t('time')}</span>
                       <p>{result.parsed.original_time}</p>
                     </div>
                   )}
                   {result.resolved.notes && (
                     <div className='col-span-2'>
-                      <span className='text-muted-foreground text-xs'>Notes</span>
+                      <span className='text-muted-foreground text-xs'>{t('notes')}</span>
                       <p className='flex items-center gap-1 text-sm'>
                         <Zap className='text-warning h-3 w-3 shrink-0' />
                         {result.resolved.notes}
@@ -362,7 +438,7 @@ export function AiParseDialog({ open, onOpenChange }: AiParseDialogProps): React
                   )}
                   {resolvedAccountName && (
                     <div className='col-span-2'>
-                      <span className='text-muted-foreground text-xs'>Transfer To</span>
+                      <span className='text-muted-foreground text-xs'>{t('transferTo')}</span>
                       <p className='flex items-center gap-1'>
                         <Zap className='text-warning h-3 w-3' />
                         {resolvedAccountName}
@@ -376,10 +452,10 @@ export function AiParseDialog({ open, onOpenChange }: AiParseDialogProps): React
                     <div className='mb-1 flex items-center gap-1.5'>
                       <Zap className='text-warning h-3.5 w-3.5' />
                       <span className='text-muted-foreground text-xs font-medium'>
-                        Automation rules applied
+                        {t('automationRulesApplied')}
                       </span>
                     </div>
-                    <div className='space-y-1'>
+                    <div className='max-h-[200px] space-y-1 overflow-y-auto'>
                       {result.applied_rules.map((rule) => {
                         const actions = rule.actions as Record<string, string | undefined>;
                         const details: string[] = [];
@@ -419,9 +495,7 @@ export function AiParseDialog({ open, onOpenChange }: AiParseDialogProps): React
                 )}
 
                 {!result.resolved.account_id && (
-                  <p className='text-destructive text-xs'>
-                    No matching account found. Use &quot;Edit &amp; Create&quot; to select one.
-                  </p>
+                  <p className='text-destructive text-xs'>{t('noMatchingAccount')}</p>
                 )}
               </div>
 
@@ -431,14 +505,14 @@ export function AiParseDialog({ open, onOpenChange }: AiParseDialogProps): React
                     variant='outline'
                     className='flex-1 cursor-pointer'
                     onClick={(): void => setResult(null)}>
-                    Re-parse
+                    {t('reparse')}
                   </Button>
                   <Button
                     variant='outline'
                     className='flex-1 cursor-pointer'
                     onClick={handleEditInForm}>
                     <Pencil className='mr-1.5 h-4 w-4' />
-                    Edit & Create
+                    {t('editAndCreate')}
                   </Button>
                 </div>
                 <div className='flex gap-2'>
@@ -446,14 +520,14 @@ export function AiParseDialog({ open, onOpenChange }: AiParseDialogProps): React
                     className='flex-1 cursor-pointer'
                     disabled={createMutation.isPending || !result.resolved.account_id}
                     onClick={handleQuickCreate}>
-                    {createMutation.isPending ? 'Creating...' : 'Quick Create'}
+                    {createMutation.isPending ? tCommon('creating') : t('quickCreate')}
                   </Button>
                   <Button
                     variant='secondary'
                     className='cursor-pointer'
                     disabled={createMutation.isPending || !result.resolved.account_id}
                     onClick={handleQuickCreateAndAnother}>
-                    Create & Next
+                    {t('createAndNext')}
                   </Button>
                 </div>
               </div>

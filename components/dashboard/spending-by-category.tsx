@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useTransactions } from '@/lib/api/queries/transaction.queries';
@@ -30,6 +31,7 @@ interface CategorySpending {
 }
 
 export function SpendingByCategory({ year, month }: SpendingByCategoryProps): React.ReactElement {
+  const t = useTranslations('dashboard');
   const dateFrom = `${year}-${String(month + 1).padStart(2, '0')}-01`;
   const lastDay = new Date(year, month + 1, 0).getDate();
   const dateTo = `${year}-${String(month + 1).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
@@ -87,12 +89,14 @@ export function SpendingByCategory({ year, month }: SpendingByCategoryProps): Re
   return (
     <Card className='border-border bg-card overflow-hidden'>
       <CardHeader className='pb-3'>
-        <CardTitle className='text-base font-medium'>Spending by Categories</CardTitle>
+        <CardTitle className='text-base font-medium'>{t('spendingByCategory')}</CardTitle>
         <p className='text-destructive text-2xl font-bold'>-{formatCurrency(totalSpending)}</p>
       </CardHeader>
       <CardContent className='min-w-0'>
         {spending.length === 0 ? (
-          <p className='text-muted-foreground py-4 text-center text-sm'>No expenses this month</p>
+          <p className='text-muted-foreground py-4 text-center text-sm'>
+            {t('noExpensesThisMonth')}
+          </p>
         ) : (
           <div className='space-y-4'>
             {spending.slice(0, 8).map((cat) => {

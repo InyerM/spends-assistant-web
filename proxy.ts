@@ -1,11 +1,28 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import { env } from './lib/env';
+import { defaultLocale, isValidLocale } from './i18n/config';
 
 const PUBLIC_PATHS = ['/login', '/register', '/auth'];
 
 function isPublicPath(pathname: string): boolean {
   return PUBLIC_PATHS.some((path) => pathname.startsWith(path));
+}
+
+/**
+ * Reads the locale from the request cookie, defaulting to 'es' (Colombia).
+ * Sets the cookie on the response if it was missing or invalid.
+ */
+function ensureLocaleCookie(request: NextRequest, response: NextResponse): void {
+  const cookieLocale = request.cookies.get('locale')?.value;
+
+  if (!isValidLocale(cookieLocale)) {
+    response.cookies.set('locale', defaultLocale, {
+      path: '/',
+      maxAge: 60 * 60 * 24 * 365, // 1 year
+      sameSite: 'lax',
+    });
+  }
 }
 
 export async function proxy(request: NextRequest): Promise<NextResponse> {
@@ -56,6 +73,9 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
     url.pathname = '/dashboard';
     return NextResponse.redirect(url);
   }
+
+  // Ensure locale cookie is set on every response
+  ensureLocaleCookie(request, supabaseResponse);
 
   return supabaseResponse;
 }

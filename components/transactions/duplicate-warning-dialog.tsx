@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 import { AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -32,6 +33,8 @@ export function DuplicateWarningDialog({
   newInput,
   onResolved,
 }: DuplicateWarningDialogProps): React.ReactElement {
+  const t = useTranslations('transactions');
+  const tCommon = useTranslations('common');
   const { data: accounts } = useAccounts();
   const { data: categories } = useCategories();
   const queryClient = useQueryClient();
@@ -57,11 +60,11 @@ export function DuplicateWarningDialog({
     try {
       await forceCreateTransaction(newInput);
       await invalidate();
-      toast.success('Transaction created');
+      toast.success(t('transactionCreated'));
       onOpenChange(false);
       onResolved();
     } catch {
-      toast.error('Failed to create transaction');
+      toast.error(t('failedToCreate'));
     } finally {
       setPending(null);
     }
@@ -72,11 +75,11 @@ export function DuplicateWarningDialog({
     try {
       await replaceTransaction(newInput, existingTransaction.id);
       await invalidate();
-      toast.success('Transaction replaced');
+      toast.success(t('transactionReplaced'));
       onOpenChange(false);
       onResolved();
     } catch {
-      toast.error('Failed to replace transaction');
+      toast.error(t('failedToReplace'));
     } finally {
       setPending(null);
     }
@@ -88,17 +91,15 @@ export function DuplicateWarningDialog({
         <DialogHeader>
           <DialogTitle className='flex items-center gap-2'>
             <AlertTriangle className='text-warning h-5 w-5' />
-            Possible duplicate
+            {t('duplicateWarning')}
           </DialogTitle>
         </DialogHeader>
 
-        <p className='text-muted-foreground text-sm'>
-          A similar transaction already exists. What would you like to do?
-        </p>
+        <p className='text-muted-foreground text-sm'>{t('duplicateExists')}</p>
 
         <div className='grid grid-cols-2 gap-3'>
           <ComparisonCard
-            label='Existing'
+            label={t('existing')}
             amount={existingTransaction.amount}
             description={existingTransaction.description}
             date={existingTransaction.date}
@@ -107,7 +108,7 @@ export function DuplicateWarningDialog({
             type={existingTransaction.type}
           />
           <ComparisonCard
-            label='New'
+            label={tCommon('new')}
             amount={newInput.amount}
             description={newInput.description}
             date={newInput.date}
@@ -120,16 +121,16 @@ export function DuplicateWarningDialog({
 
         <div className='flex flex-col gap-2 pt-2 sm:flex-row sm:justify-end'>
           <Button variant='outline' onClick={(): void => onOpenChange(false)} disabled={!!pending}>
-            Cancel
+            {tCommon('cancel')}
           </Button>
           <Button
             variant='outline'
             onClick={(): void => void handleCreateAnyway()}
             disabled={!!pending}>
-            {pending === 'create' ? 'Creating...' : 'Create anyway'}
+            {pending === 'create' ? tCommon('creating') : t('createAnyway')}
           </Button>
           <Button onClick={(): void => void handleReplace()} disabled={!!pending}>
-            {pending === 'replace' ? 'Replacing...' : 'Replace existing'}
+            {pending === 'replace' ? t('replacing') : t('replaceExisting')}
           </Button>
         </div>
       </DialogContent>

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useCallback, useState } from 'react';
+import { useTranslations, useLocale } from 'next-intl';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -13,7 +14,7 @@ import {
 import { useCategories } from '@/lib/api/queries/category.queries';
 import { useAccounts } from '@/lib/api/queries/account.queries';
 import { formatCurrency } from '@/lib/utils/formatting';
-import { formatTimeForDisplay } from '@/lib/utils/date';
+import { formatTimeForDisplay, formatDateTime } from '@/lib/utils/date';
 import {
   ArrowDownLeft,
   ArrowUpRight,
@@ -28,21 +29,6 @@ import { ConfirmDeleteDialog } from '@/components/shared/confirm-delete-dialog';
 import { toast } from 'sonner';
 import type { Transaction, TransactionType, TransactionFilters } from '@/types';
 
-const MONTH_NAMES = [
-  'January',
-  'February',
-  'March',
-  'April',
-  'May',
-  'June',
-  'July',
-  'August',
-  'September',
-  'October',
-  'November',
-  'December',
-];
-
 const typeConfig: Record<TransactionType, { icon: typeof ArrowDownLeft; colorClass: string }> = {
   expense: { icon: ArrowUpRight, colorClass: 'text-destructive' },
   income: { icon: ArrowDownLeft, colorClass: 'text-success' },
@@ -56,10 +42,12 @@ interface DateGroup {
   total: number;
 }
 
-function formatDateLabel(dateStr: string): string {
+function formatDateLabel(dateStr: string, locale: string): string {
   const [year, monthStr, day] = dateStr.split('-');
-  const monthIndex = parseInt(monthStr, 10) - 1;
-  return `${MONTH_NAMES[monthIndex]} ${parseInt(day, 10)}, ${year}`;
+  const date = new Date(Number(year), parseInt(monthStr, 10) - 1, parseInt(day, 10));
+  return new Intl.DateTimeFormat(locale, { month: 'long', day: 'numeric', year: 'numeric' }).format(
+    date,
+  );
 }
 
 function computeDayTotal(transactions: Transaction[]): number {
@@ -75,6 +63,7 @@ function buildDateGroups(
   pages: TransactionsPage[],
   sortBy?: string,
   sortOrder?: string,
+  locale = 'en',
 ): DateGroup[] {
   const allTransactions = pages.flatMap((p) => p.data);
   const grouped = new Map<string, Transaction[]>();
@@ -95,7 +84,7 @@ function buildDateGroups(
       }
       return {
         date,
-        displayDate: formatDateLabel(date),
+        displayDate: formatDateLabel(date, locale),
         transactions: txs,
         total: computeDayTotal(txs),
       };
@@ -149,6 +138,9 @@ export function TransactionList({
   onToggleSelect,
   selectMode = false,
 }: TransactionListProps): React.ReactElement {
+  const t = useTranslations('transactions');
+  const tCommon = useTranslations('common');
+  const locale = useLocale();
   const { data, isLoading, hasNextPage, fetchNextPage, isFetchingNextPage } =
     useInfiniteTransactions(filters);
   const { data: categories } = useCategories();
@@ -180,14 +172,19 @@ export function TransactionList({
     if (!deleteTx) return;
     try {
       await deleteMutation.mutateAsync(deleteTx.id);
-      toast.success('Transaction deleted');
+      toast.success(t('transactionDeleted'));
       setDeleteTx(null);
     } catch {
-      toast.error('Failed to delete transaction');
+      toast.error(t('failedToDelete'));
     }
   }
 
-  const dateGroups = buildDateGroups(data?.pages ?? [], filters.sort_by, filters.sort_order);
+  const dateGroups = buildDateGroups(
+    data?.pages ?? [],
+    filters.sort_by,
+    filters.sort_order,
+    locale,
+  );
 
   const getCategory = (
     categoryId: string | null,
@@ -220,7 +217,7 @@ export function TransactionList({
 
   if (dateGroups.length === 0) {
     return (
-      <div className='text-muted-foreground py-16 text-center text-sm'>No transactions found</div>
+      <div className='text-muted-foreground py-16 text-center text-sm'>{t('noTransactions')}</div>
     );
   }
 
@@ -350,10 +347,10 @@ export function TransactionList({
           <Loader2 className='text-muted-foreground h-5 w-5 animate-spin' />
         ) : hasNextPage ? (
           <Button variant='ghost' size='sm' onClick={(): void => void fetchNextPage()}>
-            Load more
+            {tCommon('loadMore')}
           </Button>
         ) : (
-          <p className='text-muted-foreground text-xs'>No more transactions</p>
+          <p className='text-muted-foreground text-xs'>{t('noMoreTransactions')}</p>
         )}
       </div>
 
@@ -363,26 +360,29 @@ export function TransactionList({
         onOpenChange={(o): void => {
           if (!o) setMetadataTx(null);
         }}>
-        <DialogContent className='border-border bg-card max-h-[80vh] overflow-hidden sm:max-w-[500px]'>
+        <DialogContent className='border-border bg-card max-h-[85dvh] overflow-y-auto sm:max-w-[500px]'>
           <DialogHeader>
-            <DialogTitle>Transaction Details</DialogTitle>
+            <DialogTitle>{t('transactionDetails')}</DialogTitle>
           </DialogHeader>
           {metadataTx && (
             <div className='min-h-0 space-y-4 overflow-y-auto'>
               <div className='grid grid-cols-2 gap-4'>
-                <MetadataField label='Source' value={metadataTx.source} />
-                <MetadataField label='Confidence' value={metadataTx.confidence} />
+                <MetadataField label={t('source')} value={metadataTx.source} />
+                <MetadataField label={t('confidence')} value={metadataTx.confidence} />
               </div>
-              <MetadataField label='Notes' value={metadataTx.notes} />
-              <MetadataField label='Raw Text' value={metadataTx.raw_text} />
-              <MetadataField label='Parsed Data' value={metadataTx.parsed_data} />
+              <MetadataField label={t('notes')} value={metadataTx.notes} />
+              <MetadataField label={t('rawText')} value={metadataTx.raw_text} />
+              <MetadataField label={t('parsedData')} value={metadataTx.parsed_data} />
               <div className='grid grid-cols-2 gap-4'>
-                <MetadataField label='Payment Method' value={metadataTx.payment_method} />
-                <MetadataField label='Reconciled' value={metadataTx.is_reconciled ? 'Yes' : 'No'} />
+                <MetadataField label={t('paymentMethod')} value={metadataTx.payment_method} />
+                <MetadataField
+                  label={t('reconciled')}
+                  value={metadataTx.is_reconciled ? tCommon('yes') : tCommon('no')}
+                />
               </div>
               <div className='grid grid-cols-2 gap-4'>
-                <MetadataField label='Created' value={metadataTx.created_at} />
-                <MetadataField label='Updated' value={metadataTx.updated_at} />
+                <MetadataField label={t('created')} value={formatDateTime(metadataTx.created_at)} />
+                <MetadataField label={t('updated')} value={formatDateTime(metadataTx.updated_at)} />
               </div>
             </div>
           )}
@@ -394,9 +394,11 @@ export function TransactionList({
         onOpenChange={(o): void => {
           if (!o) setDeleteTx(null);
         }}
-        title='Delete Transaction'
-        description={<p className='text-muted-foreground text-sm'>This action cannot be undone.</p>}
-        confirmText='Delete Transaction'
+        title={t('deleteTransaction')}
+        description={
+          <p className='text-muted-foreground text-sm'>{tCommon('actionCannotBeUndone')}</p>
+        }
+        confirmText={t('deleteTransaction')}
         onConfirm={(): void => void handleSwipeDelete()}
         isPending={deleteMutation.isPending}
       />

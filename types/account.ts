@@ -28,7 +28,7 @@ export interface CreateAccountInput {
   name: string;
   type: AccountType;
   institution?: string;
-  last_four?: string;
+  last_four?: string | null;
   currency?: string;
   balance?: number;
   color?: string;

@@ -84,34 +84,44 @@ export async function POST(request: NextRequest): Promise<Response> {
       return errorResponse(errObj.error || 'Parse failed', res.status);
     }
 
-    const data = (await res.json()) as WorkerParseResponse;
+    const data = (await res.json()) as WorkerParseResponse | { status: string; reason: string };
+
+    // Handle non-transactional messages (skipped by AI)
+    if ('status' in data && data.status === 'skipped') {
+      return jsonResponse({
+        status: 'skipped',
+        reason: data.reason,
+      });
+    }
+
+    const parsed = data as WorkerParseResponse;
 
     // Apply automation rules to the parsed result (RLS filters rules to this user)
     const txForRules = {
-      description: data.parsed.description,
-      amount: data.parsed.amount,
-      account_id: data.resolved.account_id ?? '',
-      source: data.parsed.source || 'manual',
-      type: data.parsed.type ?? 'expense',
-      category_id: data.resolved.category_id,
+      description: parsed.parsed.description,
+      amount: parsed.parsed.amount,
+      account_id: parsed.resolved.account_id ?? '',
+      source: parsed.parsed.source || 'manual',
+      type: parsed.parsed.type ?? 'expense',
+      category_id: parsed.resolved.category_id,
       raw_text: text,
     };
 
     const processed = await applyAutomationRules(supabase, txForRules);
 
     return jsonResponse({
-      parsed: data.parsed,
+      parsed: parsed.parsed,
       resolved: {
-        account_id: processed.account_id || data.resolved.account_id,
-        category_id: processed.category_id ?? data.resolved.category_id,
+        account_id: processed.account_id || parsed.resolved.account_id,
+        category_id: processed.category_id ?? parsed.resolved.category_id,
         transfer_to_account_id: processed.transfer_to_account_id,
         transfer_id: processed.transfer_id,
         type: processed.type,
         notes: processed.notes,
       },
       original: {
-        account_id: data.resolved.account_id,
-        category_id: data.resolved.category_id,
+        account_id: parsed.resolved.account_id,
+        category_id: parsed.resolved.category_id,
       },
       applied_rules: processed.applied_rules ?? [],
     });

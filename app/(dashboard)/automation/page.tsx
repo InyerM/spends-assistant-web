@@ -1,32 +1,108 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Skeleton } from '@/components/ui/skeleton';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { ConfirmDeleteDialog } from '@/components/shared/confirm-delete-dialog';
 import { AutomationForm } from '@/components/automation/automation-form';
-import { useAutomationRules } from '@/lib/api/queries/automation.queries';
+import { SwipeableRow } from '@/components/transactions/swipeable-row';
+import { useInfiniteAutomationRules } from '@/lib/api/queries/automation.queries';
 import { useAccounts } from '@/lib/api/queries/account.queries';
 import {
   useToggleAutomationRule,
   useDeleteAutomationRule,
+  useGenerateAccountRules,
 } from '@/lib/api/mutations/automation.mutations';
-import { Plus, Pencil, Trash2, Zap } from 'lucide-react';
-import type { AutomationRule } from '@/types';
+import { Plus, Pencil, Trash2, Zap, Loader2, Wand2 } from 'lucide-react';
+import type { AutomationRule, RuleType } from '@/types';
+
+type RuleTypeFilter = 'all' | RuleType;
+type ActiveFilter = 'all' | 'active' | 'inactive';
+
+const RULE_TYPE_OPTIONS: { value: RuleTypeFilter; labelKey: string }[] = [
+  { value: 'all', labelKey: 'allTypes' },
+  { value: 'general', labelKey: 'general' },
+  { value: 'account_detection', labelKey: 'accountDetection' },
+  { value: 'transfer', labelKey: 'transferRule' },
+];
+
+const ACTIVE_OPTIONS: { value: ActiveFilter; labelKey: string }[] = [
+  { value: 'all', labelKey: 'allStatus' },
+  { value: 'active', labelKey: 'active' },
+  { value: 'inactive', labelKey: 'inactive' },
+];
+
+const ruleTypeBadgeVariant: Record<RuleType, 'default' | 'secondary' | 'outline'> = {
+  general: 'secondary',
+  account_detection: 'default',
+  transfer: 'outline',
+};
 
 export default function AutomationPage(): React.ReactElement {
-  const { data: rules, isLoading } = useAutomationRules();
-  const { data: accounts } = useAccounts();
-  const toggleMutation = useToggleAutomationRule();
-  const deleteMutation = useDeleteAutomationRule();
-
+  const t = useTranslations('automation');
+  const tCommon = useTranslations('common');
+  const [ruleTypeFilter, setRuleTypeFilter] = useState<RuleTypeFilter>('all');
+  const [activeFilter, setActiveFilter] = useState<ActiveFilter>('all');
   const [formOpen, setFormOpen] = useState(false);
   const [editingRule, setEditingRule] = useState<AutomationRule | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<AutomationRule | null>(null);
+  const [generateConfirmOpen, setGenerateConfirmOpen] = useState(false);
+
+  const filters = {
+    ...(ruleTypeFilter !== 'all' ? { rule_type: ruleTypeFilter } : {}),
+    ...(activeFilter !== 'all' ? { is_active: activeFilter === 'active' } : {}),
+  };
+
+  const { data, isLoading, hasNextPage, fetchNextPage, isFetchingNextPage } =
+    useInfiniteAutomationRules(filters);
+  const { data: accounts } = useAccounts();
+  const toggleMutation = useToggleAutomationRule();
+  const deleteMutation = useDeleteAutomationRule();
+  const generateMutation = useGenerateAccountRules();
+
+  const bottomRef = useRef<HTMLDivElement>(null);
+
+  const handleObserver = useCallback(
+    (entries: IntersectionObserverEntry[]) => {
+      const [entry] = entries;
+      if (entry.isIntersecting && hasNextPage && !isFetchingNextPage) {
+        void fetchNextPage();
+      }
+    },
+    [hasNextPage, isFetchingNextPage, fetchNextPage],
+  );
+
+  useEffect(() => {
+    const el = bottomRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(handleObserver, { threshold: 0.1 });
+    observer.observe(el);
+    return (): void => observer.disconnect();
+  }, [handleObserver]);
+
+  const allRules = data?.pages.flatMap((p) => p.data) ?? [];
 
   const getAccountName = (accountId: string | null): string | null => {
     if (!accountId || !accounts) return null;
@@ -38,7 +114,7 @@ export default function AutomationPage(): React.ReactElement {
       { id: rule.id, is_active: checked },
       {
         onError: () => {
-          toast.error('Failed to toggle rule');
+          toast.error(t('failedToToggle'));
         },
       },
     );
@@ -58,10 +134,20 @@ export default function AutomationPage(): React.ReactElement {
     if (!deleteTarget) return;
     try {
       await deleteMutation.mutateAsync(deleteTarget.id);
-      toast.success('Rule deleted');
+      toast.success(t('ruleDeleted'));
       setDeleteTarget(null);
     } catch {
-      toast.error('Failed to delete rule');
+      toast.error(t('failedToDelete'));
+    }
+  };
+
+  const handleGenerateAccountRules = async (): Promise<void> => {
+    try {
+      const result = await generateMutation.mutateAsync();
+      toast.success(result.message);
+      setGenerateConfirmOpen(false);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t('failedToGenerate'));
     }
   };
 
@@ -69,14 +155,65 @@ export default function AutomationPage(): React.ReactElement {
     <div className='space-y-4 p-4 sm:space-y-6 sm:p-6'>
       <div className='flex items-center justify-between'>
         <div className='min-w-0'>
-          <h2 className='text-foreground text-xl font-bold sm:text-2xl'>Automation Rules</h2>
-          <p className='text-muted-foreground hidden text-sm sm:block'>
-            Rules that automatically categorize and process transactions
-          </p>
+          <h2 className='text-foreground text-xl font-bold sm:text-2xl'>{t('title')}</h2>
+          <p className='text-muted-foreground hidden text-sm sm:block'>{t('subtitle')}</p>
         </div>
-        <Button className='cursor-pointer' onClick={handleCreate}>
-          <Plus className='h-4 w-4 sm:mr-2' />
-          <span className='hidden sm:inline'>New Rule</span>
+        <div className='flex gap-2'>
+          <Button
+            variant='outline'
+            size='sm'
+            className='hidden cursor-pointer sm:flex'
+            onClick={(): void => setGenerateConfirmOpen(true)}>
+            <Wand2 className='mr-1.5 h-4 w-4' />
+            {t('autoGenerate')}
+          </Button>
+          <Button className='cursor-pointer' onClick={handleCreate}>
+            <Plus className='h-4 w-4 sm:mr-2' />
+            <span className='hidden sm:inline'>{t('newRule')}</span>
+          </Button>
+        </div>
+      </div>
+
+      {/* Filters - matching accounts page style with Select dropdowns */}
+      <div className='flex flex-wrap items-center gap-3'>
+        <Select
+          value={ruleTypeFilter}
+          onValueChange={(v): void => setRuleTypeFilter(v as RuleTypeFilter)}>
+          <SelectTrigger className='w-[160px]'>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {RULE_TYPE_OPTIONS.map((opt) => (
+              <SelectItem key={opt.value} value={opt.value}>
+                {t(opt.labelKey)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Select
+          value={activeFilter}
+          onValueChange={(v): void => setActiveFilter(v as ActiveFilter)}>
+          <SelectTrigger className='w-[140px]'>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {ACTIVE_OPTIONS.map((opt) => (
+              <SelectItem key={opt.value} value={opt.value}>
+                {t(opt.labelKey)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        {/* Mobile auto-generate button */}
+        <Button
+          variant='outline'
+          size='sm'
+          className='cursor-pointer sm:hidden'
+          onClick={(): void => setGenerateConfirmOpen(true)}>
+          <Wand2 className='mr-1.5 h-4 w-4' />
+          {t('autoGenerate')}
         </Button>
       </div>
 
@@ -86,58 +223,72 @@ export default function AutomationPage(): React.ReactElement {
             <Skeleton key={i} className='h-32 w-full' />
           ))}
         </div>
-      ) : rules?.length === 0 ? (
+      ) : allRules.length === 0 ? (
         <Card className='border-border bg-card'>
           <CardContent className='flex flex-col items-center justify-center py-12'>
             <Zap className='text-muted-foreground mb-4 h-12 w-12' />
-            <p className='text-muted-foreground mb-4'>No automation rules yet</p>
+            <p className='text-muted-foreground mb-4'>{t('noRules')}</p>
             <Button className='cursor-pointer' onClick={handleCreate}>
               <Plus className='mr-2 h-4 w-4' />
-              Create your first rule
+              {t('addFirst')}
             </Button>
           </CardContent>
         </Card>
       ) : (
-        <div className='space-y-4'>
-          {rules?.map((rule) => {
+        <div className='space-y-3'>
+          {allRules.map((rule) => {
             const transferAccount = getAccountName(rule.transfer_to_account_id);
 
-            return (
-              <Card key={rule.id} className='border-border bg-card'>
+            const ruleCardContent = (
+              <Card className='border-border bg-card'>
                 <CardHeader className='flex flex-col gap-3 space-y-0 sm:flex-row sm:items-center sm:gap-4'>
                   <div className='min-w-0 flex-1'>
                     <CardTitle className='text-base font-medium'>{rule.name}</CardTitle>
                     <div className='mt-1 flex flex-wrap items-center gap-1.5 sm:gap-2'>
-                      <Badge variant='outline'>Priority: {rule.priority}</Badge>
-                      {rule.match_phone && (
-                        <Badge variant='secondary'>
-                          <span className='hidden sm:inline'>Phone: </span>
-                          {rule.match_phone}
-                        </Badge>
-                      )}
+                      <Badge variant={ruleTypeBadgeVariant[rule.rule_type]} className='text-xs'>
+                        {rule.rule_type === 'account_detection'
+                          ? t('accountDetection')
+                          : rule.rule_type === 'transfer'
+                            ? t('transferRule')
+                            : t('general')}
+                      </Badge>
+                      <Badge variant='outline' className='font-mono text-xs'>
+                        {rule.condition_logic.toUpperCase()}
+                      </Badge>
+                      <Badge variant='outline'>
+                        {t('priority')}: {rule.priority}
+                      </Badge>
                       {transferAccount && (
                         <Badge variant='secondary'>
-                          <span className='hidden sm:inline'>Transfer to: </span>
+                          <span className='hidden sm:inline'>{t('transferRule')}: </span>
                           {transferAccount}
                         </Badge>
                       )}
                     </div>
                   </div>
-                  <div className='flex items-center gap-2'>
+                  {/* Desktop action buttons */}
+                  <div className='hidden items-center gap-2 sm:flex'>
                     <Button
                       variant='ghost'
                       size='sm'
                       onClick={(): void => handleEdit(rule)}
-                      className='h-9 w-9 cursor-pointer p-0 sm:h-8 sm:w-8'>
+                      className='h-8 w-8 cursor-pointer p-0'>
                       <Pencil className='h-4 w-4' />
                     </Button>
                     <Button
                       variant='ghost'
                       size='sm'
                       onClick={(): void => setDeleteTarget(rule)}
-                      className='text-destructive h-9 w-9 cursor-pointer p-0 sm:h-8 sm:w-8'>
+                      className='text-destructive h-8 w-8 cursor-pointer p-0'>
                       <Trash2 className='h-4 w-4' />
                     </Button>
+                    <Switch
+                      checked={rule.is_active}
+                      onCheckedChange={(checked): void => handleToggle(rule, checked)}
+                    />
+                  </div>
+                  {/* Mobile: only show toggle */}
+                  <div className='flex items-center gap-2 sm:hidden'>
                     <Switch
                       checked={rule.is_active}
                       onCheckedChange={(checked): void => handleToggle(rule, checked)}
@@ -147,32 +298,25 @@ export default function AutomationPage(): React.ReactElement {
                 <CardContent className='space-y-3'>
                   {Object.keys(rule.conditions).length > 0 && (
                     <div>
-                      <p className='text-muted-foreground mb-1 text-xs font-medium'>Conditions</p>
+                      <p className='text-muted-foreground mb-1 text-xs font-medium'>
+                        {t('conditions')}
+                      </p>
                       <div className='flex flex-wrap gap-1'>
-                        {rule.conditions.description_contains?.map((term) => (
-                          <Badge key={term} variant='outline' className='text-xs'>
-                            contains: &quot;{term}&quot;
-                          </Badge>
-                        ))}
-                        {rule.conditions.description_regex && (
-                          <Badge variant='outline' className='text-xs'>
-                            regex: {rule.conditions.description_regex}
-                          </Badge>
-                        )}
                         {rule.conditions.raw_text_contains?.map((term) => (
                           <Badge key={term} variant='outline' className='text-xs'>
-                            raw text: &quot;{term}&quot;
+                            {t('rawTextContains').toLowerCase()}: &quot;{term}&quot;
                           </Badge>
                         ))}
                         {rule.conditions.amount_between && (
                           <Badge variant='outline' className='text-xs'>
-                            amount: {rule.conditions.amount_between[0]} -{' '}
+                            {t('amountGreaterThan').toLowerCase()}:{' '}
+                            {rule.conditions.amount_between[0]} -{' '}
                             {rule.conditions.amount_between[1]}
                           </Badge>
                         )}
                         {rule.conditions.source?.map((s) => (
                           <Badge key={s} variant='outline' className='text-xs'>
-                            source: {s}
+                            {t('conditionSource').toLowerCase()}: {s}
                           </Badge>
                         ))}
                       </div>
@@ -181,51 +325,73 @@ export default function AutomationPage(): React.ReactElement {
 
                   {Object.keys(rule.actions).length > 0 && (
                     <div>
-                      <p className='text-muted-foreground mb-1 text-xs font-medium'>Actions</p>
+                      <p className='text-muted-foreground mb-1 text-xs font-medium'>
+                        {t('actions')}
+                      </p>
                       <div className='flex flex-wrap gap-1'>
                         {rule.actions.set_type && (
                           <Badge variant='default' className='text-xs'>
-                            set type: {rule.actions.set_type}
+                            {t('setType').toLowerCase()}: {rule.actions.set_type}
                           </Badge>
                         )}
                         {rule.actions.set_category && (
                           <Badge variant='default' className='text-xs'>
-                            set category
+                            {t('setCategory').toLowerCase()}
                           </Badge>
                         )}
                         {rule.actions.set_account && (
                           <Badge variant='default' className='text-xs'>
-                            set account: {getAccountName(rule.actions.set_account) ?? 'unknown'}
+                            {t('setAccount').toLowerCase()}:{' '}
+                            {getAccountName(rule.actions.set_account) ?? 'unknown'}
                           </Badge>
                         )}
                         {rule.actions.auto_reconcile && (
                           <Badge variant='default' className='text-xs'>
-                            auto reconcile
+                            {t('autoReconcile').toLowerCase()}
                           </Badge>
                         )}
                         {rule.actions.add_note && (
                           <Badge variant='default' className='text-xs'>
-                            add note
+                            {t('addNote').toLowerCase()}
                           </Badge>
                         )}
                       </div>
                     </div>
                   )}
-
-                  {rule.prompt_text && (
-                    <div>
-                      <p className='text-muted-foreground mb-1 text-xs font-medium'>AI Prompt</p>
-                      <p className='text-muted-foreground line-clamp-2 text-xs'>
-                        {rule.prompt_text}
-                      </p>
-                    </div>
-                  )}
                 </CardContent>
               </Card>
+            );
+
+            return (
+              <div key={rule.id}>
+                {/* Desktop: regular card with click-to-edit */}
+                <div className='hidden sm:block'>{ruleCardContent}</div>
+                {/* Mobile: swipeable card */}
+                <div className='sm:hidden'>
+                  <SwipeableRow
+                    onEdit={(): void => handleEdit(rule)}
+                    onDelete={(): void => setDeleteTarget(rule)}>
+                    {ruleCardContent}
+                  </SwipeableRow>
+                </div>
+              </div>
             );
           })}
         </div>
       )}
+
+      {/* Infinite scroll sentinel */}
+      <div ref={bottomRef} className='flex justify-center py-4'>
+        {isFetchingNextPage ? (
+          <Loader2 className='text-muted-foreground h-5 w-5 animate-spin' />
+        ) : hasNextPage ? (
+          <Button variant='ghost' size='sm' onClick={(): void => void fetchNextPage()}>
+            {tCommon('loadMore')}
+          </Button>
+        ) : allRules.length > 0 ? (
+          <p className='text-muted-foreground text-xs'>{t('noMoreRules')}</p>
+        ) : null}
+      </div>
 
       <AutomationForm open={formOpen} onOpenChange={setFormOpen} rule={editingRule} />
 
@@ -234,16 +400,41 @@ export default function AutomationPage(): React.ReactElement {
         onOpenChange={(open): void => {
           if (!open) setDeleteTarget(null);
         }}
-        title='Delete Rule'
-        description={
-          <p className='text-muted-foreground text-sm'>
-            This will permanently delete this automation rule.
-          </p>
-        }
+        title={t('deleteRule')}
+        description={<p className='text-muted-foreground text-sm'>{t('deleteRuleConfirm')}</p>}
         confirmText={deleteTarget?.name ?? ''}
         onConfirm={(): void => void handleDeleteConfirm()}
         isPending={deleteMutation.isPending}
       />
+
+      {/* Generate account rules confirmation dialog */}
+      <AlertDialog open={generateConfirmOpen} onOpenChange={setGenerateConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('autoGenerateTitle')}</AlertDialogTitle>
+            <AlertDialogDescription>{t('autoGenerateDescription')}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className='cursor-pointer'>{tCommon('cancel')}</AlertDialogCancel>
+            <AlertDialogAction
+              className='cursor-pointer'
+              disabled={generateMutation.isPending}
+              onClick={(e): void => {
+                e.preventDefault();
+                void handleGenerateAccountRules();
+              }}>
+              {generateMutation.isPending ? (
+                <>
+                  <Loader2 className='mr-2 h-4 w-4 animate-spin' />
+                  {tCommon('generating')}
+                </>
+              ) : (
+                t('generateRules')
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
+import { useTranslations } from 'next-intl';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAccounts } from '@/lib/api/queries/account.queries';
@@ -14,6 +15,7 @@ interface SummaryCardsProps {
 }
 
 export function SummaryCards({ year, month }: SummaryCardsProps): React.ReactElement {
+  const t = useTranslations('dashboard');
   const dateFrom = `${year}-${String(month + 1).padStart(2, '0')}-01`;
   const lastDay = new Date(year, month + 1, 0).getDate();
   const dateTo = `${year}-${String(month + 1).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
@@ -53,21 +55,21 @@ export function SummaryCards({ year, month }: SummaryCardsProps): React.ReactEle
 
   const cards = [
     {
-      label: 'Total Balance',
+      label: t('totalBalance'),
       value: stats.totalBalance,
       colorClass: stats.totalBalance >= 0 ? 'text-success' : 'text-destructive',
       icon: Wallet,
       iconColor: 'text-blue-400',
     },
     {
-      label: 'Income',
+      label: t('income'),
       value: stats.income,
       colorClass: 'text-success',
       icon: TrendingUp,
       iconColor: 'text-success',
     },
     {
-      label: 'Expenses',
+      label: t('expenses'),
       value: stats.expenses,
       colorClass: 'text-destructive',
       icon: TrendingDown,
@@ -75,7 +77,7 @@ export function SummaryCards({ year, month }: SummaryCardsProps): React.ReactEle
       prefix: '-',
     },
     {
-      label: 'Cash Flow',
+      label: t('cashFlow'),
       value: stats.cashFlow,
       colorClass: stats.cashFlow >= 0 ? 'text-success' : 'text-destructive',
       icon: Scale,

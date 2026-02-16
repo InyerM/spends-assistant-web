@@ -1,4 +1,5 @@
 import { format, parseISO } from 'date-fns';
+import { es } from 'date-fns/locale';
 
 const COLOMBIA_TIMEZONE = 'America/Bogota';
 
@@ -43,5 +44,14 @@ export function formatTimeForDisplay(timeStr: string): string {
     return `${hour12}:${minutes} ${ampm}`;
   } catch {
     return timeStr;
+  }
+}
+
+export function formatDateTime(isoString: string | null | undefined): string {
+  if (!isoString) return '\u2014';
+  try {
+    return format(parseISO(isoString), 'd MMM yyyy, h:mm a', { locale: es });
+  } catch {
+    return isoString;
   }
 }

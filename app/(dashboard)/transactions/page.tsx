@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { TransactionList } from '@/components/transactions/transaction-list';
 import { TransactionFiltersBar } from '@/components/transactions/transaction-filters';
@@ -12,16 +13,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import {
-  Plus,
-  Upload,
-  Download,
-  MoreVertical,
-  CheckSquare,
-  X,
-  Pencil,
-  Sparkles,
-} from 'lucide-react';
+import { Plus, Upload, Download, MoreVertical, CheckSquare, X, Pencil } from 'lucide-react';
+import { AiGlowButton } from '@/components/ui/ai-glow-button';
 import { ImportDialog } from '@/components/transactions/import-dialog';
 import { exportTransactionsCsv } from '@/lib/utils/export';
 import { useTransactions } from '@/lib/api/queries/transaction.queries';
@@ -42,6 +35,8 @@ function getInitialDates(): { date_from: string; date_to: string } {
 }
 
 export default function TransactionsPage(): React.ReactElement {
+  const t = useTranslations('transactions');
+  const tCommon = useTranslations('common');
   const [filters, setFilters] = useState<ListFilters>(getInitialDates);
   const [importOpen, setImportOpen] = useState(false);
   const [selectMode, setSelectMode] = useState(false);
@@ -94,7 +89,9 @@ export default function TransactionsPage(): React.ReactElement {
               onClick={exitSelectMode}>
               <X className='h-4 w-4' />
             </Button>
-            <span className='text-sm font-medium'>{selectedIds.size} selected</span>
+            <span className='text-sm font-medium'>
+              {tCommon('selected', { count: selectedIds.size })}
+            </span>
           </div>
           <Button
             size='sm'
@@ -102,16 +99,14 @@ export default function TransactionsPage(): React.ReactElement {
             disabled={selectedIds.size === 0}
             onClick={(): void => setBulkEditOpen(true)}>
             <Pencil className='mr-1.5 h-4 w-4' />
-            Edit
+            {tCommon('edit')}
           </Button>
         </div>
       ) : (
         <div className='flex items-center justify-between gap-2'>
           <div className='min-w-0'>
-            <h2 className='text-foreground text-xl font-bold sm:text-2xl'>Transactions</h2>
-            <p className='text-muted-foreground hidden text-sm sm:block'>
-              View and manage all your transactions
-            </p>
+            <h2 className='text-foreground text-xl font-bold sm:text-2xl'>{t('title')}</h2>
+            <p className='text-muted-foreground hidden text-sm sm:block'>{t('subtitle')}</p>
           </div>
           <div className='flex shrink-0 gap-2'>
             <Button
@@ -120,7 +115,7 @@ export default function TransactionsPage(): React.ReactElement {
               className='cursor-pointer'
               onClick={(): void => setSelectMode(true)}>
               <CheckSquare className='h-4 w-4 sm:mr-1.5' />
-              <span className='hidden sm:inline'>Select</span>
+              <span className='hidden sm:inline'>{tCommon('select')}</span>
             </Button>
             <Button
               variant='outline'
@@ -128,7 +123,7 @@ export default function TransactionsPage(): React.ReactElement {
               className='hidden cursor-pointer sm:flex'
               onClick={(): void => setImportOpen(true)}>
               <Upload className='mr-1.5 h-4 w-4' />
-              Import
+              {tCommon('import')}
             </Button>
             <Button
               variant='outline'
@@ -137,20 +132,13 @@ export default function TransactionsPage(): React.ReactElement {
               onClick={handleExport}
               disabled={!exportData?.data.length}>
               <Download className='mr-1.5 h-4 w-4' />
-              Export
+              {tCommon('export')}
             </Button>
-            <Button
-              variant='outline'
-              size='sm'
-              className='ai-gradient-btn cursor-pointer border-purple-500/50 bg-purple-500/10 text-purple-400 hover:border-purple-400 hover:text-purple-300'
-              onClick={openAi}>
-              <Sparkles className='h-4 w-4 sm:mr-1.5' />
-              <span className='hidden sm:inline'>AI</span>
-            </Button>
+            <AiGlowButton onClick={openAi} />
             <Button size='sm' className='cursor-pointer' onClick={openNew}>
               <Plus className='mr-1 h-4 w-4' />
-              <span className='hidden sm:inline'>New Transaction</span>
-              <span className='sm:hidden'>New</span>
+              <span className='hidden sm:inline'>{t('newTransaction')}</span>
+              <span className='sm:hidden'>{tCommon('new')}</span>
             </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -163,14 +151,14 @@ export default function TransactionsPage(): React.ReactElement {
                   className='cursor-pointer'
                   onClick={(): void => setImportOpen(true)}>
                   <Upload className='mr-2 h-4 w-4' />
-                  Import
+                  {tCommon('import')}
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   className='cursor-pointer'
                   onClick={handleExport}
                   disabled={!exportData?.data.length}>
                   <Download className='mr-2 h-4 w-4' />
-                  Export
+                  {tCommon('export')}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

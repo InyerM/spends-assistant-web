@@ -2,6 +2,7 @@
 
 import { useRef, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAccounts } from '@/lib/api/queries/account.queries';
 import { formatCurrency } from '@/lib/utils/formatting';
@@ -107,6 +108,8 @@ export function BalanceOverview({
   onEditAccount,
   onAddAccount,
 }: BalanceOverviewProps): React.ReactElement {
+  const t = useTranslations('dashboard');
+  const tCommon = useTranslations('common');
   const { data: accounts, isLoading } = useAccounts();
   const router = useRouter();
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -146,8 +149,8 @@ export function BalanceOverview({
       className='border-border text-muted-foreground hover:border-muted-foreground/50 hover:text-foreground flex cursor-pointer items-center gap-3 rounded-xl border-2 border-dashed p-4 transition-colors'>
       <Plus className='h-5 w-5 shrink-0' />
       <div className='min-w-0 text-left'>
-        <p className='text-sm font-semibold'>Add Account</p>
-        <p className='text-muted-foreground/60 text-sm'>New</p>
+        <p className='text-sm font-semibold'>{t('addAccount')}</p>
+        <p className='text-muted-foreground/60 text-sm'>{tCommon('new')}</p>
       </div>
     </button>
   ) : null;

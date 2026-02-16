@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useMemo } from 'react';
+import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
@@ -43,31 +44,41 @@ type AppField =
 
 interface FieldConfig {
   field: AppField;
-  label: string;
+  labelKey: string;
   required: boolean;
   aliases: string[];
 }
 
 const FIELD_CONFIGS: FieldConfig[] = [
-  { field: 'account', label: 'Account', required: true, aliases: ['account', 'account_id'] },
-  { field: 'date', label: 'Date', required: true, aliases: ['date'] },
-  { field: 'amount', label: 'Amount', required: true, aliases: ['amount'] },
+  {
+    field: 'account',
+    labelKey: 'fieldAccount',
+    required: true,
+    aliases: ['account', 'account_id'],
+  },
+  { field: 'date', labelKey: 'fieldDate', required: true, aliases: ['date'] },
+  { field: 'amount', labelKey: 'fieldAmount', required: true, aliases: ['amount'] },
   {
     field: 'description',
-    label: 'Description',
+    labelKey: 'fieldDescription',
     required: true,
     aliases: ['description', 'note'],
   },
-  { field: 'type', label: 'Type', required: true, aliases: ['type'] },
-  { field: 'category', label: 'Category', required: false, aliases: ['category', 'category_id'] },
-  { field: 'notes', label: 'Notes', required: false, aliases: ['notes', 'note'] },
+  { field: 'type', labelKey: 'fieldType', required: true, aliases: ['type'] },
+  {
+    field: 'category',
+    labelKey: 'fieldCategory',
+    required: false,
+    aliases: ['category', 'category_id'],
+  },
+  { field: 'notes', labelKey: 'fieldNotes', required: false, aliases: ['notes', 'note'] },
   {
     field: 'payment_method',
-    label: 'Payment Method',
+    labelKey: 'fieldPaymentMethod',
     required: false,
     aliases: ['payment_method', 'payment_type'],
   },
-  { field: 'transfer', label: 'Transfer', required: false, aliases: ['transfer'] },
+  { field: 'transfer', labelKey: 'fieldTransfer', required: false, aliases: ['transfer'] },
 ];
 
 const UNMAPPED = '__unmapped__';
@@ -206,6 +217,8 @@ interface ImportResult {
 }
 
 export function ImportDialog({ open, onOpenChange }: ImportDialogProps): React.ReactElement {
+  const t = useTranslations('transactions');
+  const tCommon = useTranslations('common');
   const [step, setStep] = useState<Step>('upload');
   const [file, setFile] = useState<File | null>(null);
   const [csvHeaders, setCsvHeaders] = useState<string[]>([]);
@@ -229,7 +242,7 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps): React.R
     const { headers, rows } = parseCsv(text);
 
     if (headers.length === 0 || rows.length === 0) {
-      toast.error('CSV file is empty or has no data rows');
+      toast.error(t('csvEmptyError'));
       setFile(null);
       return;
     }
@@ -256,8 +269,8 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps): React.R
     () =>
       FIELD_CONFIGS.filter(
         (c) => c.required && (!mapping[c.field] || mapping[c.field] === UNMAPPED),
-      ).map((c) => c.label),
-    [mapping],
+      ).map((c) => t(c.labelKey)),
+    [mapping, t],
   );
 
   const previewRows = useMemo(
@@ -288,17 +301,17 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps): React.R
 
       if (result.errors.length > 0) {
         toast.warning(
-          `Imported ${result.imported}, skipped ${result.skipped}: ${result.errors[0]}`,
+          `${t('importedCount', { count: result.imported })}, skipped ${result.skipped}: ${result.errors[0]}`,
         );
       } else {
-        toast.success(`Imported ${result.imported} transactions`);
+        toast.success(t('importedCount', { count: result.imported }));
       }
 
       void queryClient.invalidateQueries({ queryKey: transactionKeys.all });
       onOpenChange(false);
       resetState();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Import failed');
+      toast.error(error instanceof Error ? error.message : t('importFailed'));
     } finally {
       setIsImporting(false);
     }
@@ -306,10 +319,7 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps): React.R
 
   const renderUploadStep = (): React.ReactElement => (
     <div className='space-y-4'>
-      <p className='text-muted-foreground text-sm'>
-        Upload a CSV file. Column mapping is configured in the next step. Both comma and semicolon
-        delimiters are auto-detected.
-      </p>
+      <p className='text-muted-foreground text-sm'>{t('uploadDescription')}</p>
 
       <input
         ref={fileRef}
@@ -326,12 +336,12 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps): React.R
         onClick={(): void => fileRef.current?.click()}
         className='border-border hover:bg-card-overlay flex w-full cursor-pointer flex-col items-center gap-2 rounded-lg border-2 border-dashed p-8 transition-colors'>
         <Upload className='text-muted-foreground h-8 w-8' />
-        <span className='text-muted-foreground text-sm'>Click to select a CSV file</span>
+        <span className='text-muted-foreground text-sm'>{t('clickToSelect')}</span>
       </button>
 
       <div className='flex justify-end'>
         <Button variant='outline' onClick={(): void => onOpenChange(false)}>
-          Cancel
+          {tCommon('cancel')}
         </Button>
       </div>
     </div>
@@ -343,7 +353,7 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps): React.R
         <FileText className='text-muted-foreground h-4 w-4' />
         <span className='text-sm font-medium'>{file?.name}</span>
         <span className='text-muted-foreground text-xs'>
-          ({parsedRowsRef.current.length} rows, {csvHeaders.length} columns)
+          ({parsedRowsRef.current.length} {t('rows')}, {csvHeaders.length} {t('columns')})
         </span>
       </div>
 
@@ -353,7 +363,7 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps): React.R
             key={config.field}
             className='flex flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-3'>
             <span className='text-sm sm:w-32'>
-              {config.label}
+              {t(config.labelKey)}
               {config.required && <span className='text-destructive ml-0.5'>*</span>}
             </span>
             <Select
@@ -363,7 +373,7 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps): React.R
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value={UNMAPPED}>— Skip —</SelectItem>
+                <SelectItem value={UNMAPPED}>— {t('skip')} —</SelectItem>
                 {csvHeaders.map((header) => (
                   <SelectItem
                     key={header}
@@ -381,20 +391,20 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps): React.R
       {missingRequired.length > 0 && (
         <div className='text-destructive flex items-center gap-2 text-xs'>
           <AlertTriangle className='h-3.5 w-3.5' />
-          Missing required: {missingRequired.join(', ')}
+          {t('missingRequired', { fields: missingRequired.join(', ') })}
         </div>
       )}
 
       <div className='flex justify-between'>
         <Button variant='outline' onClick={(): void => resetState()}>
           <ArrowLeft className='mr-1 h-4 w-4' />
-          Back
+          {tCommon('back')}
         </Button>
         <Button
           disabled={missingRequired.length > 0}
           className='cursor-pointer'
           onClick={(): void => setStep('preview')}>
-          Preview
+          {t('preview')}
           <ArrowRight className='ml-1 h-4 w-4' />
         </Button>
       </div>
@@ -404,20 +414,22 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps): React.R
   const renderPreviewStep = (): React.ReactElement => (
     <div className='space-y-4'>
       <p className='text-muted-foreground text-sm'>
-        Showing first {previewRows.length} of {parsedRowsRef.current.length} rows. Accounts and
-        categories will be resolved by name.
+        {t('previewDescription', {
+          shown: previewRows.length,
+          total: parsedRowsRef.current.length,
+        })}
       </p>
 
       <div className='max-h-64 overflow-auto rounded border'>
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Date</TableHead>
-              <TableHead className='hidden sm:table-cell'>Account</TableHead>
-              <TableHead>Description</TableHead>
-              <TableHead className='text-right'>Amount</TableHead>
-              <TableHead>Type</TableHead>
-              <TableHead className='hidden sm:table-cell'>Category</TableHead>
+              <TableHead>{t('date')}</TableHead>
+              <TableHead className='hidden sm:table-cell'>{t('account')}</TableHead>
+              <TableHead>{t('description')}</TableHead>
+              <TableHead className='text-right'>{t('amount')}</TableHead>
+              <TableHead>{t('type')}</TableHead>
+              <TableHead className='hidden sm:table-cell'>{t('category')}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -442,13 +454,15 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps): React.R
       <div className='flex justify-between'>
         <Button variant='outline' onClick={(): void => setStep('map')}>
           <ArrowLeft className='mr-1 h-4 w-4' />
-          Back
+          {tCommon('back')}
         </Button>
         <Button
           onClick={(): void => void handleImport()}
           disabled={isImporting}
           className='cursor-pointer'>
-          {isImporting ? 'Importing...' : `Import ${parsedRowsRef.current.length} transactions`}
+          {isImporting
+            ? tCommon('importing')
+            : t('importCount', { count: parsedRowsRef.current.length })}
         </Button>
       </div>
     </div>
@@ -461,13 +475,13 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps): React.R
         if (!v) resetState();
         onOpenChange(v);
       }}>
-      <DialogContent className='border-border bg-card sm:max-w-[600px]'>
+      <DialogContent className='border-border bg-card max-h-[85dvh] overflow-y-auto sm:max-w-[600px]'>
         <DialogHeader>
           <DialogTitle>
-            Import Transactions
+            {t('importTransactions')}
             {step !== 'upload' && (
               <span className='text-muted-foreground ml-2 text-sm font-normal'>
-                — {step === 'map' ? 'Map Columns' : 'Preview'}
+                — {step === 'map' ? t('mapColumns') : t('preview')}
               </span>
             )}
           </DialogTitle>

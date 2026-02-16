@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,6 +13,7 @@ import { useProfile, useUpdateProfile } from '@/hooks/use-profile';
 import { supabaseClient } from '@/lib/supabase/client';
 
 export function ProfileTab(): React.ReactElement {
+  const t = useTranslations('settings');
   const { data: profile, isLoading } = useProfile();
   const updateProfile = useUpdateProfile();
   const [displayName, setDisplayName] = useState<string | null>(null);
@@ -22,8 +24,8 @@ export function ProfileTab(): React.ReactElement {
     updateProfile.mutate(
       { display_name: currentName },
       {
-        onSuccess: () => toast.success('Profile updated'),
-        onError: () => toast.error('Failed to update profile'),
+        onSuccess: () => toast.success(t('profileUpdated')),
+        onError: () => toast.error(t('profileUpdateFailed')),
       },
     );
   };
@@ -36,7 +38,7 @@ export function ProfileTab(): React.ReactElement {
       });
       if (error) throw error;
     } catch {
-      toast.error('Failed to link Google account');
+      toast.error(t('linkGoogleFailed'));
     }
   };
 
@@ -62,8 +64,8 @@ export function ProfileTab(): React.ReactElement {
     <div className='space-y-6'>
       <Card>
         <CardHeader>
-          <CardTitle>Profile</CardTitle>
-          <CardDescription>Manage your account information</CardDescription>
+          <CardTitle>{t('profile')}</CardTitle>
+          <CardDescription>{t('manageAccount')}</CardDescription>
         </CardHeader>
         <CardContent className='space-y-6'>
           <div className='flex items-center gap-4'>
@@ -82,7 +84,7 @@ export function ProfileTab(): React.ReactElement {
           </div>
 
           <div className='space-y-2'>
-            <Label htmlFor='display-name'>Display name</Label>
+            <Label htmlFor='display-name'>{t('displayName')}</Label>
             <Input
               id='display-name'
               value={currentName}
@@ -92,32 +94,32 @@ export function ProfileTab(): React.ReactElement {
           </div>
 
           <div className='space-y-2'>
-            <Label htmlFor='email'>Email</Label>
+            <Label htmlFor='email'>{t('email')}</Label>
             <Input id='email' value={profile?.email ?? ''} disabled />
           </div>
 
           <Button onClick={handleSave} disabled={updateProfile.isPending}>
-            {updateProfile.isPending ? 'Saving...' : 'Save changes'}
+            {updateProfile.isPending ? 'Saving...' : t('saveChanges')}
           </Button>
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle>Linked accounts</CardTitle>
-          <CardDescription>Connect third-party accounts for easier sign-in</CardDescription>
+          <CardTitle>{t('linkedAccounts')}</CardTitle>
+          <CardDescription>{t('linkedAccountsDescription')}</CardDescription>
         </CardHeader>
         <CardContent>
           <div className='flex items-center justify-between'>
             <div>
-              <p className='font-medium'>Google</p>
+              <p className='font-medium'>{t('google')}</p>
               <p className='text-muted-foreground text-sm'>
-                {hasGoogle ? 'Connected' : 'Not connected'}
+                {hasGoogle ? t('connected') : t('notConnected')}
               </p>
             </div>
             {!hasGoogle && (
               <Button variant='outline' onClick={(): void => void handleLinkGoogle()}>
-                Link Google
+                {t('linkGoogle')}
               </Button>
             )}
           </div>

@@ -1,13 +1,18 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import Link from 'next/link';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { ConfirmDeleteDialog } from '@/components/shared/confirm-delete-dialog';
 import { useAccounts } from '@/lib/api/queries/account.queries';
+import { useDeleteAccount } from '@/lib/api/mutations/account.mutations';
 import { AccountEditDialog } from '@/components/accounts/account-edit-dialog';
 import { AccountCreateDialog } from '@/components/accounts/account-create-dialog';
+import { SwipeableRow } from '@/components/transactions/swipeable-row';
 import { formatCurrency } from '@/lib/utils/formatting';
 import {
   Plus,
@@ -45,22 +50,34 @@ function AccountTypeIcon({
 }
 
 export default function AccountsPage(): React.ReactElement {
+  const t = useTranslations('accounts');
   const { data: accounts, isLoading } = useAccounts();
+  const deleteMutation = useDeleteAccount();
   const [createOpen, setCreateOpen] = useState(false);
   const [editingAccount, setEditingAccount] = useState<Account | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Account | null>(null);
+
+  const handleDeleteConfirm = async (): Promise<void> => {
+    if (!deleteTarget) return;
+    try {
+      await deleteMutation.mutateAsync(deleteTarget.id);
+      toast.success(t('accountDeleted'));
+      setDeleteTarget(null);
+    } catch {
+      toast.error(t('failedToDelete'));
+    }
+  };
 
   return (
     <div className='space-y-4 p-4 sm:space-y-6 sm:p-6'>
       <div className='flex items-center justify-between'>
         <div className='min-w-0'>
-          <h2 className='text-foreground text-xl font-bold sm:text-2xl'>Accounts</h2>
-          <p className='text-muted-foreground hidden text-sm sm:block'>
-            Manage your financial accounts
-          </p>
+          <h2 className='text-foreground text-xl font-bold sm:text-2xl'>{t('title')}</h2>
+          <p className='text-muted-foreground hidden text-sm sm:block'>{t('subtitle')}</p>
         </div>
         <Button onClick={(): void => setCreateOpen(true)}>
           <Plus className='h-4 w-4 sm:mr-2' />
-          <span className='hidden sm:inline'>New Account</span>
+          <span className='hidden sm:inline'>{t('newAccount')}</span>
         </Button>
       </div>
 
@@ -80,8 +97,8 @@ export default function AccountsPage(): React.ReactElement {
         </div>
       ) : (
         <div className='grid gap-4 md:grid-cols-2 lg:grid-cols-3'>
-          {accounts?.map((account) => (
-            <Link key={account.id} href={`/accounts/${account.id}`}>
+          {accounts?.map((account) => {
+            const cardContent = (
               <Card className='border-border bg-card hover:border-primary/50 cursor-pointer transition-colors'>
                 <CardHeader className='flex flex-row items-center justify-between space-y-0'>
                   <CardTitle className='text-base font-medium'>
@@ -96,7 +113,7 @@ export default function AccountsPage(): React.ReactElement {
                       e.stopPropagation();
                       setEditingAccount(account);
                     }}
-                    className='h-9 w-9 p-0 sm:h-8 sm:w-8'>
+                    className='hidden h-8 w-8 p-0 sm:flex'>
                     <Pencil className='h-4 w-4' />
                   </Button>
                 </CardHeader>
@@ -106,14 +123,33 @@ export default function AccountsPage(): React.ReactElement {
                     {formatCurrency(account.balance, account.currency)}
                   </div>
                   <div className='text-muted-foreground mt-2 flex items-center gap-2 text-sm'>
-                    <span className='capitalize'>{account.type.replace('_', ' ')}</span>
+                    <span className='capitalize'>
+                      {t(account.type === 'credit_card' ? 'creditCard' : account.type)}
+                    </span>
                     {account.institution && <span>· {account.institution}</span>}
                     {account.last_four && <span>· •••• {account.last_four}</span>}
                   </div>
                 </CardContent>
               </Card>
-            </Link>
-          ))}
+            );
+
+            return (
+              <div key={account.id}>
+                {/* Desktop: regular link card */}
+                <div className='hidden sm:block'>
+                  <Link href={`/accounts/${account.id}`}>{cardContent}</Link>
+                </div>
+                {/* Mobile: swipeable card */}
+                <div className='sm:hidden'>
+                  <SwipeableRow
+                    onEdit={(): void => setEditingAccount(account)}
+                    onDelete={(): void => setDeleteTarget(account)}>
+                    <Link href={`/accounts/${account.id}`}>{cardContent}</Link>
+                  </SwipeableRow>
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
 
@@ -125,6 +161,25 @@ export default function AccountsPage(): React.ReactElement {
         onOpenChange={(open): void => {
           if (!open) setEditingAccount(null);
         }}
+      />
+
+      <ConfirmDeleteDialog
+        open={deleteTarget !== null}
+        onOpenChange={(open): void => {
+          if (!open) setDeleteTarget(null);
+        }}
+        title={t('deleteAccount')}
+        description={
+          <p className='text-muted-foreground text-sm'>
+            {t('deleteAccountConfirm', {
+              name: deleteTarget?.name ?? '',
+              txInfo: '',
+            })}
+          </p>
+        }
+        confirmText={deleteTarget?.name ?? ''}
+        onConfirm={(): void => void handleDeleteConfirm()}
+        isPending={deleteMutation.isPending}
       />
     </div>
   );

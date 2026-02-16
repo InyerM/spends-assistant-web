@@ -8,7 +8,7 @@
 
 The project uses `proxy.ts` for auth/session logic. It is NOT wired up as Next.js middleware and
 must NOT be. Do not attempt to re-export it from `middleware.ts`. Do not create `middleware.ts` for
-any reason. If you think you need middleware, ask the user first.
+any reason. If you think you need middleware, ask the user first or use `proxy.ts`.
 
 ### Project Auth Pattern
 
@@ -278,3 +278,13 @@ that shouldn't re-subscribe.
 
 **8.3 useEffectEvent for Stable Callbacks** Access latest values in callbacks without adding them to
 dependency arrays.
+
+---
+
+## Important
+
+Before finishing a prompt, always check the code for any errors or typos.
+
+- Run `pnpm type-check` to check for any type errors.
+- Run `pnpm lint:fix` to check for any linting errors.
+- Run `pnpm format:fix` to format the code.

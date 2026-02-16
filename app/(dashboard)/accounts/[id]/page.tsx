@@ -2,6 +2,7 @@
 
 import { use, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -67,6 +68,8 @@ export default function AccountDetailPage({
   params: Promise<{ id: string }>;
 }): React.ReactElement {
   const { id } = use(params);
+  const t = useTranslations('accounts');
+  const tCommon = useTranslations('common');
   const router = useRouter();
   const { data: account, isLoading } = useAccount(id);
   const { data: txResult } = useTransactions({ account_id: id, limit: 100 });
@@ -80,11 +83,11 @@ export default function AccountDetailPage({
     if (!account) return;
     try {
       await deleteMutation.mutateAsync(account.id);
-      toast.success('Account deleted');
+      toast.success(t('accountDeleted'));
       setConfirmDeleteOpen(false);
       router.push('/accounts');
     } catch {
-      toast.error('Failed to delete account');
+      toast.error(t('failedToDelete'));
     }
   }
 
@@ -106,7 +109,7 @@ export default function AccountDetailPage({
   if (!account) {
     return (
       <div className='p-4 sm:p-6'>
-        <p className='text-muted-foreground'>Account not found</p>
+        <p className='text-muted-foreground'>{t('accountNotFound')}</p>
       </div>
     );
   }
@@ -124,7 +127,7 @@ export default function AccountDetailPage({
             onClick={(): void => router.back()}>
             <ArrowLeft className='h-5 w-5' />
           </Button>
-          <h2 className='text-foreground text-xl font-bold sm:text-2xl'>Account Detail</h2>
+          <h2 className='text-foreground text-xl font-bold sm:text-2xl'>{t('accountDetail')}</h2>
         </div>
         <div className='flex gap-2'>
           <Button
@@ -132,14 +135,14 @@ export default function AccountDetailPage({
             className='cursor-pointer'
             onClick={(): void => setEditOpen(true)}>
             <Pencil className='h-4 w-4 sm:mr-2' />
-            <span className='hidden sm:inline'>Edit</span>
+            <span className='hidden sm:inline'>{tCommon('edit')}</span>
           </Button>
           <Button
             variant='outline'
             className='text-destructive cursor-pointer'
             onClick={(): void => setConfirmDeleteOpen(true)}>
             <Trash2 className='h-4 w-4 sm:mr-2' />
-            <span className='hidden sm:inline'>Delete</span>
+            <span className='hidden sm:inline'>{tCommon('delete')}</span>
           </Button>
         </div>
       </div>
@@ -161,17 +164,17 @@ export default function AccountDetailPage({
       <Tabs defaultValue='balance'>
         <TabsList>
           <TabsTrigger value='balance' className='cursor-pointer'>
-            Balance
+            {t('balanceTab')}
           </TabsTrigger>
           <TabsTrigger value='records' className='cursor-pointer'>
-            Records
+            {t('recordsTab')}
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value='balance' className='mt-4'>
           <Card className='border-border bg-card'>
             <CardContent className='p-6'>
-              <p className='text-muted-foreground text-sm'>Current Balance</p>
+              <p className='text-muted-foreground text-sm'>{t('currentBalance')}</p>
               <p
                 className={`text-3xl font-bold ${account.balance >= 0 ? 'text-success' : 'text-destructive'}`}>
                 {formatCurrency(account.balance, account.currency)}
@@ -182,11 +185,11 @@ export default function AccountDetailPage({
 
         <TabsContent value='records' className='mt-4'>
           <p className='text-muted-foreground mb-4 text-sm'>
-            {transactions.length} transactions found
+            {t('transactionsFound', { count: transactions.length })}
           </p>
           {transactions.length === 0 ? (
             <p className='text-muted-foreground py-8 text-center text-sm'>
-              No transactions for this account
+              {t('noTransactionsForAccount')}
             </p>
           ) : (
             <div className='space-y-0.5'>
@@ -241,17 +244,13 @@ export default function AccountDetailPage({
       <ConfirmDeleteDialog
         open={confirmDeleteOpen}
         onOpenChange={setConfirmDeleteOpen}
-        title='Delete Account'
+        title={t('deleteAccount')}
         description={
           <p className='text-muted-foreground text-sm'>
-            This will permanently delete <strong>{account.name}</strong>
-            {txCount > 0 && (
-              <>
-                {' '}
-                and its <strong>{txCount}</strong> transaction{txCount !== 1 && 's'}
-              </>
-            )}
-            . This action cannot be undone.
+            {t('deleteAccountConfirm', {
+              name: account.name,
+              txInfo: txCount > 0 ? t('andTransactions', { count: txCount }) : '',
+            })}
           </p>
         }
         confirmText={account.name}

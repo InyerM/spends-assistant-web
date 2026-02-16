@@ -1,32 +1,34 @@
 'use client';
 
 import { usePathname } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 
-const routeToTitle: Record<string, string> = {
-  '/dashboard': 'Dashboard',
-  '/transactions': 'Transactions',
-  '/accounts': 'Accounts',
-  '/categories': 'Categories',
-  '/automation': 'Automation Rules',
-  '/settings': 'Settings',
+const routeToKey: Record<string, string> = {
+  '/dashboard': 'dashboard',
+  '/transactions': 'transactions',
+  '/accounts': 'accounts',
+  '/categories': 'categories',
+  '/automation': 'automation',
+  '/settings': 'settings',
 };
 
-function getPageTitle(pathname: string): string {
-  for (const [route, title] of Object.entries(routeToTitle)) {
+function getPageTitleKey(pathname: string): string {
+  for (const [route, key] of Object.entries(routeToKey)) {
     if (pathname === route || pathname.startsWith(route + '/')) {
-      return title;
+      return key;
     }
   }
-  return 'Dashboard';
+  return 'dashboard';
 }
 
 export function Header(): React.ReactElement {
   const pathname = usePathname();
-  const title = getPageTitle(pathname);
+  const t = useTranslations('nav');
+  const titleKey = getPageTitleKey(pathname);
 
   return (
     <header className='border-border bg-sidebar-bg/50 hidden h-14 shrink-0 items-center gap-4 border-b px-6 backdrop-blur-sm md:flex'>
-      <h1 className='text-foreground text-lg font-semibold'>{title}</h1>
+      <h1 className='text-foreground text-lg font-semibold'>{t(titleKey)}</h1>
       <div className='flex-1' />
     </header>
   );

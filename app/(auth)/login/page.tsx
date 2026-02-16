@@ -3,7 +3,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { toast } from 'sonner';
@@ -29,8 +29,14 @@ type FormValues = z.infer<typeof formSchema>;
 
 export default function LoginPage(): React.ReactElement {
   const router = useRouter();
-  const { signInWithPassword, signInWithGoogle, isLoading } = useAuth();
+  const { signInWithPassword, signInWithGoogle, isLoading, isAuthenticated } = useAuth();
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      router.push('/dashboard');
+    }
+  }, [isAuthenticated, router]);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),

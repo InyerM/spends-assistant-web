@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -19,6 +20,8 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
+import { DatePicker } from '@/components/ui/date-picker';
+import { TimePicker } from '@/components/ui/time-picker';
 import { Textarea } from '@/components/ui/textarea';
 import {
   Select,
@@ -41,6 +44,7 @@ import {
 import { DuplicateWarningDialog } from '@/components/transactions/duplicate-warning-dialog';
 import { getCurrentColombiaTimes } from '@/lib/utils/date';
 import { useTransactionFormStore } from '@/lib/stores/transaction-form.store';
+import { UsageIndicator } from '@/components/shared/usage-indicator';
 import { useUsage } from '@/hooks/use-usage';
 import { useSubscription } from '@/hooks/use-subscription';
 import type { Transaction, CreateTransactionInput } from '@/types';
@@ -70,6 +74,8 @@ export function TransactionForm({
   onOpenChange,
   transaction,
 }: TransactionFormProps): React.ReactElement {
+  const t = useTranslations('transactions');
+  const tCommon = useTranslations('common');
   const { data: accounts } = useAccounts();
   const { data: categories } = useCategories();
   const { data: usage } = useUsage();
@@ -158,7 +164,7 @@ export function TransactionForm({
           category_id: values.category_id ?? undefined,
           transfer_to_account_id: values.transfer_to_account_id ?? undefined,
         });
-        toast.success('Transaction updated');
+        toast.success(t('transactionUpdated'));
         onOpenChange(false);
       } else {
         const aiSource = transaction?.source === 'web-ai' ? transaction : null;
@@ -175,7 +181,7 @@ export function TransactionForm({
               }
             : {}),
         });
-        toast.success('Transaction created');
+        toast.success(t('transactionCreated'));
         if (addAnotherRef.current) {
           const times = getCurrentColombiaTimes();
           form.reset({
@@ -199,7 +205,7 @@ export function TransactionForm({
         setDuplicateConflict({ match: err.match, input: err.input });
         return;
       }
-      toast.error(isEditing ? 'Failed to update transaction' : 'Failed to create transaction');
+      toast.error(isEditing ? t('failedToUpdate') : t('failedToCreate'));
     }
   }
 
@@ -207,11 +213,11 @@ export function TransactionForm({
     if (!transaction) return;
     try {
       await deleteMutation.mutateAsync(transaction.id);
-      toast.success('Transaction deleted');
+      toast.success(t('transactionDeleted'));
       setConfirmDeleteOpen(false);
       onOpenChange(false);
     } catch {
-      toast.error('Failed to delete transaction');
+      toast.error(t('failedToDelete'));
     }
   }
 
@@ -219,31 +225,21 @@ export function TransactionForm({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className='border-border bg-card max-h-[90vh] overflow-y-auto sm:max-w-[500px]'>
+      <DialogContent className='border-border bg-card max-h-[85dvh] overflow-y-auto sm:max-w-[500px]'>
         <DialogHeader>
-          <DialogTitle>{isEditing ? 'Edit Transaction' : 'New Transaction'}</DialogTitle>
+          <DialogTitle>{isEditing ? t('editTransaction') : t('newTransaction')}</DialogTitle>
         </DialogHeader>
 
         {!isEditing && subscription?.plan !== 'pro' && usage && (
-          <div className='border-border bg-muted/30 flex items-center justify-between rounded-lg border px-3 py-2 text-xs'>
-            <span className='text-muted-foreground'>
-              Transactions: {usage.transactions_count}/{usage.transactions_limit} · AI Parses:{' '}
-              {usage.ai_parses_used}/{usage.ai_parses_limit}
-            </span>
-            <a href='/settings' className='text-primary font-medium hover:underline'>
-              Upgrade
-            </a>
-          </div>
+          <UsageIndicator usage={usage} showTransactions />
         )}
 
         {isEditing && transaction.duplicate_status === 'pending_review' && (
           <div className='border-warning/30 bg-warning/5 flex items-start gap-3 rounded-lg border p-3'>
             <AlertTriangle className='text-warning mt-0.5 h-4 w-4 shrink-0' />
             <div className='flex-1'>
-              <p className='text-sm font-medium'>Possible duplicate</p>
-              <p className='text-muted-foreground text-xs'>
-                This transaction was flagged as a possible duplicate.
-              </p>
+              <p className='text-sm font-medium'>{t('duplicateWarning')}</p>
+              <p className='text-muted-foreground text-xs'>{t('duplicateFlagged')}</p>
               <div className='mt-2 flex gap-2'>
                 <Button
                   type='button'
@@ -255,13 +251,13 @@ export function TransactionForm({
                       { id: transaction.id, action: 'keep' },
                       {
                         onSuccess: () => {
-                          toast.success('Marked as not duplicate');
+                          toast.success(t('markedAsNotDuplicate'));
                           onOpenChange(false);
                         },
                       },
                     );
                   }}>
-                  Keep both
+                  {t('keepBoth')}
                 </Button>
                 <Button
                   type='button'
@@ -274,13 +270,13 @@ export function TransactionForm({
                       { id: transaction.id, action: 'delete' },
                       {
                         onSuccess: () => {
-                          toast.success('Duplicate deleted');
+                          toast.success(t('duplicateDeleted'));
                           onOpenChange(false);
                         },
                       },
                     );
                   }}>
-                  Delete this one
+                  {t('deleteThisOne')}
                 </Button>
               </div>
             </div>
@@ -293,7 +289,7 @@ export function TransactionForm({
             className='ai-gradient-btn flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg border border-purple-500/50 px-3 py-2 text-sm text-purple-400 transition-colors hover:border-purple-400 hover:text-purple-300'
             onClick={openAi}>
             <Sparkles className='h-4 w-4' />
-            Or create with AI
+            {t('orCreateWithAi')}
           </button>
         )}
 
@@ -305,9 +301,9 @@ export function TransactionForm({
                 name='date'
                 render={({ field }): React.ReactElement => (
                   <FormItem>
-                    <FormLabel>Date</FormLabel>
+                    <FormLabel>{t('date')}</FormLabel>
                     <FormControl>
-                      <Input type='date' className='appearance-none' {...field} />
+                      <DatePicker value={field.value} onChange={field.onChange} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -318,9 +314,9 @@ export function TransactionForm({
                 name='time'
                 render={({ field }): React.ReactElement => (
                   <FormItem>
-                    <FormLabel>Time</FormLabel>
+                    <FormLabel>{t('time')}</FormLabel>
                     <FormControl>
-                      <Input type='time' step='1' className='appearance-none' {...field} />
+                      <TimePicker value={field.value} onChange={field.onChange} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -333,17 +329,17 @@ export function TransactionForm({
               name='type'
               render={({ field }): React.ReactElement => (
                 <FormItem>
-                  <FormLabel>Type</FormLabel>
+                  <FormLabel>{t('type')}</FormLabel>
                   <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder='Select type' />
+                        <SelectValue placeholder={t('selectType')} />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value='expense'>Expense</SelectItem>
-                      <SelectItem value='income'>Income</SelectItem>
-                      <SelectItem value='transfer'>Transfer</SelectItem>
+                      <SelectItem value='expense'>{t('expense')}</SelectItem>
+                      <SelectItem value='income'>{t('income')}</SelectItem>
+                      <SelectItem value='transfer'>{t('transfer')}</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -356,7 +352,7 @@ export function TransactionForm({
               name='amount'
               render={({ field }): React.ReactElement => (
                 <FormItem>
-                  <FormLabel>Amount (COP)</FormLabel>
+                  <FormLabel>{t('amountCop')}</FormLabel>
                   <FormControl>
                     <Input
                       type='number'
@@ -378,10 +374,10 @@ export function TransactionForm({
               name='description'
               render={({ field }): React.ReactElement => (
                 <FormItem>
-                  <FormLabel>Description</FormLabel>
+                  <FormLabel>{t('description')}</FormLabel>
                   <FormControl>
                     <Textarea
-                      placeholder='What was this for?'
+                      placeholder={t('descriptionPlaceholder')}
                       rows={2}
                       className='resize-none sm:min-h-9 sm:py-1'
                       {...field}
@@ -397,13 +393,13 @@ export function TransactionForm({
               name='account_id'
               render={({ field }): React.ReactElement => (
                 <FormItem>
-                  <FormLabel>Account</FormLabel>
+                  <FormLabel>{t('account')}</FormLabel>
                   <FormControl>
                     <SearchableSelect
                       value={field.value}
                       onValueChange={field.onChange}
-                      placeholder='Select account'
-                      searchPlaceholder='Search accounts...'
+                      placeholder={t('selectAccount')}
+                      searchPlaceholder={t('searchAccounts')}
                       items={buildAccountItems(accounts ?? [])}
                     />
                   </FormControl>
@@ -418,13 +414,13 @@ export function TransactionForm({
                 name='transfer_to_account_id'
                 render={({ field }): React.ReactElement => (
                   <FormItem>
-                    <FormLabel>Transfer To</FormLabel>
+                    <FormLabel>{t('transferTo')}</FormLabel>
                     <FormControl>
                       <SearchableSelect
                         value={field.value}
                         onValueChange={field.onChange}
-                        placeholder='Select destination account'
-                        searchPlaceholder='Search accounts...'
+                        placeholder={t('selectDestAccount')}
+                        searchPlaceholder={t('searchAccounts')}
                         items={buildAccountItems(accounts ?? [])}
                       />
                     </FormControl>
@@ -439,13 +435,13 @@ export function TransactionForm({
               name='category_id'
               render={({ field }): React.ReactElement => (
                 <FormItem>
-                  <FormLabel>Category</FormLabel>
+                  <FormLabel>{t('category')}</FormLabel>
                   <FormControl>
                     <SearchableSelect
                       value={field.value}
                       onValueChange={field.onChange}
-                      placeholder='Select category'
-                      searchPlaceholder='Search categories...'
+                      placeholder={t('selectCategory')}
+                      searchPlaceholder={t('searchCategories')}
                       items={buildCategoryItems(allCategories, watchType)}
                     />
                   </FormControl>
@@ -459,9 +455,9 @@ export function TransactionForm({
               name='notes'
               render={({ field }): React.ReactElement => (
                 <FormItem>
-                  <FormLabel>Notes</FormLabel>
+                  <FormLabel>{t('notes')}</FormLabel>
                   <FormControl>
-                    <Textarea placeholder='Optional notes...' {...field} />
+                    <Textarea placeholder={t('notesPlaceholder')} {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -475,7 +471,7 @@ export function TransactionForm({
                   variant='ghost'
                   className='text-destructive cursor-pointer'
                   onClick={(): void => setConfirmDeleteOpen(true)}>
-                  Delete
+                  {tCommon('delete')}
                 </Button>
               )}
               {!isEditing && (
@@ -488,21 +484,21 @@ export function TransactionForm({
                       addAnotherRef.current = val;
                     }}
                   />
-                  <span className='text-muted-foreground text-sm'>Add another</span>
+                  <span className='text-muted-foreground text-sm'>{t('addAnother')}</span>
                 </label>
               )}
               <div className='flex gap-3'>
                 <Button type='button' variant='outline' onClick={(): void => onOpenChange(false)}>
-                  Cancel
+                  {tCommon('cancel')}
                 </Button>
                 <Button
                   type='submit'
                   disabled={createMutation.isPending || updateMutation.isPending}>
                   {createMutation.isPending || updateMutation.isPending
-                    ? 'Saving...'
+                    ? tCommon('saving')
                     : isEditing
-                      ? 'Update'
-                      : 'Create'}
+                      ? tCommon('update')
+                      : tCommon('create')}
                 </Button>
               </div>
             </div>
@@ -514,11 +510,11 @@ export function TransactionForm({
         <ConfirmDeleteDialog
           open={confirmDeleteOpen}
           onOpenChange={setConfirmDeleteOpen}
-          title='Delete Transaction'
+          title={t('deleteTransaction')}
           description={
-            <p className='text-muted-foreground text-sm'>This action cannot be undone.</p>
+            <p className='text-muted-foreground text-sm'>{tCommon('actionCannotBeUndone')}</p>
           }
-          confirmText='Delete Transaction'
+          confirmText={t('deleteTransaction')}
           onConfirm={handleDelete}
           isPending={deleteMutation.isPending}
         />

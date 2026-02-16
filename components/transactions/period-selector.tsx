@@ -1,6 +1,7 @@
 'use client';
 
 import { Fragment, useState, useMemo } from 'react';
+import { useTranslations, useLocale } from 'next-intl';
 import {
   startOfWeek,
   endOfWeek,
@@ -28,37 +29,24 @@ interface PeriodSelectorProps {
   onChange: (dateFrom: string, dateTo: string) => void;
 }
 
-const MONTH_NAMES = [
-  'January',
-  'February',
-  'March',
-  'April',
-  'May',
-  'June',
-  'July',
-  'August',
-  'September',
-  'October',
-  'November',
-  'December',
-];
+function getMonthNames(locale: string): string[] {
+  return Array.from({ length: 12 }, (_, i) =>
+    new Intl.DateTimeFormat(locale, { month: 'long' }).format(new Date(2024, i, 1)),
+  );
+}
 
-const MONTH_SHORT = [
-  'Jan',
-  'Feb',
-  'Mar',
-  'Apr',
-  'May',
-  'Jun',
-  'Jul',
-  'Aug',
-  'Sep',
-  'Oct',
-  'Nov',
-  'Dec',
-];
+function getMonthShort(locale: string): string[] {
+  return Array.from({ length: 12 }, (_, i) =>
+    new Intl.DateTimeFormat(locale, { month: 'short' }).format(new Date(2024, i, 1)),
+  );
+}
 
-const DAY_HEADERS = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'];
+function getDayHeaders(locale: string): string[] {
+  // Monday = 2024-01-01, Tuesday = 2024-01-02, etc.
+  return Array.from({ length: 7 }, (_, i) =>
+    new Intl.DateTimeFormat(locale, { weekday: 'short' }).format(new Date(2024, 0, i + 1)),
+  );
+}
 
 function toStr(date: Date): string {
   const y = date.getFullYear();
@@ -103,16 +91,22 @@ function detectMode(dateFrom: string, dateTo: string): PeriodMode {
   return 'custom';
 }
 
-function getLabel(dateFrom: string, dateTo: string, mode: PeriodMode): string {
+function getLabel(
+  dateFrom: string,
+  dateTo: string,
+  mode: PeriodMode,
+  monthNames: string[],
+  monthShort: string[],
+): string {
   const from = toDate(dateFrom);
   const to = toDate(dateTo);
 
   switch (mode) {
     case 'month':
-      return `${MONTH_NAMES[from.getMonth()]} ${from.getFullYear()}`;
+      return `${monthNames[from.getMonth()]} ${from.getFullYear()}`;
     case 'week': {
-      const fromMonth = MONTH_SHORT[from.getMonth()];
-      const toMonth = MONTH_SHORT[to.getMonth()];
+      const fromMonth = monthShort[from.getMonth()];
+      const toMonth = monthShort[to.getMonth()];
       return from.getMonth() === to.getMonth()
         ? `W${getISOWeek(from)} · ${fromMonth} ${from.getDate()} – ${to.getDate()}, ${from.getFullYear()}`
         : `W${getISOWeek(from)} · ${fromMonth} ${from.getDate()} – ${toMonth} ${to.getDate()}, ${to.getFullYear()}`;
@@ -120,8 +114,8 @@ function getLabel(dateFrom: string, dateTo: string, mode: PeriodMode): string {
     case 'year':
       return String(from.getFullYear());
     case 'custom': {
-      const fromMonth = MONTH_SHORT[from.getMonth()];
-      const toMonth = MONTH_SHORT[to.getMonth()];
+      const fromMonth = monthShort[from.getMonth()];
+      const toMonth = monthShort[to.getMonth()];
       return `${fromMonth} ${from.getDate()}, ${from.getFullYear()} – ${toMonth} ${to.getDate()}, ${to.getFullYear()}`;
     }
   }
@@ -132,6 +126,12 @@ export function PeriodSelector({
   dateTo,
   onChange,
 }: PeriodSelectorProps): React.ReactElement {
+  const t = useTranslations('transactions');
+  const tCommon = useTranslations('common');
+  const locale = useLocale();
+  const monthNames = useMemo(() => getMonthNames(locale), [locale]);
+  const monthShort = useMemo(() => getMonthShort(locale), [locale]);
+  const dayHeaders = useMemo(() => getDayHeaders(locale), [locale]);
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<PeriodMode>(() => detectMode(dateFrom, dateTo));
   const [popoverTab, setPopoverTab] = useState<PeriodMode>(mode);
@@ -143,7 +143,7 @@ export function PeriodSelector({
     () => Math.floor(toDate(dateFrom).getFullYear() / 10) * 10,
   );
 
-  const label = getLabel(dateFrom, dateTo, mode);
+  const label = getLabel(dateFrom, dateTo, mode, monthNames, monthShort);
   const fromDate = toDate(dateFrom);
 
   const handlePrev = (): void => {
@@ -289,16 +289,16 @@ export function PeriodSelector({
           <Tabs value={popoverTab} onValueChange={(v): void => setPopoverTab(v as PeriodMode)}>
             <TabsList className='w-full'>
               <TabsTrigger value='custom' className='flex-1 cursor-pointer text-xs'>
-                Custom
+                {t('periodCustom')}
               </TabsTrigger>
               <TabsTrigger value='week' className='flex-1 cursor-pointer text-xs'>
-                Weeks
+                {t('periodWeeks')}
               </TabsTrigger>
               <TabsTrigger value='month' className='flex-1 cursor-pointer text-xs'>
-                Months
+                {t('periodMonths')}
               </TabsTrigger>
               <TabsTrigger value='year' className='flex-1 cursor-pointer text-xs'>
-                Years
+                {t('periodYears')}
               </TabsTrigger>
             </TabsList>
 
@@ -321,7 +321,7 @@ export function PeriodSelector({
                 </Button>
               </div>
               <div className='grid grid-cols-3 gap-1'>
-                {MONTH_SHORT.map((name, i) => {
+                {monthShort.map((name, i) => {
                   const isActive =
                     mode === 'month' &&
                     i === fromDate.getMonth() &&
@@ -352,7 +352,7 @@ export function PeriodSelector({
                   <ChevronLeft className='h-4 w-4' />
                 </Button>
                 <span className='text-sm font-semibold'>
-                  {MONTH_NAMES[calendarMonth.getMonth()]} {calendarMonth.getFullYear()}
+                  {monthNames[calendarMonth.getMonth()]} {calendarMonth.getFullYear()}
                 </span>
                 <Button
                   variant='ghost'
@@ -363,7 +363,7 @@ export function PeriodSelector({
                 </Button>
               </div>
               <div className='grid grid-cols-7 text-center'>
-                {DAY_HEADERS.map((d) => (
+                {dayHeaders.map((d) => (
                   <div key={d} className='text-muted-foreground py-1 text-xs font-medium'>
                     {d}
                   </div>
@@ -437,7 +437,9 @@ export function PeriodSelector({
             <TabsContent value='custom' className='mt-3'>
               <div className='space-y-3'>
                 <div className='space-y-1.5'>
-                  <label className='text-muted-foreground text-xs font-medium'>From</label>
+                  <label className='text-muted-foreground text-xs font-medium'>
+                    {t('periodFrom')}
+                  </label>
                   <Input
                     type='date'
                     value={customFrom}
@@ -446,7 +448,9 @@ export function PeriodSelector({
                   />
                 </div>
                 <div className='space-y-1.5'>
-                  <label className='text-muted-foreground text-xs font-medium'>To</label>
+                  <label className='text-muted-foreground text-xs font-medium'>
+                    {t('periodTo')}
+                  </label>
                   <Input
                     type='date'
                     value={customTo}
@@ -459,7 +463,7 @@ export function PeriodSelector({
                   disabled={!customFrom || !customTo || customFrom > customTo}
                   className='w-full cursor-pointer'
                   size='sm'>
-                  Apply
+                  {tCommon('apply')}
                 </Button>
               </div>
             </TabsContent>
@@ -471,7 +475,7 @@ export function PeriodSelector({
               size='sm'
               className='w-full cursor-pointer text-xs'
               onClick={handleReset}>
-              Reset to current month
+              {t('resetToCurrentMonth')}
             </Button>
           </div>
         </PopoverContent>

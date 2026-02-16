@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import { useTranslations } from 'next-intl';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -10,12 +11,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
+import { ColorPicker } from '@/components/ui/color-picker';
 import {
   Select,
   SelectContent,
@@ -26,21 +29,25 @@ import {
 import { useCreateAccount } from '@/lib/api/mutations/account.mutations';
 import type { AccountType } from '@/types';
 
-const accountTypes: { value: AccountType; label: string }[] = [
-  { value: 'checking', label: 'Checking' },
-  { value: 'savings', label: 'Savings' },
-  { value: 'credit_card', label: 'Credit Card' },
-  { value: 'cash', label: 'Cash' },
-  { value: 'investment', label: 'Investment' },
-  { value: 'crypto', label: 'Crypto' },
-  { value: 'credit', label: 'Credit' },
+const accountTypes: { value: AccountType; labelKey: string }[] = [
+  { value: 'checking', labelKey: 'checking' },
+  { value: 'savings', labelKey: 'savings' },
+  { value: 'credit_card', labelKey: 'creditCard' },
+  { value: 'cash', labelKey: 'cash' },
+  { value: 'investment', labelKey: 'investment' },
+  { value: 'crypto', labelKey: 'crypto' },
+  { value: 'credit', labelKey: 'credit' },
 ];
 
 const formSchema = z.object({
   name: z.string().min(1, 'Name is required'),
   type: z.enum(['checking', 'savings', 'credit_card', 'cash', 'investment', 'crypto', 'credit']),
   institution: z.string().optional(),
-  last_four: z.string().max(4).optional(),
+  last_four: z
+    .string()
+    .regex(/^\d{4}$/, 'Must be exactly 4 digits')
+    .or(z.literal(''))
+    .optional(),
   currency: z.string(),
   color: z.string().optional(),
   icon: z.string().optional(),
@@ -57,6 +64,8 @@ export function AccountCreateDialog({
   open,
   onOpenChange,
 }: AccountCreateDialogProps): React.ReactElement {
+  const t = useTranslations('accounts');
+  const tCommon = useTranslations('common');
   const createMutation = useCreateAccount();
 
   const form = useForm<FormValues>({
@@ -86,16 +95,17 @@ export function AccountCreateDialog({
     }
   }, [open, form]);
 
-  const watchType = form.watch('type');
-  const showLastFour = watchType === 'credit_card' || watchType === 'credit';
-
   async function onSubmit(values: FormValues): Promise<void> {
     try {
-      await createMutation.mutateAsync(values);
-      toast.success('Account created');
+      const payload = {
+        ...values,
+        last_four: values.last_four?.trim() || null,
+      };
+      await createMutation.mutateAsync(payload);
+      toast.success(t('accountCreated'));
       onOpenChange(false);
     } catch {
-      toast.error('Failed to create account');
+      toast.error(t('failedToCreate'));
     }
   }
 
@@ -103,7 +113,7 @@ export function AccountCreateDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className='border-border bg-card sm:max-w-[425px]'>
         <DialogHeader>
-          <DialogTitle>New Account</DialogTitle>
+          <DialogTitle>{t('newAccount')}</DialogTitle>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className='space-y-4'>
@@ -112,9 +122,9 @@ export function AccountCreateDialog({
               name='name'
               render={({ field }): React.ReactElement => (
                 <FormItem>
-                  <FormLabel>Name</FormLabel>
+                  <FormLabel>{t('name')}</FormLabel>
                   <FormControl>
-                    <Input placeholder='Account name' {...field} />
+                    <Input placeholder={t('namePlaceholder')} {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -125,17 +135,17 @@ export function AccountCreateDialog({
               name='type'
               render={({ field }): React.ReactElement => (
                 <FormItem>
-                  <FormLabel>Type</FormLabel>
+                  <FormLabel>{t('type')}</FormLabel>
                   <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder='Select type' />
+                        <SelectValue placeholder={t('type')} />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {accountTypes.map((t) => (
-                        <SelectItem key={t.value} value={t.value}>
-                          {t.label}
+                      {accountTypes.map((at) => (
+                        <SelectItem key={at.value} value={at.value}>
+                          {t(at.labelKey)}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -149,36 +159,35 @@ export function AccountCreateDialog({
               name='institution'
               render={({ field }): React.ReactElement => (
                 <FormItem>
-                  <FormLabel>Institution</FormLabel>
+                  <FormLabel>{t('institution')}</FormLabel>
                   <FormControl>
-                    <Input placeholder='e.g. Bancolombia' {...field} />
+                    <Input placeholder={t('institutionPlaceholder')} {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
-            {showLastFour && (
-              <FormField
-                control={form.control}
-                name='last_four'
-                render={({ field }): React.ReactElement => (
-                  <FormItem>
-                    <FormLabel>Last 4 Digits</FormLabel>
-                    <FormControl>
-                      <Input placeholder='1234' maxLength={4} {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            )}
+            <FormField
+              control={form.control}
+              name='last_four'
+              render={({ field }): React.ReactElement => (
+                <FormItem>
+                  <FormLabel>{t('lastFour')}</FormLabel>
+                  <FormControl>
+                    <Input placeholder='7799' maxLength={4} inputMode='numeric' {...field} />
+                  </FormControl>
+                  <FormDescription>{t('lastFourDescription')}</FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             <div className='grid grid-cols-2 gap-4'>
               <FormField
                 control={form.control}
                 name='icon'
                 render={({ field }): React.ReactElement => (
                   <FormItem>
-                    <FormLabel>Icon</FormLabel>
+                    <FormLabel>{t('icon')}</FormLabel>
                     <FormControl>
                       <Input placeholder='💳' {...field} />
                     </FormControl>
@@ -191,9 +200,9 @@ export function AccountCreateDialog({
                 name='color'
                 render={({ field }): React.ReactElement => (
                   <FormItem>
-                    <FormLabel>Color</FormLabel>
+                    <FormLabel>{t('color')}</FormLabel>
                     <FormControl>
-                      <Input type='color' {...field} />
+                      <ColorPicker value={field.value ?? ''} onChange={field.onChange} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -202,10 +211,10 @@ export function AccountCreateDialog({
             </div>
             <div className='flex justify-end gap-3 pt-4'>
               <Button type='button' variant='outline' onClick={(): void => onOpenChange(false)}>
-                Cancel
+                {tCommon('cancel')}
               </Button>
               <Button type='submit' disabled={createMutation.isPending}>
-                {createMutation.isPending ? 'Saving...' : 'Create'}
+                {createMutation.isPending ? tCommon('saving') : tCommon('create')}
               </Button>
             </div>
           </form>

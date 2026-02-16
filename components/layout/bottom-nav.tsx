@@ -2,6 +2,7 @@
 
 import { usePathname, useRouter } from 'next/navigation';
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import {
   LayoutDashboard,
   ArrowRightLeft,
@@ -19,21 +20,21 @@ import { useAuth } from '@/hooks/use-auth';
 import type { LucideIcon } from 'lucide-react';
 
 interface NavItem {
-  title: string;
+  titleKey: string;
   href: string;
   icon: LucideIcon;
 }
 
 const mainItems: NavItem[] = [
-  { title: 'Home', href: '/dashboard', icon: LayoutDashboard },
-  { title: 'Transactions', href: '/transactions', icon: ArrowRightLeft },
-  { title: 'Accounts', href: '/accounts', icon: Wallet },
-  { title: 'Categories', href: '/categories', icon: Tags },
+  { titleKey: 'home', href: '/dashboard', icon: LayoutDashboard },
+  { titleKey: 'transactions', href: '/transactions', icon: ArrowRightLeft },
+  { titleKey: 'accounts', href: '/accounts', icon: Wallet },
+  { titleKey: 'categories', href: '/categories', icon: Tags },
 ];
 
 const moreItems: NavItem[] = [
-  { title: 'Automation', href: '/automation', icon: Zap },
-  { title: 'Settings', href: '/settings', icon: Settings },
+  { titleKey: 'automation', href: '/automation', icon: Zap },
+  { titleKey: 'settings', href: '/settings', icon: Settings },
 ];
 
 function isActivePath(pathname: string, href: string): boolean {
@@ -43,6 +44,8 @@ function isActivePath(pathname: string, href: string): boolean {
 export function BottomNav(): React.ReactElement {
   const pathname = usePathname();
   const router = useRouter();
+  const t = useTranslations('nav');
+  const tCommon = useTranslations('common');
   const { user, signOut } = useAuth();
   const [moreOpen, setMoreOpen] = useState(false);
 
@@ -77,7 +80,7 @@ export function BottomNav(): React.ReactElement {
                   active ? 'text-primary' : 'text-muted-foreground',
                 )}>
                 <item.icon className='h-5 w-5' />
-                <span>{item.title}</span>
+                <span>{t(item.titleKey)}</span>
               </button>
             );
           })}
@@ -88,7 +91,7 @@ export function BottomNav(): React.ReactElement {
               moreActive ? 'text-primary' : 'text-muted-foreground',
             )}>
             <MoreHorizontal className='h-5 w-5' />
-            <span>More</span>
+            <span>{t('more')}</span>
           </button>
         </div>
       </nav>
@@ -96,7 +99,7 @@ export function BottomNav(): React.ReactElement {
       <Sheet open={moreOpen} onOpenChange={setMoreOpen}>
         <SheetContent side='bottom' className='border-border bg-card'>
           <SheetHeader>
-            <SheetTitle>More</SheetTitle>
+            <SheetTitle>{t('more')}</SheetTitle>
           </SheetHeader>
           <div className='space-y-1 py-4'>
             <div className='mb-3 flex items-center gap-3 px-3'>
@@ -118,7 +121,7 @@ export function BottomNav(): React.ReactElement {
                     active ? 'bg-primary text-white' : 'text-foreground hover:bg-card-overlay',
                   )}>
                   <item.icon className='h-5 w-5' />
-                  <span>{item.title}</span>
+                  <span>{t(item.titleKey)}</span>
                 </button>
               );
             })}
@@ -127,7 +130,7 @@ export function BottomNav(): React.ReactElement {
               onClick={(): void => void handleLogout()}
               className='text-destructive hover:bg-card-overlay flex w-full cursor-pointer items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium transition-colors'>
               <LogOut className='h-5 w-5' />
-              <span>Logout</span>
+              <span>{tCommon('signOut')}</span>
             </button>
           </div>
         </SheetContent>

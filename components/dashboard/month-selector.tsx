@@ -1,39 +1,24 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
+import { useLocale } from 'next-intl';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
-const MONTH_NAMES = [
-  'January',
-  'February',
-  'March',
-  'April',
-  'May',
-  'June',
-  'July',
-  'August',
-  'September',
-  'October',
-  'November',
-  'December',
-];
+function getMonthNames(locale: string): string[] {
+  return Array.from({ length: 12 }, (_, i) => {
+    const name = new Intl.DateTimeFormat(locale, { month: 'long' }).format(new Date(2024, i, 1));
+    return name.charAt(0).toUpperCase() + name.slice(1);
+  });
+}
 
-const MONTH_SHORT = [
-  'Jan',
-  'Feb',
-  'Mar',
-  'Apr',
-  'May',
-  'Jun',
-  'Jul',
-  'Aug',
-  'Sep',
-  'Oct',
-  'Nov',
-  'Dec',
-];
+function getMonthShort(locale: string): string[] {
+  return Array.from({ length: 12 }, (_, i) => {
+    const name = new Intl.DateTimeFormat(locale, { month: 'short' }).format(new Date(2024, i, 1));
+    return name.charAt(0).toUpperCase() + name.slice(1);
+  });
+}
 
 interface MonthSelectorProps {
   year: number;
@@ -42,6 +27,9 @@ interface MonthSelectorProps {
 }
 
 export function MonthSelector({ year, month, onChange }: MonthSelectorProps): React.ReactElement {
+  const locale = useLocale();
+  const monthNames = useMemo(() => getMonthNames(locale), [locale]);
+  const monthShort = useMemo(() => getMonthShort(locale), [locale]);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pickerYear, setPickerYear] = useState(year);
 
@@ -83,7 +71,7 @@ export function MonthSelector({ year, month, onChange }: MonthSelectorProps): Re
       <Popover open={pickerOpen} onOpenChange={handlePickerOpen}>
         <PopoverTrigger asChild>
           <button className='hover:bg-card-overlay min-w-[140px] cursor-pointer rounded-md px-2 py-1 text-center text-sm font-medium transition-colors'>
-            {MONTH_NAMES[month]} {year}
+            {monthNames[month]} {year}
           </button>
         </PopoverTrigger>
         <PopoverContent className='w-64 p-3' align='center'>
@@ -105,7 +93,7 @@ export function MonthSelector({ year, month, onChange }: MonthSelectorProps): Re
             </Button>
           </div>
           <div className='grid grid-cols-3 gap-1'>
-            {MONTH_SHORT.map((name, i) => (
+            {monthShort.map((name, i) => (
               <button
                 key={name}
                 onClick={(): void => handleMonthPick(i)}

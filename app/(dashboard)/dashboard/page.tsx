@@ -1,16 +1,19 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { BalanceOverview } from '@/components/dashboard/balance-overview';
 import { SummaryCards } from '@/components/dashboard/summary-cards';
 import { SpendingByCategory } from '@/components/dashboard/spending-by-category';
 import { RecentTransactions } from '@/components/dashboard/recent-transactions';
 import { MonthSelector } from '@/components/dashboard/month-selector';
+import { UsageCard } from '@/components/dashboard/usage-card';
 import { AccountEditDialog } from '@/components/accounts/account-edit-dialog';
 import { AccountCreateDialog } from '@/components/accounts/account-create-dialog';
 import type { Account } from '@/types';
 
 export default function DashboardPage(): React.ReactElement {
+  const t = useTranslations('dashboard');
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth());
@@ -30,7 +33,7 @@ export default function DashboardPage(): React.ReactElement {
       />
 
       <div className='flex items-center justify-between'>
-        <h2 className='text-foreground text-base font-semibold sm:text-lg'>Overview</h2>
+        <h2 className='text-foreground text-base font-semibold sm:text-lg'>{t('overview')}</h2>
         <MonthSelector year={year} month={month} onChange={handleMonthChange} />
       </div>
 
@@ -38,7 +41,10 @@ export default function DashboardPage(): React.ReactElement {
 
       <div className='grid gap-6 lg:grid-cols-2'>
         <SpendingByCategory year={year} month={month} />
-        <RecentTransactions />
+        <div className='space-y-6'>
+          <UsageCard />
+          <RecentTransactions />
+        </div>
       </div>
 
       <AccountEditDialog

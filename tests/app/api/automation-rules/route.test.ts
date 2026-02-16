@@ -16,7 +16,7 @@ vi.mock('@/lib/api/server', () => ({
 
 function createChainableQuery(data: unknown, error: { message: string } | null = null) {
   const chain: Record<string, ReturnType<typeof vi.fn>> = {};
-  ['select', 'eq', 'is', 'order', 'insert'].forEach((m) => {
+  ['select', 'eq', 'is', 'order', 'insert', 'range'].forEach((m) => {
     chain[m] = vi.fn().mockReturnValue(chain);
   });
   chain.single = vi.fn().mockResolvedValue({ data, error });
@@ -26,6 +26,7 @@ function createChainableQuery(data: unknown, error: { message: string } | null =
       resolve({
         data: Array.isArray(data) ? data : data ? [data] : [],
         error,
+        count: Array.isArray(data) ? data.length : data ? 1 : 0,
       }),
     enumerable: false,
     configurable: true,
@@ -51,10 +52,11 @@ describe('GET /api/automation-rules', () => {
       userId: 'test-user-id',
     });
 
-    const response = await GET();
+    const request = new NextRequest('http://localhost/api/automation-rules');
+    const response = await GET(request);
     expect(response.status).toBe(200);
-    const body = await response.json();
-    expect(body).toHaveLength(2);
+    const body = (await response.json()) as { data: unknown[]; count: number };
+    expect(body.data).toHaveLength(2);
   });
 
   it('returns 400 on error', async () => {
@@ -64,7 +66,8 @@ describe('GET /api/automation-rules', () => {
       userId: 'test-user-id',
     });
 
-    const response = await GET();
+    const request = new NextRequest('http://localhost/api/automation-rules');
+    const response = await GET(request);
     expect(response.status).toBe(400);
   });
 });
