@@ -87,7 +87,7 @@ export function DuplicateWarningDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className='border-border bg-card sm:max-w-[480px]'>
+      <DialogContent className='border-border bg-card w-[calc(100vw-2rem)] max-w-[540px]'>
         <DialogHeader>
           <DialogTitle className='flex items-center gap-2'>
             <AlertTriangle className='text-warning h-5 w-5' />
@@ -97,7 +97,7 @@ export function DuplicateWarningDialog({
 
         <p className='text-muted-foreground text-sm'>{t('duplicateExists')}</p>
 
-        <div className='grid grid-cols-2 gap-3'>
+        <div className='grid grid-cols-2 gap-2'>
           <ComparisonCard
             label={t('existing')}
             amount={existingTransaction.amount}
@@ -159,17 +159,17 @@ function ComparisonCard({
 }): React.ReactElement {
   return (
     <div
-      className={`rounded-lg border p-3 ${
+      className={`max-h-[180px] overflow-hidden rounded-lg border p-2.5 ${
         highlight ? 'border-primary/40 bg-primary/5' : 'border-border bg-secondary/50'
       }`}>
-      <span className='text-muted-foreground mb-2 block text-xs font-medium tracking-wide uppercase'>
+      <span className='text-muted-foreground mb-1 block text-[10px] font-medium tracking-wide uppercase'>
         {label}
       </span>
-      <p className='text-lg font-semibold'>{formatCurrency(amount)}</p>
-      <p className='text-sm'>{description}</p>
-      <div className='text-muted-foreground mt-2 space-y-0.5 text-xs'>
+      <p className='text-base leading-tight font-semibold'>{formatCurrency(amount)}</p>
+      <p className='mt-0.5 truncate text-xs'>{description}</p>
+      <div className='text-muted-foreground mt-1.5 space-y-0 text-[11px] leading-snug'>
         <p>{date}</p>
-        <p>{account}</p>
+        <p className='truncate'>{account}</p>
         <p>
           {type} &middot; {category}
         </p>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useTranslations } from 'next-intl';
 import { useLocale } from 'next-intl';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -41,7 +41,18 @@ import {
 } from '@/lib/api/mutations/category.mutations';
 import { SwipeableRow } from '@/components/transactions/swipeable-row';
 import { slugify } from '@/lib/utils/slugify';
-import { Plus, Pencil, Trash2, ChevronDown, ChevronRight, Eye, EyeOff, Info } from 'lucide-react';
+import {
+  Plus,
+  Pencil,
+  Trash2,
+  ChevronDown,
+  ChevronRight,
+  Eye,
+  EyeOff,
+  Info,
+  Search,
+  X,
+} from 'lucide-react';
 import type { Category, CategoryType, SpendingNature } from '@/types';
 
 const spendingNatureTooltipKey: Record<SpendingNature, string> = {
@@ -105,6 +116,7 @@ export default function CategoriesPage(): React.ReactElement {
   } | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [showHidden, setShowHidden] = useState(false);
+  const [search, setSearch] = useState('');
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -243,32 +255,102 @@ export default function CategoriesPage(): React.ReactElement {
 
   const parentCategories = allCategories?.filter((c) => !c.parent_id) ?? [];
 
-  // Filter tree based on showHidden toggle
-  const filteredTree = showHidden
-    ? categoryTree
-    : categoryTree
-        ?.map((parent) => ({
+  // Filter tree based on showHidden toggle and search
+  const filteredTree = useMemo(() => {
+    let tree = categoryTree;
+    if (!tree) return tree;
+
+    // Visibility filter
+    if (!showHidden) {
+      tree = tree
+        .map((parent) => ({
           ...parent,
           children: parent.children.filter((child) => child.is_active),
         }))
         .filter((parent) => parent.is_active);
+    }
+
+    // Search filter
+    const q = search.trim().toLowerCase();
+    if (q) {
+      tree = tree
+        .map((parent) => {
+          const parentName = getCategoryDisplayName(parent, locale).toLowerCase();
+          const matchingChildren = parent.children.filter((child) => {
+            const childName = getCategoryDisplayName(child, locale).toLowerCase();
+            return childName.includes(q) || child.slug.includes(q);
+          });
+          // Include parent if it matches or has matching children
+          if (parentName.includes(q) || parent.slug.includes(q)) {
+            return parent; // show all children when parent matches
+          }
+          if (matchingChildren.length > 0) {
+            return { ...parent, children: matchingChildren };
+          }
+          return null;
+        })
+        .filter(Boolean) as typeof tree;
+    }
+
+    return tree;
+  }, [categoryTree, showHidden, search, locale]);
 
   return (
     <TooltipProvider>
       <div className='space-y-4 p-4 sm:space-y-6 sm:p-6'>
-        <div className='flex justify-end'>
-          <Button className='cursor-pointer' onClick={(): void => handleCreate()}>
-            <Plus className='h-4 w-4 sm:mr-2' />
-            <span className='hidden sm:inline'>{t('newCategory')}</span>
-          </Button>
-        </div>
+        <div className='space-y-3 sm:space-y-0'>
+          {/* Mobile: search full-width */}
+          <div className='relative sm:hidden'>
+            <Search className='text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2' />
+            <Input
+              placeholder={`${tCommon('search')}...`}
+              value={search}
+              onChange={(e): void => setSearch(e.target.value)}
+              className='h-9 pr-8 pl-10 text-sm'
+            />
+            {search && (
+              <button
+                type='button'
+                onClick={(): void => setSearch('')}
+                className='text-muted-foreground hover:text-foreground absolute top-1/2 right-2 -translate-y-1/2 cursor-pointer'>
+                <X className='h-4 w-4' />
+              </button>
+            )}
+          </div>
 
-        {/* Show hidden toggle */}
-        <div className='flex items-center gap-2'>
-          <Switch checked={showHidden} onCheckedChange={setShowHidden} id='show-hidden' />
-          <label htmlFor='show-hidden' className='text-muted-foreground cursor-pointer text-sm'>
-            {t('showHidden')}
-          </label>
+          {/* Toggle + button row (mobile), search + toggle + button row (desktop) */}
+          <div className='flex items-center justify-between'>
+            <div className='flex items-center gap-3'>
+              {/* Desktop: search inline */}
+              <div className='relative hidden max-w-[320px] min-w-[180px] flex-1 sm:block'>
+                <Search className='text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2' />
+                <Input
+                  placeholder={`${tCommon('search')}...`}
+                  value={search}
+                  onChange={(e): void => setSearch(e.target.value)}
+                  className='h-9 pr-8 pl-10 text-sm'
+                />
+                {search && (
+                  <button
+                    type='button'
+                    onClick={(): void => setSearch('')}
+                    className='text-muted-foreground hover:text-foreground absolute top-1/2 right-2 -translate-y-1/2 cursor-pointer'>
+                    <X className='h-4 w-4' />
+                  </button>
+                )}
+              </div>
+              <Switch checked={showHidden} onCheckedChange={setShowHidden} id='show-hidden' />
+              <label
+                htmlFor='show-hidden'
+                className='text-muted-foreground cursor-pointer text-sm whitespace-nowrap'>
+                {t('showHidden')}
+              </label>
+            </div>
+            <Button className='cursor-pointer' onClick={(): void => handleCreate()}>
+              <Plus className='h-4 w-4 sm:mr-2' />
+              <span className='hidden sm:inline'>{t('newCategory')}</span>
+            </Button>
+          </div>
         </div>
 
         {isLoading ? (

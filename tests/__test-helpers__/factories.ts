@@ -31,6 +31,7 @@ export function createMockTransaction(overrides: Partial<Transaction> = {}): Tra
     applied_rules: null,
     duplicate_status: null,
     duplicate_of: null,
+    import_id: null,
     deleted_at: null,
     created_at: '2024-01-15T19:30:00Z',
     updated_at: '2024-01-15T19:30:00Z',

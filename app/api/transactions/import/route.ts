@@ -19,6 +19,9 @@ interface ImportTransaction {
 interface ImportBody {
   transactions: ImportTransaction[];
   resolve_names?: boolean;
+  file_name?: string;
+  row_count?: number;
+  force?: boolean;
 }
 
 async function resolveNames(
@@ -113,37 +116,99 @@ export async function POST(request: NextRequest): Promise<Response> {
       }
     }
 
+    // Create import record first (status=pending)
+    const fileName = body.file_name ?? 'import.csv';
+    const rowCount = body.row_count ?? body.transactions.length;
+
+    const { data: importRecord, error: importError } = await supabase
+      .from('imports')
+      .insert({
+        user_id: userId,
+        source: 'csv',
+        file_name: fileName,
+        file_path: null,
+        row_count: rowCount,
+        imported_count: 0,
+        status: 'pending',
+      })
+      .select()
+      .single();
+
+    if (importError) return errorResponse(importError.message, 400);
+
+    const importId = importRecord.id as string;
+
     if (body.resolve_names) {
       const { resolved, errors } = await resolveNames(body.transactions, supabase);
 
       if (resolved.length === 0) {
+        // Update import as failed
+        await supabase
+          .from('imports')
+          .update({ status: 'failed', imported_count: 0 })
+          .eq('id', importId);
         return errorResponse(
           errors.length > 0 ? errors[0] : 'No transactions could be resolved',
           400,
         );
       }
 
-      // Add user_id to each resolved transaction
-      const withUserId = resolved.map((tx) => ({ ...tx, user_id: userId }));
+      // Add user_id and import_id to each resolved transaction
+      const withMeta = resolved.map((tx) => ({
+        ...tx,
+        user_id: userId,
+        import_id: importId,
+        ...(body.force ? { duplicate_status: 'confirmed' as const } : {}),
+      }));
 
-      const { data, error } = await supabase.from('transactions').insert(withUserId).select();
+      const { data, error } = await supabase.from('transactions').insert(withMeta).select();
 
-      if (error) return errorResponse(error.message, 400);
+      if (error) {
+        await supabase
+          .from('imports')
+          .update({ status: 'failed', imported_count: 0 })
+          .eq('id', importId);
+        return errorResponse(error.message, 400);
+      }
+
+      // Update import record with final counts
+      await supabase
+        .from('imports')
+        .update({ status: 'completed', imported_count: data.length })
+        .eq('id', importId);
 
       const skipped = body.transactions.length - resolved.length;
-      return jsonResponse({ imported: data.length, skipped, errors }, 201);
+      return jsonResponse({ imported: data.length, skipped, errors, import_id: importId }, 201);
     }
 
-    // Add user_id to each transaction
-    const withUserId = (body.transactions as unknown as Record<string, unknown>[]).map((tx) => ({
+    // Add user_id and import_id to each transaction
+    const withMeta = (body.transactions as unknown as Record<string, unknown>[]).map((tx) => ({
       ...tx,
       user_id: userId,
+      import_id: importId,
+      ...(body.force ? { duplicate_status: 'confirmed' as const } : {}),
     }));
 
-    const { data, error } = await supabase.from('transactions').insert(withUserId).select();
+    const { data, error } = await supabase.from('transactions').insert(withMeta).select();
 
-    if (error) return errorResponse(error.message, 400);
-    return jsonResponse({ imported: data.length, skipped: 0, errors: [] }, 201);
+    if (error) {
+      await supabase
+        .from('imports')
+        .update({ status: 'failed', imported_count: 0 })
+        .eq('id', importId);
+      return errorResponse(error.message, 400);
+    }
+
+    // Update import record with final counts
+    await supabase
+      .from('imports')
+      .update({ status: 'completed', imported_count: data.length })
+      .eq('id', importId);
+
+    return jsonResponse(
+      { imported: data.length, skipped: 0, errors: [], import_id: importId },
+      201,
+    );
   } catch (error) {
     if (error instanceof AuthError) return errorResponse('Unauthorized', 401);
     return errorResponse('Failed to import transactions');

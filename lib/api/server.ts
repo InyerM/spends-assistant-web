@@ -80,11 +80,18 @@ interface TransactionForRules {
   [key: string]: unknown;
 }
 
-function matchesConditions(tx: TransactionForRules, conditions: AutomationRuleConditions): boolean {
+function matchesConditions(
+  tx: TransactionForRules,
+  conditions: AutomationRuleConditions,
+  logic: 'and' | 'or' = 'or',
+): boolean {
   if (conditions.description_contains) {
     const desc = tx.description.toLowerCase();
-    const matches = conditions.description_contains.some((kw) => desc.includes(kw.toLowerCase()));
-    if (!matches) return false;
+    const matchFn =
+      logic === 'and'
+        ? conditions.description_contains.every((kw) => desc.includes(kw.toLowerCase()))
+        : conditions.description_contains.some((kw) => desc.includes(kw.toLowerCase()));
+    if (!matchFn) return false;
   }
   if (conditions.description_regex) {
     const regex = new RegExp(conditions.description_regex, 'i');
@@ -102,8 +109,11 @@ function matchesConditions(tx: TransactionForRules, conditions: AutomationRuleCo
   }
   if (conditions.raw_text_contains) {
     const rawText = (tx.raw_text ?? '').toLowerCase();
-    const matches = conditions.raw_text_contains.some((kw) => rawText.includes(kw.toLowerCase()));
-    if (!matches) return false;
+    const matchFn =
+      logic === 'and'
+        ? conditions.raw_text_contains.every((kw) => rawText.includes(kw.toLowerCase()))
+        : conditions.raw_text_contains.some((kw) => rawText.includes(kw.toLowerCase()));
+    if (!matchFn) return false;
   }
   if (conditions.source) {
     if (!conditions.source.includes(tx.source)) return false;
@@ -153,7 +163,8 @@ export async function applyAutomationRules(
     [];
 
   for (const rule of rules as AutomationRule[]) {
-    if (matchesConditions(result, rule.conditions)) {
+    const logic = ((rule.condition_logic as string | undefined) ?? 'or') as 'and' | 'or';
+    if (matchesConditions(result, rule.conditions, logic)) {
       const actions = { ...rule.actions };
       if (rule.transfer_to_account_id && !actions.link_to_account) {
         actions.link_to_account = rule.transfer_to_account_id;

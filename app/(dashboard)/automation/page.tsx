@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -36,7 +36,8 @@ import {
   useDeleteAutomationRule,
   useGenerateAccountRules,
 } from '@/lib/api/mutations/automation.mutations';
-import { Plus, Pencil, Trash2, Zap, Loader2, Wand2, Sparkles } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Plus, Pencil, Trash2, Zap, Loader2, Wand2, Sparkles, Search, X } from 'lucide-react';
 import type { AutomationRule, CreateAutomationRuleInput, RuleType } from '@/types';
 
 type RuleTypeFilter = 'all' | RuleType;
@@ -73,6 +74,7 @@ export default function AutomationPage(): React.ReactElement {
   const [aiDialogOpen, setAiDialogOpen] = useState(false);
   const [aiInitialData, setAiInitialData] = useState<CreateAutomationRuleInput | null>(null);
   const [aiPromptText, setAiPromptText] = useState<string>('');
+  const [search, setSearch] = useState('');
 
   const filters = {
     ...(ruleTypeFilter !== 'all' ? { rule_type: ruleTypeFilter } : {}),
@@ -106,7 +108,17 @@ export default function AutomationPage(): React.ReactElement {
     return (): void => observer.disconnect();
   }, [handleObserver]);
 
-  const allRules = data?.pages.flatMap((p) => p.data) ?? [];
+  const allRulesRaw = useMemo(() => data?.pages.flatMap((p) => p.data) ?? [], [data?.pages]);
+
+  const allRules = useMemo((): AutomationRule[] => {
+    const q = search.trim().toLowerCase();
+    if (!q) return allRulesRaw;
+    return allRulesRaw.filter(
+      (r) =>
+        r.name.toLowerCase().includes(q) ||
+        r.conditions.raw_text_contains?.some((term) => term.toLowerCase().includes(q)),
+    );
+  }, [allRulesRaw, search]);
 
   // Hide auto-generate when user has no non-default accounts or all active ones are covered
   const allActiveAccountsCovered = ((): boolean => {
@@ -116,7 +128,7 @@ export default function AutomationPage(): React.ReactElement {
     const activeAccounts = nonDefaultAccounts.filter((a) => a.is_active);
     if (activeAccounts.length === 0) return true;
     const coveredAccountIds = new Set(
-      allRules
+      allRulesRaw
         .filter((r) => r.rule_type === 'account_detection' && r.actions.set_account)
         .map((r) => r.actions.set_account),
     );
@@ -183,82 +195,102 @@ export default function AutomationPage(): React.ReactElement {
 
   return (
     <div className='space-y-4 p-4 sm:space-y-6 sm:p-6'>
-      <div className='flex justify-end gap-2'>
-        <Button
-          variant='outline'
-          size='sm'
-          className='ai-gradient-btn hidden cursor-pointer sm:flex'
-          onClick={(): void => setAiDialogOpen(true)}>
-          <Sparkles className='mr-1.5 h-4 w-4' />
-          {t('createWithAi')}
-        </Button>
-        {!allActiveAccountsCovered && (
-          <Button
-            variant='outline'
-            size='sm'
-            className='hidden cursor-pointer sm:flex'
-            onClick={(): void => setGenerateConfirmOpen(true)}>
-            <Wand2 className='mr-1.5 h-4 w-4' />
-            {t('autoGenerate')}
-          </Button>
-        )}
-        <Button className='cursor-pointer' onClick={handleCreate}>
-          <Plus className='h-4 w-4 sm:mr-2' />
-          <span className='hidden sm:inline'>{t('newRule')}</span>
-        </Button>
-      </div>
+      <div className='space-y-3 sm:space-y-0'>
+        {/* Mobile: search full-width */}
+        <div className='relative sm:hidden'>
+          <Search className='text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2' />
+          <Input
+            placeholder={`${tCommon('search')}...`}
+            value={search}
+            onChange={(e): void => setSearch(e.target.value)}
+            className='h-9 pr-8 pl-10 text-sm'
+          />
+          {search && (
+            <button
+              type='button'
+              onClick={(): void => setSearch('')}
+              className='text-muted-foreground hover:text-foreground absolute top-1/2 right-2 -translate-y-1/2 cursor-pointer'>
+              <X className='h-4 w-4' />
+            </button>
+          )}
+        </div>
 
-      {/* Filters - matching accounts page style with Select dropdowns */}
-      <div className='flex flex-wrap items-center gap-3'>
-        <Select
-          value={ruleTypeFilter}
-          onValueChange={(v): void => setRuleTypeFilter(v as RuleTypeFilter)}>
-          <SelectTrigger className='w-auto min-w-[140px]'>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {RULE_TYPE_OPTIONS.map((opt) => (
-              <SelectItem key={opt.value} value={opt.value}>
-                {t(opt.labelKey)}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        {/* Mobile: selects + actions in one row */}
+        <div className='flex items-center gap-2 sm:justify-between'>
+          <div className='flex min-w-0 flex-1 items-center gap-2'>
+            {/* Desktop: search inline with selects */}
+            <div className='relative hidden max-w-[280px] min-w-[180px] flex-1 sm:block'>
+              <Search className='text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2' />
+              <Input
+                placeholder={`${tCommon('search')}...`}
+                value={search}
+                onChange={(e): void => setSearch(e.target.value)}
+                className='h-9 pr-8 pl-10 text-sm'
+              />
+              {search && (
+                <button
+                  type='button'
+                  onClick={(): void => setSearch('')}
+                  className='text-muted-foreground hover:text-foreground absolute top-1/2 right-2 -translate-y-1/2 cursor-pointer'>
+                  <X className='h-4 w-4' />
+                </button>
+              )}
+            </div>
+            <Select
+              value={ruleTypeFilter}
+              onValueChange={(v): void => setRuleTypeFilter(v as RuleTypeFilter)}>
+              <SelectTrigger className='min-w-0 flex-1 sm:w-auto sm:min-w-[140px] sm:flex-none'>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {RULE_TYPE_OPTIONS.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {t(opt.labelKey)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select
+              value={activeFilter}
+              onValueChange={(v): void => setActiveFilter(v as ActiveFilter)}>
+              <SelectTrigger className='min-w-0 flex-1 sm:w-auto sm:min-w-[140px] sm:flex-none'>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {ACTIVE_OPTIONS.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {t(opt.labelKey)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-        <Select
-          value={activeFilter}
-          onValueChange={(v): void => setActiveFilter(v as ActiveFilter)}>
-          <SelectTrigger className='w-auto min-w-[140px]'>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {ACTIVE_OPTIONS.map((opt) => (
-              <SelectItem key={opt.value} value={opt.value}>
-                {t(opt.labelKey)}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        {/* Mobile AI + auto-generate buttons */}
-        <Button
-          variant='outline'
-          size='sm'
-          className='ai-gradient-btn cursor-pointer sm:hidden'
-          onClick={(): void => setAiDialogOpen(true)}>
-          <Sparkles className='mr-1.5 h-4 w-4' />
-          {t('createWithAi')}
-        </Button>
-        {!allActiveAccountsCovered && (
-          <Button
-            variant='outline'
-            size='sm'
-            className='cursor-pointer sm:hidden'
-            onClick={(): void => setGenerateConfirmOpen(true)}>
-            <Wand2 className='mr-1.5 h-4 w-4' />
-            {t('autoGenerate')}
-          </Button>
-        )}
+          <div className='flex shrink-0 gap-2'>
+            <Button
+              variant='outline'
+              size='sm'
+              className='ai-gradient-btn cursor-pointer'
+              onClick={(): void => setAiDialogOpen(true)}>
+              <Sparkles className='h-4 w-4 sm:mr-1.5' />
+              <span className='hidden sm:inline'>{t('createWithAi')}</span>
+            </Button>
+            {!allActiveAccountsCovered && (
+              <Button
+                variant='outline'
+                size='sm'
+                className='cursor-pointer'
+                onClick={(): void => setGenerateConfirmOpen(true)}>
+                <Wand2 className='h-4 w-4 sm:mr-1.5' />
+                <span className='hidden sm:inline'>{t('autoGenerate')}</span>
+              </Button>
+            )}
+            <Button className='cursor-pointer' onClick={handleCreate}>
+              <Plus className='h-4 w-4 sm:mr-2' />
+              <span className='hidden sm:inline'>{t('newRule')}</span>
+            </Button>
+          </div>
+        </div>
       </div>
 
       {isLoading ? (

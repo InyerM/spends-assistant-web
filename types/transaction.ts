@@ -30,6 +30,7 @@ export interface Transaction {
   applied_rules: AppliedRule[] | null;
   duplicate_status: 'pending_review' | 'confirmed' | null;
   duplicate_of: string | null;
+  import_id: string | null;
   deleted_at: string | null;
   created_at: string;
   updated_at: string;
@@ -85,4 +86,5 @@ export interface TransactionFilters {
   sort_by?: 'date' | 'amount';
   sort_order?: 'asc' | 'desc';
   duplicate_status?: 'pending_review';
+  import_id?: string;
 }

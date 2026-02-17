@@ -32,7 +32,7 @@ interface ImportDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
-type Step = 'upload' | 'map' | 'preview';
+type Step = 'upload' | 'map' | 'preview' | 'duplicates';
 
 type AppField =
   | 'account'
@@ -217,6 +217,12 @@ interface ImportResult {
   imported: number;
   skipped: number;
   errors: string[];
+  import_id?: string;
+}
+
+interface DuplicateMatch {
+  index: number;
+  match: { id: string; date: string; amount: number; description: string; account_id: string };
 }
 
 export function ImportDialog({ open, onOpenChange }: ImportDialogProps): React.ReactElement {
@@ -228,6 +234,8 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps): React.R
   const [mapping, setMapping] = useState<Record<AppField, string>>({} as Record<AppField, string>);
   const [isDragging, setIsDragging] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
+  const [isChecking, setIsChecking] = useState(false);
+  const [duplicates, setDuplicates] = useState<DuplicateMatch[]>([]);
   const fileRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
   const parsedRowsRef = useRef<Record<string, string>[]>([]);
@@ -239,6 +247,8 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps): React.R
     setFile(null);
     setCsvHeaders([]);
     setMapping({} as Record<AppField, string>);
+    setDuplicates([]);
+    setIsChecking(false);
     parsedRowsRef.current = [];
   };
 
@@ -291,12 +301,21 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps): React.R
     usage && isFree ? Math.max(0, usage.transactions_limit - usage.transactions_count) : Infinity;
   const importExceedsLimit = isFree && importCount > txRemaining;
 
-  const handleImport = async (): Promise<void> => {
-    if (parsedRowsRef.current.length === 0) return;
-
+  const doImport = async (force: boolean, skipIndices?: Set<number>): Promise<void> => {
     setIsImporting(true);
     try {
-      const transactions = parsedRowsRef.current.map((row) => transformRow(row, mapping));
+      let transactions = parsedRowsRef.current.map((row) => transformRow(row, mapping));
+
+      if (skipIndices && skipIndices.size > 0) {
+        transactions = transactions.filter((_, i) => !skipIndices.has(i));
+      }
+
+      if (transactions.length === 0) {
+        toast.info(t('noTransactions'));
+        onOpenChange(false);
+        resetState();
+        return;
+      }
 
       const res = await fetch('/api/transactions/import', {
         method: 'POST',
@@ -306,6 +325,7 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps): React.R
           resolve_names: true,
           file_name: file?.name ?? 'import.csv',
           row_count: parsedRowsRef.current.length,
+          force,
         }),
       });
 
@@ -325,11 +345,10 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps): React.R
       }
 
       // Upload CSV file to Supabase storage in the background
-      if (file) {
+      if (file && result.import_id) {
         const formData = new FormData();
         formData.append('file', file);
-        formData.append('row_count', String(parsedRowsRef.current.length));
-        formData.append('imported_count', String(result.imported));
+        formData.append('import_id', result.import_id);
         void fetch('/api/transactions/imports', {
           method: 'POST',
           body: formData,
@@ -338,6 +357,7 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps): React.R
 
       void queryClient.invalidateQueries({ queryKey: transactionKeys.all });
       void queryClient.invalidateQueries({ queryKey: usageKeys.all });
+      void queryClient.invalidateQueries({ queryKey: ['imports'] });
 
       toast(t('importHistory'), {
         action: {
@@ -355,6 +375,52 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps): React.R
     } finally {
       setIsImporting(false);
     }
+  };
+
+  const handleImport = async (): Promise<void> => {
+    if (parsedRowsRef.current.length === 0) return;
+
+    // Check for duplicates first
+    setIsChecking(true);
+    try {
+      const transactions = parsedRowsRef.current.map((row) => transformRow(row, mapping));
+      const checkPayload = transactions.map((tx) => ({
+        date: tx.date,
+        amount: tx.amount,
+        account: tx.account,
+      }));
+
+      const res = await fetch('/api/transactions/import/check-duplicates', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ transactions: checkPayload }),
+      });
+
+      if (res.ok) {
+        const result = (await res.json()) as { duplicates: DuplicateMatch[] };
+        if (result.duplicates.length > 0) {
+          setDuplicates(result.duplicates);
+          setStep('duplicates');
+          return;
+        }
+      }
+      // If check fails or no duplicates, proceed directly
+    } catch {
+      // If duplicate check fails, proceed anyway
+    } finally {
+      setIsChecking(false);
+    }
+
+    await doImport(false);
+  };
+
+  const handleSkipDuplicates = async (): Promise<void> => {
+    const skipIndices = new Set(duplicates.map((d) => d.index));
+    await doImport(false, skipIndices);
+  };
+
+  const handleImportAllAnyway = async (): Promise<void> => {
+    await doImport(true);
   };
 
   const renderUploadStep = (): React.ReactElement => (
@@ -536,12 +602,77 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps): React.R
         </Button>
         <Button
           onClick={(): void => void handleImport()}
-          disabled={isImporting || importExceedsLimit}
+          disabled={isImporting || isChecking || importExceedsLimit}
           className='cursor-pointer'>
-          {isImporting
-            ? tCommon('importing')
-            : t('importCount', { count: parsedRowsRef.current.length })}
+          {isChecking
+            ? t('checking')
+            : isImporting
+              ? tCommon('importing')
+              : t('importCount', { count: parsedRowsRef.current.length })}
         </Button>
+      </div>
+    </div>
+  );
+
+  const renderDuplicatesStep = (): React.ReactElement => (
+    <div className='space-y-4'>
+      <div className='border-warning/30 bg-warning/5 flex items-center gap-2 rounded-lg border p-3'>
+        <AlertTriangle className='text-warning h-4 w-4 shrink-0' />
+        <div>
+          <p className='text-sm font-medium'>{t('duplicatesFound')}</p>
+          <p className='text-muted-foreground text-sm'>
+            {t('duplicatesDescription', { count: duplicates.length })}
+          </p>
+        </div>
+      </div>
+
+      <div className='border-border max-h-48 overflow-auto rounded-lg border'>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>#</TableHead>
+              <TableHead>{t('date')}</TableHead>
+              <TableHead>{t('description')}</TableHead>
+              <TableHead className='text-right'>{t('amount')}</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {duplicates.map((dup) => (
+              <TableRow key={dup.index}>
+                <TableCell className='text-muted-foreground text-xs'>{dup.index + 1}</TableCell>
+                <TableCell className='text-xs'>{dup.match.date}</TableCell>
+                <TableCell className='max-w-[150px] truncate text-xs'>
+                  {dup.match.description}
+                </TableCell>
+                <TableCell className='text-right text-xs'>
+                  {dup.match.amount.toLocaleString()}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+
+      <div className='flex flex-col gap-2 sm:flex-row sm:justify-between'>
+        <Button variant='outline' onClick={(): void => setStep('preview')}>
+          <ArrowLeft className='mr-1 h-4 w-4' />
+          {tCommon('back')}
+        </Button>
+        <div className='flex gap-2'>
+          <Button
+            variant='outline'
+            className='cursor-pointer'
+            onClick={(): void => void handleSkipDuplicates()}
+            disabled={isImporting}>
+            {t('skipDuplicates')}
+          </Button>
+          <Button
+            className='cursor-pointer'
+            onClick={(): void => void handleImportAllAnyway()}
+            disabled={isImporting}>
+            {isImporting ? tCommon('importing') : t('importAllAnyway')}
+          </Button>
+        </div>
       </div>
     </div>
   );
@@ -559,7 +690,12 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps): React.R
             {t('importTransactions')}
             {step !== 'upload' && (
               <span className='text-muted-foreground ml-2 text-sm font-normal'>
-                — {step === 'map' ? t('mapColumns') : t('preview')}
+                —{' '}
+                {step === 'map'
+                  ? t('mapColumns')
+                  : step === 'duplicates'
+                    ? t('duplicatesFound')
+                    : t('preview')}
               </span>
             )}
           </DialogTitle>
@@ -568,6 +704,7 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps): React.R
         {step === 'upload' && renderUploadStep()}
         {step === 'map' && renderMapStep()}
         {step === 'preview' && renderPreviewStep()}
+        {step === 'duplicates' && renderDuplicatesStep()}
       </DialogContent>
     </Dialog>
   );

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
 import Link from 'next/link';
 import { toast } from 'sonner';
@@ -14,9 +14,12 @@ import { AccountEditDialog } from '@/components/accounts/account-edit-dialog';
 import { AccountCreateDialog } from '@/components/accounts/account-create-dialog';
 import { SwipeableRow } from '@/components/transactions/swipeable-row';
 import { formatCurrency } from '@/lib/utils/formatting';
+import { Input } from '@/components/ui/input';
 import {
   Plus,
   Pencil,
+  Search,
+  X,
   Landmark,
   PiggyBank,
   CreditCard,
@@ -52,12 +55,26 @@ function AccountTypeIcon({
 
 export default function AccountsPage(): React.ReactElement {
   const t = useTranslations('accounts');
+  const tCommon = useTranslations('common');
   const locale = useLocale();
   const { data: accounts, isLoading } = useAccounts();
   const deleteMutation = useDeleteAccount();
+  const [search, setSearch] = useState('');
   const [createOpen, setCreateOpen] = useState(false);
   const [editingAccount, setEditingAccount] = useState<Account | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Account | null>(null);
+
+  const filteredAccounts = useMemo((): Account[] | undefined => {
+    if (!accounts) return undefined;
+    if (!search.trim()) return accounts;
+    const q = search.toLowerCase();
+    return accounts.filter(
+      (a) =>
+        a.name.toLowerCase().includes(q) ||
+        a.institution?.toLowerCase().includes(q) ||
+        a.last_four?.includes(q),
+    );
+  }, [accounts, search]);
 
   const handleDeleteConfirm = async (): Promise<void> => {
     if (!deleteTarget) return;
@@ -72,8 +89,25 @@ export default function AccountsPage(): React.ReactElement {
 
   return (
     <div className='space-y-4 p-4 sm:space-y-6 sm:p-6'>
-      <div className='flex justify-end'>
-        <Button onClick={(): void => setCreateOpen(true)}>
+      <div className='flex items-center gap-3'>
+        <div className='relative min-w-[140px] flex-1 sm:min-w-[180px]'>
+          <Search className='text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2' />
+          <Input
+            placeholder={`${tCommon('search')}...`}
+            value={search}
+            onChange={(e): void => setSearch(e.target.value)}
+            className='h-9 pr-8 pl-10 text-sm'
+          />
+          {search && (
+            <button
+              type='button'
+              onClick={(): void => setSearch('')}
+              className='text-muted-foreground hover:text-foreground absolute top-1/2 right-2 -translate-y-1/2 cursor-pointer'>
+              <X className='h-4 w-4' />
+            </button>
+          )}
+        </div>
+        <Button className='shrink-0 cursor-pointer' onClick={(): void => setCreateOpen(true)}>
           <Plus className='h-4 w-4 sm:mr-2' />
           <span className='hidden sm:inline'>{t('newAccount')}</span>
         </Button>
@@ -95,7 +129,7 @@ export default function AccountsPage(): React.ReactElement {
         </div>
       ) : (
         <div className='grid gap-4 md:grid-cols-2 lg:grid-cols-3'>
-          {accounts?.map((account) => {
+          {filteredAccounts?.map((account) => {
             const cardContent = (
               <Card className='border-border bg-card hover:border-primary/50 cursor-pointer transition-colors'>
                 <CardHeader className='flex flex-row items-center justify-between space-y-0'>

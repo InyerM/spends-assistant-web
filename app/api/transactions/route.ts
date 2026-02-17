@@ -52,6 +52,9 @@ export async function GET(request: NextRequest): Promise<Response> {
     if (dateTo) query = query.lte('date', dateTo);
     if (search) query = query.ilike('description', `%${search}%`);
 
+    const importId = searchParams.get('import_id');
+    if (importId) query = query.eq('import_id', importId);
+
     const duplicateStatus = searchParams.get('duplicate_status');
     if (duplicateStatus) query = query.eq('duplicate_status', duplicateStatus);
 

@@ -157,6 +157,34 @@ export function useBulkUpdateTransactions(): ReturnType<
   });
 }
 
+export async function bulkDeleteTransactions(ids: string[]): Promise<{ deletedCount: number }> {
+  const res = await fetch('/api/transactions/bulk-delete', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ids }),
+  });
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error((error as { error: string }).error || 'Failed to bulk delete');
+  }
+  return res.json() as Promise<{ deletedCount: number }>;
+}
+
+export function useBulkDeleteTransactions(): ReturnType<
+  typeof useMutation<{ deletedCount: number }, Error, string[]>
+> {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: bulkDeleteTransactions,
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: transactionKeys.all });
+      void queryClient.invalidateQueries({ queryKey: accountKeys.all });
+      void queryClient.invalidateQueries({ queryKey: usageKeys.all });
+    },
+  });
+}
+
 export function useDeleteTransaction(): ReturnType<typeof useMutation<void, Error, string>> {
   const queryClient = useQueryClient();
 

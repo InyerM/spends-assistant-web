@@ -1,17 +1,24 @@
 import type { NextRequest } from 'next/server';
 import { getUserClient, AuthError, jsonResponse, errorResponse } from '@/lib/api/server';
 
-export async function GET(): Promise<Response> {
+export async function GET(request: NextRequest): Promise<Response> {
   try {
     const { supabase } = await getUserClient();
+    const { searchParams } = request.nextUrl;
 
-    const { data, error } = await supabase
+    const page = parseInt(searchParams.get('page') ?? '1', 10);
+    const limit = parseInt(searchParams.get('limit') ?? '20', 10);
+    const from = (page - 1) * limit;
+    const to = from + limit - 1;
+
+    const { data, error, count } = await supabase
       .from('imports')
-      .select('*')
-      .order('created_at', { ascending: false });
+      .select('*', { count: 'exact' })
+      .order('created_at', { ascending: false })
+      .range(from, to);
 
     if (error) return errorResponse(error.message, 400);
-    return jsonResponse(data);
+    return jsonResponse({ data, count });
   } catch (error) {
     if (error instanceof AuthError) return errorResponse('Unauthorized', 401);
     return errorResponse('Failed to fetch imports');
@@ -24,8 +31,7 @@ export async function POST(request: NextRequest): Promise<Response> {
 
     const formData = await request.formData();
     const file = formData.get('file') as File | null;
-    const rowCount = parseInt(formData.get('row_count') as string, 10) || 0;
-    const importedCount = parseInt(formData.get('imported_count') as string, 10) || 0;
+    const importId = formData.get('import_id') as string | null;
 
     if (!file) {
       return errorResponse('No file provided', 400);
@@ -44,7 +50,16 @@ export async function POST(request: NextRequest): Promise<Response> {
       return errorResponse(uploadError.message, 400);
     }
 
-    // Record in imports table
+    // Update existing import record with file_path if import_id provided
+    if (importId) {
+      await supabase.from('imports').update({ file_path: filePath }).eq('id', importId);
+      return jsonResponse({ file_path: filePath }, 200);
+    }
+
+    // Fallback: create a new import record (legacy support)
+    const rowCount = parseInt(formData.get('row_count') as string, 10) || 0;
+    const importedCount = parseInt(formData.get('imported_count') as string, 10) || 0;
+
     const { data, error } = await supabase
       .from('imports')
       .insert({

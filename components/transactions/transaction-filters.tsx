@@ -6,7 +6,6 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { PeriodSelector } from '@/components/transactions/period-selector';
 import { useAccounts } from '@/lib/api/queries/account.queries';
 import { useCategories } from '@/lib/api/queries/category.queries';
 import type { TransactionFilters, TransactionType } from '@/types';
@@ -72,10 +71,6 @@ export function TransactionFiltersBar({
 
   const getChildren = (parentId: string): typeof parentCategories =>
     categories?.filter((c) => c.parent_id === parentId) ?? [];
-
-  const handlePeriodChange = (dateFrom: string, dateTo: string): void => {
-    onFiltersChange({ ...filters, date_from: dateFrom, date_to: dateTo });
-  };
 
   // Type filter
   const toggleType = (type: TransactionType): void => {
@@ -210,228 +205,221 @@ export function TransactionFiltersBar({
   };
 
   return (
-    <div className='space-y-3'>
-      <div className='flex items-center justify-between'>
-        <PeriodSelector
-          dateFrom={filters.date_from ?? ''}
-          dateTo={filters.date_to ?? ''}
-          onChange={handlePeriodChange}
+    <div className='flex flex-wrap items-center gap-2'>
+      <div className='relative min-w-[140px] flex-1 sm:min-w-[180px]'>
+        <Search className='text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2' />
+        <Input
+          placeholder={`${tCommon('search')}...`}
+          value={filters.search ?? ''}
+          onChange={(e): void =>
+            onFiltersChange({ ...filters, search: e.target.value || undefined })
+          }
+          className='h-9 pr-8 pl-10 text-sm'
         />
-        <div className='flex items-center gap-2'>
-          {activeFilterCount > 0 && (
-            <Badge variant='secondary' className='hidden text-xs sm:flex'>
-              <SlidersHorizontal className='mr-1 h-3 w-3' />
-              {t('filtersApplied', { count: activeFilterCount })}
-            </Badge>
-          )}
-          {activeFilterCount > 0 && (
-            <Button
-              variant='ghost'
-              size='sm'
-              className='cursor-pointer text-xs'
-              onClick={clearFilters}>
-              <X className='mr-1 h-3 w-3' />
-              {t('clear')}
-            </Button>
-          )}
-        </div>
+        {filters.search && (
+          <button
+            type='button'
+            onClick={(): void => onFiltersChange({ ...filters, search: undefined })}
+            className='text-muted-foreground hover:text-foreground absolute top-1/2 right-2 -translate-y-1/2 cursor-pointer'>
+            <X className='h-4 w-4' />
+          </button>
+        )}
       </div>
 
-      <div className='flex flex-wrap gap-2'>
-        <div className='relative min-w-[140px] flex-1 sm:min-w-[180px]'>
-          <Search className='text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2' />
-          <Input
-            placeholder={`${tCommon('search')}...`}
-            value={filters.search ?? ''}
-            onChange={(e): void =>
-              onFiltersChange({ ...filters, search: e.target.value || undefined })
-            }
-            className='h-9 pl-10 text-sm'
-          />
-        </div>
-
-        {/* Type filter - multiselect */}
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button variant='outline' className='h-9 cursor-pointer text-sm'>
-              {selectedTypes.length > 0
-                ? t('typesCount', { count: selectedTypes.length })
-                : t('allTypes')}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className='w-44 p-2' align='start'>
-            <div className='space-y-1'>
-              <label className='hover:bg-card-overlay flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm font-medium'>
+      {/* Type filter - multiselect */}
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button variant='outline' className='h-9 cursor-pointer text-sm'>
+            {selectedTypes.length > 0
+              ? t('typesCount', { count: selectedTypes.length })
+              : t('allTypes')}
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className='w-44 p-2' align='start'>
+          <div className='space-y-1'>
+            <label className='hover:bg-card-overlay flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm font-medium'>
+              <Checkbox
+                checked={selectedTypes.length === TRANSACTION_TYPES.length}
+                onCheckedChange={toggleAllTypes}
+              />
+              <span>{tCommon('selectAll')}</span>
+            </label>
+            <div className='bg-border my-1 h-px' />
+            {TRANSACTION_TYPES.map((tt) => (
+              <label
+                key={tt.value}
+                className='hover:bg-card-overlay flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm'>
                 <Checkbox
-                  checked={selectedTypes.length === TRANSACTION_TYPES.length}
-                  onCheckedChange={toggleAllTypes}
+                  checked={selectedTypes.includes(tt.value)}
+                  onCheckedChange={(): void => toggleType(tt.value)}
                 />
-                <span>{tCommon('selectAll')}</span>
+                <span>{t(tt.labelKey)}</span>
               </label>
-              <div className='bg-border my-1 h-px' />
-              {TRANSACTION_TYPES.map((tt) => (
-                <label
-                  key={tt.value}
-                  className='hover:bg-card-overlay flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm'>
+            ))}
+          </div>
+        </PopoverContent>
+      </Popover>
+
+      {/* Account filter - multiselect with select all */}
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button variant='outline' className='h-9 cursor-pointer text-sm'>
+            <Wallet className='mr-1.5 h-3.5 w-3.5' />
+            {selectedAccountIds.length > 0
+              ? t('accountsCount', { count: selectedAccountIds.length })
+              : t('allAccounts')}
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className='w-56 p-2' align='start'>
+          <div className='space-y-1'>
+            {accounts && accounts.length > 0 && (
+              <>
+                <label className='hover:bg-card-overlay flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm font-medium'>
                   <Checkbox
-                    checked={selectedTypes.includes(tt.value)}
-                    onCheckedChange={(): void => toggleType(tt.value)}
+                    checked={selectedAccountIds.length === accounts.length}
+                    onCheckedChange={toggleAllAccounts}
                   />
-                  <span>{t(tt.labelKey)}</span>
+                  <span>{tCommon('selectAll')}</span>
                 </label>
-              ))}
-            </div>
-          </PopoverContent>
-        </Popover>
+                <div className='bg-border my-1 h-px' />
+              </>
+            )}
+            {accounts?.map((account) => (
+              <label
+                key={account.id}
+                className='hover:bg-card-overlay flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm'>
+                <Checkbox
+                  checked={selectedAccountIds.includes(account.id)}
+                  onCheckedChange={(): void => toggleAccount(account.id)}
+                />
+                <span className='truncate'>{account.name}</span>
+              </label>
+            ))}
+          </div>
+        </PopoverContent>
+      </Popover>
 
-        {/* Account filter - multiselect with select all */}
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button variant='outline' className='h-9 cursor-pointer text-sm'>
-              <Wallet className='mr-1.5 h-3.5 w-3.5' />
-              {selectedAccountIds.length > 0
-                ? t('accountsCount', { count: selectedAccountIds.length })
-                : t('allAccounts')}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className='w-56 p-2' align='start'>
-            <div className='space-y-1'>
-              {accounts && accounts.length > 0 && (
-                <>
-                  <label className='hover:bg-card-overlay flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm font-medium'>
-                    <Checkbox
-                      checked={selectedAccountIds.length === accounts.length}
-                      onCheckedChange={toggleAllAccounts}
-                    />
-                    <span>{tCommon('selectAll')}</span>
-                  </label>
-                  <div className='bg-border my-1 h-px' />
-                </>
-              )}
-              {accounts?.map((account) => (
-                <label
-                  key={account.id}
-                  className='hover:bg-card-overlay flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm'>
+      {/* Category filter - hierarchical multiselect */}
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button variant='outline' className='h-9 max-w-[180px] cursor-pointer text-sm'>
+            <Tag className='mr-1.5 h-3.5 w-3.5 shrink-0' />
+            <span className='truncate'>
+              {selectedCategoryIds.length > 0
+                ? t('categoriesCount', { count: selectedCategoryIds.length })
+                : t('allCategories')}
+            </span>
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className='max-h-[300px] w-64 overflow-y-auto p-2' align='start'>
+          <div className='space-y-0.5'>
+            {categories && categories.length > 0 && (
+              <>
+                <label className='hover:bg-card-overlay flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm font-medium'>
                   <Checkbox
-                    checked={selectedAccountIds.includes(account.id)}
-                    onCheckedChange={(): void => toggleAccount(account.id)}
+                    checked={selectedCategoryIds.length === categories.length}
+                    onCheckedChange={toggleAllCategories}
                   />
-                  <span className='truncate'>{account.name}</span>
+                  <span>{tCommon('selectAll')}</span>
                 </label>
-              ))}
-            </div>
-          </PopoverContent>
-        </Popover>
+                <div className='bg-border my-1 h-px' />
+              </>
+            )}
+            {parentCategories.map((cat) => {
+              const children = getChildren(cat.id);
+              const hasChildren = children.length > 0;
+              const isExpanded = expandedCategories.has(cat.id);
 
-        {/* Category filter - hierarchical multiselect */}
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button variant='outline' className='h-9 max-w-[180px] cursor-pointer text-sm'>
-              <Tag className='mr-1.5 h-3.5 w-3.5 shrink-0' />
-              <span className='truncate'>
-                {selectedCategoryIds.length > 0
-                  ? t('categoriesCount', { count: selectedCategoryIds.length })
-                  : t('allCategories')}
-              </span>
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className='max-h-[300px] w-64 overflow-y-auto p-2' align='start'>
-            <div className='space-y-0.5'>
-              {categories && categories.length > 0 && (
-                <>
-                  <label className='hover:bg-card-overlay flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm font-medium'>
-                    <Checkbox
-                      checked={selectedCategoryIds.length === categories.length}
-                      onCheckedChange={toggleAllCategories}
-                    />
-                    <span>{tCommon('selectAll')}</span>
-                  </label>
-                  <div className='bg-border my-1 h-px' />
-                </>
-              )}
-              {parentCategories.map((cat) => {
-                const children = getChildren(cat.id);
-                const hasChildren = children.length > 0;
-                const isExpanded = expandedCategories.has(cat.id);
-
-                return (
-                  <div key={cat.id}>
-                    <div className='hover:bg-card-overlay flex items-center gap-1 rounded-md px-1 py-1'>
-                      {hasChildren ? (
-                        <button
-                          onClick={(): void => toggleExpandCategory(cat.id)}
-                          className='cursor-pointer p-0.5'>
-                          {isExpanded ? (
-                            <ChevronDown className='h-3.5 w-3.5' />
-                          ) : (
-                            <ChevronRight className='h-3.5 w-3.5' />
-                          )}
-                        </button>
-                      ) : (
-                        <span className='w-[18px]' />
-                      )}
-                      <label className='flex min-w-0 flex-1 cursor-pointer items-center gap-2'>
-                        <Checkbox
-                          checked={selectedCategoryIds.includes(cat.id)}
-                          onCheckedChange={(): void => toggleCategory(cat.id)}
-                        />
-                        <span className='truncate text-sm'>
-                          {cat.icon ? `${cat.icon} ` : ''}
-                          {cat.name}
-                        </span>
-                      </label>
-                    </div>
-                    {hasChildren && isExpanded && (
-                      <div className='ml-5 space-y-0.5'>
-                        {children.map((sub) => (
-                          <label
-                            key={sub.id}
-                            className='hover:bg-card-overlay flex cursor-pointer items-center gap-2 rounded-md px-2 py-1 text-sm'>
-                            <Checkbox
-                              checked={selectedCategoryIds.includes(sub.id)}
-                              onCheckedChange={(): void => toggleSubcategory(sub.id, cat.id)}
-                            />
-                            <span className='truncate'>
-                              {sub.icon ? `${sub.icon} ` : ''}
-                              {sub.name}
-                            </span>
-                          </label>
-                        ))}
-                      </div>
+              return (
+                <div key={cat.id}>
+                  <div className='hover:bg-card-overlay flex items-center gap-1 rounded-md px-1 py-1'>
+                    {hasChildren ? (
+                      <button
+                        onClick={(): void => toggleExpandCategory(cat.id)}
+                        className='cursor-pointer p-0.5'>
+                        {isExpanded ? (
+                          <ChevronDown className='h-3.5 w-3.5' />
+                        ) : (
+                          <ChevronRight className='h-3.5 w-3.5' />
+                        )}
+                      </button>
+                    ) : (
+                      <span className='w-[18px]' />
                     )}
+                    <label className='flex min-w-0 flex-1 cursor-pointer items-center gap-2'>
+                      <Checkbox
+                        checked={selectedCategoryIds.includes(cat.id)}
+                        onCheckedChange={(): void => toggleCategory(cat.id)}
+                      />
+                      <span className='truncate text-sm'>
+                        {cat.icon ? `${cat.icon} ` : ''}
+                        {cat.name}
+                      </span>
+                    </label>
                   </div>
-                );
-              })}
-            </div>
-          </PopoverContent>
-        </Popover>
+                  {hasChildren && isExpanded && (
+                    <div className='ml-5 space-y-0.5'>
+                      {children.map((sub) => (
+                        <label
+                          key={sub.id}
+                          className='hover:bg-card-overlay flex cursor-pointer items-center gap-2 rounded-md px-2 py-1 text-sm'>
+                          <Checkbox
+                            checked={selectedCategoryIds.includes(sub.id)}
+                            onCheckedChange={(): void => toggleSubcategory(sub.id, cat.id)}
+                          />
+                          <span className='truncate'>
+                            {sub.icon ? `${sub.icon} ` : ''}
+                            {sub.name}
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </PopoverContent>
+      </Popover>
 
-        {/* Sort */}
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button variant='outline' className='h-9 cursor-pointer text-sm'>
-              <ArrowUpDown className='mr-1.5 h-3.5 w-3.5' />
-              {t('sort')}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className='w-48 p-2' align='end'>
-            <div className='space-y-0.5'>
-              {SORT_OPTIONS.map((opt) => (
-                <button
-                  key={opt.value}
-                  onClick={(): void => handleSort(opt.value)}
-                  className={`w-full cursor-pointer rounded-md px-2 py-1.5 text-left text-sm transition-colors ${
-                    currentSort === opt.value
-                      ? 'bg-primary text-primary-foreground'
-                      : 'hover:bg-card-overlay'
-                  }`}>
-                  {t(opt.labelKey)}
-                </button>
-              ))}
-            </div>
-          </PopoverContent>
-        </Popover>
-      </div>
+      {/* Sort */}
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button variant='outline' className='h-9 cursor-pointer text-sm'>
+            <ArrowUpDown className='mr-1.5 h-3.5 w-3.5' />
+            {t('sort')}
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className='w-48 p-2' align='end'>
+          <div className='space-y-0.5'>
+            {SORT_OPTIONS.map((opt) => (
+              <button
+                key={opt.value}
+                onClick={(): void => handleSort(opt.value)}
+                className={`w-full cursor-pointer rounded-md px-2 py-1.5 text-left text-sm transition-colors ${
+                  currentSort === opt.value
+                    ? 'bg-primary text-primary-foreground'
+                    : 'hover:bg-card-overlay'
+                }`}>
+                {t(opt.labelKey)}
+              </button>
+            ))}
+          </div>
+        </PopoverContent>
+      </Popover>
+
+      {activeFilterCount > 0 && (
+        <Badge variant='secondary' className='hidden text-xs sm:flex'>
+          <SlidersHorizontal className='mr-1 h-3 w-3' />
+          {t('filtersApplied', { count: activeFilterCount })}
+        </Badge>
+      )}
+      {activeFilterCount > 0 && (
+        <Button variant='ghost' size='sm' className='cursor-pointer text-xs' onClick={clearFilters}>
+          <X className='mr-1 h-3 w-3' />
+          {t('clear')}
+        </Button>
+      )}
     </div>
   );
 }
