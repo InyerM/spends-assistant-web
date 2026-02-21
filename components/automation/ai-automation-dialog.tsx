@@ -7,7 +7,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
-import { Sparkles, Loader2 } from 'lucide-react';
+import { Sparkles } from 'lucide-react';
+import { InlineLoader } from '@/components/shared/loader';
 import { useGenerateAutomationRules } from '@/lib/api/mutations/ai-automation.mutations';
 import type { CreateAutomationRuleInput } from '@/types';
 
@@ -100,7 +101,7 @@ export function AiAutomationDialog({
               className='w-full cursor-pointer'>
               {generating ? (
                 <>
-                  <Loader2 className='mr-2 h-4 w-4 animate-spin' />
+                  <InlineLoader className='mr-2' />
                   {tCommon('generating')}
                 </>
               ) : (

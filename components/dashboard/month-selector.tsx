@@ -57,9 +57,9 @@ export function MonthSelector({ year, month, onChange }: MonthSelectorProps): Re
       </Button>
       <Popover open={pickerOpen} onOpenChange={handlePickerOpen}>
         <PopoverTrigger asChild>
-          <button className='hover:bg-card-overlay min-w-[140px] cursor-pointer rounded-md px-2 py-1 text-center text-sm font-medium transition-colors'>
+          <Button variant='ghost' className='min-w-[140px] cursor-pointer text-sm font-medium'>
             {monthNames[month]} {year}
-          </button>
+          </Button>
         </PopoverTrigger>
         <PopoverContent className='w-64 p-3' align='center'>
           <div className='mb-3 flex items-center justify-between'>
@@ -81,16 +81,18 @@ export function MonthSelector({ year, month, onChange }: MonthSelectorProps): Re
           </div>
           <div className='grid grid-cols-3 gap-1'>
             {monthShort.map((name, i) => (
-              <button
+              <Button
                 key={name}
+                variant='ghost'
+                size='sm'
                 onClick={(): void => handleMonthPick(i)}
-                className={`cursor-pointer rounded-md px-2 py-1.5 text-sm transition-colors ${
+                className={`cursor-pointer ${
                   i === month && pickerYear === year
-                    ? 'bg-primary text-primary-foreground'
-                    : 'hover:bg-card-overlay text-foreground'
+                    ? 'bg-primary text-primary-foreground hover:bg-primary/90'
+                    : 'text-foreground hover:bg-card-overlay'
                 }`}>
                 {name}
-              </button>
+              </Button>
             ))}
           </div>
         </PopoverContent>

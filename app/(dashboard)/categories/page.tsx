@@ -21,6 +21,7 @@ import {
 import { SwipeableRow } from '@/components/transactions/swipeable-row';
 import { CategoryFormDialog } from '@/components/categories/category-form-dialog';
 import { Plus, Pencil, Trash2, ChevronDown, ChevronRight, Eye, EyeOff } from 'lucide-react';
+import { TYPE_BADGE_VARIANT, SPENDING_NATURE_BADGE_VARIANT } from '@/lib/constants/badge-variants';
 import type { Category, CategoryType, SpendingNature } from '@/types';
 
 const spendingNatureTooltipKey: Record<SpendingNature, string> = {
@@ -28,22 +29,6 @@ const spendingNatureTooltipKey: Record<SpendingNature, string> = {
   want: 'spendingNatureWantTooltip',
   need: 'spendingNatureNeedTooltip',
   must: 'spendingNatureMustTooltip',
-};
-
-const typeBadgeVariant: Record<CategoryType, 'destructive' | 'default' | 'secondary'> = {
-  expense: 'destructive',
-  income: 'default',
-  transfer: 'secondary',
-};
-
-const spendingNatureBadgeVariant: Record<
-  SpendingNature,
-  'outline' | 'default' | 'secondary' | 'destructive'
-> = {
-  none: 'outline',
-  want: 'secondary',
-  need: 'default',
-  must: 'destructive',
 };
 
 function getCategoryDisplayName(category: Category, locale: string): string {
@@ -260,7 +245,7 @@ export default function CategoriesPage(): React.ReactElement {
                       </Tooltip>
                     </div>
                     <Badge
-                      variant={typeBadgeVariant[parent.type]}
+                      variant={TYPE_BADGE_VARIANT[parent.type]}
                       className='hidden shrink-0 sm:inline-flex'>
                       {parent.type}
                     </Badge>
@@ -268,7 +253,7 @@ export default function CategoriesPage(): React.ReactElement {
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <Badge
-                            variant={spendingNatureBadgeVariant[parent.spending_nature]}
+                            variant={SPENDING_NATURE_BADGE_VARIANT[parent.spending_nature]}
                             className='hidden shrink-0 cursor-default text-xs sm:inline-flex'>
                             {t(parent.spending_nature)}
                           </Badge>
@@ -386,7 +371,7 @@ export default function CategoriesPage(): React.ReactElement {
                                 <Tooltip>
                                   <TooltipTrigger asChild>
                                     <Badge
-                                      variant={spendingNatureBadgeVariant[child.spending_nature]}
+                                      variant={SPENDING_NATURE_BADGE_VARIANT[child.spending_nature]}
                                       className='hidden shrink-0 cursor-default text-xs sm:inline-flex'>
                                       {t(child.spending_nature)}
                                     </Badge>

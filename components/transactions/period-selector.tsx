@@ -6,6 +6,7 @@ import { startOfMonth, startOfWeek, addMonths, subMonths, isSameMonth } from 'da
 import { ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DatePicker } from '@/components/ui/date-picker';
+import { Label } from '@/components/ui/label';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { usePeriodSelector } from '@/hooks/use-period-selector';
@@ -107,10 +108,12 @@ export function PeriodSelector({
       )}
       <Popover open={open} onOpenChange={handleOpenChange}>
         <PopoverTrigger asChild>
-          <button className='hover:bg-card-overlay flex cursor-pointer items-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium transition-colors sm:px-2 sm:py-1'>
+          <Button
+            variant='ghost'
+            className='cursor-pointer gap-1.5 text-sm font-medium sm:h-8 sm:px-2'>
             <Calendar className='text-muted-foreground h-3.5 w-3.5' />
             {label}
-          </button>
+          </Button>
         </PopoverTrigger>
         <PopoverContent className='w-auto min-w-[280px] p-3' align='start'>
           <Tabs
@@ -156,16 +159,18 @@ export function PeriodSelector({
                     i === period.fromDate.getMonth() &&
                     period.pickerYear === period.fromDate.getFullYear();
                   return (
-                    <button
+                    <Button
                       key={name}
+                      variant='ghost'
+                      size='sm'
                       onClick={(): void => handleMonthPick(i)}
-                      className={`cursor-pointer rounded-md px-2 py-2.5 text-sm transition-colors sm:py-1.5 ${
+                      className={`cursor-pointer py-2.5 sm:py-1.5 ${
                         isActive
-                          ? 'bg-primary text-primary-foreground'
-                          : 'hover:bg-card-overlay text-foreground'
+                          ? 'bg-primary text-primary-foreground hover:bg-primary/90'
+                          : 'text-foreground hover:bg-card-overlay'
                       }`}>
                       {name}
-                    </button>
+                    </Button>
                   );
                 })}
               </div>
@@ -203,18 +208,20 @@ export function PeriodSelector({
                   return (
                     <Fragment key={toStr(week[0])}>
                       {week.map((day, di) => (
-                        <button
+                        <Button
                           key={toStr(day)}
+                          variant='ghost'
+                          size='sm'
                           onClick={(): void => handleWeekPick(day)}
-                          className={`cursor-pointer py-2.5 text-sm transition-colors sm:py-1.5 sm:text-xs ${
+                          className={`h-auto cursor-pointer rounded-none py-2.5 text-sm sm:py-1.5 sm:text-xs ${
                             isSelected
-                              ? 'bg-primary text-primary-foreground'
+                              ? 'bg-primary text-primary-foreground hover:bg-primary/90'
                               : 'hover:bg-card-overlay'
                           } ${!isSameMonth(day, period.calendarMonth) ? 'opacity-40' : ''} ${
                             di === 0 ? 'rounded-l-md' : ''
                           } ${di === 6 ? 'rounded-r-md' : ''}`}>
                           {day.getDate()}
-                        </button>
+                        </Button>
                       ))}
                     </Fragment>
                   );
@@ -247,18 +254,20 @@ export function PeriodSelector({
                   const isActive = period.mode === 'year' && y === period.fromDate.getFullYear();
                   const isOutside = y < period.decadeStart || y >= period.decadeStart + 10;
                   return (
-                    <button
+                    <Button
                       key={y}
+                      variant='ghost'
+                      size='sm'
                       onClick={(): void => handleYearPick(y)}
-                      className={`cursor-pointer rounded-md px-2 py-2.5 text-sm transition-colors sm:py-1.5 ${
+                      className={`cursor-pointer py-2.5 sm:py-1.5 ${
                         isActive
-                          ? 'bg-primary text-primary-foreground'
+                          ? 'bg-primary text-primary-foreground hover:bg-primary/90'
                           : isOutside
                             ? 'text-muted-foreground hover:bg-card-overlay'
-                            : 'hover:bg-card-overlay text-foreground'
+                            : 'text-foreground hover:bg-card-overlay'
                       }`}>
                       {y}
-                    </button>
+                    </Button>
                   );
                 })}
               </div>
@@ -267,9 +276,9 @@ export function PeriodSelector({
             <TabsContent value='custom' className='mt-3'>
               <div className='space-y-3'>
                 <div className='space-y-1.5'>
-                  <label className='text-muted-foreground text-xs font-medium'>
+                  <Label className='text-muted-foreground text-xs font-medium'>
                     {t('periodFrom')}
-                  </label>
+                  </Label>
                   <DatePicker
                     value={period.customFrom}
                     onChange={period.setCustomFrom}
@@ -277,9 +286,9 @@ export function PeriodSelector({
                   />
                 </div>
                 <div className='space-y-1.5'>
-                  <label className='text-muted-foreground text-xs font-medium'>
+                  <Label className='text-muted-foreground text-xs font-medium'>
                     {t('periodTo')}
-                  </label>
+                  </Label>
                   <DatePicker
                     value={period.customTo}
                     onChange={period.setCustomTo}

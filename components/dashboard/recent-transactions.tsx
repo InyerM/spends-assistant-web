@@ -14,6 +14,7 @@ import { formatCurrency } from '@/lib/utils/formatting';
 import { formatTimeForDisplay } from '@/lib/utils/date';
 import { getCategoryName } from '@/lib/i18n/get-category-name';
 import type { Locale } from '@/i18n/config';
+import { Button } from '@/components/ui/button';
 import { ArrowDownLeft, ArrowUpRight, ArrowRightLeft, ArrowRight } from 'lucide-react';
 import type { TransactionType, Category, Account } from '@/types';
 
@@ -100,31 +101,38 @@ export function RecentTransactions(): React.ReactElement {
                     key={tx.id}
                     type='button'
                     onClick={(): void => openWith(tx)}
-                    className='hover:bg-card-overlay flex w-full min-w-0 cursor-pointer items-center gap-3 rounded-lg p-2.5 text-left'>
+                    className='hover:bg-card-overlay flex w-full min-w-0 cursor-pointer items-center gap-3 rounded-lg p-2.5 text-left transition-colors'>
                     <div
-                      className={`bg-card-overlay flex h-9 w-9 items-center justify-center rounded-full ${config.colorClass}`}>
+                      className={`bg-card-overlay flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${config.colorClass}`}>
                       <Icon className='h-4 w-4' />
                     </div>
                     <div className='min-w-0 flex-1'>
                       <p className='text-foreground truncate text-sm font-medium'>
                         {tx.description}
                       </p>
-                      <p className='text-muted-foreground truncate text-xs'>{accountName}</p>
-                      {category && (
-                        <Badge
-                          variant='secondary'
-                          className='mt-0.5 h-5 max-w-full truncate px-1.5 text-[10px]'
-                          style={
-                            category.color
-                              ? {
-                                  backgroundColor: `${category.color}20`,
-                                  color: category.color,
-                                }
-                              : undefined
-                          }>
-                          {category.name}
-                        </Badge>
-                      )}
+                      <div className='flex items-center gap-1'>
+                        <p className='text-muted-foreground truncate text-xs'>{accountName}</p>
+                        {category && (
+                          <>
+                            <span className='text-muted-foreground hidden text-xs sm:inline'>
+                              ·
+                            </span>
+                            <Badge
+                              variant='secondary'
+                              className='h-5 max-w-full truncate px-1.5 text-[10px] max-sm:mt-0.5 max-sm:basis-full'
+                              style={
+                                category.color
+                                  ? {
+                                      backgroundColor: `${category.color}20`,
+                                      color: category.color,
+                                    }
+                                  : undefined
+                              }>
+                              {category.name}
+                            </Badge>
+                          </>
+                        )}
+                      </div>
                     </div>
                     <div className='shrink-0 text-right'>
                       <p className={`text-sm font-semibold whitespace-nowrap ${config.colorClass}`}>
@@ -139,12 +147,13 @@ export function RecentTransactions(): React.ReactElement {
                 );
               })}
             </div>
-            <button
+            <Button
+              variant='ghost'
               onClick={(): void => router.push('/transactions')}
-              className='text-muted-foreground hover:text-foreground hover:bg-card-overlay mt-3 flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-lg py-2 text-sm transition-colors'>
+              className='text-muted-foreground hover:text-foreground hover:bg-card-overlay mt-3 w-full cursor-pointer gap-1.5 text-sm'>
               {t('viewAllTransactions')}
               <ArrowRight className='h-3.5 w-3.5' />
-            </button>
+            </Button>
           </>
         )}
       </CardContent>

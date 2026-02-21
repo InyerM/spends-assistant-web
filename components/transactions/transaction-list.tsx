@@ -17,14 +17,8 @@ import { formatCurrency } from '@/lib/utils/formatting';
 import { formatTimeForDisplay, formatDateTime } from '@/lib/utils/date';
 import { getCategoryName } from '@/lib/i18n/get-category-name';
 import type { Locale } from '@/i18n/config';
-import {
-  ArrowDownLeft,
-  ArrowUpRight,
-  ArrowRightLeft,
-  Loader2,
-  Info,
-  AlertTriangle,
-} from 'lucide-react';
+import { ArrowDownLeft, ArrowUpRight, ArrowRightLeft, Info, AlertTriangle } from 'lucide-react';
+import { InlineLoader } from '@/components/shared/loader';
 import { useDeleteTransaction } from '@/lib/api/mutations/transaction.mutations';
 import { SwipeableRow } from '@/components/transactions/swipeable-row';
 import { ConfirmDeleteDialog } from '@/components/shared/confirm-delete-dialog';
@@ -399,7 +393,7 @@ export function TransactionList({
 
       <div ref={bottomRef} className='flex justify-center py-4'>
         {isFetchingNextPage ? (
-          <Loader2 className='text-muted-foreground h-5 w-5 animate-spin' />
+          <InlineLoader className='text-muted-foreground h-5 w-5' />
         ) : hasNextPage ? (
           <Button variant='ghost' size='sm' onClick={(): void => void fetchNextPage()}>
             {tCommon('loadMore')}

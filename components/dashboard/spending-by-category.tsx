@@ -7,6 +7,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useCategories } from '@/lib/api/queries/category.queries';
 import { formatCurrency } from '@/lib/utils/formatting';
 import { getCategoryName } from '@/lib/i18n/get-category-name';
+import { Button } from '@/components/ui/button';
 import { ArrowRight } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import type { Locale } from '@/i18n/config';
@@ -170,12 +171,13 @@ export function SpendingByCategory({
               </ResponsiveContainer>
             </div>
             {hasMore && (
-              <button
+              <Button
+                variant='ghost'
                 onClick={(): void => router.push('/transactions?type=expense')}
-                className='text-muted-foreground hover:text-foreground mt-4 flex w-full cursor-pointer items-center justify-center gap-1.5 py-2.5 text-sm transition-colors'>
+                className='text-muted-foreground hover:text-foreground mt-4 w-full cursor-pointer gap-1.5 text-sm'>
                 {t('viewAllCategories')}
                 <ArrowRight className='h-3.5 w-3.5' />
-              </button>
+              </Button>
             )}
           </>
         )}

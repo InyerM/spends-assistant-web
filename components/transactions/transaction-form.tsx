@@ -12,7 +12,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ConfirmDeleteDialog } from '@/components/shared/confirm-delete-dialog';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Sparkles, AlertTriangle, Loader2, Pencil, Zap } from 'lucide-react';
+import { Sparkles, AlertTriangle, Pencil, Zap } from 'lucide-react';
+import { InlineLoader } from '@/components/shared/loader';
 import {
   Form,
   FormControl,
@@ -438,7 +439,7 @@ export function TransactionForm({
                               className='ai-gradient-btn w-full cursor-pointer'>
                               {ai.isParsing ? (
                                 <>
-                                  <Loader2 className='mr-2 h-4 w-4 animate-spin' />
+                                  <InlineLoader className='mr-2' />
                                   {t('parsing')}
                                 </>
                               ) : (
@@ -453,12 +454,13 @@ export function TransactionForm({
                         {atLimit && <TooltipContent>{t('limitReachedTooltip')}</TooltipContent>}
                       </Tooltip>
                     </TooltipProvider>
-                    <button
+                    <Button
                       type='button'
-                      className='text-muted-foreground hover:text-foreground w-full cursor-pointer text-center text-sm transition-colors'
+                      variant='link'
+                      className='text-muted-foreground hover:text-foreground h-auto w-full cursor-pointer p-0 text-sm'
                       onClick={ai.handleCreateManually}>
                       {t('orCreateManually')}
-                    </button>
+                    </Button>
                   </>
                 )}
               </>

@@ -39,7 +39,8 @@ import {
 import { useInfiniteScroll } from '@/hooks/use-infinite-scroll';
 import { SearchInput } from '@/components/shared/search-input';
 import { findById } from '@/lib/utils/lookup';
-import { Plus, Pencil, Trash2, Zap, Loader2, Wand2, Sparkles } from 'lucide-react';
+import { Plus, Pencil, Trash2, Zap, Wand2, Sparkles } from 'lucide-react';
+import { InlineLoader } from '@/components/shared/loader';
 import type { AutomationRule, CreateAutomationRuleInput, RuleType } from '@/types';
 
 type RuleTypeFilter = 'all' | RuleType;
@@ -421,7 +422,7 @@ export default function AutomationPage(): React.ReactElement {
       {/* Infinite scroll sentinel */}
       <div ref={bottomRef} className='flex justify-center py-4'>
         {isFetchingNextPage ? (
-          <Loader2 className='text-muted-foreground h-5 w-5 animate-spin' />
+          <InlineLoader className='text-muted-foreground h-5 w-5' />
         ) : hasNextPage ? (
           <Button variant='ghost' size='sm' onClick={(): void => void fetchNextPage()}>
             {tCommon('loadMore')}
@@ -475,7 +476,7 @@ export default function AutomationPage(): React.ReactElement {
               }}>
               {generateMutation.isPending ? (
                 <>
-                  <Loader2 className='mr-2 h-4 w-4 animate-spin' />
+                  <InlineLoader className='mr-2' />
                   {tCommon('generating')}
                 </>
               ) : (

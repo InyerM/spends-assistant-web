@@ -14,6 +14,7 @@ import {
   LogOut,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/hooks/use-auth';
@@ -72,27 +73,29 @@ export function BottomNav(): React.ReactElement {
           {mainItems.map((item) => {
             const active = isActivePath(pathname, item.href);
             return (
-              <button
+              <Button
                 key={item.href}
+                variant='ghost'
                 onClick={(): void => handleNav(item.href)}
                 className={cn(
-                  'flex flex-1 cursor-pointer flex-col items-center gap-1 py-2 text-xs font-medium transition-colors',
+                  'h-auto flex-1 cursor-pointer flex-col gap-1 rounded-none py-2 text-xs font-medium',
                   active ? 'text-primary' : 'text-muted-foreground',
                 )}>
                 <item.icon className='h-5 w-5' />
                 <span>{t(item.titleKey)}</span>
-              </button>
+              </Button>
             );
           })}
-          <button
+          <Button
+            variant='ghost'
             onClick={(): void => setMoreOpen(true)}
             className={cn(
-              'flex flex-1 cursor-pointer flex-col items-center gap-1 py-2 text-xs font-medium transition-colors',
+              'h-auto flex-1 cursor-pointer flex-col gap-1 rounded-none py-2 text-xs font-medium',
               moreActive ? 'text-primary' : 'text-muted-foreground',
             )}>
             <MoreHorizontal className='h-5 w-5' />
             <span>{t('more')}</span>
-          </button>
+          </Button>
         </div>
       </nav>
 
@@ -113,25 +116,29 @@ export function BottomNav(): React.ReactElement {
             {moreItems.map((item) => {
               const active = isActivePath(pathname, item.href);
               return (
-                <button
+                <Button
                   key={item.href}
+                  variant='ghost'
                   onClick={(): void => handleNav(item.href)}
                   className={cn(
-                    'flex w-full cursor-pointer items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium transition-colors',
-                    active ? 'bg-primary text-white' : 'text-foreground hover:bg-card-overlay',
+                    'h-auto w-full cursor-pointer justify-start gap-3 rounded-lg px-3 py-3 text-sm font-medium',
+                    active
+                      ? 'bg-primary hover:bg-primary/90 text-white'
+                      : 'text-foreground hover:bg-card-overlay',
                   )}>
                   <item.icon className='h-5 w-5' />
                   <span>{t(item.titleKey)}</span>
-                </button>
+                </Button>
               );
             })}
             <div className='border-border my-2 border-t' />
-            <button
+            <Button
+              variant='ghost'
               onClick={(): void => void handleLogout()}
-              className='text-destructive hover:bg-card-overlay flex w-full cursor-pointer items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium transition-colors'>
+              className='text-destructive hover:bg-card-overlay h-auto w-full cursor-pointer justify-start gap-3 rounded-lg px-3 py-3 text-sm font-medium'>
               <LogOut className='h-5 w-5' />
               <span>{tCommon('signOut')}</span>
-            </button>
+            </Button>
           </div>
         </SheetContent>
       </Sheet>

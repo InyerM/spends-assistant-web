@@ -16,6 +16,7 @@ import {
   LogOut,
   Settings,
 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -85,11 +86,13 @@ export function Sidebar({ className, onClose }: SidebarProps): React.ReactElemen
         className,
       )}>
       {!onClose && (
-        <button
+        <Button
+          variant='outline'
+          size='icon-sm'
           onClick={toggleCollapsed}
-          className='bg-sidebar-bg hover:bg-card-overlay border-border absolute top-11 -right-4 z-50 flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg border shadow-lg transition-all'>
+          className='bg-sidebar-bg hover:bg-card-overlay absolute top-11 -right-4 z-50 cursor-pointer rounded-lg shadow-lg'>
           <Menu className='text-muted-foreground h-4 w-4' />
-        </button>
+        </Button>
       )}
 
       <div className='border-border flex h-16 items-center border-b px-4'>
@@ -110,20 +113,21 @@ export function Sidebar({ className, onClose }: SidebarProps): React.ReactElemen
         {navItems.map((item) => {
           const title = t(item.titleKey);
           return (
-            <button
+            <Button
               key={item.href}
+              variant='ghost'
               onClick={(): void => handleNavigation(item.href)}
               className={cn(
-                'flex w-full cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
+                'h-auto w-full cursor-pointer justify-start gap-3 rounded-lg px-3 py-2.5 text-sm font-medium',
                 isCollapsed && 'justify-center',
                 isActivePath(item.href)
-                  ? 'bg-primary text-primary-foreground'
+                  ? 'bg-primary text-primary-foreground hover:bg-primary/90'
                   : 'text-muted-foreground hover:bg-card-overlay hover:text-foreground',
               )}
               title={isCollapsed ? title : undefined}>
               <item.icon className='h-5 w-5 shrink-0' />
               {!isCollapsed && <span>{title}</span>}
-            </button>
+            </Button>
           );
         })}
       </nav>
@@ -131,9 +135,10 @@ export function Sidebar({ className, onClose }: SidebarProps): React.ReactElemen
       <div className='border-border border-t p-3'>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button
+            <Button
+              variant='ghost'
               className={cn(
-                'hover:bg-card-overlay flex w-full cursor-pointer items-center gap-3 rounded-lg p-2 transition-colors',
+                'h-auto w-full cursor-pointer justify-start gap-3 rounded-lg p-2',
                 isCollapsed && 'justify-center',
               )}
               title={isCollapsed ? (displayName ?? 'User menu') : undefined}>
@@ -146,7 +151,7 @@ export function Sidebar({ className, onClose }: SidebarProps): React.ReactElemen
                   {displayName}
                 </span>
               )}
-            </button>
+            </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent side='top' align='start' className='w-56'>
             <DropdownMenuItem onClick={(): void => handleNavigation('/settings')}>

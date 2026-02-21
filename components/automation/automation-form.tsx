@@ -58,12 +58,14 @@ function InfoTip({ text }: { text: string }): React.ReactElement {
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <button
+        <Button
           type='button'
-          className='text-muted-foreground hover:text-foreground inline-flex cursor-help'
+          variant='ghost'
+          size='icon-xs'
+          className='text-muted-foreground hover:text-foreground cursor-help'
           tabIndex={-1}>
           <Info className='h-3.5 w-3.5' />
-        </button>
+        </Button>
       </TooltipTrigger>
       <TooltipContent side='top' className='max-w-72 whitespace-pre-line'>
         {text}
@@ -350,26 +352,30 @@ export function AutomationForm({
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <div className='bg-muted inline-flex h-8 items-center rounded-md p-0.5'>
-                              <button
+                              <Button
                                 type='button'
-                                className={`cursor-pointer rounded-sm px-3 py-1 text-xs font-medium transition-colors ${
+                                variant='ghost'
+                                size='xs'
+                                className={`cursor-pointer rounded-sm px-3 ${
                                   field.value === 'and'
-                                    ? 'bg-background text-foreground shadow-sm'
+                                    ? 'bg-background text-foreground hover:bg-background shadow-sm'
                                     : 'text-muted-foreground hover:text-foreground'
                                 }`}
                                 onClick={(): void => field.onChange('and' as ConditionLogic)}>
                                 AND
-                              </button>
-                              <button
+                              </Button>
+                              <Button
                                 type='button'
-                                className={`cursor-pointer rounded-sm px-3 py-1 text-xs font-medium transition-colors ${
+                                variant='ghost'
+                                size='xs'
+                                className={`cursor-pointer rounded-sm px-3 ${
                                   field.value === 'or'
-                                    ? 'bg-background text-foreground shadow-sm'
+                                    ? 'bg-background text-foreground hover:bg-background shadow-sm'
                                     : 'text-muted-foreground hover:text-foreground'
                                 }`}
                                 onClick={(): void => field.onChange('or' as ConditionLogic)}>
                                 OR
-                              </button>
+                              </Button>
                             </div>
                           </TooltipTrigger>
                           <TooltipContent side='top' className='max-w-64'>

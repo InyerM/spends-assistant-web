@@ -2,6 +2,7 @@
 
 import { useRef, useState } from 'react';
 import { motion, useMotionValue, useTransform, useAnimation, type PanInfo } from 'framer-motion';
+import { Button } from '@/components/ui/button';
 import { Pencil, Trash2, ChevronLeft } from 'lucide-react';
 
 const SWIPE_THRESHOLD = 80;
@@ -80,17 +81,19 @@ export function SwipeableRow({
       <motion.div
         className='absolute top-0 right-0 flex h-full items-stretch'
         style={{ opacity: actionsOpacity }}>
-        <button
+        <Button
+          variant='ghost'
           onClick={handleEdit}
-          className='bg-transfer hover:bg-transfer/80 flex w-20 cursor-pointer items-center justify-center text-white transition-colors'>
+          className='bg-transfer hover:bg-transfer/80 h-full w-20 cursor-pointer rounded-none text-white'>
           <Pencil className='h-5 w-5' />
-        </button>
+        </Button>
         {onDelete && (
-          <button
+          <Button
+            variant='ghost'
             onClick={handleDelete}
-            className='bg-destructive hover:bg-destructive/80 flex w-20 cursor-pointer items-center justify-center text-white transition-colors'>
+            className='bg-destructive hover:bg-destructive/80 h-full w-20 cursor-pointer rounded-none text-white'>
             <Trash2 className='h-5 w-5' />
-          </button>
+          </Button>
         )}
       </motion.div>
 

@@ -39,11 +39,7 @@ async function fetchImports(page: number): Promise<ImportsResult> {
   return res.json() as Promise<ImportsResult>;
 }
 
-const statusBadgeVariant: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
-  completed: 'default',
-  pending: 'secondary',
-  failed: 'destructive',
-};
+import { STATUS_BADGE_VARIANT } from '@/lib/constants/badge-variants';
 
 function formatDate(dateStr: string): string {
   return new Intl.DateTimeFormat(undefined, {
@@ -131,7 +127,7 @@ export default function ImportsPage(): React.ReactElement {
                       })}
                     </TableCell>
                     <TableCell>
-                      <Badge variant={statusBadgeVariant[row.status] ?? 'outline'}>
+                      <Badge variant={STATUS_BADGE_VARIANT[row.status] ?? 'outline'}>
                         {row.status}
                       </Badge>
                     </TableCell>
@@ -160,7 +156,9 @@ export default function ImportsPage(): React.ReactElement {
                     <FileText className='text-muted-foreground h-4 w-4 shrink-0' />
                     <span className='truncate text-sm font-medium'>{row.file_name}</span>
                   </div>
-                  <Badge variant={statusBadgeVariant[row.status] ?? 'outline'} className='shrink-0'>
+                  <Badge
+                    variant={STATUS_BADGE_VARIANT[row.status] ?? 'outline'}
+                    className='shrink-0'>
                     {row.status}
                   </Badge>
                 </div>

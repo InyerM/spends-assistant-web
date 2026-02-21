@@ -18,6 +18,7 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { ColorPicker } from '@/components/ui/color-picker';
 import {
   Select,
@@ -335,10 +336,10 @@ export function AccountEditDialog({
                 {adjustMode !== 'none' && (
                   <div className='space-y-3'>
                     <div>
-                      <label className='text-muted-foreground mb-1 block text-xs'>
+                      <Label className='text-muted-foreground mb-1 block text-xs'>
                         {t('newBalance')}
-                      </label>
-                      <div className='flex gap-2'>
+                      </Label>
+                      <div className='flex min-w-0 gap-2'>
                         <Button
                           type='button'
                           variant='outline'
@@ -357,11 +358,11 @@ export function AccountEditDialog({
                           value={newBalance}
                           onChange={(e): void => setNewBalance(e.target.value)}
                           placeholder={String(Math.abs(account.balance))}
-                          className='h-14 text-2xl font-semibold sm:h-11 sm:text-base sm:font-normal'
+                          className='h-14 min-w-0 text-2xl font-semibold sm:h-11 sm:text-base sm:font-normal'
                         />
                       </div>
                     </div>
-                    <div className='flex gap-2'>
+                    <div className='flex flex-wrap gap-2'>
                       <Button
                         type='button'
                         size='sm'
@@ -388,12 +389,14 @@ export function AccountEditDialog({
                         {createTxMutation.isPending ? tCommon('creating') : t('withTransaction')}
                       </Button>
                     </div>
-                    <button
+                    <Button
                       type='button'
-                      className='text-muted-foreground hover:text-foreground cursor-pointer text-xs underline'
+                      variant='link'
+                      size='sm'
+                      className='text-muted-foreground hover:text-foreground h-auto cursor-pointer p-0 text-xs'
                       onClick={handleOpenTransactionForm}>
                       {t('orCreateCustomTransaction')}
-                    </button>
+                    </Button>
                   </div>
                 )}
               </div>

@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
+import { Loader } from '@/components/shared/loader';
 
 interface AuthGuardProps {
   children: React.ReactNode;
@@ -21,10 +22,7 @@ export function AuthGuard({ children }: AuthGuardProps): React.ReactNode {
   if (isLoading) {
     return (
       <div className='bg-background flex min-h-screen items-center justify-center'>
-        <div className='flex flex-col items-center gap-4'>
-          <div className='border-primary h-8 w-8 animate-spin rounded-full border-4 border-t-transparent' />
-          <p className='text-muted-foreground text-sm'>Loading...</p>
-        </div>
+        <Loader text='Loading...' />
       </div>
     );
   }
