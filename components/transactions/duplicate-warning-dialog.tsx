@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
 import { toast } from 'sonner';
 import { AlertTriangle } from 'lucide-react';
@@ -41,12 +41,20 @@ export function DuplicateWarningDialog({
   const queryClient = useQueryClient();
   const [pending, setPending] = useState<'create' | 'replace' | null>(null);
 
-  const getAccountName = (accountId: string): string =>
-    accounts?.find((a) => a.id === accountId)?.name ?? '';
+  const accountMap = useMemo(
+    () => new Map((accounts ?? []).map((a) => [a.id, a.name])),
+    [accounts],
+  );
+  const categoryMap = useMemo(
+    () => new Map((categories ?? []).map((c) => [c.id, c.name])),
+    [categories],
+  );
+
+  const getAccountName = (accountId: string): string => accountMap.get(accountId) ?? '';
 
   const getCategoryName = (categoryId: string | null): string => {
-    if (!categoryId || !categories) return 'None';
-    return categories.find((c) => c.id === categoryId)?.name ?? 'None';
+    if (!categoryId) return 'None';
+    return categoryMap.get(categoryId) ?? 'None';
   };
 
   const invalidate = async (): Promise<void> => {

@@ -4,7 +4,10 @@ export async function GET(): Promise<Response> {
   try {
     const { supabase } = await getUserClient();
 
-    const { data, error } = await supabase.from('subscriptions').select('*').single();
+    const { data, error } = await supabase
+      .from('subscriptions')
+      .select('plan, status, current_period_start, current_period_end')
+      .single();
 
     if (error) {
       // No subscription found — return free defaults

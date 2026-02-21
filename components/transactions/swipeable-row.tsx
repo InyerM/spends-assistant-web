@@ -6,7 +6,7 @@ import { Pencil, Trash2, ChevronLeft } from 'lucide-react';
 
 const SWIPE_THRESHOLD = 80;
 const ACTION_WIDTH = 160;
-const HINT_STORAGE_KEY = 'hasSeenSwipeHint';
+const HINT_STORAGE_KEY = 'v1_hasSeenSwipeHint';
 
 interface SwipeableRowProps {
   children: React.ReactNode;

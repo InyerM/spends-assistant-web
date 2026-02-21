@@ -156,7 +156,7 @@ export function TransactionForm({
       });
       ai.resetToPrompt();
     }
-  }, [open, transaction, form]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [open, transaction?.id, form]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const watchType = form.watch('type');
 

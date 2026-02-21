@@ -179,7 +179,7 @@ export function AutomationForm({
         form.reset(getDefaults(rule));
       }
     }
-  }, [open, rule, initialData, form]);
+  }, [open, rule?.id, initialData?.name, form]); // eslint-disable-line react-hooks/exhaustive-deps -- intentionally using primitive deps
 
   // ── Condition row management ──────────────────────────────────────────
 

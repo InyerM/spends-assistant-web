@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Sparkles, Loader2 } from 'lucide-react';
+import { useGenerateAutomationRules } from '@/lib/api/mutations/ai-automation.mutations';
 import type { CreateAutomationRuleInput } from '@/types';
 
 interface GeneratedRule {
@@ -17,11 +18,6 @@ interface GeneratedRule {
   conditions: Record<string, unknown>;
   actions: Record<string, unknown>;
   priority?: number;
-}
-
-interface GenerateResponse {
-  rules: GeneratedRule[];
-  prompt: string;
 }
 
 interface AiAutomationDialogProps {
@@ -38,13 +34,14 @@ export function AiAutomationDialog({
   const t = useTranslations('automation');
   const tCommon = useTranslations('common');
   const [prompt, setPrompt] = useState('');
-  const [generating, setGenerating] = useState(false);
-  const [result, setResult] = useState<GenerateResponse | null>(null);
+  const generateMutation = useGenerateAutomationRules();
+
+  const generating = generateMutation.isPending;
+  const result = generateMutation.data ?? null;
 
   function resetState(): void {
     setPrompt('');
-    setResult(null);
-    setGenerating(false);
+    generateMutation.reset();
   }
 
   function handleClose(next: boolean): void {
@@ -54,26 +51,10 @@ export function AiAutomationDialog({
 
   async function handleGenerate(): Promise<void> {
     if (!prompt.trim()) return;
-    setGenerating(true);
-    setResult(null);
     try {
-      const res = await fetch('/api/automation-rules/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt }),
-      });
-
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: 'Generation failed' }));
-        throw new Error((err as { error: string }).error);
-      }
-
-      const data = (await res.json()) as GenerateResponse;
-      setResult(data);
+      await generateMutation.mutateAsync(prompt);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to generate');
-    } finally {
-      setGenerating(false);
     }
   }
 
@@ -185,7 +166,7 @@ export function AiAutomationDialog({
               <Button
                 variant='outline'
                 className='w-full cursor-pointer'
-                onClick={(): void => setResult(null)}>
+                onClick={(): void => generateMutation.reset()}>
                 {tCommon('back')}
               </Button>
             </div>

@@ -225,3 +225,121 @@ export function useResolveDuplicate(): ReturnType<
     },
   });
 }
+
+// --- Import-related mutations ---
+
+export interface ImportTransactionsInput {
+  transactions: {
+    date: string;
+    time: string;
+    amount: number;
+    description: string;
+    notes: string | null;
+    type: string;
+    account: string;
+    category: string | null;
+    payment_method: string | null;
+    source: string;
+  }[];
+  resolve_names: boolean;
+  file_name: string;
+  row_count: number;
+  force: boolean;
+}
+
+export interface ImportTransactionsResult {
+  imported: number;
+  skipped: number;
+  errors: string[];
+  import_id?: string;
+}
+
+export async function importTransactions(
+  input: ImportTransactionsInput,
+): Promise<ImportTransactionsResult> {
+  const res = await fetch('/api/transactions/import', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error((error as { error: string }).error || 'Import failed');
+  }
+  return res.json() as Promise<ImportTransactionsResult>;
+}
+
+export function useImportTransactions(): ReturnType<
+  typeof useMutation<ImportTransactionsResult, Error, ImportTransactionsInput>
+> {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: importTransactions,
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: transactionKeys.all });
+      void queryClient.invalidateQueries({ queryKey: accountKeys.all });
+      void queryClient.invalidateQueries({ queryKey: usageKeys.all });
+      void queryClient.invalidateQueries({ queryKey: ['imports'] });
+    },
+  });
+}
+
+export interface UploadImportFileInput {
+  file: File;
+  import_id: string;
+}
+
+export async function uploadImportFile(input: UploadImportFileInput): Promise<unknown> {
+  const formData = new FormData();
+  formData.append('file', input.file);
+  formData.append('import_id', input.import_id);
+  const res = await fetch('/api/transactions/imports', {
+    method: 'POST',
+    body: formData,
+  });
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error((error as { error: string }).error || 'Failed to upload import file');
+  }
+  return res.json();
+}
+
+export function useUploadImportFile(): ReturnType<
+  typeof useMutation<unknown, Error, UploadImportFileInput>
+> {
+  return useMutation({ mutationFn: uploadImportFile });
+}
+
+export interface CheckDuplicatesInput {
+  transactions: { date: string; amount: number; account: string }[];
+}
+
+export interface DuplicateMatch {
+  index: number;
+  match: { id: string; date: string; amount: number; description: string; account_id: string };
+}
+
+export interface CheckDuplicatesResult {
+  duplicates: DuplicateMatch[];
+}
+
+export async function checkImportDuplicates(
+  input: CheckDuplicatesInput,
+): Promise<CheckDuplicatesResult> {
+  const res = await fetch('/api/transactions/import/check-duplicates', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) {
+    throw new Error('Failed to check duplicates');
+  }
+  return res.json() as Promise<CheckDuplicatesResult>;
+}
+
+export function useCheckImportDuplicates(): ReturnType<
+  typeof useMutation<CheckDuplicatesResult, Error, CheckDuplicatesInput>
+> {
+  return useMutation({ mutationFn: checkImportDuplicates });
+}

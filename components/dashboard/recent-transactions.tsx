@@ -1,5 +1,6 @@
 'use client';
 
+import { useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations, useLocale } from 'next-intl';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -14,7 +15,7 @@ import { formatTimeForDisplay } from '@/lib/utils/date';
 import { getCategoryName } from '@/lib/i18n/get-category-name';
 import type { Locale } from '@/i18n/config';
 import { ArrowDownLeft, ArrowUpRight, ArrowRightLeft, ArrowRight } from 'lucide-react';
-import type { TransactionType } from '@/types';
+import type { TransactionType, Category, Account } from '@/types';
 
 const typeConfig: Record<TransactionType, { icon: typeof ArrowDownLeft; colorClass: string }> = {
   expense: { icon: ArrowUpRight, colorClass: 'text-destructive' },
@@ -31,18 +32,26 @@ export function RecentTransactions(): React.ReactElement {
   const { data: categories } = useCategories();
   const { data: accounts } = useAccounts();
 
+  const categoryMap = useMemo(
+    () => new Map<string, Category>((categories ?? []).map((c) => [c.id, c])),
+    [categories],
+  );
+  const accountMap = useMemo(
+    () => new Map<string, Account>((accounts ?? []).map((a) => [a.id, a])),
+    [accounts],
+  );
+
   const getCategory = (
     categoryId: string | null,
   ): { name: string; color: string | null } | null => {
-    if (!categoryId || !categories) return null;
-    const cat = categories.find((c) => c.id === categoryId);
+    if (!categoryId) return null;
+    const cat = categoryMap.get(categoryId);
     if (!cat) return null;
     return { name: getCategoryName(cat, locale as Locale), color: cat.color };
   };
 
   const getAccountName = (accountId: string): string => {
-    if (!accounts) return '';
-    return accounts.find((a) => a.id === accountId)?.name ?? '';
+    return accountMap.get(accountId)?.name ?? '';
   };
 
   if (isLoading) {

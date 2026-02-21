@@ -16,7 +16,11 @@ export async function GET(): Promise<Response> {
       categoriesCountResult,
       automationsCountResult,
     ] = await Promise.all([
-      supabase.from('usage_tracking').select('*').eq('month', month).maybeSingle(),
+      supabase
+        .from('usage_tracking')
+        .select('ai_parses_used, transactions_count')
+        .eq('month', month)
+        .maybeSingle(),
       supabase.from('app_settings').select('value').eq('key', 'free_ai_parses_limit').maybeSingle(),
       supabase
         .from('app_settings')

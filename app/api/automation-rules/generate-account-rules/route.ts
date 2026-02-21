@@ -46,7 +46,7 @@ export async function POST(): Promise<Response> {
     // Fetch active accounts
     const { data: accounts, error: accountsError } = await supabase
       .from('accounts')
-      .select('*')
+      .select('id, name, type, institution, last_four, is_active, is_default')
       .eq('is_active', true)
       .is('deleted_at', null);
 

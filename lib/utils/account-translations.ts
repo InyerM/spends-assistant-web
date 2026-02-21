@@ -1,3 +1,18 @@
+import type { AccountType } from '@/types';
+
+/**
+ * Shared account type definitions used across create/edit dialogs.
+ */
+export const ACCOUNT_TYPES: { value: AccountType; labelKey: string }[] = [
+  { value: 'checking', labelKey: 'checking' },
+  { value: 'savings', labelKey: 'savings' },
+  { value: 'credit_card', labelKey: 'creditCard' },
+  { value: 'cash', labelKey: 'cash' },
+  { value: 'investment', labelKey: 'investment' },
+  { value: 'crypto', labelKey: 'crypto' },
+  { value: 'credit', labelKey: 'credit' },
+];
+
 /**
  * Translation map for default account names.
  * Only default accounts that have well-known names need entries here.

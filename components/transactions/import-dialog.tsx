@@ -3,7 +3,6 @@
 import { useState, useRef, useMemo } from 'react';
 import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
-import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import {
@@ -21,8 +20,13 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { transactionKeys } from '@/lib/api/queries/transaction.queries';
-import { useUsage, usageKeys } from '@/hooks/use-usage';
+import {
+  useImportTransactions,
+  useUploadImportFile,
+  useCheckImportDuplicates,
+} from '@/lib/api/mutations/transaction.mutations';
+import type { DuplicateMatch } from '@/lib/api/mutations/transaction.mutations';
+import { useUsage } from '@/hooks/use-usage';
 import { useSubscription } from '@/hooks/use-subscription';
 import { Upload, FileText, ArrowLeft, ArrowRight, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -161,18 +165,6 @@ function transformRow(
   };
 }
 
-interface ImportResult {
-  imported: number;
-  skipped: number;
-  errors: string[];
-  import_id?: string;
-}
-
-interface DuplicateMatch {
-  index: number;
-  match: { id: string; date: string; amount: number; description: string; account_id: string };
-}
-
 export function ImportDialog({ open, onOpenChange }: ImportDialogProps): React.ReactElement {
   const t = useTranslations('transactions');
   const tCommon = useTranslations('common');
@@ -182,13 +174,16 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps): React.R
   const [mapping, setMapping] = useState<Record<AppField, string>>({} as Record<AppField, string>);
   const [isDragging, setIsDragging] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
-  const [isChecking, setIsChecking] = useState(false);
   const [duplicates, setDuplicates] = useState<DuplicateMatch[]>([]);
   const fileRef = useRef<HTMLInputElement>(null);
-  const queryClient = useQueryClient();
   const parsedRowsRef = useRef<Record<string, string>[]>([]);
   const { data: usage } = useUsage();
   const { data: subscription } = useSubscription();
+  const importMutation = useImportTransactions();
+  const uploadFileMutation = useUploadImportFile();
+  const checkDuplicatesMutation = useCheckImportDuplicates();
+
+  const isChecking = checkDuplicatesMutation.isPending;
 
   const resetState = (): void => {
     setStep('upload');
@@ -196,7 +191,7 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps): React.R
     setCsvHeaders([]);
     setMapping({} as Record<AppField, string>);
     setDuplicates([]);
-    setIsChecking(false);
+    checkDuplicatesMutation.reset();
     parsedRowsRef.current = [];
   };
 
@@ -265,24 +260,13 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps): React.R
         return;
       }
 
-      const res = await fetch('/api/transactions/import', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          transactions,
-          resolve_names: true,
-          file_name: file?.name ?? 'import.csv',
-          row_count: parsedRowsRef.current.length,
-          force,
-        }),
+      const result = await importMutation.mutateAsync({
+        transactions,
+        resolve_names: true,
+        file_name: file?.name ?? 'import.csv',
+        row_count: parsedRowsRef.current.length,
+        force,
       });
-
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error((error as { error: string }).error || 'Import failed');
-      }
-
-      const result = (await res.json()) as ImportResult;
 
       if (result.errors.length > 0) {
         toast.warning(
@@ -294,18 +278,11 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps): React.R
 
       // Upload CSV file to Supabase storage in the background
       if (file && result.import_id) {
-        const formData = new FormData();
-        formData.append('file', file);
-        formData.append('import_id', result.import_id);
-        void fetch('/api/transactions/imports', {
-          method: 'POST',
-          body: formData,
+        void uploadFileMutation.mutateAsync({
+          file,
+          import_id: result.import_id,
         });
       }
-
-      void queryClient.invalidateQueries({ queryKey: transactionKeys.all });
-      void queryClient.invalidateQueries({ queryKey: usageKeys.all });
-      void queryClient.invalidateQueries({ queryKey: ['imports'] });
 
       toast(t('importHistory'), {
         action: {
@@ -329,7 +306,6 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps): React.R
     if (parsedRowsRef.current.length === 0) return;
 
     // Check for duplicates first
-    setIsChecking(true);
     try {
       const transactions = parsedRowsRef.current.map((row) => transformRow(row, mapping));
       const checkPayload = transactions.map((tx) => ({
@@ -338,25 +314,17 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps): React.R
         account: tx.account,
       }));
 
-      const res = await fetch('/api/transactions/import/check-duplicates', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ transactions: checkPayload }),
+      const result = await checkDuplicatesMutation.mutateAsync({
+        transactions: checkPayload,
       });
 
-      if (res.ok) {
-        const result = (await res.json()) as { duplicates: DuplicateMatch[] };
-        if (result.duplicates.length > 0) {
-          setDuplicates(result.duplicates);
-          setStep('duplicates');
-          return;
-        }
+      if (result.duplicates.length > 0) {
+        setDuplicates(result.duplicates);
+        setStep('duplicates');
+        return;
       }
-      // If check fails or no duplicates, proceed directly
     } catch {
       // If duplicate check fails, proceed anyway
-    } finally {
-      setIsChecking(false);
     }
 
     await doImport(false);

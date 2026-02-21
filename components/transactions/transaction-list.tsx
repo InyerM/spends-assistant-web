@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -30,9 +30,10 @@ import { SwipeableRow } from '@/components/transactions/swipeable-row';
 import { ConfirmDeleteDialog } from '@/components/shared/confirm-delete-dialog';
 import { useLongPress } from '@/hooks/use-long-press';
 import { useInfiniteScroll } from '@/hooks/use-infinite-scroll';
-import { findById } from '@/lib/utils/lookup';
 import { toast } from 'sonner';
-import type { Transaction, TransactionType, TransactionFilters } from '@/types';
+import type { Transaction, TransactionType, TransactionFilters, Category, Account } from '@/types';
+
+const EMPTY_HANDLERS = {};
 
 const typeConfig: Record<TransactionType, { icon: typeof ArrowDownLeft; colorClass: string }> = {
   expense: { icon: ArrowUpRight, colorClass: 'text-destructive' },
@@ -84,14 +85,17 @@ function buildDateGroups(
       sortBy === 'date' && sortOrder === 'asc' ? a.localeCompare(b) : b.localeCompare(a),
     )
     .map(([date, txs]) => {
-      if (sortBy === 'amount') {
-        txs.sort((a, b) => (sortOrder === 'asc' ? a.amount - b.amount : b.amount - a.amount));
-      }
+      const sorted =
+        sortBy === 'amount'
+          ? txs.toSorted((a, b) =>
+              sortOrder === 'asc' ? a.amount - b.amount : b.amount - a.amount,
+            )
+          : txs;
       return {
         date,
         displayDate: formatDateLabel(date, locale),
-        transactions: txs,
-        total: computeDayTotal(txs),
+        transactions: sorted,
+        total: computeDayTotal(sorted),
       };
     });
 }
@@ -170,7 +174,7 @@ function TransactionRow({
   const rowContent = (
     <div
       className={`hover:bg-card-overlay flex items-center gap-3 rounded-lg p-3 transition-colors ${isSelected ? 'bg-card-overlay' : ''}`}
-      {...(onLongPress ? longPressHandlers : {})}>
+      {...(onLongPress ? longPressHandlers : EMPTY_HANDLERS)}>
       {selectMode && onToggleSelect && (
         <Checkbox
           checked={isSelected}
@@ -311,24 +315,32 @@ export function TransactionList({
     locale,
   );
 
+  const categoryMap = useMemo(
+    () => new Map<string, Category>((categories ?? []).map((c) => [c.id, c])),
+    [categories],
+  );
+  const accountMap = useMemo(
+    () => new Map<string, Account>((accounts ?? []).map((a) => [a.id, a])),
+    [accounts],
+  );
+
   const getCategory = (
     categoryId: string | null,
   ): { name: string; color: string | null } | null => {
-    if (!categoryId || !categories) return null;
-    const cat = findById(categories, categoryId);
+    if (!categoryId) return null;
+    const cat = categoryMap.get(categoryId);
     if (!cat) return null;
     const name = getCategoryName(cat, locale as Locale);
     // If child category, inherit parent color if not set
     if (!cat.color && cat.parent_id) {
-      const parent = findById(categories, cat.parent_id);
+      const parent = categoryMap.get(cat.parent_id);
       return { name, color: parent?.color ?? null };
     }
     return { name, color: cat.color };
   };
 
   const getAccountName = (accountId: string): string => {
-    if (!accounts) return '';
-    return findById(accounts, accountId)?.name ?? '';
+    return accountMap.get(accountId)?.name ?? '';
   };
 
   if (isLoading) {
@@ -350,7 +362,10 @@ export function TransactionList({
   return (
     <div className='space-y-6'>
       {dateGroups.map((group, groupIndex) => (
-        <div key={group.date} className='mb-4'>
+        <div
+          key={group.date}
+          className='mb-4'
+          style={{ contentVisibility: 'auto', containIntrinsicSize: '0 200px' }}>
           <div className='border-border mb-2 flex items-center justify-between border-b pb-2'>
             <span className='text-muted-foreground text-sm font-medium'>{group.displayDate}</span>
             <span

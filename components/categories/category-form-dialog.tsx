@@ -113,7 +113,7 @@ export function CategoryFormDialog({
     if (!editingCategory && watchName) {
       form.setValue('slug', generateUniqueSlug(watchName));
     }
-  }, [watchName, editingCategory, form, generateUniqueSlug]);
+  }, [watchName, editingCategory?.id, form, generateUniqueSlug]); // eslint-disable-line react-hooks/exhaustive-deps -- intentionally using primitive dep
 
   // Reset form when dialog opens
   useEffect(() => {
@@ -140,7 +140,7 @@ export function CategoryFormDialog({
         });
       }
     }
-  }, [open, editingCategory, defaultParentId, defaultType, form]);
+  }, [open, editingCategory?.id, defaultParentId, defaultType, form]); // eslint-disable-line react-hooks/exhaustive-deps -- intentionally using primitive dep
 
   async function onSubmit(values: FormValues): Promise<void> {
     try {

@@ -27,17 +27,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useCreateAccount } from '@/lib/api/mutations/account.mutations';
-import type { AccountType } from '@/types';
-
-const accountTypes: { value: AccountType; labelKey: string }[] = [
-  { value: 'checking', labelKey: 'checking' },
-  { value: 'savings', labelKey: 'savings' },
-  { value: 'credit_card', labelKey: 'creditCard' },
-  { value: 'cash', labelKey: 'cash' },
-  { value: 'investment', labelKey: 'investment' },
-  { value: 'crypto', labelKey: 'crypto' },
-  { value: 'credit', labelKey: 'credit' },
-];
+import { ACCOUNT_TYPES } from '@/lib/utils/account-translations';
 
 const formSchema = z.object({
   name: z.string().min(1, 'Name is required'),
@@ -143,7 +133,7 @@ export function AccountCreateDialog({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {accountTypes.map((at) => (
+                      {ACCOUNT_TYPES.map((at) => (
                         <SelectItem key={at.value} value={at.value}>
                           {t(at.labelKey)}
                         </SelectItem>

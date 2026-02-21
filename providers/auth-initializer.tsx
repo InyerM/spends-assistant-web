@@ -1,6 +1,5 @@
 'use client';
 
-import { useEffect } from 'react';
 import { useAuthStore } from '@/store/auth-store';
 
 function trackSession(): void {
@@ -9,8 +8,11 @@ function trackSession(): void {
   });
 }
 
+let didInit = false;
+
 export function AuthInitializer({ children }: { children: React.ReactNode }): React.ReactElement {
-  useEffect(() => {
+  if (!didInit) {
+    didInit = true;
     void useAuthStore
       .getState()
       .initialize()
@@ -20,7 +22,7 @@ export function AuthInitializer({ children }: { children: React.ReactNode }): Re
           trackSession();
         }
       });
-  }, []);
+  }
 
   return <>{children}</>;
 }

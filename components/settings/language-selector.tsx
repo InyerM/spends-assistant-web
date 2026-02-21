@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/select';
 import { locales, type Locale } from '@/i18n/config';
 import { getLocaleCookie, setLocaleCookie } from '@/lib/i18n/locale-cookie';
+import { useUpdateLanguage } from '@/lib/api/mutations/settings.mutations';
 
 interface LanguageOption {
   value: Locale;
@@ -28,40 +29,28 @@ const LANGUAGE_OPTIONS: LanguageOption[] = [
   { value: 'pt', label: 'Portuguese', nativeLabel: 'Portugues' },
 ];
 
-async function saveLanguagePreference(language: Locale): Promise<void> {
-  const res = await fetch('/api/settings/language', {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ language }),
-  });
-  if (!res.ok) {
-    const error = (await res.json()) as { error?: string };
-    throw new Error(error.error ?? 'Failed to update language');
-  }
-}
-
 export function LanguageSelector(): React.ReactElement {
   const t = useTranslations('settings');
   const [currentLocale] = useState<Locale>(getLocaleCookie);
-  const [isPending, setIsPending] = useState(false);
+  const updateLanguage = useUpdateLanguage();
+
+  const isPending = updateLanguage.isPending;
 
   const handleLanguageChange = (value: string): void => {
     if (!locales.includes(value as Locale)) return;
     const newLocale = value as Locale;
 
-    setIsPending(true);
-
-    void saveLanguagePreference(newLocale)
-      .then(() => {
+    updateLanguage.mutate(newLocale, {
+      onSuccess: () => {
         setLocaleCookie(newLocale);
         toast.success(t('languageUpdated'));
         // Full reload so next-intl picks up the new locale from the cookie on the server
         window.location.reload();
-      })
-      .catch(() => {
+      },
+      onError: () => {
         toast.error(t('languageUpdateFailed'));
-        setIsPending(false);
-      });
+      },
+    });
   };
 
   return (

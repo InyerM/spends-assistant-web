@@ -33,17 +33,8 @@ import { useTransactions } from '@/lib/api/queries/transaction.queries';
 import { useTransactionFormStore } from '@/lib/stores/transaction-form.store';
 import { formatCurrency } from '@/lib/utils/formatting';
 import { getCurrentColombiaTimes } from '@/lib/utils/date';
-import type { Account, AccountType } from '@/types';
-
-const accountTypes: { value: AccountType; labelKey: string }[] = [
-  { value: 'checking', labelKey: 'checking' },
-  { value: 'savings', labelKey: 'savings' },
-  { value: 'credit_card', labelKey: 'creditCard' },
-  { value: 'cash', labelKey: 'cash' },
-  { value: 'investment', labelKey: 'investment' },
-  { value: 'crypto', labelKey: 'crypto' },
-  { value: 'credit', labelKey: 'credit' },
-];
+import { ACCOUNT_TYPES } from '@/lib/utils/account-translations';
+import type { Account } from '@/types';
 
 const formSchema = z.object({
   name: z.string().min(1, 'Name is required'),
@@ -124,7 +115,7 @@ export function AccountEditDialog({
         icon: account.icon ?? '',
       });
     }
-  }, [account, open, form]);
+  }, [account?.id, open, form]); // eslint-disable-line react-hooks/exhaustive-deps -- intentionally using primitive dep
 
   async function onSubmit(values: FormValues): Promise<void> {
     if (!account) return;
@@ -251,7 +242,7 @@ export function AccountEditDialog({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {accountTypes.map((at) => (
+                      {ACCOUNT_TYPES.map((at) => (
                         <SelectItem key={at.value} value={at.value}>
                           {t(at.labelKey)}
                         </SelectItem>

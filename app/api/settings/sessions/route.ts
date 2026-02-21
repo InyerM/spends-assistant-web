@@ -7,7 +7,7 @@ export async function GET(): Promise<Response> {
 
     const { data, error } = await supabase
       .from('user_sessions')
-      .select('*')
+      .select('id, device_type, device_name, ip_address, last_active_at')
       .order('last_active_at', { ascending: false });
 
     if (error) return errorResponse(error.message, 400);
