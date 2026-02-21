@@ -1,4 +1,14 @@
-import { startOfWeek, endOfWeek, getISOWeek } from 'date-fns';
+import {
+  startOfWeek,
+  endOfWeek,
+  startOfMonth,
+  endOfMonth,
+  getISOWeek,
+  addMonths,
+  subMonths,
+  addWeeks,
+  subWeeks,
+} from 'date-fns';
 
 export type PeriodMode = 'month' | 'week' | 'year' | 'custom';
 
@@ -45,6 +55,27 @@ export function detectMode(dateFrom: string, dateTo: string): PeriodMode {
   return 'custom';
 }
 
+// ── Label formatting ────────────────────────────────────────────────────────
+
+type LabelFormatter = (from: Date, to: Date, monthNames: string[], monthShort: string[]) => string;
+
+const LABEL_FORMATTERS: Record<PeriodMode, LabelFormatter> = {
+  month: (from, _to, monthNames) => `${monthNames[from.getMonth()]} ${from.getFullYear()}`,
+  week: (from, to, _monthNames, monthShort) => {
+    const fromMonth = monthShort[from.getMonth()];
+    const toMonth = monthShort[to.getMonth()];
+    return from.getMonth() === to.getMonth()
+      ? `W${getISOWeek(from)} · ${fromMonth} ${from.getDate()} – ${to.getDate()}, ${from.getFullYear()}`
+      : `W${getISOWeek(from)} · ${fromMonth} ${from.getDate()} – ${toMonth} ${to.getDate()}, ${to.getFullYear()}`;
+  },
+  year: (from) => String(from.getFullYear()),
+  custom: (from, to, _monthNames, monthShort) => {
+    const fromMonth = monthShort[from.getMonth()];
+    const toMonth = monthShort[to.getMonth()];
+    return `${fromMonth} ${from.getDate()}, ${from.getFullYear()} – ${toMonth} ${to.getDate()}, ${to.getFullYear()}`;
+  },
+};
+
 export function getLabel(
   dateFrom: string,
   dateTo: string,
@@ -54,25 +85,55 @@ export function getLabel(
 ): string {
   const from = toDate(dateFrom);
   const to = toDate(dateTo);
+  return LABEL_FORMATTERS[mode](from, to, monthNames, monthShort);
+}
 
-  switch (mode) {
-    case 'month':
-      return `${monthNames[from.getMonth()]} ${from.getFullYear()}`;
-    case 'week': {
-      const fromMonth = monthShort[from.getMonth()];
-      const toMonth = monthShort[to.getMonth()];
-      return from.getMonth() === to.getMonth()
-        ? `W${getISOWeek(from)} · ${fromMonth} ${from.getDate()} – ${to.getDate()}, ${from.getFullYear()}`
-        : `W${getISOWeek(from)} · ${fromMonth} ${from.getDate()} – ${toMonth} ${to.getDate()}, ${to.getFullYear()}`;
-    }
-    case 'year':
-      return String(from.getFullYear());
-    case 'custom': {
-      const fromMonth = monthShort[from.getMonth()];
-      const toMonth = monthShort[to.getMonth()];
-      return `${fromMonth} ${from.getDate()}, ${from.getFullYear()} – ${toMonth} ${to.getDate()}, ${to.getFullYear()}`;
-    }
-  }
+// ── Period navigation ───────────────────────────────────────────────────────
+
+type PeriodNavigator = (from: Date) => [string, string];
+
+const WEEK_OPTS = { weekStartsOn: 1 as const };
+
+const PREV_NAVIGATORS: Partial<Record<PeriodMode, PeriodNavigator>> = {
+  month: (from) => {
+    const prev = subMonths(from, 1);
+    return [toStr(startOfMonth(prev)), toStr(endOfMonth(prev))];
+  },
+  week: (from) => {
+    const prev = subWeeks(from, 1);
+    return [toStr(startOfWeek(prev, WEEK_OPTS)), toStr(endOfWeek(prev, WEEK_OPTS))];
+  },
+  year: (from) => {
+    const y = from.getFullYear() - 1;
+    return [`${y}-01-01`, `${y}-12-31`];
+  },
+};
+
+const NEXT_NAVIGATORS: Partial<Record<PeriodMode, PeriodNavigator>> = {
+  month: (from) => {
+    const next = addMonths(from, 1);
+    return [toStr(startOfMonth(next)), toStr(endOfMonth(next))];
+  },
+  week: (from) => {
+    const next = addWeeks(from, 1);
+    return [toStr(startOfWeek(next, WEEK_OPTS)), toStr(endOfWeek(next, WEEK_OPTS))];
+  },
+  year: (from) => {
+    const y = from.getFullYear() + 1;
+    return [`${y}-01-01`, `${y}-12-31`];
+  },
+};
+
+export function getPrevPeriod(dateFrom: string, mode: PeriodMode): [string, string] | null {
+  const nav = PREV_NAVIGATORS[mode];
+  if (!nav) return null;
+  return nav(toDate(dateFrom));
+}
+
+export function getNextPeriod(dateFrom: string, mode: PeriodMode): [string, string] | null {
+  const nav = NEXT_NAVIGATORS[mode];
+  if (!nav) return null;
+  return nav(toDate(dateFrom));
 }
 
 export function getMonthNames(locale: string): string[] {

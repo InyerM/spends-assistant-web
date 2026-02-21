@@ -16,18 +16,7 @@ import {
 import { locales, type Locale } from '@/i18n/config';
 import { getLocaleCookie, setLocaleCookie } from '@/lib/i18n/locale-cookie';
 import { useUpdateLanguage } from '@/lib/api/mutations/settings.mutations';
-
-interface LanguageOption {
-  value: Locale;
-  label: string;
-  nativeLabel: string;
-}
-
-const LANGUAGE_OPTIONS: LanguageOption[] = [
-  { value: 'en', label: 'English', nativeLabel: 'English' },
-  { value: 'es', label: 'Spanish', nativeLabel: 'Espanol' },
-  { value: 'pt', label: 'Portuguese', nativeLabel: 'Portugues' },
-];
+import { LANGUAGE_OPTIONS } from '@/lib/constants/languages';
 
 export function LanguageSelector(): React.ReactElement {
   const t = useTranslations('settings');

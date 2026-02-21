@@ -50,12 +50,7 @@ import {
 import { ConditionValueInput } from '@/components/automation/condition-value-input';
 import { ActionValueInput } from '@/components/automation/action-value-input';
 import type { AutomationRule, ConditionLogic, CreateAutomationRuleInput, RuleType } from '@/types';
-
-const RULE_TYPE_KEYS: Record<RuleType, string> = {
-  general: 'general',
-  account_detection: 'accountDetection',
-  transfer: 'transferRule',
-};
+import { RULE_TYPE_KEYS } from '@/lib/constants/automation';
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 

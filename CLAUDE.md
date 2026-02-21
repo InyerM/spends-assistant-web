@@ -362,6 +362,48 @@ Known duplication patterns to avoid and refactor:
 
 ---
 
+## No Switch-Case — Use Object Mapping
+
+**NEVER use `switch` or `switch/case` statements.** Use object/record mapping instead.
+
+```ts
+// BAD
+switch (type) {
+  case 'income':
+    return 'green';
+  case 'expense':
+    return 'red';
+  case 'transfer':
+    return 'blue';
+  default:
+    return 'gray';
+}
+
+// GOOD
+const TYPE_COLORS: Record<string, string> = {
+  income: 'green',
+  expense: 'red',
+  transfer: 'blue',
+};
+const color = TYPE_COLORS[type] ?? 'gray';
+```
+
+Benefits: O(1) lookup, easier to extend, no fall-through bugs, testable as data.
+
+If the mapping involves functions, use `Record<string, () => T>`:
+
+```ts
+const HANDLERS: Record<string, (ctx: Context) => Result> = {
+  create: (ctx) => handleCreate(ctx),
+  update: (ctx) => handleUpdate(ctx),
+  delete: (ctx) => handleDelete(ctx),
+};
+const handler = HANDLERS[action];
+if (handler) return handler(ctx);
+```
+
+---
+
 ## Component & Hook Guidelines
 
 - **Max component size**: ~200 lines. If a component exceeds this, look for logic to extract into a
@@ -372,6 +414,43 @@ Known duplication patterns to avoid and refactor:
   raw `fetch` in components
 - **State machines**: Multi-step flows (wizard, AI parse) should be managed by a custom hook that
   exposes `{ step, data, actions }`
+
+### Clean Component Files — CRITICAL
+
+**Component files (`.tsx` in `components/` and `app/`) must ONLY contain React components and their
+directly coupled event handlers.** Everything else lives in a separate file:
+
+| What                        | Where it goes                             | Example                               |
+| --------------------------- | ----------------------------------------- | ------------------------------------- |
+| Pure utility functions      | `lib/utils/<feature>.ts`                  | `parse24h`, `buildAutoMapping`        |
+| Constants / config objects  | `lib/constants/<domain>.ts`               | `TRANSACTION_TYPES`, `SORT_OPTIONS`   |
+| Types / interfaces (shared) | `types/`                                  | `TransactionFilters`, `AppField`      |
+| Zod schemas (shared)        | `lib/schemas/`                            | Validation schemas used in >1 file    |
+| Business logic hooks        | `hooks/`                                  | `useTransactionFilters`, `useAiParse` |
+| Data fetching               | `lib/api/queries/` + `lib/api/mutations/` | React Query hooks                     |
+
+**Rule of thumb:** If a function or constant does NOT use JSX or React hooks, it does NOT belong in
+a component file. Move it to the appropriate `lib/` location and import it.
+
+```ts
+// BAD — utility function defined inside a component file
+// components/transactions/import-dialog.tsx
+function buildAutoMapping(headers: string[]) { ... }
+const FIELD_CONFIGS = [ ... ];
+export function ImportDialog() { ... }
+
+// GOOD — utility extracted, component file only has the component
+// lib/utils/csv-import.ts
+export function buildAutoMapping(headers: string[]) { ... }
+export const FIELD_CONFIGS = [ ... ];
+
+// components/transactions/import-dialog.tsx
+import { buildAutoMapping, FIELD_CONFIGS } from '@/lib/utils/csv-import';
+export function ImportDialog() { ... }
+```
+
+Small private sub-components used only within the same file (e.g., a `ComparisonCard` inside a
+dialog) are acceptable — they use JSX and are tightly coupled to the parent.
 
 ---
 

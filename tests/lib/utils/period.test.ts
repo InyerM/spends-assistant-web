@@ -7,6 +7,8 @@ import {
   getDayHeaders,
   toStr,
   toDate,
+  getPrevPeriod,
+  getNextPeriod,
 } from '@/lib/utils/period';
 
 describe('toStr', () => {
@@ -140,5 +142,41 @@ describe('getDayHeaders', () => {
   it('returns 7 day names', () => {
     const headers = getDayHeaders('en');
     expect(headers).toHaveLength(7);
+  });
+});
+
+describe('getPrevPeriod', () => {
+  it('returns previous month for month mode', () => {
+    expect(getPrevPeriod('2024-06-01', 'month')).toEqual(['2024-05-01', '2024-05-31']);
+  });
+
+  it('returns previous week for week mode', () => {
+    expect(getPrevPeriod('2024-01-08', 'week')).toEqual(['2024-01-01', '2024-01-07']);
+  });
+
+  it('returns previous year for year mode', () => {
+    expect(getPrevPeriod('2024-01-01', 'year')).toEqual(['2023-01-01', '2023-12-31']);
+  });
+
+  it('returns null for custom mode', () => {
+    expect(getPrevPeriod('2024-01-15', 'custom')).toBeNull();
+  });
+});
+
+describe('getNextPeriod', () => {
+  it('returns next month for month mode', () => {
+    expect(getNextPeriod('2024-06-01', 'month')).toEqual(['2024-07-01', '2024-07-31']);
+  });
+
+  it('returns next week for week mode', () => {
+    expect(getNextPeriod('2024-01-01', 'week')).toEqual(['2024-01-08', '2024-01-14']);
+  });
+
+  it('returns next year for year mode', () => {
+    expect(getNextPeriod('2024-01-01', 'year')).toEqual(['2025-01-01', '2025-12-31']);
+  });
+
+  it('returns null for custom mode', () => {
+    expect(getNextPeriod('2024-01-15', 'custom')).toBeNull();
   });
 });

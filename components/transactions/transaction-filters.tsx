@@ -9,7 +9,8 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { useAccounts } from '@/lib/api/queries/account.queries';
 import { useCategories } from '@/lib/api/queries/category.queries';
 import { useTransactionFilters } from '@/hooks/use-transaction-filters';
-import type { TransactionFilters, TransactionType } from '@/types';
+import type { TransactionFilters } from '@/types';
+import { TRANSACTION_TYPES, SORT_OPTIONS } from '@/lib/constants/transaction';
 import {
   Wallet,
   Tag,
@@ -27,19 +28,6 @@ interface TransactionFiltersBarProps {
   filters: ListFilters;
   onFiltersChange: (filters: ListFilters) => void;
 }
-
-const TRANSACTION_TYPES: { value: TransactionType; labelKey: string }[] = [
-  { value: 'expense', labelKey: 'expense' },
-  { value: 'income', labelKey: 'income' },
-  { value: 'transfer', labelKey: 'transfer' },
-];
-
-const SORT_OPTIONS: { value: string; labelKey: string }[] = [
-  { value: 'date-desc', labelKey: 'newestFirst' },
-  { value: 'date-asc', labelKey: 'oldestFirst' },
-  { value: 'amount-desc', labelKey: 'highestAmount' },
-  { value: 'amount-asc', labelKey: 'lowestAmount' },
-];
 
 export function TransactionFiltersBar({
   filters,

@@ -5,20 +5,7 @@ import { useLocale } from 'next-intl';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-
-function getMonthNames(locale: string): string[] {
-  return Array.from({ length: 12 }, (_, i) => {
-    const name = new Intl.DateTimeFormat(locale, { month: 'long' }).format(new Date(2024, i, 1));
-    return name.charAt(0).toUpperCase() + name.slice(1);
-  });
-}
-
-function getMonthShort(locale: string): string[] {
-  return Array.from({ length: 12 }, (_, i) => {
-    const name = new Intl.DateTimeFormat(locale, { month: 'short' }).format(new Date(2024, i, 1));
-    return name.charAt(0).toUpperCase() + name.slice(1);
-  });
-}
+import { getMonthNames, getMonthShort } from '@/lib/utils/period';
 
 interface MonthSelectorProps {
   year: number;

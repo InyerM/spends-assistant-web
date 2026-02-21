@@ -1,15 +1,5 @@
 import { useState, useMemo, useCallback } from 'react';
-import {
-  startOfWeek,
-  endOfWeek,
-  startOfMonth,
-  endOfMonth,
-  addMonths,
-  subMonths,
-  addWeeks,
-  subWeeks,
-  eachDayOfInterval,
-} from 'date-fns';
+import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, eachDayOfInterval } from 'date-fns';
 import {
   toStr,
   toDate,
@@ -18,6 +8,8 @@ import {
   getMonthNames,
   getMonthShort,
   getDayHeaders,
+  getPrevPeriod,
+  getNextPeriod,
   type PeriodMode,
 } from '@/lib/utils/period';
 
@@ -118,55 +110,13 @@ export function usePeriodSelector({
   }, [baseLabel, mode, fromDate, dateFrom]);
 
   const handlePrev = useCallback((): void => {
-    const from = toDate(dateFrom);
-    switch (mode) {
-      case 'month': {
-        const prev = subMonths(from, 1);
-        onChange(toStr(startOfMonth(prev)), toStr(endOfMonth(prev)));
-        break;
-      }
-      case 'week': {
-        const prev = subWeeks(from, 1);
-        onChange(
-          toStr(startOfWeek(prev, { weekStartsOn: 1 })),
-          toStr(endOfWeek(prev, { weekStartsOn: 1 })),
-        );
-        break;
-      }
-      case 'year': {
-        const y = from.getFullYear() - 1;
-        onChange(`${y}-01-01`, `${y}-12-31`);
-        break;
-      }
-      default:
-        break;
-    }
+    const result = getPrevPeriod(dateFrom, mode);
+    if (result) onChange(result[0], result[1]);
   }, [dateFrom, mode, onChange]);
 
   const handleNext = useCallback((): void => {
-    const from = toDate(dateFrom);
-    switch (mode) {
-      case 'month': {
-        const next = addMonths(from, 1);
-        onChange(toStr(startOfMonth(next)), toStr(endOfMonth(next)));
-        break;
-      }
-      case 'week': {
-        const next = addWeeks(from, 1);
-        onChange(
-          toStr(startOfWeek(next, { weekStartsOn: 1 })),
-          toStr(endOfWeek(next, { weekStartsOn: 1 })),
-        );
-        break;
-      }
-      case 'year': {
-        const y = from.getFullYear() + 1;
-        onChange(`${y}-01-01`, `${y}-12-31`);
-        break;
-      }
-      default:
-        break;
-    }
+    const result = getNextPeriod(dateFrom, mode);
+    if (result) onChange(result[0], result[1]);
   }, [dateFrom, mode, onChange]);
 
   const handleMonthPick = useCallback(

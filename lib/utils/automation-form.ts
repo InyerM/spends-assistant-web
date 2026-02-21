@@ -133,68 +133,87 @@ export function buildPayload(
   actionRows: ActionRow[],
 ): CreateAutomationRuleInput {
   const conditions: AutomationRuleConditions = {};
-  const rawTextTerms: string[] = [];
-  const sourceTerms: string[] = [];
-  let amountMin: number | undefined;
-  let amountMax: number | undefined;
+
+  interface ConditionAccumulator {
+    rawTextTerms: string[];
+    sourceTerms: string[];
+    amountMin: number | undefined;
+    amountMax: number | undefined;
+  }
+
+  const CONDITION_HANDLERS: Record<
+    ConditionType,
+    (acc: ConditionAccumulator, value: string) => void
+  > = {
+    raw_text_contains: (acc, value) => acc.rawTextTerms.push(value.trim()),
+    source: (acc, value) => acc.sourceTerms.push(value.trim()),
+    amount_greater_than: (acc, value) => {
+      acc.amountMin = Number(value);
+    },
+    amount_less_than: (acc, value) => {
+      acc.amountMax = Number(value);
+    },
+    type: () => {
+      /* noop */
+    },
+  };
+
+  const condAcc: ConditionAccumulator = {
+    rawTextTerms: [],
+    sourceTerms: [],
+    amountMin: undefined,
+    amountMax: undefined,
+  };
 
   for (const row of conditionRows) {
     if (!row.value.trim()) continue;
-    switch (row.type) {
-      case 'raw_text_contains':
-        rawTextTerms.push(row.value.trim());
-        break;
-      case 'source':
-        sourceTerms.push(row.value.trim());
-        break;
-      case 'amount_greater_than':
-        amountMin = Number(row.value);
-        break;
-      case 'amount_less_than':
-        amountMax = Number(row.value);
-        break;
-      case 'type':
-        // stored as a condition if needed; for now map to source-style
-        break;
-    }
+    CONDITION_HANDLERS[row.type](condAcc, row.value);
   }
 
-  if (rawTextTerms.length > 0) conditions.raw_text_contains = rawTextTerms;
-  if (sourceTerms.length > 0) conditions.source = sourceTerms;
-  if (amountMin !== undefined && amountMax !== undefined) {
-    conditions.amount_between = [amountMin, amountMax];
-  } else if (amountMin !== undefined) {
-    conditions.amount_between = [amountMin, Number.MAX_SAFE_INTEGER];
-  } else if (amountMax !== undefined) {
-    conditions.amount_between = [0, amountMax];
+  if (condAcc.rawTextTerms.length > 0) conditions.raw_text_contains = condAcc.rawTextTerms;
+  if (condAcc.sourceTerms.length > 0) conditions.source = condAcc.sourceTerms;
+  if (condAcc.amountMin !== undefined && condAcc.amountMax !== undefined) {
+    conditions.amount_between = [condAcc.amountMin, condAcc.amountMax];
+  } else if (condAcc.amountMin !== undefined) {
+    conditions.amount_between = [condAcc.amountMin, Number.MAX_SAFE_INTEGER];
+  } else if (condAcc.amountMax !== undefined) {
+    conditions.amount_between = [0, condAcc.amountMax];
   }
 
   const actions: AutomationRuleActions = {};
-  let transferToAccountId: string | undefined;
+
+  interface ActionContext {
+    actions: AutomationRuleActions;
+    transferToAccountId: string | undefined;
+  }
+
+  const ACTION_HANDLERS: Record<ActionType, (ctx: ActionContext, value: string) => void> = {
+    set_type: (ctx, value) => {
+      ctx.actions.set_type = value as 'expense' | 'income' | 'transfer';
+    },
+    set_category: (ctx, value) => {
+      ctx.actions.set_category = value;
+    },
+    set_account: (ctx, value) => {
+      ctx.actions.set_account = value;
+    },
+    transfer_to_account: (ctx, value) => {
+      ctx.actions.link_to_account = value;
+      ctx.transferToAccountId = value;
+    },
+    auto_reconcile: (ctx, value) => {
+      if (value === 'true') ctx.actions.auto_reconcile = true;
+    },
+    add_note: (ctx, value) => {
+      ctx.actions.add_note = value.trim();
+    },
+  };
+
+  const actionCtx: ActionContext = { actions, transferToAccountId: undefined };
 
   for (const row of actionRows) {
     if (!row.value.trim() && row.type !== 'auto_reconcile') continue;
-    switch (row.type) {
-      case 'set_type':
-        actions.set_type = row.value as 'expense' | 'income' | 'transfer';
-        break;
-      case 'set_category':
-        actions.set_category = row.value;
-        break;
-      case 'set_account':
-        actions.set_account = row.value;
-        break;
-      case 'transfer_to_account':
-        actions.link_to_account = row.value;
-        transferToAccountId = row.value;
-        break;
-      case 'auto_reconcile':
-        if (row.value === 'true') actions.auto_reconcile = true;
-        break;
-      case 'add_note':
-        actions.add_note = row.value.trim();
-        break;
-    }
+    ACTION_HANDLERS[row.type](actionCtx, row.value);
   }
 
   return {
@@ -203,7 +222,7 @@ export function buildPayload(
     priority: values.priority,
     rule_type: values.rule_type,
     condition_logic: values.condition_logic,
-    transfer_to_account_id: transferToAccountId,
+    transfer_to_account_id: actionCtx.transferToAccountId,
     conditions,
     actions,
   };
