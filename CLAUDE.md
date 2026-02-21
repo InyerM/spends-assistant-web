@@ -285,6 +285,103 @@ dependency arrays.
 
 Before finishing a prompt, always check the code for any errors or typos.
 
-- Run `pnpm type-check` to check for any type errors.
+- Run `pnpm typecheck` to check for any type errors.
 - Run `pnpm lint:fix` to check for any linting errors.
 - Run `pnpm format:fix` to format the code.
+- Run `pnpm test:run` to ensure no test regressions.
+
+---
+
+## SOLID Principles (with project-specific examples)
+
+**SRP — Single Responsibility Principle**
+
+- A component should have ONE reason to change
+- BAD: `transaction-form.tsx` (1125 lines) — mixes AI parsing, 3-step state machine, form
+  validation, delete logic, and usage limit checks
+- BAD: `categories/page.tsx` (832 lines) — embeds form schema, slug generation, tree filtering, and
+  CRUD all in one page
+- RULE: If a component does more than render UI + handle user events for ONE feature, extract the
+  extra logic
+
+**OCP — Open/Closed Principle**
+
+- Prefer composition over conditionals. Use `children`, render props, or compound components
+- BAD: A single component with 5 `if (step === 'x')` branches — extract each step into its own
+  component
+
+**LSP — Liskov Substitution**
+
+- Extracted hooks must maintain the same contract as the inline logic they replace
+- When extracting a hook from a component, the component's public props interface must not change
+
+**ISP — Interface Segregation**
+
+- Don't pass entire objects when a component only uses 1-2 fields (already in Vercel rules:
+  server-serialization)
+- BAD: `<Profile user={user} />` when only `user.name` is used
+- GOOD: `<Profile name={user.name} />`
+
+**DIP — Dependency Inversion**
+
+- Components depend on hooks/abstractions, not on raw `fetch` or `supabase` calls
+- BAD: `api-keys-tab.tsx` uses manual `useState`/`useEffect`/`fetch` instead of React Query
+- BAD: `security-tab.tsx` calls `supabaseClient.auth` directly
+- GOOD: All data fetching through `lib/api/queries/` + `lib/api/mutations/` + React Query hooks
+
+---
+
+## DRY — Don't Repeat Yourself
+
+Known duplication patterns to avoid and refactor:
+
+- **IntersectionObserver**: Use `hooks/use-infinite-scroll.ts` — never write inline
+  IntersectionObserver
+- **Search inputs**: Use `components/shared/search-input.tsx` for search + clear button pattern
+- **Lookup helpers**: Use `lib/utils/lookup.ts` for `getAccountName()`, `findCategoryName()` etc.
+- **CSV parsing**: Use `lib/utils/csv.ts` for `detectDelimiter()`, `parseCsvLine()`, `parseCsv()`
+- **Form schemas**: Keep zod schemas in the component file ONLY if they're used nowhere else. If
+  shared, move to `lib/schemas/`
+- **Delete-then-toast**: The try/catch/toast pattern for mutations is handled by React Query
+  `onSuccess`/`onError` callbacks — don't write manual try/catch
+
+---
+
+## STUPID — Avoid These Anti-Patterns
+
+- **S**ingleton: Don't create global mutable state outside of Zustand stores
+- **T**ight coupling: Components should not import from other components' internal files. Use the
+  public API (hooks, shared components)
+- **U**ntestable: If a function is hard to test, it's doing too much. Extract pure logic from React
+  components
+- **P**remature optimization: Don't `useMemo`/`useCallback` everything. Only memoize when profiling
+  shows a need (already in Vercel rules: rerender-simple-expression-in-memo)
+- **I**ndescriptive naming: Use descriptive names. `handleClick` is fine for a button, but
+  `handleQuickCreateAndAnother` should be in a named hook
+- **D**uplication: See DRY section above
+
+---
+
+## Component & Hook Guidelines
+
+- **Max component size**: ~200 lines. If a component exceeds this, look for logic to extract into a
+  custom hook or sub-component
+- **Business logic location**: Custom hooks in `hooks/` for feature-specific logic (e.g.,
+  `use-infinite-scroll.ts`, `use-csv-import.ts`). Pure utilities in `lib/utils/`
+- **Data fetching**: ALWAYS through React Query (`lib/api/queries/` + `lib/api/mutations/`). Never
+  raw `fetch` in components
+- **State machines**: Multi-step flows (wizard, AI parse) should be managed by a custom hook that
+  exposes `{ step, data, actions }`
+
+---
+
+## Testing Requirements
+
+- **New hooks**: Every extracted hook MUST have unit tests in `tests/hooks/`
+- **New utils**: Every new utility file MUST have unit tests in `tests/lib/utils/`
+- **TDD for refactoring**: When extracting existing logic:
+  1. Write characterization tests for the logic
+  2. Move the code to the new module
+  3. Update imports
+  4. Verify all tests pass
+- **Run `pnpm test:run` before finishing** to ensure no regressions

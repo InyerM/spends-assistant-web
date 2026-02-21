@@ -2,125 +2,25 @@
 
 import { Fragment, useState, useMemo } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
-import {
-  startOfWeek,
-  endOfWeek,
-  startOfMonth,
-  endOfMonth,
-  addMonths,
-  subMonths,
-  addWeeks,
-  subWeeks,
-  eachDayOfInterval,
-  isSameMonth,
-  getISOWeek,
-} from 'date-fns';
+import { startOfMonth, startOfWeek, addMonths, subMonths, isSameMonth } from 'date-fns';
 import { ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DatePicker } from '@/components/ui/date-picker';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-
-type PeriodMode = 'month' | 'week' | 'year' | 'custom';
+import { usePeriodSelector } from '@/hooks/use-period-selector';
+import {
+  toStr,
+  getMonthNames as getMonthNamesUtil,
+  getMonthShort as getMonthShortUtil,
+  getDayHeaders as getDayHeadersUtil,
+  type PeriodMode,
+} from '@/lib/utils/period';
 
 interface PeriodSelectorProps {
   dateFrom: string;
   dateTo: string;
   onChange: (dateFrom: string, dateTo: string) => void;
-}
-
-function getMonthNames(locale: string): string[] {
-  return Array.from({ length: 12 }, (_, i) => {
-    const name = new Intl.DateTimeFormat(locale, { month: 'long' }).format(new Date(2024, i, 1));
-    return name.charAt(0).toUpperCase() + name.slice(1);
-  });
-}
-
-function getMonthShort(locale: string): string[] {
-  return Array.from({ length: 12 }, (_, i) => {
-    const name = new Intl.DateTimeFormat(locale, { month: 'short' }).format(new Date(2024, i, 1));
-    return name.charAt(0).toUpperCase() + name.slice(1);
-  });
-}
-
-function getDayHeaders(locale: string): string[] {
-  // Monday = 2024-01-01, Tuesday = 2024-01-02, etc.
-  return Array.from({ length: 7 }, (_, i) =>
-    new Intl.DateTimeFormat(locale, { weekday: 'short' }).format(new Date(2024, 0, i + 1)),
-  );
-}
-
-function toStr(date: Date): string {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, '0');
-  const d = String(date.getDate()).padStart(2, '0');
-  return `${y}-${m}-${d}`;
-}
-
-function toDate(str: string): Date {
-  const [y, m, d] = str.split('-').map(Number);
-  return new Date(y, m - 1, d);
-}
-
-function detectMode(dateFrom: string, dateTo: string): PeriodMode {
-  const from = toDate(dateFrom);
-  const to = toDate(dateTo);
-
-  if (
-    dateFrom.endsWith('-01-01') &&
-    dateTo.endsWith('-12-31') &&
-    dateFrom.slice(0, 4) === dateTo.slice(0, 4)
-  ) {
-    return 'year';
-  }
-
-  const lastOfMonth = new Date(from.getFullYear(), from.getMonth() + 1, 0).getDate();
-  if (
-    from.getDate() === 1 &&
-    to.getDate() === lastOfMonth &&
-    from.getMonth() === to.getMonth() &&
-    from.getFullYear() === to.getFullYear()
-  ) {
-    return 'month';
-  }
-
-  const ws = startOfWeek(from, { weekStartsOn: 1 });
-  const we = endOfWeek(from, { weekStartsOn: 1 });
-  if (toStr(ws) === dateFrom && toStr(we) === dateTo) {
-    return 'week';
-  }
-
-  return 'custom';
-}
-
-function getLabel(
-  dateFrom: string,
-  dateTo: string,
-  mode: PeriodMode,
-  monthNames: string[],
-  monthShort: string[],
-): string {
-  const from = toDate(dateFrom);
-  const to = toDate(dateTo);
-
-  switch (mode) {
-    case 'month':
-      return `${monthNames[from.getMonth()]} ${from.getFullYear()}`;
-    case 'week': {
-      const fromMonth = monthShort[from.getMonth()];
-      const toMonth = monthShort[to.getMonth()];
-      return from.getMonth() === to.getMonth()
-        ? `W${getISOWeek(from)} · ${fromMonth} ${from.getDate()} – ${to.getDate()}, ${from.getFullYear()}`
-        : `W${getISOWeek(from)} · ${fromMonth} ${from.getDate()} – ${toMonth} ${to.getDate()}, ${to.getFullYear()}`;
-    }
-    case 'year':
-      return String(from.getFullYear());
-    case 'custom': {
-      const fromMonth = monthShort[from.getMonth()];
-      const toMonth = monthShort[to.getMonth()];
-      return `${fromMonth} ${from.getDate()}, ${from.getFullYear()} – ${toMonth} ${to.getDate()}, ${to.getFullYear()}`;
-    }
-  }
 }
 
 export function PeriodSelector({
@@ -131,175 +31,77 @@ export function PeriodSelector({
   const t = useTranslations('transactions');
   const tCommon = useTranslations('common');
   const locale = useLocale();
-  const monthNames = useMemo(() => getMonthNames(locale), [locale]);
-  const monthShort = useMemo(() => getMonthShort(locale), [locale]);
-  const dayHeaders = useMemo(() => getDayHeaders(locale), [locale]);
   const [open, setOpen] = useState(false);
-  const [mode, setMode] = useState<PeriodMode>(() => detectMode(dateFrom, dateTo));
-  const [popoverTab, setPopoverTab] = useState<PeriodMode>(mode);
-  const [pickerYear, setPickerYear] = useState(() => toDate(dateFrom).getFullYear());
-  const [calendarMonth, setCalendarMonth] = useState(() => startOfMonth(toDate(dateFrom)));
-  const [customFrom, setCustomFrom] = useState(dateFrom);
-  const [customTo, setCustomTo] = useState(dateTo);
-  const [decadeStart, setDecadeStart] = useState(
-    () => Math.floor(toDate(dateFrom).getFullYear() / 10) * 10,
-  );
 
-  const baseLabel = getLabel(dateFrom, dateTo, mode, monthNames, monthShort);
-  const fromDate = toDate(dateFrom);
+  // Locale-aware month/day names for display
+  const localeMonthNames = useMemo(() => getMonthNamesUtil(locale), [locale]);
+  const localeMonthShort = useMemo(() => getMonthShortUtil(locale), [locale]);
+  const localeDayHeaders = useMemo(() => getDayHeadersUtil(locale), [locale]);
 
+  const period = usePeriodSelector({ dateFrom, dateTo, onChange });
+
+  // Override label with localized "this month/week/year" when applicable
   const label = useMemo((): string => {
     const now = new Date();
-    if (mode === 'month') {
+    if (period.mode === 'month') {
       const nowStart = startOfMonth(now);
       if (
-        fromDate.getFullYear() === nowStart.getFullYear() &&
-        fromDate.getMonth() === nowStart.getMonth()
+        period.fromDate.getFullYear() === nowStart.getFullYear() &&
+        period.fromDate.getMonth() === nowStart.getMonth()
       ) {
         return t('thisMonth');
       }
-    } else if (mode === 'week') {
+    } else if (period.mode === 'week') {
       const nowWeekStart = startOfWeek(now, { weekStartsOn: 1 });
       if (toStr(nowWeekStart) === dateFrom) {
         return t('thisWeek');
       }
-    } else if (mode === 'year') {
-      if (fromDate.getFullYear() === now.getFullYear()) {
+    } else if (period.mode === 'year') {
+      if (period.fromDate.getFullYear() === now.getFullYear()) {
         return t('thisYear');
       }
     }
-    return baseLabel;
-  }, [baseLabel, mode, fromDate, dateFrom, t]);
+    return period.label;
+  }, [period.label, period.mode, period.fromDate, dateFrom, t]);
 
-  const handlePrev = (): void => {
-    const from = toDate(dateFrom);
-    switch (mode) {
-      case 'month': {
-        const prev = subMonths(from, 1);
-        onChange(toStr(startOfMonth(prev)), toStr(endOfMonth(prev)));
-        break;
-      }
-      case 'week': {
-        const prev = subWeeks(from, 1);
-        onChange(
-          toStr(startOfWeek(prev, { weekStartsOn: 1 })),
-          toStr(endOfWeek(prev, { weekStartsOn: 1 })),
-        );
-        break;
-      }
-      case 'year': {
-        const y = from.getFullYear() - 1;
-        onChange(`${y}-01-01`, `${y}-12-31`);
-        break;
-      }
-      default:
-        break;
-    }
-  };
-
-  const handleNext = (): void => {
-    const from = toDate(dateFrom);
-    switch (mode) {
-      case 'month': {
-        const next = addMonths(from, 1);
-        onChange(toStr(startOfMonth(next)), toStr(endOfMonth(next)));
-        break;
-      }
-      case 'week': {
-        const next = addWeeks(from, 1);
-        onChange(
-          toStr(startOfWeek(next, { weekStartsOn: 1 })),
-          toStr(endOfWeek(next, { weekStartsOn: 1 })),
-        );
-        break;
-      }
-      case 'year': {
-        const y = from.getFullYear() + 1;
-        onChange(`${y}-01-01`, `${y}-12-31`);
-        break;
-      }
-      default:
-        break;
-    }
+  const handleOpenChange = (o: boolean): void => {
+    period.handleOpenChange(o);
+    setOpen(o);
   };
 
   const handleMonthPick = (m: number): void => {
-    const d = new Date(pickerYear, m, 1);
-    onChange(toStr(startOfMonth(d)), toStr(endOfMonth(d)));
-    setMode('month');
+    period.handleMonthPick(m);
     setOpen(false);
   };
 
   const handleWeekPick = (day: Date): void => {
-    onChange(
-      toStr(startOfWeek(day, { weekStartsOn: 1 })),
-      toStr(endOfWeek(day, { weekStartsOn: 1 })),
-    );
-    setMode('week');
+    period.handleWeekPick(day);
     setOpen(false);
   };
 
   const handleYearPick = (y: number): void => {
-    onChange(`${y}-01-01`, `${y}-12-31`);
-    setMode('year');
+    period.handleYearPick(y);
     setOpen(false);
   };
 
   const handleCustomApply = (): void => {
-    if (customFrom && customTo && customFrom <= customTo) {
-      onChange(customFrom, customTo);
-      setMode('custom');
-      setOpen(false);
-    }
-  };
-
-  const handleReset = (): void => {
-    const now = new Date();
-    onChange(toStr(startOfMonth(now)), toStr(endOfMonth(now)));
-    setMode('month');
+    period.handleCustomApply();
     setOpen(false);
   };
 
-  const handleOpenChange = (o: boolean): void => {
-    if (o) {
-      const from = toDate(dateFrom);
-      setPopoverTab(mode);
-      setPickerYear(from.getFullYear());
-      setCalendarMonth(startOfMonth(from));
-      setCustomFrom(dateFrom);
-      setCustomTo(dateTo);
-      setDecadeStart(Math.floor(from.getFullYear() / 10) * 10);
-    }
-    setOpen(o);
+  const handleReset = (): void => {
+    period.handleReset();
+    setOpen(false);
   };
-
-  const calDays = useMemo((): Date[] => {
-    const start = startOfWeek(startOfMonth(calendarMonth), { weekStartsOn: 1 });
-    const end = endOfWeek(endOfMonth(calendarMonth), { weekStartsOn: 1 });
-    return eachDayOfInterval({ start, end });
-  }, [calendarMonth]);
-
-  const weeks = useMemo((): Date[][] => {
-    const result: Date[][] = [];
-    for (let i = 0; i < calDays.length; i += 7) {
-      result.push(calDays.slice(i, i + 7));
-    }
-    return result;
-  }, [calDays]);
-
-  const years = useMemo(
-    (): number[] => Array.from({ length: 12 }, (_, i) => decadeStart - 1 + i),
-    [decadeStart],
-  );
 
   return (
     <div className='flex items-center gap-1'>
-      {mode !== 'custom' && (
+      {period.mode !== 'custom' && (
         <Button
           variant='ghost'
           size='icon'
           className='h-9 w-9 cursor-pointer sm:h-8 sm:w-8'
-          onClick={handlePrev}>
+          onClick={period.handlePrev}>
           <ChevronLeft className='h-4 w-4' />
         </Button>
       )}
@@ -311,7 +113,9 @@ export function PeriodSelector({
           </button>
         </PopoverTrigger>
         <PopoverContent className='w-auto min-w-[280px] p-3' align='start'>
-          <Tabs value={popoverTab} onValueChange={(v): void => setPopoverTab(v as PeriodMode)}>
+          <Tabs
+            value={period.popoverTab}
+            onValueChange={(v): void => period.setPopoverTab(v as PeriodMode)}>
             <TabsList className='w-full'>
               <TabsTrigger value='custom' className='flex-1 cursor-pointer text-xs'>
                 {t('periodCustom')}
@@ -333,24 +137,24 @@ export function PeriodSelector({
                   variant='ghost'
                   size='icon'
                   className='h-8 w-8 cursor-pointer'
-                  onClick={(): void => setPickerYear(pickerYear - 1)}>
+                  onClick={(): void => period.setPickerYear(period.pickerYear - 1)}>
                   <ChevronLeft className='h-4 w-4' />
                 </Button>
-                <span className='text-sm font-semibold'>{pickerYear}</span>
+                <span className='text-sm font-semibold'>{period.pickerYear}</span>
                 <Button
                   variant='ghost'
                   size='icon'
                   className='h-8 w-8 cursor-pointer'
-                  onClick={(): void => setPickerYear(pickerYear + 1)}>
+                  onClick={(): void => period.setPickerYear(period.pickerYear + 1)}>
                   <ChevronRight className='h-4 w-4' />
                 </Button>
               </div>
               <div className='grid grid-cols-3 gap-1'>
-                {monthShort.map((name, i) => {
+                {localeMonthShort.map((name, i) => {
                   const isActive =
-                    mode === 'month' &&
-                    i === fromDate.getMonth() &&
-                    pickerYear === fromDate.getFullYear();
+                    period.mode === 'month' &&
+                    i === period.fromDate.getMonth() &&
+                    period.pickerYear === period.fromDate.getFullYear();
                   return (
                     <button
                       key={name}
@@ -373,28 +177,29 @@ export function PeriodSelector({
                   variant='ghost'
                   size='icon'
                   className='h-8 w-8 cursor-pointer'
-                  onClick={(): void => setCalendarMonth(subMonths(calendarMonth, 1))}>
+                  onClick={(): void => period.setCalendarMonth(subMonths(period.calendarMonth, 1))}>
                   <ChevronLeft className='h-4 w-4' />
                 </Button>
                 <span className='text-sm font-semibold'>
-                  {monthNames[calendarMonth.getMonth()]} {calendarMonth.getFullYear()}
+                  {localeMonthNames[period.calendarMonth.getMonth()]}{' '}
+                  {period.calendarMonth.getFullYear()}
                 </span>
                 <Button
                   variant='ghost'
                   size='icon'
                   className='h-8 w-8 cursor-pointer'
-                  onClick={(): void => setCalendarMonth(addMonths(calendarMonth, 1))}>
+                  onClick={(): void => period.setCalendarMonth(addMonths(period.calendarMonth, 1))}>
                   <ChevronRight className='h-4 w-4' />
                 </Button>
               </div>
               <div className='grid grid-cols-7 text-center'>
-                {dayHeaders.map((d) => (
+                {localeDayHeaders.map((d) => (
                   <div key={d} className='text-muted-foreground py-1 text-xs font-medium'>
                     {d}
                   </div>
                 ))}
-                {weeks.map((week) => {
-                  const isSelected = mode === 'week' && toStr(week[0]) === dateFrom;
+                {period.weeks.map((week) => {
+                  const isSelected = period.mode === 'week' && toStr(week[0]) === dateFrom;
                   return (
                     <Fragment key={toStr(week[0])}>
                       {week.map((day, di) => (
@@ -405,7 +210,7 @@ export function PeriodSelector({
                             isSelected
                               ? 'bg-primary text-primary-foreground'
                               : 'hover:bg-card-overlay'
-                          } ${!isSameMonth(day, calendarMonth) ? 'opacity-40' : ''} ${
+                          } ${!isSameMonth(day, period.calendarMonth) ? 'opacity-40' : ''} ${
                             di === 0 ? 'rounded-l-md' : ''
                           } ${di === 6 ? 'rounded-r-md' : ''}`}>
                           {day.getDate()}
@@ -423,24 +228,24 @@ export function PeriodSelector({
                   variant='ghost'
                   size='icon'
                   className='h-8 w-8 cursor-pointer'
-                  onClick={(): void => setDecadeStart(decadeStart - 10)}>
+                  onClick={(): void => period.setDecadeStart(period.decadeStart - 10)}>
                   <ChevronLeft className='h-4 w-4' />
                 </Button>
                 <span className='text-sm font-semibold'>
-                  {decadeStart} – {decadeStart + 9}
+                  {period.decadeStart} – {period.decadeStart + 9}
                 </span>
                 <Button
                   variant='ghost'
                   size='icon'
                   className='h-8 w-8 cursor-pointer'
-                  onClick={(): void => setDecadeStart(decadeStart + 10)}>
+                  onClick={(): void => period.setDecadeStart(period.decadeStart + 10)}>
                   <ChevronRight className='h-4 w-4' />
                 </Button>
               </div>
               <div className='grid grid-cols-3 gap-1'>
-                {years.map((y) => {
-                  const isActive = mode === 'year' && y === fromDate.getFullYear();
-                  const isOutside = y < decadeStart || y >= decadeStart + 10;
+                {period.years.map((y) => {
+                  const isActive = period.mode === 'year' && y === period.fromDate.getFullYear();
+                  const isOutside = y < period.decadeStart || y >= period.decadeStart + 10;
                   return (
                     <button
                       key={y}
@@ -465,17 +270,27 @@ export function PeriodSelector({
                   <label className='text-muted-foreground text-xs font-medium'>
                     {t('periodFrom')}
                   </label>
-                  <DatePicker value={customFrom} onChange={setCustomFrom} className='h-9 text-sm' />
+                  <DatePicker
+                    value={period.customFrom}
+                    onChange={period.setCustomFrom}
+                    className='h-9 text-sm'
+                  />
                 </div>
                 <div className='space-y-1.5'>
                   <label className='text-muted-foreground text-xs font-medium'>
                     {t('periodTo')}
                   </label>
-                  <DatePicker value={customTo} onChange={setCustomTo} className='h-9 text-sm' />
+                  <DatePicker
+                    value={period.customTo}
+                    onChange={period.setCustomTo}
+                    className='h-9 text-sm'
+                  />
                 </div>
                 <Button
                   onClick={handleCustomApply}
-                  disabled={!customFrom || !customTo || customFrom > customTo}
+                  disabled={
+                    !period.customFrom || !period.customTo || period.customFrom > period.customTo
+                  }
                   className='w-full cursor-pointer'
                   size='sm'>
                   {tCommon('apply')}
@@ -495,12 +310,12 @@ export function PeriodSelector({
           </div>
         </PopoverContent>
       </Popover>
-      {mode !== 'custom' && (
+      {period.mode !== 'custom' && (
         <Button
           variant='ghost'
           size='icon'
           className='h-9 w-9 cursor-pointer sm:h-8 sm:w-8'
-          onClick={handleNext}>
+          onClick={period.handleNext}>
           <ChevronRight className='h-4 w-4' />
         </Button>
       )}

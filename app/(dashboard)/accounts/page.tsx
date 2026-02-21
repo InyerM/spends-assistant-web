@@ -13,13 +13,11 @@ import { useDeleteAccount } from '@/lib/api/mutations/account.mutations';
 import { AccountEditDialog } from '@/components/accounts/account-edit-dialog';
 import { AccountCreateDialog } from '@/components/accounts/account-create-dialog';
 import { SwipeableRow } from '@/components/transactions/swipeable-row';
+import { SearchInput } from '@/components/shared/search-input';
 import { formatCurrency } from '@/lib/utils/formatting';
-import { Input } from '@/components/ui/input';
 import {
   Plus,
   Pencil,
-  Search,
-  X,
   Landmark,
   PiggyBank,
   CreditCard,
@@ -90,23 +88,12 @@ export default function AccountsPage(): React.ReactElement {
   return (
     <div className='space-y-4 p-4 sm:space-y-6 sm:p-6'>
       <div className='flex items-center gap-3'>
-        <div className='relative min-w-[140px] flex-1 sm:min-w-[180px]'>
-          <Search className='text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2' />
-          <Input
-            placeholder={`${tCommon('search')}...`}
-            value={search}
-            onChange={(e): void => setSearch(e.target.value)}
-            className='h-9 pr-8 pl-10 text-sm'
-          />
-          {search && (
-            <button
-              type='button'
-              onClick={(): void => setSearch('')}
-              className='text-muted-foreground hover:text-foreground absolute top-1/2 right-2 -translate-y-1/2 cursor-pointer'>
-              <X className='h-4 w-4' />
-            </button>
-          )}
-        </div>
+        <SearchInput
+          value={search}
+          onChange={setSearch}
+          placeholder={`${tCommon('search')}...`}
+          className='min-w-[140px] flex-1 sm:min-w-[180px]'
+        />
         <Button className='shrink-0 cursor-pointer' onClick={(): void => setCreateOpen(true)}>
           <Plus className='h-4 w-4 sm:mr-2' />
           <span className='hidden sm:inline'>{t('newAccount')}</span>

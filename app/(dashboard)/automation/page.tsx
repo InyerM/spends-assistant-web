@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -36,8 +36,10 @@ import {
   useDeleteAutomationRule,
   useGenerateAccountRules,
 } from '@/lib/api/mutations/automation.mutations';
-import { Input } from '@/components/ui/input';
-import { Plus, Pencil, Trash2, Zap, Loader2, Wand2, Sparkles, Search, X } from 'lucide-react';
+import { useInfiniteScroll } from '@/hooks/use-infinite-scroll';
+import { SearchInput } from '@/components/shared/search-input';
+import { findById } from '@/lib/utils/lookup';
+import { Plus, Pencil, Trash2, Zap, Loader2, Wand2, Sparkles } from 'lucide-react';
 import type { AutomationRule, CreateAutomationRuleInput, RuleType } from '@/types';
 
 type RuleTypeFilter = 'all' | RuleType;
@@ -88,25 +90,7 @@ export default function AutomationPage(): React.ReactElement {
   const deleteMutation = useDeleteAutomationRule();
   const generateMutation = useGenerateAccountRules();
 
-  const bottomRef = useRef<HTMLDivElement>(null);
-
-  const handleObserver = useCallback(
-    (entries: IntersectionObserverEntry[]) => {
-      const [entry] = entries;
-      if (entry.isIntersecting && hasNextPage && !isFetchingNextPage) {
-        void fetchNextPage();
-      }
-    },
-    [hasNextPage, isFetchingNextPage, fetchNextPage],
-  );
-
-  useEffect(() => {
-    const el = bottomRef.current;
-    if (!el) return;
-    const observer = new IntersectionObserver(handleObserver, { threshold: 0.1 });
-    observer.observe(el);
-    return (): void => observer.disconnect();
-  }, [handleObserver]);
+  const bottomRef = useInfiniteScroll({ fetchNextPage, hasNextPage, isFetchingNextPage });
 
   const allRulesRaw = useMemo(() => data?.pages.flatMap((p) => p.data) ?? [], [data?.pages]);
 
@@ -137,7 +121,7 @@ export default function AutomationPage(): React.ReactElement {
 
   const getAccountName = (accountId: string | null): string | null => {
     if (!accountId || !accounts) return null;
-    return accounts.find((a) => a.id === accountId)?.name ?? null;
+    return findById(accounts, accountId)?.name ?? null;
   };
 
   const handleToggle = (rule: AutomationRule, checked: boolean): void => {
@@ -197,45 +181,23 @@ export default function AutomationPage(): React.ReactElement {
     <div className='space-y-4 p-4 sm:space-y-6 sm:p-6'>
       <div className='space-y-3 sm:space-y-0'>
         {/* Mobile: search full-width */}
-        <div className='relative sm:hidden'>
-          <Search className='text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2' />
-          <Input
-            placeholder={`${tCommon('search')}...`}
-            value={search}
-            onChange={(e): void => setSearch(e.target.value)}
-            className='h-9 pr-8 pl-10 text-sm'
-          />
-          {search && (
-            <button
-              type='button'
-              onClick={(): void => setSearch('')}
-              className='text-muted-foreground hover:text-foreground absolute top-1/2 right-2 -translate-y-1/2 cursor-pointer'>
-              <X className='h-4 w-4' />
-            </button>
-          )}
-        </div>
+        <SearchInput
+          value={search}
+          onChange={setSearch}
+          placeholder={`${tCommon('search')}...`}
+          className='sm:hidden'
+        />
 
         {/* Mobile: selects + actions in one row */}
         <div className='flex items-center gap-2 sm:justify-between'>
           <div className='flex min-w-0 flex-1 items-center gap-2'>
             {/* Desktop: search inline with selects */}
-            <div className='relative hidden max-w-[280px] min-w-[180px] flex-1 sm:block'>
-              <Search className='text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2' />
-              <Input
-                placeholder={`${tCommon('search')}...`}
-                value={search}
-                onChange={(e): void => setSearch(e.target.value)}
-                className='h-9 pr-8 pl-10 text-sm'
-              />
-              {search && (
-                <button
-                  type='button'
-                  onClick={(): void => setSearch('')}
-                  className='text-muted-foreground hover:text-foreground absolute top-1/2 right-2 -translate-y-1/2 cursor-pointer'>
-                  <X className='h-4 w-4' />
-                </button>
-              )}
-            </div>
+            <SearchInput
+              value={search}
+              onChange={setSearch}
+              placeholder={`${tCommon('search')}...`}
+              className='hidden max-w-[280px] min-w-[180px] flex-1 sm:block'
+            />
             <Select
               value={ruleTypeFilter}
               onValueChange={(v): void => setRuleTypeFilter(v as RuleTypeFilter)}>

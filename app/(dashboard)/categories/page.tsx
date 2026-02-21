@@ -1,58 +1,26 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { useTranslations } from 'next-intl';
 import { useLocale } from 'next-intl';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { useForm, useWatch } from 'react-hook-form';
-import { z } from 'zod';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ConfirmDeleteDialog } from '@/components/shared/confirm-delete-dialog';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
-import { ColorPicker } from '@/components/ui/color-picker';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { SearchInput } from '@/components/shared/search-input';
 import { Switch } from '@/components/ui/switch';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useAllCategoryTree, useAllCategories } from '@/lib/api/queries/category.queries';
+import { useAllCategoryTree } from '@/lib/api/queries/category.queries';
 import {
-  useCreateCategory,
   useUpdateCategory,
   useDeleteCategory,
   fetchCategoryWithCounts,
 } from '@/lib/api/mutations/category.mutations';
 import { SwipeableRow } from '@/components/transactions/swipeable-row';
-import { slugify } from '@/lib/utils/slugify';
-import {
-  Plus,
-  Pencil,
-  Trash2,
-  ChevronDown,
-  ChevronRight,
-  Eye,
-  EyeOff,
-  Info,
-  Search,
-  X,
-} from 'lucide-react';
+import { CategoryFormDialog } from '@/components/categories/category-form-dialog';
+import { Plus, Pencil, Trash2, ChevronDown, ChevronRight, Eye, EyeOff } from 'lucide-react';
 import type { Category, CategoryType, SpendingNature } from '@/types';
 
 const spendingNatureTooltipKey: Record<SpendingNature, string> = {
@@ -61,18 +29,6 @@ const spendingNatureTooltipKey: Record<SpendingNature, string> = {
   need: 'spendingNatureNeedTooltip',
   must: 'spendingNatureMustTooltip',
 };
-
-const formSchema = z.object({
-  name: z.string().min(1, 'Name is required'),
-  slug: z.string().min(1, 'Slug is required'),
-  type: z.enum(['expense', 'income', 'transfer']),
-  parent_id: z.string().optional(),
-  icon: z.string().optional(),
-  color: z.string().optional(),
-  spending_nature: z.enum(['none', 'want', 'need', 'must']).optional(),
-});
-
-type FormValues = z.infer<typeof formSchema>;
 
 const typeBadgeVariant: Record<CategoryType, 'destructive' | 'default' | 'secondary'> = {
   expense: 'destructive',
@@ -102,12 +58,12 @@ export default function CategoriesPage(): React.ReactElement {
   const tCommon = useTranslations('common');
   const locale = useLocale();
   const { data: categoryTree, isLoading } = useAllCategoryTree();
-  const { data: allCategories } = useAllCategories();
-  const createMutation = useCreateCategory();
   const updateMutation = useUpdateCategory();
   const deleteMutation = useDeleteCategory();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+  const [defaultParentId, setDefaultParentId] = useState<string | undefined>();
+  const [defaultType, setDefaultType] = useState<CategoryType | undefined>();
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [deleteTarget, setDeleteTarget] = useState<Category | null>(null);
   const [deleteInfo, setDeleteInfo] = useState<{
@@ -117,44 +73,6 @@ export default function CategoriesPage(): React.ReactElement {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [showHidden, setShowHidden] = useState(false);
   const [search, setSearch] = useState('');
-
-  const form = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      name: '',
-      slug: '',
-      type: 'expense',
-      parent_id: undefined,
-      icon: '',
-      color: '',
-      spending_nature: 'none',
-    },
-  });
-
-  const watchName = useWatch({ control: form.control, name: 'name' });
-
-  const generateUniqueSlug = useCallback(
-    (name: string): string => {
-      const base = slugify(name);
-      if (!base) return '';
-      const existingSlugs = new Set(
-        (allCategories ?? [])
-          .filter((c) => !editingCategory || c.id !== editingCategory.id)
-          .map((c) => c.slug),
-      );
-      if (!existingSlugs.has(base)) return base;
-      let i = 2;
-      while (existingSlugs.has(`${base}-${i}`)) i++;
-      return `${base}-${i}`;
-    },
-    [allCategories, editingCategory],
-  );
-
-  useEffect(() => {
-    if (!editingCategory && watchName) {
-      form.setValue('slug', generateUniqueSlug(watchName));
-    }
-  }, [watchName, editingCategory, form, generateUniqueSlug]);
 
   const toggleExpanded = (id: string): void => {
     setExpandedIds((prev) => {
@@ -170,29 +88,15 @@ export default function CategoriesPage(): React.ReactElement {
 
   const handleCreate = (parentId?: string, type?: CategoryType): void => {
     setEditingCategory(null);
-    form.reset({
-      name: '',
-      slug: '',
-      type: type ?? 'expense',
-      parent_id: parentId ?? undefined,
-      icon: '',
-      color: '',
-      spending_nature: 'none',
-    });
+    setDefaultParentId(parentId);
+    setDefaultType(type);
     setDialogOpen(true);
   };
 
   const handleEdit = (category: Category): void => {
     setEditingCategory(category);
-    form.reset({
-      name: category.name,
-      slug: category.slug,
-      type: category.type,
-      parent_id: category.parent_id ?? undefined,
-      icon: category.icon ?? '',
-      color: category.color ?? '',
-      spending_nature: category.spending_nature ?? 'none',
-    });
+    setDefaultParentId(undefined);
+    setDefaultType(undefined);
     setDialogOpen(true);
   };
 
@@ -233,27 +137,6 @@ export default function CategoriesPage(): React.ReactElement {
       },
     );
   };
-
-  async function onSubmit(values: FormValues): Promise<void> {
-    try {
-      const payload = {
-        ...values,
-        parent_id: values.parent_id === 'none' ? undefined : values.parent_id,
-      };
-      if (editingCategory) {
-        await updateMutation.mutateAsync({ id: editingCategory.id, ...payload });
-        toast.success(t('categoryUpdated'));
-      } else {
-        await createMutation.mutateAsync(payload);
-        toast.success(t('categoryCreated'));
-      }
-      setDialogOpen(false);
-    } catch {
-      toast.error(editingCategory ? t('failedToUpdate') : t('failedToCreate'));
-    }
-  }
-
-  const parentCategories = allCategories?.filter((c) => !c.parent_id) ?? [];
 
   // Filter tree based on showHidden toggle and search
   const filteredTree = useMemo(() => {
@@ -300,45 +183,23 @@ export default function CategoriesPage(): React.ReactElement {
       <div className='space-y-4 p-4 sm:space-y-6 sm:p-6'>
         <div className='space-y-3 sm:space-y-0'>
           {/* Mobile: search full-width */}
-          <div className='relative sm:hidden'>
-            <Search className='text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2' />
-            <Input
-              placeholder={`${tCommon('search')}...`}
-              value={search}
-              onChange={(e): void => setSearch(e.target.value)}
-              className='h-9 pr-8 pl-10 text-sm'
-            />
-            {search && (
-              <button
-                type='button'
-                onClick={(): void => setSearch('')}
-                className='text-muted-foreground hover:text-foreground absolute top-1/2 right-2 -translate-y-1/2 cursor-pointer'>
-                <X className='h-4 w-4' />
-              </button>
-            )}
-          </div>
+          <SearchInput
+            value={search}
+            onChange={setSearch}
+            placeholder={`${tCommon('search')}...`}
+            className='sm:hidden'
+          />
 
           {/* Toggle + button row (mobile), search + toggle + button row (desktop) */}
           <div className='flex items-center justify-between'>
             <div className='flex items-center gap-3'>
               {/* Desktop: search inline */}
-              <div className='relative hidden max-w-[320px] min-w-[180px] flex-1 sm:block'>
-                <Search className='text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2' />
-                <Input
-                  placeholder={`${tCommon('search')}...`}
-                  value={search}
-                  onChange={(e): void => setSearch(e.target.value)}
-                  className='h-9 pr-8 pl-10 text-sm'
-                />
-                {search && (
-                  <button
-                    type='button'
-                    onClick={(): void => setSearch('')}
-                    className='text-muted-foreground hover:text-foreground absolute top-1/2 right-2 -translate-y-1/2 cursor-pointer'>
-                    <X className='h-4 w-4' />
-                  </button>
-                )}
-              </div>
+              <SearchInput
+                value={search}
+                onChange={setSearch}
+                placeholder={`${tCommon('search')}...`}
+                className='hidden max-w-[320px] min-w-[180px] flex-1 sm:block'
+              />
               <Switch checked={showHidden} onCheckedChange={setShowHidden} id='show-hidden' />
               <label
                 htmlFor='show-hidden'
@@ -633,173 +494,13 @@ export default function CategoriesPage(): React.ReactElement {
           </div>
         )}
 
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogContent className='border-border bg-card max-h-[85dvh] overflow-y-auto sm:max-w-[425px]'>
-            <DialogHeader>
-              <DialogTitle>{editingCategory ? t('editCategory') : t('newCategory')}</DialogTitle>
-            </DialogHeader>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className='space-y-4'>
-                <FormField
-                  control={form.control}
-                  name='name'
-                  render={({ field }): React.ReactElement => (
-                    <FormItem>
-                      <FormLabel>{t('name')}</FormLabel>
-                      <FormControl>
-                        <Input placeholder={t('namePlaceholder')} {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name='type'
-                  render={({ field }): React.ReactElement => (
-                    <FormItem>
-                      <FormLabel>{t('type')}</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder={t('type')} />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value='expense'>{t('expense')}</SelectItem>
-                          <SelectItem value='income'>{t('income')}</SelectItem>
-                          <SelectItem value='transfer'>{t('transfer')}</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name='parent_id'
-                  render={({ field }): React.ReactElement => (
-                    <FormItem>
-                      <FormLabel>{t('parent')}</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value ?? 'none'}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder={t('noneTopLevel')} />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value='none'>{t('noneTopLevel')}</SelectItem>
-                          {parentCategories.map((cat) => (
-                            <SelectItem key={cat.id} value={cat.id}>
-                              {cat.icon ?? ''} {getCategoryDisplayName(cat, locale)}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name='spending_nature'
-                  render={({ field }): React.ReactElement => (
-                    <FormItem>
-                      <FormLabel className='inline-flex items-center gap-1.5'>
-                        {t('spendingNature')}
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <button
-                              type='button'
-                              className='text-muted-foreground hover:text-foreground inline-flex cursor-help'
-                              tabIndex={-1}>
-                              <Info className='h-3.5 w-3.5' />
-                            </button>
-                          </TooltipTrigger>
-                          <TooltipContent side='top' className='max-w-64'>
-                            {t('spendingNatureHelp')}
-                          </TooltipContent>
-                        </Tooltip>
-                      </FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value ?? 'none'}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value='none'>
-                            {tCommon('none')} - {t('spendingNatureNoneTooltip')}
-                          </SelectItem>
-                          <SelectItem value='want'>
-                            {t('want')} - {t('spendingNatureWantTooltip')}
-                          </SelectItem>
-                          <SelectItem value='need'>
-                            {t('need')} - {t('spendingNatureNeedTooltip')}
-                          </SelectItem>
-                          <SelectItem value='must'>
-                            {t('must')} - {t('spendingNatureMustTooltip')}
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <div className='grid grid-cols-2 gap-4'>
-                  <FormField
-                    control={form.control}
-                    name='icon'
-                    render={({ field }): React.ReactElement => (
-                      <FormItem>
-                        <FormLabel>{t('icon')}</FormLabel>
-                        <FormControl>
-                          <Input placeholder='🍔' {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name='color'
-                    render={({ field }): React.ReactElement => (
-                      <FormItem>
-                        <FormLabel>{t('color')}</FormLabel>
-                        <FormControl>
-                          <ColorPicker value={field.value ?? ''} onChange={field.onChange} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                <div className='flex justify-end gap-3 pt-4'>
-                  <Button
-                    type='button'
-                    variant='outline'
-                    onClick={(): void => setDialogOpen(false)}>
-                    {tCommon('cancel')}
-                  </Button>
-                  <Button
-                    type='submit'
-                    disabled={createMutation.isPending || updateMutation.isPending}>
-                    {createMutation.isPending || updateMutation.isPending
-                      ? tCommon('saving')
-                      : editingCategory
-                        ? tCommon('update')
-                        : tCommon('create')}
-                  </Button>
-                </div>
-              </form>
-            </Form>
-          </DialogContent>
-        </Dialog>
+        <CategoryFormDialog
+          open={dialogOpen}
+          onOpenChange={setDialogOpen}
+          editingCategory={editingCategory}
+          defaultParentId={defaultParentId}
+          defaultType={defaultType}
+        />
 
         <ConfirmDeleteDialog
           open={deleteDialogOpen}

@@ -1,16 +1,16 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { SearchInput } from '@/components/shared/search-input';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useAccounts } from '@/lib/api/queries/account.queries';
 import { useCategories } from '@/lib/api/queries/category.queries';
+import { useTransactionFilters } from '@/hooks/use-transaction-filters';
 import type { TransactionFilters, TransactionType } from '@/types';
 import {
-  Search,
   Wallet,
   Tag,
   X,
@@ -41,16 +41,6 @@ const SORT_OPTIONS: { value: string; labelKey: string }[] = [
   { value: 'amount-asc', labelKey: 'lowestAmount' },
 ];
 
-function countActiveFilters(filters: ListFilters): number {
-  let count = 0;
-  if (filters.search) count++;
-  if (filters.types?.length) count++;
-  if (filters.account_ids?.length) count++;
-  if (filters.category_ids?.length) count++;
-  if (filters.sort_by) count++;
-  return count;
-}
-
 export function TransactionFiltersBar({
   filters,
   onFiltersChange,
@@ -61,121 +51,32 @@ export function TransactionFiltersBar({
   const { data: categories } = useCategories();
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
 
-  const selectedTypes = filters.types ?? [];
-  const selectedAccountIds = filters.account_ids ?? [];
-  const selectedCategoryIds = filters.category_ids ?? [];
-  const activeFilterCount = countActiveFilters(filters);
-  const currentSort = `${filters.sort_by ?? 'date'}-${filters.sort_order ?? 'desc'}`;
+  const {
+    selectedTypes,
+    selectedAccountIds,
+    selectedCategoryIds,
+    activeFilterCount,
+    currentSort,
+    toggleType,
+    toggleAllTypes,
+    toggleAccount,
+    toggleAllAccounts,
+    toggleCategory,
+    toggleSubcategory,
+    toggleAllCategories,
+    handleSort,
+    clearFilters,
+  } = useTransactionFilters({
+    filters,
+    onFiltersChange,
+    accounts,
+    categories,
+  });
 
   const parentCategories = categories?.filter((c) => !c.parent_id) ?? [];
 
   const getChildren = (parentId: string): typeof parentCategories =>
     categories?.filter((c) => c.parent_id === parentId) ?? [];
-
-  // Type filter
-  const toggleType = (type: TransactionType): void => {
-    const current = [...selectedTypes];
-    const index = current.indexOf(type);
-    if (index >= 0) {
-      current.splice(index, 1);
-    } else {
-      current.push(type);
-    }
-    onFiltersChange({
-      ...filters,
-      types: current.length > 0 ? current : undefined,
-    });
-  };
-
-  const toggleAllTypes = (): void => {
-    const allSelected = selectedTypes.length === TRANSACTION_TYPES.length;
-    onFiltersChange({
-      ...filters,
-      types: allSelected ? undefined : TRANSACTION_TYPES.map((t) => t.value),
-    });
-  };
-
-  // Account filter
-  const toggleAccount = (accountId: string): void => {
-    const current = [...selectedAccountIds];
-    const index = current.indexOf(accountId);
-    if (index >= 0) {
-      current.splice(index, 1);
-    } else {
-      current.push(accountId);
-    }
-    onFiltersChange({
-      ...filters,
-      account_ids: current.length > 0 ? current : undefined,
-    });
-  };
-
-  const toggleAllAccounts = (): void => {
-    if (!accounts) return;
-    const allSelected = selectedAccountIds.length === accounts.length;
-    onFiltersChange({
-      ...filters,
-      account_ids: allSelected ? undefined : accounts.map((a) => a.id),
-    });
-  };
-
-  // Category filter
-  const toggleAllCategories = (): void => {
-    if (!categories) return;
-    const allIds = categories.map((c) => c.id);
-    const allSelected = selectedCategoryIds.length === allIds.length;
-    onFiltersChange({
-      ...filters,
-      category_ids: allSelected ? undefined : allIds,
-    });
-  };
-
-  const toggleCategory = (categoryId: string): void => {
-    const children = getChildren(categoryId);
-    const childIds = children.map((c) => c.id);
-    const allIds = [categoryId, ...childIds];
-
-    const isParentSelected = selectedCategoryIds.includes(categoryId);
-
-    let updated: string[];
-    if (isParentSelected) {
-      // Deselect parent + all children
-      updated = selectedCategoryIds.filter((id) => !allIds.includes(id));
-    } else {
-      // Select parent + all children
-      updated = [...new Set([...selectedCategoryIds, ...allIds])];
-    }
-
-    onFiltersChange({
-      ...filters,
-      category_ids: updated.length > 0 ? updated : undefined,
-    });
-  };
-
-  const toggleSubcategory = (subcategoryId: string, parentId: string): void => {
-    const current = [...selectedCategoryIds];
-    const index = current.indexOf(subcategoryId);
-    if (index >= 0) {
-      current.splice(index, 1);
-      // Also deselect parent if a child is deselected
-      const parentIndex = current.indexOf(parentId);
-      if (parentIndex >= 0) current.splice(parentIndex, 1);
-    } else {
-      current.push(subcategoryId);
-      // Check if all siblings are selected, then select parent too
-      const siblings = getChildren(parentId);
-      const allSiblingsSelected = siblings.every(
-        (s) => s.id === subcategoryId || current.includes(s.id),
-      );
-      if (allSiblingsSelected && !current.includes(parentId)) {
-        current.push(parentId);
-      }
-    }
-    onFiltersChange({
-      ...filters,
-      category_ids: current.length > 0 ? current : undefined,
-    });
-  };
 
   const toggleExpandCategory = (categoryId: string): void => {
     setExpandedCategories((prev) => {
@@ -189,42 +90,14 @@ export function TransactionFiltersBar({
     });
   };
 
-  // Sort
-  const handleSort = (value: string): void => {
-    const [sortBy, sortOrder] = value.split('-') as ['date' | 'amount', 'asc' | 'desc'];
-    const isDefault = sortBy === 'date' && sortOrder === 'desc';
-    onFiltersChange({
-      ...filters,
-      sort_by: isDefault ? undefined : sortBy,
-      sort_order: isDefault ? undefined : sortOrder,
-    });
-  };
-
-  const clearFilters = (): void => {
-    onFiltersChange({ date_from: filters.date_from, date_to: filters.date_to });
-  };
-
   return (
     <div className='flex flex-wrap items-center gap-2'>
-      <div className='relative min-w-[140px] flex-1 sm:min-w-[180px]'>
-        <Search className='text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2' />
-        <Input
-          placeholder={`${tCommon('search')}...`}
-          value={filters.search ?? ''}
-          onChange={(e): void =>
-            onFiltersChange({ ...filters, search: e.target.value || undefined })
-          }
-          className='h-9 pr-8 pl-10 text-sm'
-        />
-        {filters.search && (
-          <button
-            type='button'
-            onClick={(): void => onFiltersChange({ ...filters, search: undefined })}
-            className='text-muted-foreground hover:text-foreground absolute top-1/2 right-2 -translate-y-1/2 cursor-pointer'>
-            <X className='h-4 w-4' />
-          </button>
-        )}
-      </div>
+      <SearchInput
+        value={filters.search ?? ''}
+        onChange={(value): void => onFiltersChange({ ...filters, search: value || undefined })}
+        placeholder={`${tCommon('search')}...`}
+        className='min-w-[140px] flex-1 sm:min-w-[180px]'
+      />
 
       {/* Type filter - multiselect */}
       <Popover>

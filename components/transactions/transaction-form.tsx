@@ -45,65 +45,13 @@ import {
 } from '@/lib/api/mutations/transaction.mutations';
 import { DuplicateWarningDialog } from '@/components/transactions/duplicate-warning-dialog';
 import { getCurrentColombiaTimes } from '@/lib/utils/date';
+import { findNameById, findById } from '@/lib/utils/lookup';
 import { UsageIndicator } from '@/components/shared/usage-indicator';
 import { useUsage } from '@/hooks/use-usage';
 import { useSubscription } from '@/hooks/use-subscription';
-import type { AppliedRule, Transaction, CreateTransactionInput } from '@/types';
-
-// --- AI Parse types ---
-
-interface ParsedExpense {
-  amount: number;
-  description: string;
-  category: string;
-  original_date?: string | null;
-  original_time?: string | null;
-  confidence: number;
-  payment_type?: string;
-  bank?: string;
-  type?: string;
-}
-
-interface ParseResponse {
-  parsed: ParsedExpense;
-  resolved: {
-    account_id?: string;
-    category_id?: string;
-    transfer_to_account_id?: string;
-    transfer_id?: string;
-    type?: string;
-    notes?: string;
-  };
-  original?: {
-    account_id?: string;
-    category_id?: string;
-  };
-  applied_rules: AppliedRule[];
-}
-
-function parseDateString(dateStr: string): string {
-  const parts = dateStr.split('/');
-  if (parts.length !== 3) return dateStr;
-  let year = parts[2];
-  if (year.length === 2) year = `20${year}`;
-  return `${year}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
-}
-
-function parseTimeString(timeStr: string): string {
-  return timeStr.length === 5 ? `${timeStr}:00` : timeStr;
-}
-
-function findCategoryName(cats: { id: string; name: string }[], id: string): string | null {
-  return cats.find((c) => c.id === id)?.name ?? null;
-}
-
-const SKIPPED_REASON_KEYS: Record<string, string> = {
-  spending_summary: 'skippedSpendingSummary',
-  balance_inquiry: 'skippedBalanceInquiry',
-  otp_code: 'skippedOtpCode',
-  promotional: 'skippedPromotional',
-  informational: 'skippedInformational',
-};
+import { useAiParse } from '@/hooks/use-ai-parse';
+import { SKIPPED_REASON_KEYS } from '@/lib/utils/ai-parse';
+import type { Transaction, CreateTransactionInput } from '@/types';
 
 // --- Form schema ---
 
@@ -120,7 +68,6 @@ const formSchema = z.object({
 });
 
 type FormValues = z.infer<typeof formSchema>;
-type Step = 'ai-prompt' | 'ai-result' | 'form';
 
 interface TransactionFormProps {
   open: boolean;
@@ -152,19 +99,7 @@ export function TransactionForm({
     input: CreateTransactionInput;
   } | null>(null);
 
-  // AI prompt state
-  const [step, setStep] = useState<Step>('ai-prompt');
-  const [aiText, setAiText] = useState('');
-  const [parsing, setParsing] = useState(false);
-  const [parseResult, setParseResult] = useState<ParseResponse | null>(null);
-  const [limitReached, setLimitReached] = useState(false);
-  const [skippedReason, setSkippedReason] = useState<string | null>(null);
-  const [aiSource, setAiSource] = useState<{
-    raw_text: string;
-    confidence: number;
-    parsed_data: Record<string, unknown>;
-    applied_rules?: AppliedRule[];
-  } | null>(null);
+  const ai = useAiParse();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const colombiaTimes = getCurrentColombiaTimes();
@@ -202,9 +137,9 @@ export function TransactionForm({
         category_id: transaction.category_id ?? undefined,
         transfer_to_account_id: transaction.transfer_to_account_id ?? undefined,
       });
-      setStep('form');
-      setAiSource(null);
-      setParseResult(null);
+      ai.setStep('form');
+      ai.setAiSource(null);
+      ai.setParseResult(null);
     } else if (open && !transaction) {
       // New: start at AI prompt
       const times = getCurrentColombiaTimes();
@@ -219,85 +154,25 @@ export function TransactionForm({
         category_id: undefined,
         transfer_to_account_id: undefined,
       });
-      setStep('ai-prompt');
-      setAiText('');
-      setParseResult(null);
-      setLimitReached(false);
-      setSkippedReason(null);
-      setAiSource(null);
+      ai.resetToPrompt();
     }
-  }, [open, transaction, form]);
+  }, [open, transaction, form]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const watchType = form.watch('type');
 
-  // --- AI Parse logic ---
-
-  async function handleParse(): Promise<void> {
-    if (!aiText.trim()) return;
-    setParsing(true);
-    setParseResult(null);
-    setLimitReached(false);
-    setSkippedReason(null);
-    try {
-      const res = await fetch('/api/transactions/parse', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: aiText }),
-      });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: 'Parse failed' }));
-        const errObj = err as { error: string; code?: string };
-        if (res.status === 429 && errObj.code === 'PARSE_LIMIT_REACHED') {
-          setLimitReached(true);
-          return;
-        }
-        throw new Error(errObj.error);
-      }
-      const data = (await res.json()) as ParseResponse & { status?: string; reason?: string };
-      if (data.status === 'skipped') {
-        setSkippedReason(data.reason ?? 'unknown');
-        return;
-      }
-      setParseResult(data);
-      setStep('ai-result');
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to parse');
-    } finally {
-      setParsing(false);
-    }
-  }
-
-  function buildFieldsFromParse(result: ParseResponse): FormValues {
-    const { parsed, resolved } = result;
-    const times = getCurrentColombiaTimes();
-    const date = parsed.original_date ? parseDateString(parsed.original_date) : times.date;
-    const time = parsed.original_time ? parseTimeString(parsed.original_time) : times.time;
-    const type = (resolved.type ?? parsed.type ?? 'expense') as 'expense' | 'income' | 'transfer';
-
-    return {
-      date,
-      time,
-      amount: parsed.amount,
-      description: parsed.description,
-      type,
-      account_id: resolved.account_id ?? '',
-      category_id: resolved.category_id,
-      transfer_to_account_id: resolved.transfer_to_account_id,
-      notes: resolved.notes ?? '',
-    };
-  }
+  // --- Quick create handlers (use AI parse result) ---
 
   function handleQuickCreate(): void {
-    if (!parseResult) return;
-    const fields = buildFieldsFromParse(parseResult);
-    setAiSource({
-      raw_text: aiText,
-      confidence: parseResult.parsed.confidence,
-      parsed_data: parseResult.parsed as unknown as Record<string, unknown>,
-      applied_rules: parseResult.applied_rules.length > 0 ? parseResult.applied_rules : undefined,
+    const fields = ai.buildFields();
+    if (!fields) return;
+    ai.setAiSource({
+      raw_text: ai.aiText,
+      confidence: ai.parseResult!.parsed.confidence,
+      parsed_data: ai.parseResult!.parsed as unknown as Record<string, unknown>,
+      applied_rules:
+        ai.parseResult!.applied_rules.length > 0 ? ai.parseResult!.applied_rules : undefined,
     });
     form.reset(fields);
-    // Submit directly
     void quickSubmit(fields);
   }
 
@@ -306,12 +181,12 @@ export function TransactionForm({
       await createMutation.mutateAsync({
         ...fields,
         source: 'web-ai',
-        raw_text: aiText,
-        confidence: parseResult?.parsed.confidence,
-        parsed_data: parseResult?.parsed as unknown as Record<string, unknown>,
+        raw_text: ai.aiText,
+        confidence: ai.parseResult?.parsed.confidence,
+        parsed_data: ai.parseResult?.parsed as unknown as Record<string, unknown>,
         applied_rules:
-          parseResult && parseResult.applied_rules.length > 0
-            ? parseResult.applied_rules
+          ai.parseResult && ai.parseResult.applied_rules.length > 0
+            ? ai.parseResult.applied_rules
             : undefined,
         category_id: fields.category_id ?? undefined,
         transfer_to_account_id: fields.transfer_to_account_id ?? undefined,
@@ -328,8 +203,8 @@ export function TransactionForm({
   }
 
   function handleQuickCreateAndAnother(): void {
-    if (!parseResult) return;
-    const fields = buildFieldsFromParse(parseResult);
+    const fields = ai.buildFields();
+    if (!fields) return;
     void quickSubmitAndAnother(fields);
   }
 
@@ -338,21 +213,18 @@ export function TransactionForm({
       await createMutation.mutateAsync({
         ...fields,
         source: 'web-ai',
-        raw_text: aiText,
-        confidence: parseResult?.parsed.confidence,
-        parsed_data: parseResult?.parsed as unknown as Record<string, unknown>,
+        raw_text: ai.aiText,
+        confidence: ai.parseResult?.parsed.confidence,
+        parsed_data: ai.parseResult?.parsed as unknown as Record<string, unknown>,
         applied_rules:
-          parseResult && parseResult.applied_rules.length > 0
-            ? parseResult.applied_rules
+          ai.parseResult && ai.parseResult.applied_rules.length > 0
+            ? ai.parseResult.applied_rules
             : undefined,
         category_id: fields.category_id ?? undefined,
         transfer_to_account_id: fields.transfer_to_account_id ?? undefined,
       });
       toast.success(t('transactionCreatedFromAi'));
-      // Reset for next parse
-      setAiText('');
-      setParseResult(null);
-      setStep('ai-prompt');
+      ai.resetToPrompt();
     } catch (err) {
       if (err instanceof DuplicateError) {
         setDuplicateConflict({ match: err.match, input: err.input });
@@ -363,22 +235,8 @@ export function TransactionForm({
   }
 
   function handleEditInForm(): void {
-    if (!parseResult) return;
-    const fields = buildFieldsFromParse(parseResult);
-    setAiSource({
-      raw_text: aiText,
-      confidence: parseResult.parsed.confidence,
-      parsed_data: parseResult.parsed as unknown as Record<string, unknown>,
-      applied_rules: parseResult.applied_rules.length > 0 ? parseResult.applied_rules : undefined,
-    });
-    form.reset(fields);
-    setStep('form');
-  }
-
-  function handleCreateManually(): void {
-    setAiSource(null);
-    setParseResult(null);
-    setStep('form');
+    const fields = ai.handleEditInForm();
+    if (fields) form.reset(fields);
   }
 
   // --- Form submit ---
@@ -398,15 +256,15 @@ export function TransactionForm({
       } else {
         await createMutation.mutateAsync({
           ...values,
-          source: aiSource ? 'web-ai' : 'web',
+          source: ai.aiSource ? 'web-ai' : 'web',
           category_id: values.category_id ?? undefined,
           transfer_to_account_id: values.transfer_to_account_id ?? undefined,
-          ...(aiSource
+          ...(ai.aiSource
             ? {
-                raw_text: aiSource.raw_text,
-                confidence: aiSource.confidence,
-                parsed_data: aiSource.parsed_data,
-                applied_rules: aiSource.applied_rules,
+                raw_text: ai.aiSource.raw_text,
+                confidence: ai.aiSource.confidence,
+                parsed_data: ai.aiSource.parsed_data,
+                applied_rules: ai.aiSource.applied_rules,
               }
             : {}),
         });
@@ -424,7 +282,7 @@ export function TransactionForm({
             category_id: values.category_id,
             transfer_to_account_id: undefined,
           });
-          setAiSource(null);
+          ai.setAiSource(null);
           return;
         }
         onOpenChange(false);
@@ -452,18 +310,19 @@ export function TransactionForm({
   }
 
   const allCategories = categories ?? [];
+  const { parseResult } = ai;
 
   // --- AI result display helpers ---
   const hasRules = parseResult && parseResult.applied_rules.length > 0;
   const resolvedType = parseResult?.resolved.type ?? parseResult?.parsed.type;
   const resolvedCategoryName = parseResult?.resolved.category_id
-    ? findCategoryName(categories ?? [], parseResult.resolved.category_id)
+    ? findNameById(categories ?? [], parseResult.resolved.category_id)
     : null;
   const resolvedAccountName = parseResult?.resolved.transfer_to_account_id
-    ? accounts?.find((a) => a.id === parseResult.resolved.transfer_to_account_id)?.name
+    ? findById(accounts ?? [], parseResult.resolved.transfer_to_account_id)?.name
     : null;
   const sourceAccountName = parseResult?.resolved.account_id
-    ? accounts?.find((a) => a.id === parseResult.resolved.account_id)?.name
+    ? findById(accounts ?? [], parseResult.resolved.account_id)?.name
     : null;
   const categoryOverridden =
     hasRules &&
@@ -481,17 +340,17 @@ export function TransactionForm({
           <DialogTitle>
             {isEditing
               ? t('editTransaction')
-              : step === 'ai-result'
+              : ai.step === 'ai-result'
                 ? t('aiTransaction')
                 : t('newTransaction')}
           </DialogTitle>
-          {step === 'ai-prompt' && !isEditing && (
+          {ai.step === 'ai-prompt' && !isEditing && (
             <p className='text-muted-foreground text-sm'>{t('aiDialogDescription')}</p>
           )}
         </DialogHeader>
 
         {/* ========== STEP: AI PROMPT ========== */}
-        {step === 'ai-prompt' && !isEditing && (
+        {ai.step === 'ai-prompt' && !isEditing && (
           <div className='space-y-4'>
             {!isPro && usage && <UsageIndicator usage={usage} />}
 
@@ -509,7 +368,7 @@ export function TransactionForm({
                 <Button
                   className='w-full cursor-pointer'
                   variant='outline'
-                  onClick={handleCreateManually}>
+                  onClick={ai.handleCreateManually}>
                   {t('orCreateManually')}
                 </Button>
               </div>
@@ -519,13 +378,13 @@ export function TransactionForm({
                 <Textarea
                   ref={textareaRef}
                   placeholder={t('aiTextPlaceholder')}
-                  value={aiText}
-                  onChange={(e): void => setAiText(e.target.value)}
+                  value={ai.aiText}
+                  onChange={(e): void => ai.setAiText(e.target.value)}
                   rows={3}
-                  disabled={parsing}
+                  disabled={ai.isParsing}
                 />
 
-                {limitReached && (
+                {ai.limitReached && (
                   <div className='border-destructive/30 bg-destructive/5 space-y-3 rounded-lg border p-4'>
                     <p className='text-destructive text-sm font-medium'>{t('parseLimitReached')}</p>
                     <p className='text-muted-foreground text-xs'>{t('parseLimitDescription')}</p>
@@ -533,7 +392,7 @@ export function TransactionForm({
                       <Button
                         variant='outline'
                         className='flex-1 cursor-pointer'
-                        onClick={handleCreateManually}>
+                        onClick={ai.handleCreateManually}>
                         {t('orCreateManually')}
                       </Button>
                       <a href='/settings?tab=subscription' className='flex-1'>
@@ -543,23 +402,23 @@ export function TransactionForm({
                   </div>
                 )}
 
-                {skippedReason && (
+                {ai.skippedReason && (
                   <div className='border-warning/30 bg-warning/5 space-y-3 rounded-lg border p-4'>
                     <div className='flex items-center gap-2'>
                       <AlertTriangle className='text-warning h-5 w-5 shrink-0' />
                       <p className='text-sm font-medium'>{t('notTransaction')}</p>
                     </div>
                     <p className='text-muted-foreground text-xs'>
-                      {SKIPPED_REASON_KEYS[skippedReason]
-                        ? t(SKIPPED_REASON_KEYS[skippedReason])
-                        : `Reason: ${skippedReason}`}
+                      {SKIPPED_REASON_KEYS[ai.skippedReason]
+                        ? t(SKIPPED_REASON_KEYS[ai.skippedReason])
+                        : `Reason: ${ai.skippedReason}`}
                     </p>
                     <Button
                       variant='outline'
                       className='w-full cursor-pointer'
                       onClick={(): void => {
-                        setSkippedReason(null);
-                        setAiText('');
+                        ai.clearSkippedReason();
+                        ai.setAiText('');
                         setTimeout(() => textareaRef.current?.focus(), 0);
                       }}>
                       {tCommon('tryAgain')}
@@ -567,17 +426,17 @@ export function TransactionForm({
                   </div>
                 )}
 
-                {!limitReached && !skippedReason && (
+                {!ai.limitReached && !ai.skippedReason && (
                   <>
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <span className='w-full'>
                             <Button
-                              onClick={handleParse}
-                              disabled={parsing || !aiText.trim()}
+                              onClick={ai.handleParse}
+                              disabled={ai.isParsing || !ai.aiText.trim()}
                               className='ai-gradient-btn w-full cursor-pointer'>
-                              {parsing ? (
+                              {ai.isParsing ? (
                                 <>
                                   <Loader2 className='mr-2 h-4 w-4 animate-spin' />
                                   {t('parsing')}
@@ -597,7 +456,7 @@ export function TransactionForm({
                     <button
                       type='button'
                       className='text-muted-foreground hover:text-foreground w-full cursor-pointer text-center text-sm transition-colors'
-                      onClick={handleCreateManually}>
+                      onClick={ai.handleCreateManually}>
                       {t('orCreateManually')}
                     </button>
                   </>
@@ -608,7 +467,7 @@ export function TransactionForm({
         )}
 
         {/* ========== STEP: AI RESULT (preview) ========== */}
-        {step === 'ai-result' && parseResult && (
+        {ai.step === 'ai-result' && parseResult && (
           <div className='space-y-3'>
             <div className='border-border space-y-2 rounded-lg border p-3'>
               <div className='grid grid-cols-2 gap-2 text-sm'>
@@ -639,7 +498,7 @@ export function TransactionForm({
                       </p>
                     </div>
                   ) : (
-                    <p>{resolvedCategoryName ?? parseResult.parsed.category}</p>
+                    <p>{resolvedCategoryName || parseResult.parsed.category}</p>
                   )}
                 </div>
                 {resolvedType && (
@@ -654,8 +513,9 @@ export function TransactionForm({
                     {accountOverridden ? (
                       <div>
                         <p className='text-muted-foreground text-xs line-through'>
-                          {accounts?.find((a) => a.id === parseResult.original?.account_id)?.name ??
-                            parseResult.parsed.bank}
+                          {(parseResult.original?.account_id
+                            ? findById(accounts ?? [], parseResult.original.account_id)?.name
+                            : undefined) ?? parseResult.parsed.bank}
                         </p>
                         <p className='flex items-center gap-1'>
                           <Zap className='text-warning h-3 w-3' />
@@ -719,15 +579,15 @@ export function TransactionForm({
                       const details: string[] = [];
                       if (actions.set_type) details.push(`type: ${actions.set_type}`);
                       if (actions.set_category) {
-                        const name = findCategoryName(categories ?? [], actions.set_category);
-                        details.push(`category: ${name ?? actions.set_category}`);
+                        const name = findNameById(categories ?? [], actions.set_category);
+                        details.push(`category: ${name || actions.set_category}`);
                       }
                       if (actions.set_account) {
-                        const name = accounts?.find((a) => a.id === actions.set_account)?.name;
+                        const name = findById(accounts ?? [], actions.set_account)?.name;
                         details.push(`account: ${name ?? 'account'}`);
                       }
                       if (actions.link_to_account) {
-                        const name = accounts?.find((a) => a.id === actions.link_to_account)?.name;
+                        const name = findById(accounts ?? [], actions.link_to_account)?.name;
                         details.push(`transfer to: ${name ?? 'account'}`);
                       }
                       if (actions.add_note) {
@@ -761,8 +621,8 @@ export function TransactionForm({
                   variant='outline'
                   className='flex-1 cursor-pointer'
                   onClick={(): void => {
-                    setParseResult(null);
-                    setStep('ai-prompt');
+                    ai.setParseResult(null);
+                    ai.setStep('ai-prompt');
                   }}>
                   {t('reparse')}
                 </Button>
@@ -794,7 +654,7 @@ export function TransactionForm({
         )}
 
         {/* ========== STEP: MANUAL FORM ========== */}
-        {step === 'form' && (
+        {ai.step === 'form' && (
           <>
             {!isEditing && !isPro && usage && <UsageIndicator usage={usage} showTransactions />}
 
@@ -863,10 +723,10 @@ export function TransactionForm({
               </div>
             )}
 
-            {aiSource && (
+            {ai.aiSource && (
               <Badge variant='secondary' className='w-fit gap-1.5'>
                 <Sparkles className='h-3 w-3' />
-                AI-parsed ({aiSource.confidence}%)
+                AI-parsed ({ai.aiSource.confidence}%)
               </Badge>
             )}
 

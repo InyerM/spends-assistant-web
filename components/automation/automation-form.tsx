@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { useTranslations, useLocale } from 'next-intl';
+import { useTranslations } from 'next-intl';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -28,8 +28,6 @@ import {
 } from '@/components/ui/select';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Info, Plus, X } from 'lucide-react';
-import { SearchableSelect } from '@/components/shared/searchable-select';
-import { buildAccountItems, buildCategoryItems } from '@/lib/utils/select-items';
 import { useAccounts } from '@/lib/api/queries/account.queries';
 import { useCategories } from '@/lib/api/queries/category.queries';
 import { useAppSettings } from '@/hooks/use-app-settings';
@@ -37,60 +35,21 @@ import {
   useCreateAutomationRule,
   useUpdateAutomationRule,
 } from '@/lib/api/mutations/automation.mutations';
-import type {
-  AutomationRule,
-  AutomationRuleConditions,
-  AutomationRuleActions,
-  ConditionLogic,
-  CreateAutomationRuleInput,
-  RuleType,
-} from '@/types';
-
-// ── Condition / Action row types ──────────────────────────────────────────
-
-type ConditionType =
-  | 'raw_text_contains'
-  | 'source'
-  | 'amount_greater_than'
-  | 'amount_less_than'
-  | 'type';
-
-interface ConditionRow {
-  id: string;
-  type: ConditionType;
-  value: string;
-}
-
-type ActionType =
-  | 'set_category'
-  | 'set_type'
-  | 'set_account'
-  | 'transfer_to_account'
-  | 'auto_reconcile'
-  | 'add_note';
-
-interface ActionRow {
-  id: string;
-  type: ActionType;
-  value: string;
-}
-
-const CONDITION_TYPE_KEYS: Record<ConditionType, string> = {
-  raw_text_contains: 'rawTextContains',
-  source: 'conditionSource',
-  amount_greater_than: 'amountGreaterThan',
-  amount_less_than: 'amountLessThan',
-  type: 'transactionType',
-};
-
-const ACTION_TYPE_KEYS: Record<ActionType, string> = {
-  set_category: 'setCategory',
-  set_type: 'setType',
-  set_account: 'setAccount',
-  transfer_to_account: 'transferToAccount',
-  auto_reconcile: 'autoReconcile',
-  add_note: 'addNote',
-};
+import {
+  generateId,
+  conditionsToRows,
+  actionsToRows,
+  buildPayload,
+  CONDITION_TYPE_KEYS,
+  ACTION_TYPE_KEYS,
+  type ConditionType,
+  type ActionType,
+  type ConditionRow,
+  type ActionRow,
+} from '@/lib/utils/automation-form';
+import { ConditionValueInput } from '@/components/automation/condition-value-input';
+import { ActionValueInput } from '@/components/automation/action-value-input';
+import type { AutomationRule, ConditionLogic, CreateAutomationRuleInput, RuleType } from '@/types';
 
 const RULE_TYPE_KEYS: Record<RuleType, string> = {
   general: 'general',
@@ -99,10 +58,6 @@ const RULE_TYPE_KEYS: Record<RuleType, string> = {
 };
 
 // ── Helpers ───────────────────────────────────────────────────────────────
-
-function generateId(): string {
-  return Math.random().toString(36).slice(2, 9);
-}
 
 function InfoTip({ text }: { text: string }): React.ReactElement {
   return (
@@ -133,208 +88,6 @@ const formSchema = z.object({
 });
 
 type FormValues = z.infer<typeof formSchema>;
-
-// ── Helpers to convert existing rule to dynamic rows ──────────────────────
-
-function conditionsToRows(conditions: AutomationRuleConditions): ConditionRow[] {
-  const rows: ConditionRow[] = [];
-  if (conditions.raw_text_contains) {
-    for (const term of conditions.raw_text_contains) {
-      rows.push({ id: generateId(), type: 'raw_text_contains', value: term });
-    }
-  }
-  if (conditions.source) {
-    for (const s of conditions.source) {
-      rows.push({ id: generateId(), type: 'source', value: s });
-    }
-  }
-  if (conditions.amount_between) {
-    rows.push({
-      id: generateId(),
-      type: 'amount_greater_than',
-      value: String(conditions.amount_between[0]),
-    });
-    rows.push({
-      id: generateId(),
-      type: 'amount_less_than',
-      value: String(conditions.amount_between[1]),
-    });
-  }
-  return rows;
-}
-
-function actionsToRows(
-  actions: AutomationRuleActions,
-  transferToAccountId?: string | null,
-): ActionRow[] {
-  const rows: ActionRow[] = [];
-  if (actions.set_type) {
-    rows.push({ id: generateId(), type: 'set_type', value: actions.set_type });
-  }
-  if (actions.set_category) {
-    rows.push({ id: generateId(), type: 'set_category', value: actions.set_category });
-  }
-  if (actions.set_account) {
-    rows.push({ id: generateId(), type: 'set_account', value: actions.set_account });
-  }
-  if (actions.link_to_account || transferToAccountId) {
-    rows.push({
-      id: generateId(),
-      type: 'transfer_to_account',
-      value: actions.link_to_account ?? transferToAccountId ?? '',
-    });
-  }
-  if (actions.auto_reconcile) {
-    rows.push({ id: generateId(), type: 'auto_reconcile', value: 'true' });
-  }
-  if (actions.add_note) {
-    rows.push({ id: generateId(), type: 'add_note', value: actions.add_note });
-  }
-  return rows;
-}
-
-// ── Condition value input component ───────────────────────────────────────
-
-function ConditionValueInput({
-  row,
-  onChange,
-}: {
-  row: ConditionRow;
-  onChange: (value: string) => void;
-}): React.ReactElement {
-  const t = useTranslations('automation');
-  const tTx = useTranslations('transactions');
-
-  if (row.type === 'type') {
-    return (
-      <Select value={row.value || undefined} onValueChange={onChange}>
-        <SelectTrigger className='h-9 flex-1'>
-          <SelectValue placeholder={tTx('selectType')} />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value='expense'>{tTx('expense')}</SelectItem>
-          <SelectItem value='income'>{tTx('income')}</SelectItem>
-          <SelectItem value='transfer'>{tTx('transfer')}</SelectItem>
-        </SelectContent>
-      </Select>
-    );
-  }
-  if (row.type === 'amount_greater_than' || row.type === 'amount_less_than') {
-    return (
-      <Input
-        type='number'
-        placeholder='0'
-        className='h-9 flex-1'
-        value={row.value}
-        onChange={(e): void => onChange(e.target.value)}
-      />
-    );
-  }
-  if (row.type === 'source') {
-    return (
-      <Input
-        placeholder={t('sourcePlaceholder')}
-        className='h-9 flex-1'
-        value={row.value}
-        onChange={(e): void => onChange(e.target.value)}
-      />
-    );
-  }
-  // raw_text_contains
-  return (
-    <Input
-      placeholder={t('rawTextPlaceholder')}
-      className='h-9 flex-1'
-      value={row.value}
-      onChange={(e): void => onChange(e.target.value)}
-    />
-  );
-}
-
-// ── Action value input component ──────────────────────────────────────────
-
-function ActionValueInput({
-  row,
-  onChange,
-  accounts,
-  categories,
-}: {
-  row: ActionRow;
-  onChange: (value: string) => void;
-  accounts: ReturnType<typeof useAccounts>['data'];
-  categories: ReturnType<typeof useCategories>['data'];
-}): React.ReactElement {
-  const t = useTranslations('automation');
-  const tTx = useTranslations('transactions');
-  const tCommon = useTranslations('common');
-  const locale = useLocale();
-
-  if (row.type === 'set_type') {
-    return (
-      <Select value={row.value || undefined} onValueChange={onChange}>
-        <SelectTrigger className='h-9 flex-1'>
-          <SelectValue placeholder={tTx('selectType')} />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value='expense'>{tTx('expense')}</SelectItem>
-          <SelectItem value='income'>{tTx('income')}</SelectItem>
-          <SelectItem value='transfer'>{tTx('transfer')}</SelectItem>
-        </SelectContent>
-      </Select>
-    );
-  }
-  if (row.type === 'set_category') {
-    return (
-      <div className='flex-1'>
-        <SearchableSelect
-          value={row.value || undefined}
-          onValueChange={onChange}
-          placeholder={tTx('selectCategory')}
-          searchPlaceholder={tTx('searchCategories')}
-          items={buildCategoryItems(categories ?? [], undefined, {
-            locale: locale as 'en' | 'es' | 'pt',
-            allPrefix: (name: string): string => tCommon('allOf', { name }),
-          })}
-        />
-      </div>
-    );
-  }
-  if (row.type === 'set_account' || row.type === 'transfer_to_account') {
-    return (
-      <div className='flex-1'>
-        <SearchableSelect
-          value={row.value || undefined}
-          onValueChange={onChange}
-          placeholder={tTx('selectAccount')}
-          searchPlaceholder={tTx('searchAccounts')}
-          items={buildAccountItems(accounts ?? [])}
-        />
-      </div>
-    );
-  }
-  if (row.type === 'auto_reconcile') {
-    return (
-      <div className='flex flex-1 items-center'>
-        <Switch
-          checked={row.value === 'true'}
-          onCheckedChange={(checked): void => onChange(checked ? 'true' : 'false')}
-        />
-        <span className='text-muted-foreground ml-2 text-sm'>
-          {row.value === 'true' ? tCommon('enabled') : tCommon('disabled')}
-        </span>
-      </div>
-    );
-  }
-  // add_note
-  return (
-    <Input
-      placeholder={t('notePlaceholder')}
-      className='h-9 flex-1'
-      value={row.value}
-      onChange={(e): void => onChange(e.target.value)}
-    />
-  );
-}
 
 // ── Main Form ─────────────────────────────────────────────────────────────
 
@@ -459,89 +212,9 @@ export function AutomationForm({
     setActionRows((prev) => prev.filter((r) => r.id !== id));
   }, []);
 
-  // ── Build payload ─────────────────────────────────────────────────────
-
-  function buildPayload(values: FormValues): CreateAutomationRuleInput {
-    const conditions: AutomationRuleConditions = {};
-    const rawTextTerms: string[] = [];
-    const sourceTerms: string[] = [];
-    let amountMin: number | undefined;
-    let amountMax: number | undefined;
-
-    for (const row of conditionRows) {
-      if (!row.value.trim()) continue;
-      switch (row.type) {
-        case 'raw_text_contains':
-          rawTextTerms.push(row.value.trim());
-          break;
-        case 'source':
-          sourceTerms.push(row.value.trim());
-          break;
-        case 'amount_greater_than':
-          amountMin = Number(row.value);
-          break;
-        case 'amount_less_than':
-          amountMax = Number(row.value);
-          break;
-        case 'type':
-          // stored as a condition if needed; for now map to source-style
-          break;
-      }
-    }
-
-    if (rawTextTerms.length > 0) conditions.raw_text_contains = rawTextTerms;
-    if (sourceTerms.length > 0) conditions.source = sourceTerms;
-    if (amountMin !== undefined && amountMax !== undefined) {
-      conditions.amount_between = [amountMin, amountMax];
-    } else if (amountMin !== undefined) {
-      conditions.amount_between = [amountMin, Number.MAX_SAFE_INTEGER];
-    } else if (amountMax !== undefined) {
-      conditions.amount_between = [0, amountMax];
-    }
-
-    const actions: AutomationRuleActions = {};
-    let transferToAccountId: string | undefined;
-
-    for (const row of actionRows) {
-      if (!row.value.trim() && row.type !== 'auto_reconcile') continue;
-      switch (row.type) {
-        case 'set_type':
-          actions.set_type = row.value as 'expense' | 'income' | 'transfer';
-          break;
-        case 'set_category':
-          actions.set_category = row.value;
-          break;
-        case 'set_account':
-          actions.set_account = row.value;
-          break;
-        case 'transfer_to_account':
-          actions.link_to_account = row.value;
-          transferToAccountId = row.value;
-          break;
-        case 'auto_reconcile':
-          if (row.value === 'true') actions.auto_reconcile = true;
-          break;
-        case 'add_note':
-          actions.add_note = row.value.trim();
-          break;
-      }
-    }
-
-    return {
-      name: values.name,
-      is_active: values.is_active,
-      priority: values.priority,
-      rule_type: values.rule_type,
-      condition_logic: values.condition_logic,
-      transfer_to_account_id: transferToAccountId,
-      conditions,
-      actions,
-    };
-  }
-
   async function onSubmit(values: FormValues): Promise<void> {
     try {
-      const payload = buildPayload(values);
+      const payload = buildPayload(values, conditionRows, actionRows);
       if (aiPrompt) {
         (payload as unknown as Record<string, unknown>).ai_prompt = aiPrompt;
       }

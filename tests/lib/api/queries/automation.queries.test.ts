@@ -11,7 +11,7 @@ describe('automationKeys', () => {
   });
 
   it('list extends lists', () => {
-    expect(automationKeys.list()).toEqual(['automation-rules', 'list']);
+    expect(automationKeys.list()).toEqual(['automation-rules', 'list', undefined]);
   });
 });
 

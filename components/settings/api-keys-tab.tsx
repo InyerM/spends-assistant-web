@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -13,73 +13,34 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-
-interface ApiKey {
-  id: string;
-  name: string;
-  is_active: boolean;
-  last_used_at: string | null;
-  created_at: string;
-}
-
-interface NewKeyResponse extends ApiKey {
-  key: string;
-}
+import { useApiKeys } from '@/lib/api/queries/api-key.queries';
+import { useCreateApiKey, useDeleteApiKey } from '@/lib/api/mutations/api-key.mutations';
 
 export function ApiKeysTab(): React.ReactElement {
   const t = useTranslations('settings');
   const tc = useTranslations('common');
-  const [keys, setKeys] = useState<ApiKey[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [creating, setCreating] = useState(false);
+  const { data: keys, isLoading: loading } = useApiKeys();
+  const createMutation = useCreateApiKey();
+  const deleteMutation = useDeleteApiKey();
   const [newKeyName, setNewKeyName] = useState('');
   const [newKey, setNewKey] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
 
-  const fetchKeys = useCallback(async (): Promise<void> => {
-    try {
-      const res = await fetch('/api/api-keys');
-      if (!res.ok) throw new Error('Failed to fetch');
-      const data = (await res.json()) as ApiKey[];
-      setKeys(data);
-    } catch {
-      toast.error(t('failedToLoadApiKeys'));
-    } finally {
-      setLoading(false);
-    }
-  }, [t]);
-
-  useEffect(() => {
-    void fetchKeys();
-  }, [fetchKeys]);
-
   async function handleCreate(): Promise<void> {
-    setCreating(true);
     try {
-      const res = await fetch('/api/api-keys', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: newKeyName || 'Default' }),
-      });
-      if (!res.ok) throw new Error('Failed to create');
-      const data = (await res.json()) as NewKeyResponse;
+      const data = await createMutation.mutateAsync(newKeyName);
       setNewKey(data.key);
       setDialogOpen(true);
       setNewKeyName('');
-      void fetchKeys();
     } catch {
       toast.error(t('failedToCreateApiKey'));
-    } finally {
-      setCreating(false);
     }
   }
 
   async function handleDelete(id: string): Promise<void> {
     try {
-      const res = await fetch(`/api/api-keys?id=${id}`, { method: 'DELETE' });
-      if (!res.ok) throw new Error('Failed to delete');
+      await deleteMutation.mutateAsync(id);
       toast.success(t('apiKeyDeleted'));
-      void fetchKeys();
     } catch {
       toast.error(t('failedToDeleteApiKey'));
     }
@@ -106,14 +67,14 @@ export function ApiKeysTab(): React.ReactElement {
               value={newKeyName}
               onChange={(e): void => setNewKeyName(e.target.value)}
             />
-            <Button onClick={(): void => void handleCreate()} disabled={creating}>
-              {creating ? t('creatingKey') : t('generateKey')}
+            <Button onClick={(): void => void handleCreate()} disabled={createMutation.isPending}>
+              {createMutation.isPending ? t('creatingKey') : t('generateKey')}
             </Button>
           </div>
 
           {loading ? (
             <p className='text-muted-foreground text-sm'>{t('loadingKeys')}</p>
-          ) : keys.length === 0 ? (
+          ) : !keys || keys.length === 0 ? (
             <p className='text-muted-foreground text-sm'>{t('noApiKeys')}</p>
           ) : (
             <div className='space-y-2'>

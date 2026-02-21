@@ -14,13 +14,38 @@ vi.mock('@/lib/api/server', () => ({
   errorResponse: (message: string, status = 500) => Response.json({ error: message }, { status }),
 }));
 
-function createImportChain() {
+interface TableConfig {
+  maybeSingle?: { data: unknown; error: unknown };
+  single?: { data: unknown; error: unknown };
+  thenable?: { data: unknown; error: unknown };
+}
+
+function createChain(config: TableConfig = {}) {
   const chain: Record<string, ReturnType<typeof vi.fn>> = {};
   ['select', 'eq', 'is', 'in', 'insert', 'update'].forEach((m) => {
     chain[m] = vi.fn().mockReturnValue(chain);
   });
-  chain.maybeSingle = vi.fn().mockResolvedValue({ data: null, error: null });
+  chain.maybeSingle = vi.fn().mockResolvedValue(config.maybeSingle ?? { data: null, error: null });
+  chain.single = vi.fn().mockResolvedValue(config.single ?? { data: null, error: null });
+  if (config.thenable) {
+    Object.defineProperty(chain, 'then', {
+      value: (resolve: (v: unknown) => void) => resolve(config.thenable),
+      enumerable: false,
+      configurable: true,
+    });
+  }
   return chain;
+}
+
+function createSupabaseMock(tables: Partial<Record<string, TableConfig>> = {}) {
+  const defaultChain = createChain();
+  return {
+    from: vi.fn((table: string) => {
+      const config = tables[table];
+      if (config) return createChain(config);
+      return defaultChain;
+    }),
+  };
 }
 
 describe('POST /api/transactions/import', () => {
@@ -30,17 +55,14 @@ describe('POST /api/transactions/import', () => {
 
   it('imports transactions directly', async () => {
     const { getUserClient } = await import('@/lib/api/server');
-    const chain = createImportChain();
 
-    Object.defineProperty(chain, 'then', {
-      value: (resolve: (v: unknown) => void) =>
-        resolve({ data: [{ id: 'tx-1' }, { id: 'tx-2' }], error: null }),
-      enumerable: false,
-      configurable: true,
+    const supabase = createSupabaseMock({
+      imports: { single: { data: { id: 'import-1' }, error: null } },
+      transactions: { thenable: { data: [{ id: 'tx-1' }, { id: 'tx-2' }], error: null } },
     });
 
     vi.mocked(getUserClient).mockResolvedValue({
-      supabase: { from: vi.fn().mockReturnValue(chain) } as never,
+      supabase: supabase as never,
       userId: 'test-user-id',
     });
 
@@ -77,6 +99,13 @@ describe('POST /api/transactions/import', () => {
   });
 
   it('returns 400 when no transactions provided', async () => {
+    const { getUserClient } = await import('@/lib/api/server');
+
+    vi.mocked(getUserClient).mockResolvedValue({
+      supabase: createSupabaseMock() as never,
+      userId: 'test-user-id',
+    });
+
     const request = new NextRequest('http://localhost/api/transactions/import', {
       method: 'POST',
       body: JSON.stringify({ transactions: [] }),
@@ -87,27 +116,16 @@ describe('POST /api/transactions/import', () => {
 
   it('resolves names when resolve_names is true', async () => {
     const { getUserClient } = await import('@/lib/api/server');
-    const chain = createImportChain();
 
-    let thenCallCount = 0;
-    Object.defineProperty(chain, 'then', {
-      value: (resolve: (v: unknown) => void) => {
-        thenCallCount++;
-        // Accounts lookup
-        if (thenCallCount === 1)
-          return resolve({ data: [{ id: 'acc-1', name: 'Checking' }], error: null });
-        // Categories lookup
-        if (thenCallCount === 2)
-          return resolve({ data: [{ id: 'cat-1', name: 'Food' }], error: null });
-        // Insert
-        return resolve({ data: [{ id: 'tx-1' }], error: null });
-      },
-      enumerable: false,
-      configurable: true,
+    const supabase = createSupabaseMock({
+      imports: { single: { data: { id: 'import-1' }, error: null } },
+      accounts: { thenable: { data: [{ id: 'acc-1', name: 'Checking' }], error: null } },
+      categories: { thenable: { data: [{ id: 'cat-1', name: 'Food' }], error: null } },
+      transactions: { thenable: { data: [{ id: 'tx-1' }], error: null } },
     });
 
     vi.mocked(getUserClient).mockResolvedValue({
-      supabase: { from: vi.fn().mockReturnValue(chain) } as never,
+      supabase: supabase as never,
       userId: 'test-user-id',
     });
 
@@ -139,22 +157,15 @@ describe('POST /api/transactions/import', () => {
 
   it('returns error when all accounts unresolved', async () => {
     const { getUserClient } = await import('@/lib/api/server');
-    const chain = createImportChain();
 
-    let thenCallCount = 0;
-    Object.defineProperty(chain, 'then', {
-      value: (resolve: (v: unknown) => void) => {
-        thenCallCount++;
-        if (thenCallCount === 1) return resolve({ data: [], error: null });
-        if (thenCallCount === 2) return resolve({ data: [], error: null });
-        return resolve({ data: [], error: null });
-      },
-      enumerable: false,
-      configurable: true,
+    const supabase = createSupabaseMock({
+      imports: { single: { data: { id: 'import-1' }, error: null } },
+      accounts: { thenable: { data: [], error: null } },
+      categories: { thenable: { data: [], error: null } },
     });
 
     vi.mocked(getUserClient).mockResolvedValue({
-      supabase: { from: vi.fn().mockReturnValue(chain) } as never,
+      supabase: supabase as never,
       userId: 'test-user-id',
     });
 
@@ -184,17 +195,14 @@ describe('POST /api/transactions/import', () => {
 
   it('returns 400 on DB insert error', async () => {
     const { getUserClient } = await import('@/lib/api/server');
-    const chain = createImportChain();
 
-    Object.defineProperty(chain, 'then', {
-      value: (resolve: (v: unknown) => void) =>
-        resolve({ data: null, error: { message: 'Insert failed' } }),
-      enumerable: false,
-      configurable: true,
+    const supabase = createSupabaseMock({
+      imports: { single: { data: { id: 'import-1' }, error: null } },
+      transactions: { thenable: { data: null, error: { message: 'Insert failed' } } },
     });
 
     vi.mocked(getUserClient).mockResolvedValue({
-      supabase: { from: vi.fn().mockReturnValue(chain) } as never,
+      supabase: supabase as never,
       userId: 'test-user-id',
     });
 

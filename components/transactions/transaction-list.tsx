@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useCallback, useState } from 'react';
+import { useState } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -29,6 +29,8 @@ import { useDeleteTransaction } from '@/lib/api/mutations/transaction.mutations'
 import { SwipeableRow } from '@/components/transactions/swipeable-row';
 import { ConfirmDeleteDialog } from '@/components/shared/confirm-delete-dialog';
 import { useLongPress } from '@/hooks/use-long-press';
+import { useInfiniteScroll } from '@/hooks/use-infinite-scroll';
+import { findById } from '@/lib/utils/lookup';
 import { toast } from 'sonner';
 import type { Transaction, TransactionType, TransactionFilters } from '@/types';
 
@@ -286,28 +288,10 @@ export function TransactionList({
     useInfiniteTransactions(filters);
   const { data: categories } = useCategories();
   const { data: accounts } = useAccounts();
-  const bottomRef = useRef<HTMLDivElement>(null);
+  const bottomRef = useInfiniteScroll({ fetchNextPage, hasNextPage, isFetchingNextPage });
   const [metadataTx, setMetadataTx] = useState<Transaction | null>(null);
   const [deleteTx, setDeleteTx] = useState<Transaction | null>(null);
   const deleteMutation = useDeleteTransaction();
-
-  const handleObserver = useCallback(
-    (entries: IntersectionObserverEntry[]) => {
-      const [entry] = entries;
-      if (entry.isIntersecting && hasNextPage && !isFetchingNextPage) {
-        void fetchNextPage();
-      }
-    },
-    [hasNextPage, isFetchingNextPage, fetchNextPage],
-  );
-
-  useEffect(() => {
-    const el = bottomRef.current;
-    if (!el) return;
-    const observer = new IntersectionObserver(handleObserver, { threshold: 0.1 });
-    observer.observe(el);
-    return (): void => observer.disconnect();
-  }, [handleObserver]);
 
   async function handleSwipeDelete(): Promise<void> {
     if (!deleteTx) return;
@@ -331,12 +315,12 @@ export function TransactionList({
     categoryId: string | null,
   ): { name: string; color: string | null } | null => {
     if (!categoryId || !categories) return null;
-    const cat = categories.find((c) => c.id === categoryId);
+    const cat = findById(categories, categoryId);
     if (!cat) return null;
     const name = getCategoryName(cat, locale as Locale);
     // If child category, inherit parent color if not set
     if (!cat.color && cat.parent_id) {
-      const parent = categories.find((c) => c.id === cat.parent_id);
+      const parent = findById(categories, cat.parent_id);
       return { name, color: parent?.color ?? null };
     }
     return { name, color: cat.color };
@@ -344,7 +328,7 @@ export function TransactionList({
 
   const getAccountName = (accountId: string): string => {
     if (!accounts) return '';
-    return accounts.find((a) => a.id === accountId)?.name ?? '';
+    return findById(accounts, accountId)?.name ?? '';
   };
 
   if (isLoading) {
