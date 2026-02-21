@@ -3,6 +3,7 @@
 import { useMemo } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
 import { Card, CardContent } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 import { useAccounts } from '@/lib/api/queries/account.queries';
 import { formatCurrency } from '@/lib/utils/formatting';
 import {
@@ -26,6 +27,7 @@ interface BalanceTrendChartProps {
   transactions: Transaction[];
   dateFrom: string;
   dateTo: string;
+  className?: string;
 }
 
 interface BalanceTooltipProps {
@@ -63,10 +65,11 @@ export function BalanceTrendChart({
   transactions,
   dateFrom,
   dateTo,
+  className,
 }: BalanceTrendChartProps): React.ReactElement | null {
   const t = useTranslations('dashboard');
   const locale = useLocale();
-  const { data: accounts } = useAccounts();
+  const { data: accounts, isLoading: accLoading } = useAccounts();
 
   const { chartData, endBalance } = useMemo(() => {
     if (!accounts) return { chartData: [], endBalance: 0 };
@@ -109,13 +112,26 @@ export function BalanceTrendChart({
     return { chartData: days, endBalance: runningBalance };
   }, [transactions, accounts, dateFrom, dateTo]);
 
+  if (accLoading) {
+    return (
+      <Card className={`border-border bg-card flex flex-col ${className ?? ''}`}>
+        <CardContent className='p-4 sm:p-5'>
+          <Skeleton className='h-5 w-40' />
+          <Skeleton className='mt-1 h-3 w-56' />
+          <Skeleton className='mt-3 h-8 w-36' />
+          <Skeleton className='mt-3 h-[200px] w-full rounded-lg' />
+        </CardContent>
+      </Card>
+    );
+  }
+
   if (chartData.length === 0) return null;
 
   const isPositive = endBalance >= 0;
 
   return (
-    <Card className='border-border bg-card'>
-      <CardContent className='p-4 sm:p-5'>
+    <Card className={`border-border bg-card flex flex-col ${className ?? ''}`}>
+      <CardContent className='flex flex-1 flex-col p-4 sm:p-5'>
         <h3 className='text-foreground text-base font-semibold'>{t('balanceTrend')}</h3>
         <p className='text-muted-foreground mt-0.5 text-xs'>{t('balanceTrendSubtitle')}</p>
 
@@ -124,7 +140,7 @@ export function BalanceTrendChart({
           {formatCurrency(endBalance, 'COP', locale)}
         </p>
 
-        <div className='mt-3 h-[180px] w-full'>
+        <div className='mt-3 min-h-[200px] w-full flex-1'>
           <ResponsiveContainer width='100%' height='100%'>
             <AreaChart data={chartData}>
               <defs>

@@ -58,13 +58,18 @@ export default function DashboardPage(): React.ReactElement {
 
       <SummaryCards transactions={transactions} isLoading={txLoading} />
 
-      <div className='grid gap-4 sm:gap-6 lg:grid-cols-2'>
-        <SpendingNatureCards transactions={transactions} dateFrom={dateFrom} dateTo={dateTo} />
-        <BalanceTrendChart transactions={transactions} dateFrom={dateFrom} dateTo={dateTo} />
+      <div className='grid gap-4 sm:gap-6 lg:grid-cols-3'>
+        <BalanceTrendChart
+          className='lg:col-span-2'
+          transactions={transactions}
+          dateFrom={dateFrom}
+          dateTo={dateTo}
+        />
+        <SpendingByCategory transactions={transactions} isLoading={txLoading} />
       </div>
 
-      <div className='grid gap-6 lg:grid-cols-2'>
-        <SpendingByCategory transactions={transactions} isLoading={txLoading} />
+      <div className='grid gap-4 sm:gap-6 lg:grid-cols-2'>
+        <SpendingNatureCards transactions={transactions} />
         <RecentTransactions />
       </div>
 

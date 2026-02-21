@@ -91,7 +91,8 @@
     "balanceTrendSubtitle": "Evolução do seu saldo durante o período",
     "must": "Obrigatório",
     "need": "Necessário",
-    "want": "Desejo"
+    "want": "Desejo",
+    "viewAllCategories": "Ver todas as categorias"
   },
   "transactions": {
     "title": "Transações",

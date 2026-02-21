@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
 import { Card, CardContent } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 import { useCategories } from '@/lib/api/queries/category.queries';
 import { formatCurrency } from '@/lib/utils/formatting';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from 'recharts';
@@ -29,8 +30,7 @@ interface DayData {
 
 interface SpendingNatureCardsProps {
   transactions: Transaction[];
-  dateFrom: string;
-  dateTo: string;
+  className?: string;
 }
 
 interface TooltipEntry {
@@ -79,13 +79,12 @@ function formatYAxis(value: number): string {
 
 export function SpendingNatureCards({
   transactions,
-  dateFrom,
-  dateTo,
+  className,
 }: SpendingNatureCardsProps): React.ReactElement | null {
   const t = useTranslations('dashboard');
   const tCommon = useTranslations('common');
   const locale = useLocale();
-  const { data: categories } = useCategories();
+  const { data: categories, isLoading: catLoading } = useCategories();
   const [activeTab, setActiveTab] = useState<FilterTab>('all');
 
   const { chartData, total } = useMemo(() => {
@@ -111,15 +110,14 @@ export function SpendingNatureCards({
       dayMap.set(tx.date, existing);
     }
 
-    // Fill missing days in range
-    const start = new Date(dateFrom + 'T00:00:00');
-    const end = new Date(dateTo + 'T00:00:00');
+    // Only include days that have data
     const days: DayData[] = [];
     let sum = 0;
 
-    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-      const key = d.toISOString().slice(0, 10);
-      const vals = dayMap.get(key) ?? { must: 0, need: 0, want: 0 };
+    const sortedDates = [...dayMap.keys()].sort();
+    for (const key of sortedDates) {
+      const vals = dayMap.get(key)!;
+      const d = new Date(key + 'T00:00:00');
       const dayNum = d.getDate();
       const month = d.getMonth() + 1;
       days.push({ date: key, label: `${month}/${dayNum}`, ...vals });
@@ -127,7 +125,21 @@ export function SpendingNatureCards({
     }
 
     return { chartData: days, total: sum };
-  }, [transactions, categories, dateFrom, dateTo]);
+  }, [transactions, categories]);
+
+  if (catLoading) {
+    return (
+      <Card className={`border-border bg-card ${className ?? ''}`}>
+        <CardContent className='p-4 sm:p-5'>
+          <Skeleton className='h-5 w-40' />
+          <Skeleton className='mt-1 h-3 w-64' />
+          <Skeleton className='mt-3 h-8 w-full rounded-full' />
+          <Skeleton className='mt-4 h-8 w-36' />
+          <Skeleton className='mt-3 h-[200px] w-full rounded-lg' />
+        </CardContent>
+      </Card>
+    );
+  }
 
   if (chartData.length === 0) return null;
 
@@ -143,7 +155,7 @@ export function SpendingNatureCards({
     activeTab === 'all' ? total : chartData.reduce((sum, d) => sum + d[activeTab], 0);
 
   return (
-    <Card className='border-border bg-card'>
+    <Card className={`border-border bg-card ${className ?? ''}`}>
       <CardContent className='p-4 sm:p-5'>
         <h3 className='text-foreground text-base font-semibold'>{t('spendingNature')}</h3>
         <p className='text-muted-foreground mt-0.5 text-xs'>{t('spendingNatureSubtitle')}</p>
@@ -168,7 +180,7 @@ export function SpendingNatureCards({
           {formatCurrency(filteredTotal, 'COP', locale)}
         </p>
 
-        <div className='mt-3 h-[180px] w-full'>
+        <div className='mt-3 h-[200px] w-full'>
           <ResponsiveContainer width='100%' height='100%'>
             <BarChart data={chartData} barGap={1} barCategoryGap='20%'>
               <XAxis
@@ -180,6 +192,8 @@ export function SpendingNatureCards({
                 className='fill-muted-foreground'
               />
               <YAxis
+                scale='sqrt'
+                domain={[0, 'auto']}
                 tickFormatter={formatYAxis}
                 tick={{ fontSize: 10 }}
                 tickLine={false}

@@ -91,7 +91,8 @@
     "balanceTrendSubtitle": "Your balance evolution over the period",
     "must": "Must",
     "need": "Need",
-    "want": "Want"
+    "want": "Want",
+    "viewAllCategories": "View all categories"
   },
   "transactions": {
     "title": "Transactions",
