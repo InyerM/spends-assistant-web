@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -267,6 +267,7 @@ function ActionValueInput({
   const t = useTranslations('automation');
   const tTx = useTranslations('transactions');
   const tCommon = useTranslations('common');
+  const locale = useLocale();
 
   if (row.type === 'set_type') {
     return (
@@ -290,7 +291,10 @@ function ActionValueInput({
           onValueChange={onChange}
           placeholder={tTx('selectCategory')}
           searchPlaceholder={tTx('searchCategories')}
-          items={buildCategoryItems(categories ?? [])}
+          items={buildCategoryItems(categories ?? [], undefined, {
+            locale: locale as 'en' | 'es' | 'pt',
+            allPrefix: (name: string): string => tCommon('allOf', { name }),
+          })}
         />
       </div>
     );

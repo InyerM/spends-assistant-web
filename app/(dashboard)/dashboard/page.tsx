@@ -6,11 +6,14 @@ import { startOfMonth, endOfMonth } from 'date-fns';
 import { BalanceOverview } from '@/components/dashboard/balance-overview';
 import { SummaryCards } from '@/components/dashboard/summary-cards';
 import { SpendingByCategory } from '@/components/dashboard/spending-by-category';
+import { SpendingNatureCards } from '@/components/dashboard/spending-nature-cards';
+import { BalanceTrendChart } from '@/components/dashboard/balance-trend-chart';
 import { RecentTransactions } from '@/components/dashboard/recent-transactions';
 import { PeriodSelector } from '@/components/transactions/period-selector';
 import { UsageCard } from '@/components/dashboard/usage-card';
 import { AccountEditDialog } from '@/components/accounts/account-edit-dialog';
 import { AccountCreateDialog } from '@/components/accounts/account-create-dialog';
+import { useTransactions } from '@/lib/api/queries/transaction.queries';
 import type { Account } from '@/types';
 
 function toStr(date: Date): string {
@@ -27,6 +30,14 @@ export default function DashboardPage(): React.ReactElement {
   const [dateTo, setDateTo] = useState(() => toStr(endOfMonth(now)));
   const [editingAccount, setEditingAccount] = useState<Account | null>(null);
   const [createAccountOpen, setCreateAccountOpen] = useState(false);
+
+  const { data: txResult, isLoading: txLoading } = useTransactions({
+    date_from: dateFrom,
+    date_to: dateTo,
+    limit: 500,
+  });
+
+  const transactions = txResult?.data ?? [];
 
   const handlePeriodChange = (newFrom: string, newTo: string): void => {
     setDateFrom(newFrom);
@@ -45,10 +56,15 @@ export default function DashboardPage(): React.ReactElement {
         <PeriodSelector dateFrom={dateFrom} dateTo={dateTo} onChange={handlePeriodChange} />
       </div>
 
-      <SummaryCards dateFrom={dateFrom} dateTo={dateTo} />
+      <SummaryCards transactions={transactions} isLoading={txLoading} />
+
+      <div className='grid gap-4 sm:gap-6 lg:grid-cols-2'>
+        <SpendingNatureCards transactions={transactions} dateFrom={dateFrom} dateTo={dateTo} />
+        <BalanceTrendChart transactions={transactions} dateFrom={dateFrom} dateTo={dateTo} />
+      </div>
 
       <div className='grid gap-6 lg:grid-cols-2'>
-        <SpendingByCategory dateFrom={dateFrom} dateTo={dateTo} />
+        <SpendingByCategory transactions={transactions} isLoading={txLoading} />
         <RecentTransactions />
       </div>
 

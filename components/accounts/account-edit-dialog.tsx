@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -74,6 +74,7 @@ export function AccountEditDialog({
 }: AccountEditDialogProps): React.ReactElement {
   const t = useTranslations('accounts');
   const tCommon = useTranslations('common');
+  const locale = useLocale();
   const updateMutation = useUpdateAccount();
   const deleteMutation = useDeleteAccount();
   const createTxMutation = useCreateTransaction();
@@ -167,7 +168,9 @@ export function AccountEditDialog({
     }
     try {
       await updateMutation.mutateAsync({ id: account.id, balance: target });
-      toast.success(t('balanceSetTo', { balance: formatCurrency(target, account.currency) }));
+      toast.success(
+        t('balanceSetTo', { balance: formatCurrency(target, account.currency, locale) }),
+      );
       onOpenChange(false);
     } catch {
       toast.error(t('failedToAdjust'));
@@ -199,7 +202,7 @@ export function AccountEditDialog({
       });
       toast.success(
         t('adjustmentCreated', {
-          amount: `${diff > 0 ? '+' : ''}${formatCurrency(diff, account.currency)}`,
+          amount: `${diff > 0 ? '+' : ''}${formatCurrency(diff, account.currency, locale)}`,
         }),
       );
       onOpenChange(false);
@@ -323,7 +326,7 @@ export function AccountEditDialog({
                     <p className='text-sm font-medium'>{t('balance')}</p>
                     <p
                       className={`text-lg font-bold ${account.balance >= 0 ? 'text-success' : 'text-destructive'}`}>
-                      {formatCurrency(account.balance, account.currency)}
+                      {formatCurrency(account.balance, account.currency, locale)}
                     </p>
                   </div>
                   {adjustMode === 'none' && (

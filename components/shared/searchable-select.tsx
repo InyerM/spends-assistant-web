@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from 'react';
 import { Command } from 'cmdk';
-import { CheckIcon, ChevronDownIcon, Search } from 'lucide-react';
+import { CheckIcon, ChevronDownIcon, ChevronRight, Search } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
 
@@ -21,6 +21,7 @@ interface SearchableSelectProps {
   items: SearchableSelectItem[];
   className?: string;
   disabled?: boolean;
+  collapsibleGroups?: boolean;
 }
 
 export function SearchableSelect({
@@ -32,9 +33,11 @@ export function SearchableSelect({
   items,
   className,
   disabled,
+  collapsibleGroups = false,
 }: SearchableSelectProps): React.ReactElement {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
 
   const selectedLabel = items.find((i) => i.value === value)?.label;
 
@@ -47,6 +50,15 @@ export function SearchableSelect({
     [onValueChange],
   );
 
+  const toggleGroup = useCallback((group: string): void => {
+    setExpandedGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(group)) next.delete(group);
+      else next.add(group);
+      return next;
+    });
+  }, []);
+
   // Group items by their group field
   const groups = new Map<string | undefined, SearchableSelectItem[]>();
   for (const item of items) {
@@ -54,6 +66,8 @@ export function SearchableSelect({
     if (!groups.has(key)) groups.set(key, []);
     groups.get(key)!.push(item);
   }
+
+  const isSearching = search.trim().length > 0;
 
   return (
     <Popover open={open} onOpenChange={setOpen} modal>
@@ -91,25 +105,49 @@ export function SearchableSelect({
           <Command.List
             id='searchable-select-list'
             className='scrollbar-subtle !max-h-60 !overflow-y-auto overscroll-contain p-1'>
-            <Command.Empty className='text-muted-foreground py-6 text-center text-sm'>
-              {emptyText}
-            </Command.Empty>
+            {(!collapsibleGroups || isSearching) && (
+              <Command.Empty className='text-muted-foreground py-6 text-center text-sm'>
+                {emptyText}
+              </Command.Empty>
+            )}
             {[...groups.entries()].map(([group, groupItems]) =>
               group ? (
                 <Command.Group
                   key={group}
-                  heading={group}
+                  heading={
+                    collapsibleGroups && !isSearching ? (
+                      <button
+                        type='button'
+                        className='flex w-full cursor-pointer items-center gap-1'
+                        onClick={(e): void => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          toggleGroup(group);
+                        }}>
+                        <ChevronRight
+                          className={cn(
+                            'size-3 transition-transform',
+                            expandedGroups.has(group) && 'rotate-90',
+                          )}
+                        />
+                        {group}
+                      </button>
+                    ) : (
+                      group
+                    )
+                  }
                   className='[&_[cmdk-group-heading]]:text-muted-foreground [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-xs'>
-                  {groupItems.map((item) => (
-                    <Command.Item
-                      key={item.value}
-                      value={item.label}
-                      onSelect={(): void => handleSelect(item.value)}
-                      className='focus:bg-accent focus:text-accent-foreground data-[selected=true]:bg-accent data-[selected=true]:text-accent-foreground relative flex w-full cursor-default items-center gap-2 rounded-sm py-1.5 pr-8 pl-2 text-sm outline-hidden select-none data-[disabled=true]:pointer-events-none data-[disabled=true]:opacity-50'>
-                      {item.label}
-                      {value === item.value && <CheckIcon className='absolute right-2 size-4' />}
-                    </Command.Item>
-                  ))}
+                  {(!collapsibleGroups || isSearching || expandedGroups.has(group)) &&
+                    groupItems.map((item) => (
+                      <Command.Item
+                        key={item.value}
+                        value={item.label}
+                        onSelect={(): void => handleSelect(item.value)}
+                        className='focus:bg-accent focus:text-accent-foreground data-[selected=true]:bg-accent data-[selected=true]:text-accent-foreground relative flex w-full cursor-default items-center gap-2 rounded-sm py-1.5 pr-8 pl-2 text-sm outline-hidden select-none data-[disabled=true]:pointer-events-none data-[disabled=true]:opacity-50'>
+                        {item.label}
+                        {value === item.value && <CheckIcon className='absolute right-2 size-4' />}
+                      </Command.Item>
+                    ))}
                 </Command.Group>
               ) : (
                 groupItems.map((item) => (

@@ -1,11 +1,13 @@
 'use client';
 
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useTransactions } from '@/lib/api/queries/transaction.queries';
 import { useCategories } from '@/lib/api/queries/category.queries';
 import { formatCurrency } from '@/lib/utils/formatting';
+import { getCategoryName } from '@/lib/i18n/get-category-name';
+import type { Locale } from '@/i18n/config';
+import type { Transaction } from '@/types';
 
 const BAR_COLORS = [
   'bg-emerald-500',
@@ -19,8 +21,8 @@ const BAR_COLORS = [
 ];
 
 interface SpendingByCategoryProps {
-  dateFrom: string;
-  dateTo: string;
+  transactions: Transaction[];
+  isLoading?: boolean;
 }
 
 interface CategorySpending {
@@ -31,25 +33,20 @@ interface CategorySpending {
 }
 
 export function SpendingByCategory({
-  dateFrom,
-  dateTo,
+  transactions,
+  isLoading,
 }: SpendingByCategoryProps): React.ReactElement {
   const t = useTranslations('dashboard');
+  const locale = useLocale();
 
-  const { data: result, isLoading: txLoading } = useTransactions({
-    type: 'expense',
-    date_from: dateFrom,
-    date_to: dateTo,
-    limit: 500,
-  });
   const { data: categories, isLoading: catLoading } = useCategories();
 
-  const transactions = result?.data ?? [];
+  const expenses = transactions.filter((tx) => tx.type === 'expense');
   const spending: CategorySpending[] = [];
 
-  if (transactions.length > 0 && categories) {
+  if (expenses.length > 0 && categories) {
     const byCategory = new Map<string, number>();
-    for (const tx of transactions) {
+    for (const tx of expenses) {
       const catId = tx.category_id ?? 'uncategorized';
       byCategory.set(catId, (byCategory.get(catId) ?? 0) + tx.amount);
     }
@@ -59,7 +56,7 @@ export function SpendingByCategory({
       const cat = categories.find((c) => c.id === catId);
       spending.push({
         id: catId,
-        name: cat?.name ?? 'Uncategorized',
+        name: cat ? getCategoryName(cat, locale as Locale) : 'Uncategorized',
         amount,
         color: BAR_COLORS[colorIndex % BAR_COLORS.length],
       });
@@ -71,7 +68,7 @@ export function SpendingByCategory({
 
   const totalSpending = spending.reduce((sum, s) => sum + s.amount, 0);
 
-  if (txLoading || catLoading) {
+  if (isLoading || catLoading) {
     return (
       <Card className='border-border bg-card'>
         <CardHeader>
@@ -90,7 +87,9 @@ export function SpendingByCategory({
     <Card className='border-border bg-card overflow-hidden'>
       <CardHeader className='pb-3'>
         <CardTitle className='text-base font-medium'>{t('spendingByCategory')}</CardTitle>
-        <p className='text-destructive text-2xl font-bold'>-{formatCurrency(totalSpending)}</p>
+        <p className='text-destructive text-2xl font-bold'>
+          -{formatCurrency(totalSpending, 'COP', locale)}
+        </p>
       </CardHeader>
       <CardContent className='min-w-0'>
         {spending.length === 0 ? (
@@ -106,7 +105,7 @@ export function SpendingByCategory({
                   <div className='mb-1.5 flex items-center justify-between gap-2 text-sm'>
                     <span className='text-foreground min-w-0 truncate'>{cat.name}</span>
                     <span className='text-muted-foreground shrink-0'>
-                      {formatCurrency(cat.amount)}
+                      {formatCurrency(cat.amount, 'COP', locale)}
                     </span>
                   </div>
                   <div className='bg-muted h-2 overflow-hidden rounded-full'>

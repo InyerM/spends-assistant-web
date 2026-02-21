@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -135,6 +135,7 @@ export function TransactionForm({
 }: TransactionFormProps): React.ReactElement {
   const t = useTranslations('transactions');
   const tCommon = useTranslations('common');
+  const locale = useLocale();
   const { data: accounts } = useAccounts();
   const { data: categories } = useCategories();
   const { data: usage } = useUsage();
@@ -1018,7 +1019,11 @@ export function TransactionForm({
                           onValueChange={field.onChange}
                           placeholder={t('selectCategory')}
                           searchPlaceholder={t('searchCategories')}
-                          items={buildCategoryItems(allCategories, watchType)}
+                          items={buildCategoryItems(allCategories, watchType, {
+                            locale: locale as 'en' | 'es' | 'pt',
+                            allPrefix: (name: string): string => tCommon('allOf', { name }),
+                          })}
+                          collapsibleGroups
                         />
                       </FormControl>
                       <FormMessage />

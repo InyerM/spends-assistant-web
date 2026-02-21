@@ -63,4 +63,28 @@ describe('buildCategoryItems', () => {
   it('returns empty array for empty input', () => {
     expect(buildCategoryItems([])).toEqual([]);
   });
+
+  it('uses translated names when locale provided', () => {
+    const categories = [
+      createMockCategory({
+        id: 'c1',
+        name: 'Food',
+        parent_id: null,
+        translations: { es: 'Comida' },
+      }),
+    ];
+    const items = buildCategoryItems(categories, undefined, { locale: 'es' });
+    expect(items[0].label).toBe('Comida');
+  });
+
+  it('uses custom allPrefix', () => {
+    const categories = [
+      createMockCategory({ id: 'p1', name: 'Food', parent_id: null }),
+      createMockCategory({ id: 'c1', name: 'Restaurant', parent_id: 'p1' }),
+    ];
+    const items = buildCategoryItems(categories, undefined, {
+      allPrefix: (name: string): string => `Todo ${name}`,
+    });
+    expect(items[0].label).toBe('Todo Food');
+  });
 });

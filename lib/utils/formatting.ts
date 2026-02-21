@@ -1,9 +1,16 @@
-export function formatCurrency(amount: number, currency: string = 'COP'): string {
-  return new Intl.NumberFormat('es-CO', {
+const LOCALE_MAP: Record<string, string> = {
+  en: 'en-US',
+  es: 'es-CO',
+  pt: 'pt-BR',
+};
+
+export function formatCurrency(amount: number, currency: string = 'COP', locale?: string): string {
+  const intlLocale = (locale && LOCALE_MAP[locale]) ?? 'es-CO';
+  return new Intl.NumberFormat(intlLocale, {
     style: 'currency',
     currency,
     minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
+    maximumFractionDigits: 2,
   }).format(amount);
 }
 

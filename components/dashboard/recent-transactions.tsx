@@ -1,15 +1,18 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useTransactionFormStore } from '@/lib/stores/transaction-form.store';
 import { useTransactions } from '@/lib/api/queries/transaction.queries';
 import { useCategories } from '@/lib/api/queries/category.queries';
 import { useAccounts } from '@/lib/api/queries/account.queries';
 import { formatCurrency } from '@/lib/utils/formatting';
 import { formatTimeForDisplay } from '@/lib/utils/date';
+import { getCategoryName } from '@/lib/i18n/get-category-name';
+import type { Locale } from '@/i18n/config';
 import { ArrowDownLeft, ArrowUpRight, ArrowRightLeft, ArrowRight } from 'lucide-react';
 import type { TransactionType } from '@/types';
 
@@ -21,7 +24,9 @@ const typeConfig: Record<TransactionType, { icon: typeof ArrowDownLeft; colorCla
 
 export function RecentTransactions(): React.ReactElement {
   const t = useTranslations('dashboard');
+  const locale = useLocale();
   const router = useRouter();
+  const { openWith } = useTransactionFormStore();
   const { data: result, isLoading } = useTransactions({ limit: 5 });
   const { data: categories } = useCategories();
   const { data: accounts } = useAccounts();
@@ -32,7 +37,7 @@ export function RecentTransactions(): React.ReactElement {
     if (!categoryId || !categories) return null;
     const cat = categories.find((c) => c.id === categoryId);
     if (!cat) return null;
-    return { name: cat.name, color: cat.color };
+    return { name: getCategoryName(cat, locale as Locale), color: cat.color };
   };
 
   const getAccountName = (accountId: string): string => {
@@ -82,9 +87,11 @@ export function RecentTransactions(): React.ReactElement {
                 const accountName = getAccountName(tx.account_id);
 
                 return (
-                  <div
+                  <button
                     key={tx.id}
-                    className='hover:bg-card-overlay flex min-w-0 items-center gap-3 rounded-lg p-2.5'>
+                    type='button'
+                    onClick={(): void => openWith(tx)}
+                    className='hover:bg-card-overlay flex w-full min-w-0 cursor-pointer items-center gap-3 rounded-lg p-2.5 text-left'>
                     <div
                       className={`bg-card-overlay flex h-9 w-9 items-center justify-center rounded-full ${config.colorClass}`}>
                       <Icon className='h-4 w-4' />
@@ -93,38 +100,33 @@ export function RecentTransactions(): React.ReactElement {
                       <p className='text-foreground truncate text-sm font-medium'>
                         {tx.description}
                       </p>
-                      <div className='text-muted-foreground flex items-center gap-2 text-xs'>
-                        <span>{accountName}</span>
-                        {category && (
-                          <>
-                            <span>·</span>
-                            <Badge
-                              variant='secondary'
-                              className='h-5 px-1.5 text-[10px]'
-                              style={
-                                category.color
-                                  ? {
-                                      backgroundColor: `${category.color}20`,
-                                      color: category.color,
-                                    }
-                                  : undefined
-                              }>
-                              {category.name}
-                            </Badge>
-                          </>
-                        )}
-                      </div>
+                      <p className='text-muted-foreground truncate text-xs'>{accountName}</p>
+                      {category && (
+                        <Badge
+                          variant='secondary'
+                          className='mt-0.5 h-5 max-w-full truncate px-1.5 text-[10px]'
+                          style={
+                            category.color
+                              ? {
+                                  backgroundColor: `${category.color}20`,
+                                  color: category.color,
+                                }
+                              : undefined
+                          }>
+                          {category.name}
+                        </Badge>
+                      )}
                     </div>
                     <div className='shrink-0 text-right'>
                       <p className={`text-sm font-semibold whitespace-nowrap ${config.colorClass}`}>
                         {tx.type === 'expense' ? '-' : tx.type === 'income' ? '+' : ''}
-                        {formatCurrency(tx.amount)}
+                        {formatCurrency(tx.amount, 'COP', locale)}
                       </p>
                       <p className='text-muted-foreground text-xs'>
                         {formatTimeForDisplay(tx.time)}
                       </p>
                     </div>
-                  </div>
+                  </button>
                 );
               })}
             </div>

@@ -45,7 +45,8 @@
     "creating": "Creando...",
     "updating": "Actualizando...",
     "generating": "Generando...",
-    "importing": "Importando..."
+    "importing": "Importando...",
+    "allOf": "Todo {name}"
   },
   "nav": {
     "dashboard": "Panel",
@@ -83,7 +84,14 @@
     "automationRules": "Reglas de Automatización",
     "settings": "Configuración",
     "home": "Inicio",
-    "more": "Más"
+    "more": "Más",
+    "spendingNature": "Naturaleza del Gasto",
+    "spendingNatureSubtitle": "¿Cuánto debo pagar, necesito pagar o simplemente quiero gastar?",
+    "balanceTrend": "Tendencia de Balance",
+    "balanceTrendSubtitle": "Evolución de tu saldo durante el período",
+    "must": "Obligatorio",
+    "need": "Necesario",
+    "want": "Deseo"
   },
   "transactions": {
     "title": "Transacciones",

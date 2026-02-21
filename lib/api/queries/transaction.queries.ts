@@ -55,10 +55,12 @@ export async function fetchTransaction(id: string): Promise<Transaction> {
 
 export function useTransactions(
   filters: TransactionFilters = {},
+  options?: { enabled?: boolean },
 ): ReturnType<typeof useQuery<TransactionsResult>> {
   return useQuery({
     queryKey: transactionKeys.list(filters),
     queryFn: () => fetchTransactions(filters),
+    enabled: options?.enabled,
   });
 }
 

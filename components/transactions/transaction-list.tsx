@@ -15,6 +15,8 @@ import { useCategories } from '@/lib/api/queries/category.queries';
 import { useAccounts } from '@/lib/api/queries/account.queries';
 import { formatCurrency } from '@/lib/utils/formatting';
 import { formatTimeForDisplay, formatDateTime } from '@/lib/utils/date';
+import { getCategoryName } from '@/lib/i18n/get-category-name';
+import type { Locale } from '@/i18n/config';
 import {
   ArrowDownLeft,
   ArrowUpRight,
@@ -26,6 +28,7 @@ import {
 import { useDeleteTransaction } from '@/lib/api/mutations/transaction.mutations';
 import { SwipeableRow } from '@/components/transactions/swipeable-row';
 import { ConfirmDeleteDialog } from '@/components/shared/confirm-delete-dialog';
+import { useLongPress } from '@/hooks/use-long-press';
 import { toast } from 'sonner';
 import type { Transaction, TransactionType, TransactionFilters } from '@/types';
 
@@ -123,12 +126,149 @@ function MetadataField({
   );
 }
 
+// --- TransactionRow sub-component ---
+
+interface TransactionRowProps {
+  tx: Transaction;
+  categoryInfo: { name: string; color: string | null } | null;
+  accountName: string;
+  locale: string;
+  selectMode: boolean;
+  isSelected: boolean;
+  onToggleSelect?: (id: string) => void;
+  onEdit: (tx: Transaction) => void;
+  onShowMetadata: (tx: Transaction) => void;
+  onDelete: (tx: Transaction) => void;
+  showHint: boolean;
+  onLongPress?: (id: string) => void;
+}
+
+function TransactionRow({
+  tx,
+  categoryInfo,
+  accountName,
+  locale,
+  selectMode,
+  isSelected,
+  onToggleSelect,
+  onEdit,
+  onShowMetadata,
+  onDelete,
+  showHint,
+  onLongPress,
+}: TransactionRowProps): React.ReactElement {
+  const config = typeConfig[tx.type];
+  const Icon = config.icon;
+  const hasMetadata = tx.raw_text || tx.parsed_data || tx.notes;
+
+  const longPressHandlers = useLongPress({
+    onLongPress: (): void => onLongPress?.(tx.id),
+  });
+
+  const rowContent = (
+    <div
+      className={`hover:bg-card-overlay flex items-center gap-3 rounded-lg p-3 transition-colors ${isSelected ? 'bg-card-overlay' : ''}`}
+      {...(onLongPress ? longPressHandlers : {})}>
+      {selectMode && onToggleSelect && (
+        <Checkbox
+          checked={isSelected}
+          onCheckedChange={(): void => onToggleSelect(tx.id)}
+          className='shrink-0'
+        />
+      )}
+      {!selectMode && onLongPress && (
+        <Checkbox
+          checked={false}
+          onCheckedChange={(): void => onLongPress(tx.id)}
+          className='border-muted-foreground/40 hidden shrink-0 md:block'
+        />
+      )}
+      <button
+        onClick={(): void => {
+          if (selectMode && onToggleSelect) {
+            onToggleSelect(tx.id);
+          } else {
+            onEdit(tx);
+          }
+        }}
+        className='flex min-w-0 flex-1 cursor-pointer items-center gap-3 text-left'>
+        <div
+          className={`bg-card-overlay flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${config.colorClass}`}>
+          <Icon className='h-4 w-4' />
+        </div>
+
+        <div className='min-w-0 flex-1'>
+          <div className='flex items-center gap-1.5'>
+            <p className='text-foreground truncate text-sm font-medium'>{tx.description}</p>
+            {tx.duplicate_status === 'pending_review' && (
+              <span title='Possible duplicate'>
+                <AlertTriangle className='text-warning h-3.5 w-3.5 shrink-0' />
+              </span>
+            )}
+          </div>
+          <p className='text-muted-foreground truncate text-xs'>{accountName}</p>
+          {categoryInfo && (
+            <Badge
+              variant='secondary'
+              className='mt-0.5 h-5 max-w-full truncate px-1.5 text-[10px]'
+              style={
+                categoryInfo.color
+                  ? {
+                      backgroundColor: `${categoryInfo.color}20`,
+                      color: categoryInfo.color,
+                      borderColor: `${categoryInfo.color}40`,
+                    }
+                  : undefined
+              }>
+              {categoryInfo.name}
+            </Badge>
+          )}
+        </div>
+
+        <div className='shrink-0 text-right'>
+          <p className={`text-sm font-semibold ${config.colorClass}`}>
+            {tx.type === 'expense' ? '-' : tx.type === 'income' ? '+' : ''}
+            {formatCurrency(tx.amount, 'COP', locale)}
+          </p>
+          <p className='text-muted-foreground text-xs'>{formatTimeForDisplay(tx.time)}</p>
+        </div>
+      </button>
+
+      {!selectMode && hasMetadata && (
+        <button
+          onClick={(): void => onShowMetadata(tx)}
+          className='text-muted-foreground hover:text-foreground cursor-pointer rounded-md p-1.5 transition-colors'
+          title='View details'>
+          <Info className='h-4 w-4' />
+        </button>
+      )}
+    </div>
+  );
+
+  return (
+    <div>
+      <div className='hidden md:block'>{rowContent}</div>
+      <div className='md:hidden'>
+        <SwipeableRow
+          onEdit={(): void => onEdit(tx)}
+          onDelete={(): void => onDelete(tx)}
+          showHint={showHint}>
+          {rowContent}
+        </SwipeableRow>
+      </div>
+    </div>
+  );
+}
+
+// --- Main TransactionList ---
+
 interface TransactionListProps {
   filters: Omit<TransactionFilters, 'page' | 'limit'>;
   onEdit: (transaction: Transaction) => void;
   selectedIds?: Set<string>;
   onToggleSelect?: (id: string) => void;
   selectMode?: boolean;
+  onActivateSelectMode?: (id: string) => void;
 }
 
 export function TransactionList({
@@ -137,6 +277,7 @@ export function TransactionList({
   selectedIds,
   onToggleSelect,
   selectMode = false,
+  onActivateSelectMode,
 }: TransactionListProps): React.ReactElement {
   const t = useTranslations('transactions');
   const tCommon = useTranslations('common');
@@ -192,12 +333,13 @@ export function TransactionList({
     if (!categoryId || !categories) return null;
     const cat = categories.find((c) => c.id === categoryId);
     if (!cat) return null;
+    const name = getCategoryName(cat, locale as Locale);
     // If child category, inherit parent color if not set
     if (!cat.color && cat.parent_id) {
       const parent = categories.find((c) => c.id === cat.parent_id);
-      return { name: cat.name, color: parent?.color ?? null };
+      return { name, color: parent?.color ?? null };
     }
-    return { name: cat.name, color: cat.color };
+    return { name, color: cat.color };
   };
 
   const getAccountName = (accountId: string): string => {
@@ -230,115 +372,28 @@ export function TransactionList({
             <span
               className={`text-sm font-semibold ${group.total >= 0 ? 'text-success' : 'text-destructive'}`}>
               {group.total >= 0 ? '+' : ''}
-              {formatCurrency(group.total)}
+              {formatCurrency(group.total, 'COP', locale)}
             </span>
           </div>
 
           <div className='space-y-0.5'>
-            {group.transactions.map((tx, txIndex) => {
-              const config = typeConfig[tx.type];
-              const Icon = config.icon;
-              const categoryInfo = getCategory(tx.category_id);
-              const accountName = getAccountName(tx.account_id);
-              const hasMetadata = tx.raw_text || tx.parsed_data || tx.notes;
-
-              const isSelected = selectedIds?.has(tx.id) ?? false;
-
-              const rowContent = (
-                <div
-                  className={`hover:bg-card-overlay flex items-center gap-3 rounded-lg p-3 transition-colors ${isSelected ? 'bg-card-overlay' : ''}`}>
-                  {selectMode && onToggleSelect && (
-                    <Checkbox
-                      checked={isSelected}
-                      onCheckedChange={(): void => onToggleSelect(tx.id)}
-                      className='shrink-0'
-                    />
-                  )}
-                  <button
-                    onClick={(): void => {
-                      if (selectMode && onToggleSelect) {
-                        onToggleSelect(tx.id);
-                      } else {
-                        onEdit(tx);
-                      }
-                    }}
-                    className='flex min-w-0 flex-1 cursor-pointer items-center gap-3 text-left'>
-                    <div
-                      className={`bg-card-overlay flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${config.colorClass}`}>
-                      <Icon className='h-4 w-4' />
-                    </div>
-
-                    <div className='min-w-0 flex-1'>
-                      <div className='flex items-center gap-1.5'>
-                        <p className='text-foreground truncate text-sm font-medium'>
-                          {tx.description}
-                        </p>
-                        {tx.duplicate_status === 'pending_review' && (
-                          <span title='Possible duplicate'>
-                            <AlertTriangle className='text-warning h-3.5 w-3.5 shrink-0' />
-                          </span>
-                        )}
-                      </div>
-                      <div className='text-muted-foreground flex items-center gap-1.5 text-xs'>
-                        <span className='truncate'>{accountName}</span>
-                        {categoryInfo && (
-                          <>
-                            <span>·</span>
-                            <Badge
-                              variant='secondary'
-                              className='h-5 shrink-0 px-1.5 text-[10px]'
-                              style={
-                                categoryInfo.color
-                                  ? {
-                                      backgroundColor: `${categoryInfo.color}20`,
-                                      color: categoryInfo.color,
-                                      borderColor: `${categoryInfo.color}40`,
-                                    }
-                                  : undefined
-                              }>
-                              {categoryInfo.name}
-                            </Badge>
-                          </>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className='shrink-0 text-right'>
-                      <p className={`text-sm font-semibold ${config.colorClass}`}>
-                        {tx.type === 'expense' ? '-' : tx.type === 'income' ? '+' : ''}
-                        {formatCurrency(tx.amount)}
-                      </p>
-                      <p className='text-muted-foreground text-xs'>
-                        {formatTimeForDisplay(tx.time)}
-                      </p>
-                    </div>
-                  </button>
-
-                  {!selectMode && hasMetadata && (
-                    <button
-                      onClick={(): void => setMetadataTx(tx)}
-                      className='text-muted-foreground hover:text-foreground cursor-pointer rounded-md p-1.5 transition-colors'
-                      title='View details'>
-                      <Info className='h-4 w-4' />
-                    </button>
-                  )}
-                </div>
-              );
-
-              return (
-                <div key={tx.id}>
-                  <div className='hidden md:block'>{rowContent}</div>
-                  <div className='md:hidden'>
-                    <SwipeableRow
-                      onEdit={(): void => onEdit(tx)}
-                      onDelete={(): void => setDeleteTx(tx)}
-                      showHint={groupIndex === 0 && txIndex === 0}>
-                      {rowContent}
-                    </SwipeableRow>
-                  </div>
-                </div>
-              );
-            })}
+            {group.transactions.map((tx, txIndex) => (
+              <TransactionRow
+                key={tx.id}
+                tx={tx}
+                categoryInfo={getCategory(tx.category_id)}
+                accountName={getAccountName(tx.account_id)}
+                locale={locale}
+                selectMode={selectMode}
+                isSelected={selectedIds?.has(tx.id) ?? false}
+                onToggleSelect={onToggleSelect}
+                onEdit={onEdit}
+                onShowMetadata={setMetadataTx}
+                onDelete={setDeleteTx}
+                showHint={groupIndex === 0 && txIndex === 0}
+                onLongPress={!selectMode ? onActivateSelectMode : undefined}
+              />
+            ))}
           </div>
         </div>
       ))}

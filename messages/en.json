@@ -45,7 +45,8 @@
     "creating": "Creating...",
     "updating": "Updating...",
     "generating": "Generating...",
-    "importing": "Importing..."
+    "importing": "Importing...",
+    "allOf": "All {name}"
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -83,7 +84,14 @@
     "automationRules": "Automation Rules",
     "settings": "Settings",
     "home": "Home",
-    "more": "More"
+    "more": "More",
+    "spendingNature": "Spending Nature",
+    "spendingNatureSubtitle": "How much do I have to pay, need to pay, or simply want to spend?",
+    "balanceTrend": "Balance Trend",
+    "balanceTrendSubtitle": "Your balance evolution over the period",
+    "must": "Must",
+    "need": "Need",
+    "want": "Want"
   },
   "transactions": {
     "title": "Transactions",

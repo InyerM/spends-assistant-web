@@ -154,7 +154,7 @@ export default function AccountsPage(): React.ReactElement {
                 <CardContent>
                   <div
                     className={`text-2xl font-bold ${account.balance >= 0 ? 'text-success' : 'text-destructive'}`}>
-                    {formatCurrency(account.balance, account.currency)}
+                    {formatCurrency(account.balance, account.currency, locale)}
                   </div>
                   <div className='text-muted-foreground mt-2 flex items-center gap-2 text-sm'>
                     <span className='capitalize'>

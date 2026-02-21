@@ -1,31 +1,26 @@
 'use client';
 
 import { useMemo } from 'react';
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAccounts } from '@/lib/api/queries/account.queries';
-import { useTransactions } from '@/lib/api/queries/transaction.queries';
 import { formatCurrency } from '@/lib/utils/formatting';
 import { TrendingUp, TrendingDown, Scale, Wallet } from 'lucide-react';
+import type { Transaction } from '@/types';
 
 interface SummaryCardsProps {
-  dateFrom: string;
-  dateTo: string;
+  transactions: Transaction[];
+  isLoading?: boolean;
 }
 
-export function SummaryCards({ dateFrom, dateTo }: SummaryCardsProps): React.ReactElement {
+export function SummaryCards({ transactions, isLoading }: SummaryCardsProps): React.ReactElement {
   const t = useTranslations('dashboard');
+  const locale = useLocale();
 
   const { data: accounts, isLoading: accLoading } = useAccounts();
-  const { data: txResult, isLoading: txLoading } = useTransactions({
-    date_from: dateFrom,
-    date_to: dateTo,
-    limit: 500,
-  });
 
   const stats = useMemo(() => {
-    const transactions = txResult?.data ?? [];
     let income = 0;
     let expenses = 0;
 
@@ -38,9 +33,9 @@ export function SummaryCards({ dateFrom, dateTo }: SummaryCardsProps): React.Rea
     const cashFlow = income - expenses;
 
     return { totalBalance, income, expenses, cashFlow };
-  }, [txResult?.data, accounts]);
+  }, [transactions, accounts]);
 
-  if (accLoading || txLoading) {
+  if (accLoading || isLoading) {
     return (
       <div className='grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-4'>
         {Array.from({ length: 4 }).map((_, i) => (
@@ -96,7 +91,7 @@ export function SummaryCards({ dateFrom, dateTo }: SummaryCardsProps): React.Rea
                 <p className='text-muted-foreground truncate text-xs'>{card.label}</p>
                 <p className={`truncate text-base font-bold sm:text-lg ${card.colorClass}`}>
                   {card.prefix ?? ''}
-                  {formatCurrency(Math.abs(card.value))}
+                  {formatCurrency(Math.abs(card.value), 'COP', locale)}
                 </p>
               </div>
             </CardContent>

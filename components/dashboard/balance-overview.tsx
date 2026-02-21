@@ -2,7 +2,7 @@
 
 import { useRef, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAccounts } from '@/lib/api/queries/account.queries';
 import { formatCurrency } from '@/lib/utils/formatting';
@@ -63,9 +63,10 @@ interface AccountCardProps {
   account: Account;
   onEdit?: (account: Account) => void;
   onClick: () => void;
+  locale?: string;
 }
 
-function AccountCard({ account, onEdit, onClick }: AccountCardProps): React.ReactElement {
+function AccountCard({ account, onEdit, onClick, locale }: AccountCardProps): React.ReactElement {
   const rawColor = account.color ?? FALLBACK_COLORS[account.type];
   const bgColor = darkenColor(rawColor);
   const Icon = ACCOUNT_TYPE_ICONS[account.type];
@@ -83,7 +84,9 @@ function AccountCard({ account, onEdit, onClick }: AccountCardProps): React.Reac
       <Icon className='h-5 w-5 shrink-0 text-white/70' />
       <div className='min-w-0 flex-1'>
         <p className='truncate text-sm font-semibold text-white'>{account.name}</p>
-        <p className='text-sm text-white/80'>{formatCurrency(account.balance, account.currency)}</p>
+        <p className='text-sm text-white/80'>
+          {formatCurrency(account.balance, account.currency, locale)}
+        </p>
       </div>
       {onEdit && (
         <button
@@ -110,6 +113,7 @@ export function BalanceOverview({
 }: BalanceOverviewProps): React.ReactElement {
   const t = useTranslations('dashboard');
   const tCommon = useTranslations('common');
+  const locale = useLocale();
   const { data: accounts, isLoading } = useAccounts();
   const router = useRouter();
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -175,6 +179,7 @@ export function BalanceOverview({
                     account={account}
                     onEdit={onEditAccount}
                     onClick={(): void => router.push(`/accounts/${account.id}`)}
+                    locale={locale}
                   />
                 ))}
                 {showAddHere && addCard}

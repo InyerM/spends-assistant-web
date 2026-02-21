@@ -2,7 +2,7 @@
 
 import { use, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -16,6 +16,8 @@ import { AccountEditDialog } from '@/components/accounts/account-edit-dialog';
 import { ConfirmDeleteDialog } from '@/components/shared/confirm-delete-dialog';
 import { formatCurrency } from '@/lib/utils/formatting';
 import { formatDateForDisplay, formatTimeForDisplay } from '@/lib/utils/date';
+import { getCategoryName as getTranslatedCategoryName } from '@/lib/i18n/get-category-name';
+import type { Locale } from '@/i18n/config';
 import {
   ArrowLeft,
   Pencil,
@@ -70,6 +72,7 @@ export default function AccountDetailPage({
   const { id } = use(params);
   const t = useTranslations('accounts');
   const tCommon = useTranslations('common');
+  const locale = useLocale();
   const router = useRouter();
   const { data: account, isLoading } = useAccount(id);
   const { data: txResult } = useTransactions({ account_id: id, limit: 100 });
@@ -93,7 +96,9 @@ export default function AccountDetailPage({
 
   const getCategoryName = (categoryId: string | null): string | null => {
     if (!categoryId || !categories) return null;
-    return categories.find((c) => c.id === categoryId)?.name ?? null;
+    const cat = categories.find((c) => c.id === categoryId);
+    if (!cat) return null;
+    return getTranslatedCategoryName(cat, locale as Locale);
   };
 
   if (isLoading) {
@@ -177,7 +182,7 @@ export default function AccountDetailPage({
               <p className='text-muted-foreground text-sm'>{t('currentBalance')}</p>
               <p
                 className={`text-3xl font-bold ${account.balance >= 0 ? 'text-success' : 'text-destructive'}`}>
-                {formatCurrency(account.balance, account.currency)}
+                {formatCurrency(account.balance, account.currency, locale)}
               </p>
             </CardContent>
           </Card>
@@ -225,7 +230,7 @@ export default function AccountDetailPage({
                     <div className='shrink-0 text-right'>
                       <p className={`text-sm font-semibold ${config.colorClass}`}>
                         {tx.type === 'expense' ? '-' : tx.type === 'income' ? '+' : ''}
-                        {formatCurrency(tx.amount)}
+                        {formatCurrency(tx.amount, 'COP', locale)}
                       </p>
                       <p className='text-muted-foreground text-xs'>
                         {formatTimeForDisplay(tx.time)}

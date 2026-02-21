@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
 import { toast } from 'sonner';
 import { AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -35,6 +35,7 @@ export function DuplicateWarningDialog({
 }: DuplicateWarningDialogProps): React.ReactElement {
   const t = useTranslations('transactions');
   const tCommon = useTranslations('common');
+  const locale = useLocale();
   const { data: accounts } = useAccounts();
   const { data: categories } = useCategories();
   const queryClient = useQueryClient();
@@ -106,6 +107,7 @@ export function DuplicateWarningDialog({
             account={getAccountName(existingTransaction.account_id)}
             category={getCategoryName(existingTransaction.category_id)}
             type={existingTransaction.type}
+            locale={locale}
           />
           <ComparisonCard
             label={tCommon('new')}
@@ -116,6 +118,7 @@ export function DuplicateWarningDialog({
             category={getCategoryName(newInput.category_id ?? null)}
             type={newInput.type}
             highlight
+            locale={locale}
           />
         </div>
 
@@ -147,6 +150,7 @@ function ComparisonCard({
   category,
   type,
   highlight,
+  locale,
 }: {
   label: string;
   amount: number;
@@ -156,6 +160,7 @@ function ComparisonCard({
   category: string;
   type: string;
   highlight?: boolean;
+  locale?: string;
 }): React.ReactElement {
   return (
     <div
@@ -165,7 +170,9 @@ function ComparisonCard({
       <span className='text-muted-foreground mb-1 block text-[10px] font-medium tracking-wide uppercase'>
         {label}
       </span>
-      <p className='text-base leading-tight font-semibold'>{formatCurrency(amount)}</p>
+      <p className='text-base leading-tight font-semibold'>
+        {formatCurrency(amount, 'COP', locale)}
+      </p>
       <p className='mt-0.5 truncate text-xs'>{description}</p>
       <div className='text-muted-foreground mt-1.5 space-y-0 text-[11px] leading-snug'>
         <p>{date}</p>

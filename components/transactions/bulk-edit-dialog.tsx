@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -38,6 +38,7 @@ export function BulkEditDialog({
 }: BulkEditDialogProps): React.ReactElement {
   const t = useTranslations('transactions');
   const tCommon = useTranslations('common');
+  const locale = useLocale();
   const { data: accounts } = useAccounts();
   const { data: categories } = useCategories();
   const bulkMutation = useBulkUpdateTransactions();
@@ -128,7 +129,10 @@ export function BulkEditDialog({
               items={[
                 { value: UNCHANGED, label: tCommon('noChange') },
                 { value: NONE, label: t('noneRemoveCategory') },
-                ...buildCategoryItems(categories ?? [], currentType),
+                ...buildCategoryItems(categories ?? [], currentType, {
+                  locale: locale as 'en' | 'es' | 'pt',
+                  allPrefix: (name: string): string => tCommon('allOf', { name }),
+                }),
               ]}
             />
           </div>

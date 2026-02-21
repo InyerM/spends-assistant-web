@@ -79,7 +79,10 @@ export default function TransactionsPage(): React.ReactElement {
     return filters;
   }, [filters, importIdParam]);
 
-  const { data: exportData } = useTransactions({ ...effectiveFilters, limit: 500 });
+  const { refetch: fetchExportData, isFetching: isExporting } = useTransactions(
+    { ...effectiveFilters, limit: 500 },
+    { enabled: false },
+  );
   const { data: infiniteData } = useInfiniteTransactions(effectiveFilters);
   const bulkDeleteMutation = useBulkDeleteTransactions();
 
@@ -92,9 +95,10 @@ export default function TransactionsPage(): React.ReactElement {
     openWith(transaction);
   };
 
-  const handleExport = (): void => {
-    if (exportData?.data) {
-      exportTransactionsCsv(exportData.data);
+  const handleExport = async (): Promise<void> => {
+    const { data: result } = await fetchExportData();
+    if (result?.data) {
+      exportTransactionsCsv(result.data);
     }
   };
 
@@ -122,6 +126,11 @@ export default function TransactionsPage(): React.ReactElement {
     setSelectMode(false);
     setSelectedIds(new Set());
   };
+
+  const handleActivateSelectMode = useCallback((id: string): void => {
+    setSelectMode(true);
+    setSelectedIds(new Set([id]));
+  }, []);
 
   const handleBulkComplete = (): void => {
     exitSelectMode();
@@ -155,7 +164,7 @@ export default function TransactionsPage(): React.ReactElement {
   return (
     <div className='space-y-4 p-4 sm:space-y-6 sm:p-6'>
       {selectMode ? (
-        <div className='bg-card border-border flex items-center justify-between gap-2 rounded-lg border p-2 sm:p-3'>
+        <div className='bg-card border-border sticky top-0 z-10 flex items-center justify-between gap-2 rounded-lg border p-2 sm:p-3'>
           <div className='flex min-w-0 items-center gap-2 sm:gap-3'>
             <Button
               variant='ghost'
@@ -221,8 +230,8 @@ export default function TransactionsPage(): React.ReactElement {
               variant='outline'
               size='sm'
               className='hidden cursor-pointer sm:flex'
-              onClick={handleExport}
-              disabled={!exportData?.data.length}>
+              onClick={(): void => void handleExport()}
+              disabled={isExporting || !infiniteData?.pages[0]?.data?.length}>
               <Download className='mr-1.5 h-4 w-4' />
               {tCommon('export')}
             </Button>
@@ -252,8 +261,8 @@ export default function TransactionsPage(): React.ReactElement {
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   className='cursor-pointer'
-                  onClick={handleExport}
-                  disabled={!exportData?.data.length}>
+                  onClick={(): void => void handleExport()}
+                  disabled={isExporting || !infiniteData?.pages[0]?.data?.length}>
                   <Download className='mr-2 h-4 w-4' />
                   {tCommon('export')}
                 </DropdownMenuItem>
@@ -295,6 +304,7 @@ export default function TransactionsPage(): React.ReactElement {
         selectMode={selectMode}
         selectedIds={selectedIds}
         onToggleSelect={toggleSelect}
+        onActivateSelectMode={handleActivateSelectMode}
       />
 
       <ImportDialog open={importOpen} onOpenChange={setImportOpen} />
