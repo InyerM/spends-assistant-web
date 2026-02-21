@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useMemo } from 'react';
+import { useRef, useMemo, useState } from 'react';
 import { Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useUserSettings } from '@/hooks/use-user-settings';
@@ -36,6 +36,30 @@ function formatTime(hours24: number, minutes: number): string {
   return `${String(hours24).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
 }
 
+/** Returns true if the partial input could lead to a valid hours value. */
+function isValidHoursInput(val: string, is24h: boolean): boolean {
+  if (val === '') return true;
+  const num = parseInt(val, 10);
+  if (isNaN(num)) return false;
+  if (val.length === 1) {
+    // Single digit: allow if it could be a valid value or prefix
+    // 12h: 0 (prefix for 01-09), 1 (value or prefix for 10-12), 2-9 (values)
+    // 24h: 0-2 (values or prefixes), 3-9 (values)
+    return is24h ? num <= 9 : num <= 9;
+  }
+  // Two digits: must be in valid range
+  return is24h ? num <= 23 : num >= 1 && num <= 12;
+}
+
+/** Returns true if the partial input could lead to a valid minutes value. */
+function isValidMinutesInput(val: string): boolean {
+  if (val === '') return true;
+  const num = parseInt(val, 10);
+  if (isNaN(num)) return false;
+  if (val.length === 1) return num <= 9;
+  return num <= 59;
+}
+
 export function TimePicker({ value, onChange, className }: TimePickerProps): React.ReactElement {
   const { hours, minutes } = useMemo(() => parse24h(value), [value]);
   const { hours12, period } = to12h(hours);
@@ -45,24 +69,50 @@ export function TimePicker({ value, onChange, className }: TimePickerProps): Rea
   const minutesRef = useRef<HTMLInputElement>(null);
   const periodRef = useRef<HTMLButtonElement>(null);
 
-  function handleHoursChange12h(raw: string): void {
-    const num = parseInt(raw, 10);
-    if (isNaN(num)) return;
-    const clamped = Math.max(1, Math.min(12, num));
-    const h24 = to24h(clamped, period);
-    onChange(formatTime(h24, minutes));
+  const displayHours = is24h ? String(hours).padStart(2, '0') : String(hours12);
+  const displayMinutes = String(minutes).padStart(2, '0');
+
+  const [hoursText, setHoursText] = useState(displayHours);
+  const [minutesText, setMinutesText] = useState(displayMinutes);
+  const [isEditingHours, setIsEditingHours] = useState(false);
+  const [isEditingMinutes, setIsEditingMinutes] = useState(false);
+
+  // Sync local state when external value changes and not editing
+  // (React-recommended pattern: adjust state during render instead of in an effect)
+  const [prevDisplayHours, setPrevDisplayHours] = useState(displayHours);
+  if (displayHours !== prevDisplayHours) {
+    setPrevDisplayHours(displayHours);
+    if (!isEditingHours) setHoursText(displayHours);
   }
 
-  function handleHoursChange24h(raw: string): void {
-    const num = parseInt(raw, 10);
-    if (isNaN(num)) return;
-    const clamped = Math.max(0, Math.min(23, num));
-    onChange(formatTime(clamped, minutes));
+  const [prevDisplayMinutes, setPrevDisplayMinutes] = useState(displayMinutes);
+  if (displayMinutes !== prevDisplayMinutes) {
+    setPrevDisplayMinutes(displayMinutes);
+    if (!isEditingMinutes) setMinutesText(displayMinutes);
   }
 
-  function handleMinutesChange(raw: string): void {
+  function commitHours(raw: string): void {
     const num = parseInt(raw, 10);
-    if (isNaN(num)) return;
+    if (isNaN(num)) {
+      setHoursText(displayHours);
+      return;
+    }
+    if (is24h) {
+      const clamped = Math.max(0, Math.min(23, num));
+      onChange(formatTime(clamped, minutes));
+    } else {
+      const clamped = Math.max(1, Math.min(12, num));
+      const h24 = to24h(clamped, period);
+      onChange(formatTime(h24, minutes));
+    }
+  }
+
+  function commitMinutes(raw: string): void {
+    const num = parseInt(raw, 10);
+    if (isNaN(num)) {
+      setMinutesText(displayMinutes);
+      return;
+    }
     const clamped = Math.max(0, Math.min(59, num));
     onChange(formatTime(hours, clamped));
   }
@@ -97,6 +147,11 @@ export function TimePicker({ value, onChange, className }: TimePickerProps): Rea
     } else if (e.key === 'ArrowRight') {
       e.preventDefault();
       minutesRef.current?.focus();
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      commitHours(hoursText);
+      setIsEditingHours(false);
+      minutesRef.current?.focus();
     }
   }
 
@@ -117,6 +172,10 @@ export function TimePicker({ value, onChange, className }: TimePickerProps): Rea
     } else if (e.key === 'ArrowLeft') {
       e.preventDefault();
       hoursRef.current?.focus();
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      commitMinutes(minutesText);
+      setIsEditingMinutes(false);
     }
   }
 
@@ -130,6 +189,10 @@ export function TimePicker({ value, onChange, className }: TimePickerProps): Rea
     }
   }
 
+  const inputClassName = cn(
+    'h-full w-10 shrink-0 border-0 bg-transparent text-center font-mono text-sm outline-none',
+  );
+
   return (
     <div
       className={cn(
@@ -141,37 +204,47 @@ export function TimePicker({ value, onChange, className }: TimePickerProps): Rea
       <Clock className='text-muted-foreground ml-3 h-4 w-4 shrink-0 opacity-50' />
       <input
         ref={hoursRef}
-        type='number'
+        type='text'
         inputMode='numeric'
-        min={is24h ? 0 : 1}
-        max={is24h ? 23 : 12}
-        value={is24h ? hours : hours12}
-        onChange={(e): void =>
-          is24h ? handleHoursChange24h(e.target.value) : handleHoursChange12h(e.target.value)
-        }
+        maxLength={2}
+        value={hoursText}
+        onChange={(e): void => {
+          const val = e.target.value.replace(/\D/g, '').slice(0, 2);
+          if (isValidHoursInput(val, is24h)) setHoursText(val);
+        }}
+        onFocus={(): void => {
+          setIsEditingHours(true);
+          hoursRef.current?.select();
+        }}
+        onBlur={(): void => {
+          commitHours(hoursText);
+          setIsEditingHours(false);
+        }}
         onKeyDown={handleHoursKeyDown}
-        className={cn(
-          'h-full w-10 shrink-0 border-0 bg-transparent text-center font-mono text-sm outline-none',
-          '[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none',
-          '[&::-webkit-outer-spin-button]:appearance-none',
-        )}
+        className={inputClassName}
         aria-label='Hours'
       />
       <span className='text-muted-foreground shrink-0 font-mono text-sm font-bold'>:</span>
       <input
         ref={minutesRef}
-        type='number'
+        type='text'
         inputMode='numeric'
-        min={0}
-        max={59}
-        value={String(minutes).padStart(2, '0')}
-        onChange={(e): void => handleMinutesChange(e.target.value)}
+        maxLength={2}
+        value={minutesText}
+        onChange={(e): void => {
+          const val = e.target.value.replace(/\D/g, '').slice(0, 2);
+          if (isValidMinutesInput(val)) setMinutesText(val);
+        }}
+        onFocus={(): void => {
+          setIsEditingMinutes(true);
+          minutesRef.current?.select();
+        }}
+        onBlur={(): void => {
+          commitMinutes(minutesText);
+          setIsEditingMinutes(false);
+        }}
         onKeyDown={handleMinutesKeyDown}
-        className={cn(
-          'h-full w-10 shrink-0 border-0 bg-transparent text-center font-mono text-sm outline-none',
-          '[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none',
-          '[&::-webkit-outer-spin-button]:appearance-none',
-        )}
+        className={inputClassName}
         aria-label='Minutes'
       />
       {!is24h && (

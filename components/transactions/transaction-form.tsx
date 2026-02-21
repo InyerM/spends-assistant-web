@@ -932,8 +932,8 @@ export function TransactionForm({
                       <FormControl>
                         <Input
                           type='number'
-                          inputMode='numeric'
-                          step='1'
+                          inputMode='decimal'
+                          step='any'
                           min='0'
                           placeholder='0'
                           {...field}
