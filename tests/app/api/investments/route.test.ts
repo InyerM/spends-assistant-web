@@ -135,7 +135,9 @@ describe('/api/investments', () => {
   });
 
   it('scopes the read to the authenticated owner', async () => {
-    expect((await GET()).status).toBe(200);
+    const response = await GET();
+    expect(response.status).toBe(200);
+    expect(response.headers.get('Cache-Control')).toBe('private, no-store');
     expect(eq).toHaveBeenCalledWith('user_id', 'user-1');
   });
 });

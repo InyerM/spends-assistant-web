@@ -1,6 +1,8 @@
 import type { NextRequest } from 'next/server';
-import { AuthError, errorResponse, getUserClient, jsonResponse } from '@/lib/api/server';
+import { AuthError, errorResponse, getUserClient } from '@/lib/api/server';
 import { investmentConfirmSchema } from '@/lib/wealth/manual-entry';
+
+const privateHeaders = { 'Cache-Control': 'private, no-store' };
 
 export async function GET(): Promise<Response> {
   try {
@@ -13,7 +15,7 @@ export async function GET(): Promise<Response> {
       .eq('user_id', userId)
       .order('created_at', { ascending: false });
     if (error) return errorResponse(error.message, 500);
-    return jsonResponse({ data });
+    return Response.json({ data }, { headers: privateHeaders });
   } catch (error) {
     return error instanceof AuthError
       ? errorResponse('Unauthorized', 401)
@@ -39,7 +41,7 @@ export async function POST(request: NextRequest): Promise<Response> {
       return errorResponse('Failed to save investment entry');
     }
     const result = data as { replayed: boolean };
-    return jsonResponse(result, result.replayed ? 200 : 201);
+    return Response.json(result, { status: result.replayed ? 200 : 201, headers: privateHeaders });
   } catch (error) {
     return error instanceof AuthError
       ? errorResponse('Unauthorized', 401)

@@ -82,7 +82,9 @@ describe('/api/loans', () => {
   it('keeps replay status and scopes owner reads', async () => {
     rpc.mockResolvedValue({ data: { id, replayed: true }, error: null });
     expect((await post({ request_id: id, reviewed: true, event: payment })).status).toBe(200);
-    expect((await GET()).status).toBe(200);
+    const response = await GET();
+    expect(response.status).toBe(200);
+    expect(response.headers.get('Cache-Control')).toBe('private, no-store');
     expect(eq).toHaveBeenCalledWith('user_id', 'owner-1');
   });
   it('accepts a loan without an invented opening balance or rate', async () => {
