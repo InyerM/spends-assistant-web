@@ -1,6 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { POST } from '@/app/api/transactions/import/route';
 import { NextRequest } from 'next/server';
+import { getUserClient } from '@/lib/api/server';
+import { createFakeSupabase, type FakeDbOptions } from './fake-supabase';
 
 vi.mock('@/lib/api/server', () => ({
   getUserClient: vi.fn(),
@@ -14,215 +16,333 @@ vi.mock('@/lib/api/server', () => ({
   errorResponse: (message: string, status = 500) => Response.json({ error: message }, { status }),
 }));
 
-interface TableConfig {
-  maybeSingle?: { data: unknown; error: unknown };
-  single?: { data: unknown; error: unknown };
-  thenable?: { data: unknown; error: unknown };
-}
+const ACCOUNTS = [{ id: 'acc-1', name: 'Checking' }];
+const CATEGORIES = [{ id: 'cat-1', name: 'Food' }];
 
-function createChain(config: TableConfig = {}) {
-  const chain: Record<string, ReturnType<typeof vi.fn>> = {};
-  ['select', 'eq', 'is', 'in', 'insert', 'update'].forEach((m) => {
-    chain[m] = vi.fn().mockReturnValue(chain);
-  });
-  chain.maybeSingle = vi.fn().mockResolvedValue(config.maybeSingle ?? { data: null, error: null });
-  chain.single = vi.fn().mockResolvedValue(config.single ?? { data: null, error: null });
-  if (config.thenable) {
-    Object.defineProperty(chain, 'then', {
-      value: (resolve: (v: unknown) => void) => resolve(config.thenable),
-      enumerable: false,
-      configurable: true,
-    });
-  }
-  return chain;
-}
-
-function createSupabaseMock(tables: Partial<Record<string, TableConfig>> = {}) {
-  const defaultChain = createChain();
+function row(overrides: Record<string, unknown> = {}) {
   return {
-    from: vi.fn((table: string) => {
-      const config = tables[table];
-      if (config) return createChain(config);
-      return defaultChain;
-    }),
+    date: '2024-01-15',
+    time: '14:30:00',
+    amount: 50000,
+    description: 'Lunch',
+    notes: null,
+    type: 'expense',
+    account: 'Checking',
+    category: 'Food',
+    payment_method: null,
+    source: 'csv_import',
+    ...overrides,
   };
 }
 
+function setup(options: FakeDbOptions = {}) {
+  const fake = createFakeSupabase({ accounts: ACCOUNTS, categories: CATEGORIES, ...options });
+  vi.mocked(getUserClient).mockResolvedValue({
+    supabase: fake.client as never,
+    userId: 'test-user-id',
+  });
+  return fake;
+}
+
+function post(body: Record<string, unknown>) {
+  return POST(
+    new NextRequest('http://localhost/api/transactions/import', {
+      method: 'POST',
+      body: JSON.stringify({ resolve_names: true, file_name: 'bank.csv', ...body }),
+    }),
+  );
+}
+
+const EXISTING = {
+  id: 'tx-existing',
+  date: '2024-01-15',
+  amount: 50000,
+  description: 'Lunch',
+  account_id: 'acc-1',
+};
+
 describe('POST /api/transactions/import', () => {
   beforeEach(() => {
-    vi.restoreAllMocks();
+    vi.mocked(getUserClient).mockReset();
   });
 
-  it('imports transactions directly', async () => {
-    const { getUserClient } = await import('@/lib/api/server');
+  it('imports rows without matches, resolving account and category names', async () => {
+    const fake = setup();
+    const response = await post({ transactions: [row(), row({ date: '2024-01-16' })] });
 
-    const supabase = createSupabaseMock({
-      imports: { single: { data: { id: 'import-1' }, error: null } },
-      transactions: { thenable: { data: [{ id: 'tx-1' }, { id: 'tx-2' }], error: null } },
-    });
-
-    vi.mocked(getUserClient).mockResolvedValue({
-      supabase: supabase as never,
-      userId: 'test-user-id',
-    });
-
-    const request = new NextRequest('http://localhost/api/transactions/import', {
-      method: 'POST',
-      body: JSON.stringify({
-        transactions: [
-          {
-            date: '2024-01-15',
-            time: '14:30',
-            amount: 50000,
-            description: 'Test',
-            type: 'expense',
-            account: 'Checking',
-            source: 'import',
-          },
-          {
-            date: '2024-01-16',
-            time: '10:00',
-            amount: 30000,
-            description: 'Test 2',
-            type: 'expense',
-            account: 'Checking',
-            source: 'import',
-          },
-        ],
-      }),
-    });
-    const response = await POST(request);
     expect(response.status).toBe(201);
     const body = await response.json();
     expect(body.imported).toBe(2);
     expect(body.skipped).toBe(0);
+    expect(fake.state.transactionInserts[0][0]).toMatchObject({
+      account_id: 'acc-1',
+      category_id: 'cat-1',
+      user_id: 'test-user-id',
+      import_id: body.import_id,
+    });
+    expect(fake.state.transactionInserts[0][0]).not.toHaveProperty('account');
+    expect(fake.state.transactionInserts[0][0]).not.toHaveProperty('duplicate_status');
+    expect(fake.state.importUpdates.at(-1)).toMatchObject({
+      status: 'completed',
+      imported_count: 2,
+    });
   });
 
-  it('returns 400 when no transactions provided', async () => {
-    const { getUserClient } = await import('@/lib/api/server');
+  it('keeps legitimate equal-amount payments in the same file when nothing exists yet', async () => {
+    const fake = setup();
+    const response = await post({ transactions: [row(), row()] });
 
-    vi.mocked(getUserClient).mockResolvedValue({
-      supabase: createSupabaseMock() as never,
-      userId: 'test-user-id',
-    });
-
-    const request = new NextRequest('http://localhost/api/transactions/import', {
-      method: 'POST',
-      body: JSON.stringify({ transactions: [] }),
-    });
-    const response = await POST(request);
-    expect(response.status).toBe(400);
-  });
-
-  it('resolves names when resolve_names is true', async () => {
-    const { getUserClient } = await import('@/lib/api/server');
-
-    const supabase = createSupabaseMock({
-      imports: { single: { data: { id: 'import-1' }, error: null } },
-      accounts: { thenable: { data: [{ id: 'acc-1', name: 'Checking' }], error: null } },
-      categories: { thenable: { data: [{ id: 'cat-1', name: 'Food' }], error: null } },
-      transactions: { thenable: { data: [{ id: 'tx-1' }], error: null } },
-    });
-
-    vi.mocked(getUserClient).mockResolvedValue({
-      supabase: supabase as never,
-      userId: 'test-user-id',
-    });
-
-    const request = new NextRequest('http://localhost/api/transactions/import', {
-      method: 'POST',
-      body: JSON.stringify({
-        resolve_names: true,
-        transactions: [
-          {
-            date: '2024-01-15',
-            time: '14:30',
-            amount: 50000,
-            description: 'Lunch',
-            type: 'expense',
-            account: 'Checking',
-            category: 'Food',
-            source: 'import',
-            notes: null,
-            payment_method: null,
-          },
-        ],
-      }),
-    });
-    const response = await POST(request);
     expect(response.status).toBe(201);
-    const body = await response.json();
-    expect(body.imported).toBe(1);
+    expect((await response.json()).imported).toBe(2);
+    expect(fake.state.transactionInserts[0]).toHaveLength(2);
   });
 
-  it('returns error when all accounts unresolved', async () => {
-    const { getUserClient } = await import('@/lib/api/server');
-
-    const supabase = createSupabaseMock({
-      imports: { single: { data: { id: 'import-1' }, error: null } },
-      accounts: { thenable: { data: [], error: null } },
-      categories: { thenable: { data: [], error: null } },
+  it('only accepts whitelisted columns from the client', async () => {
+    const fake = setup();
+    await post({
+      transactions: [
+        row({ user_id: 'someone-else', duplicate_status: 'confirmed', deleted_at: 'x' }),
+      ],
     });
-
-    vi.mocked(getUserClient).mockResolvedValue({
-      supabase: supabase as never,
-      userId: 'test-user-id',
-    });
-
-    const request = new NextRequest('http://localhost/api/transactions/import', {
-      method: 'POST',
-      body: JSON.stringify({
-        resolve_names: true,
-        transactions: [
-          {
-            date: '2024-01-15',
-            time: '14:30',
-            amount: 50000,
-            description: 'Test',
-            type: 'expense',
-            account: 'Unknown',
-            category: null,
-            source: 'import',
-            notes: null,
-            payment_method: null,
-          },
-        ],
-      }),
-    });
-    const response = await POST(request);
-    expect(response.status).toBe(400);
+    const inserted = fake.state.transactionInserts[0][0];
+    expect(inserted.user_id).toBe('test-user-id');
+    expect(inserted).not.toHaveProperty('duplicate_status');
+    expect(inserted).not.toHaveProperty('deleted_at');
   });
 
-  it('returns 400 on DB insert error', async () => {
-    const { getUserClient } = await import('@/lib/api/server');
+  describe('existing matches', () => {
+    it('rejects with 409 and writes nothing when a row matches an existing transaction', async () => {
+      const fake = setup({ transactions: [EXISTING] });
+      const response = await post({ transactions: [row(), row({ date: '2024-02-01' })] });
 
-    const supabase = createSupabaseMock({
-      imports: { single: { data: { id: 'import-1' }, error: null } },
-      transactions: { thenable: { data: null, error: { message: 'Insert failed' } } },
+      expect(response.status).toBe(409);
+      const body = await response.json();
+      expect(body.duplicates).toEqual([{ index: 0, match: EXISTING }]);
+      expect(body.unreviewed).toEqual([0]);
+      expect(fake.state.imports).toHaveLength(0);
+      expect(fake.state.transactionInserts).toHaveLength(0);
     });
 
-    vi.mocked(getUserClient).mockResolvedValue({
-      supabase: supabase as never,
-      userId: 'test-user-id',
+    it('matches on account_id as well as account name', async () => {
+      const fake = setup({ transactions: [EXISTING] });
+      const response = await post({
+        transactions: [row({ account: undefined, account_id: 'acc-1' })],
+      });
+
+      expect(response.status).toBe(409);
+      expect(fake.state.transactionInserts).toHaveLength(0);
     });
 
-    const request = new NextRequest('http://localhost/api/transactions/import', {
-      method: 'POST',
-      body: JSON.stringify({
-        transactions: [
-          {
-            date: '2024-01-15',
-            time: '14:30',
-            amount: 50000,
-            description: 'Test',
-            type: 'expense',
-            account: 'Checking',
-            source: 'import',
-          },
-        ],
-      }),
+    it('skips reviewed rows with decision skip and imports the rest', async () => {
+      const fake = setup({ transactions: [EXISTING] });
+      const response = await post({
+        transactions: [row(), row({ date: '2024-02-01' })],
+        duplicate_reviews: [{ index: 0, match_ids: ['tx-existing'], decision: 'skip' }],
+      });
+
+      expect(response.status).toBe(201);
+      const body = await response.json();
+      expect(body).toMatchObject({ imported: 1, skipped: 1 });
+      expect(fake.state.transactionInserts[0]).toHaveLength(1);
+      expect(fake.state.transactionInserts[0][0].date).toBe('2024-02-01');
     });
-    const response = await POST(request);
-    expect(response.status).toBe(400);
+
+    it('imports reviewed rows with decision import as confirmed', async () => {
+      const fake = setup({ transactions: [EXISTING] });
+      const response = await post({
+        transactions: [row()],
+        duplicate_reviews: [{ index: 0, match_ids: ['tx-existing'], decision: 'import' }],
+      });
+
+      expect(response.status).toBe(201);
+      expect(fake.state.transactionInserts[0][0].duplicate_status).toBe('confirmed');
+    });
+
+    it('fails closed when the duplicate lookup errors', async () => {
+      const fake = setup({ failTransactionSelect: 'timeout' });
+      const response = await post({ transactions: [row()] });
+
+      expect(response.status).toBe(500);
+      expect(fake.state.imports).toHaveLength(0);
+      expect(fake.state.transactionInserts).toHaveLength(0);
+    });
+
+    it('returns 200 with nothing imported when every row is skipped', async () => {
+      const fake = setup({ transactions: [EXISTING] });
+      const response = await post({
+        transactions: [row()],
+        duplicate_reviews: [{ index: 0, match_ids: ['tx-existing'], decision: 'skip' }],
+      });
+
+      expect(response.status).toBe(200);
+      expect(await response.json()).toMatchObject({ imported: 0, skipped: 1 });
+      expect(fake.state.imports).toHaveLength(0);
+    });
+  });
+
+  describe('repeated submissions', () => {
+    it('blocks an identical second submission because the first import is now a match', async () => {
+      const fake = setup();
+      const payload = { transactions: [row(), row({ date: '2024-01-16', amount: 10 })] };
+
+      expect((await post(payload)).status).toBe(201);
+      const second = await post(payload);
+
+      expect(second.status).toBe(409);
+      expect((await second.json()).unreviewed).toEqual([0, 1]);
+      expect(fake.state.transactionInserts).toHaveLength(1);
+      expect(fake.state.transactions).toHaveLength(2);
+    });
+
+    it('blocks replaying a reviewed request once its rows exist (review becomes stale)', async () => {
+      const fake = setup({ transactions: [EXISTING] });
+      const payload = {
+        transactions: [row()],
+        duplicate_reviews: [{ index: 0, match_ids: ['tx-existing'], decision: 'import' }],
+      };
+
+      expect((await post(payload)).status).toBe(201);
+      const replay = await post(payload);
+
+      expect(replay.status).toBe(409);
+      expect((await replay.json()).stale).toEqual([0]);
+      expect(fake.state.transactionInserts).toHaveLength(1);
+    });
+  });
+
+  describe('force review', () => {
+    it('rejects the legacy force flag instead of bypassing review', async () => {
+      const fake = setup({ transactions: [EXISTING] });
+      const response = await post({ transactions: [row()], force: true });
+
+      expect(response.status).toBe(400);
+      expect(fake.state.transactionInserts).toHaveLength(0);
+    });
+
+    it('rejects a review that does not cover a newly appeared match', async () => {
+      const fake = setup({
+        transactions: [EXISTING, { ...EXISTING, id: 'tx-newer', description: 'Other' }],
+      });
+      const response = await post({
+        transactions: [row()],
+        duplicate_reviews: [{ index: 0, match_ids: ['tx-existing'], decision: 'import' }],
+      });
+
+      expect(response.status).toBe(409);
+      expect((await response.json()).stale).toEqual([0]);
+      expect(fake.state.transactionInserts).toHaveLength(0);
+    });
+
+    it('rejects malformed reviews', async () => {
+      const fake = setup({ transactions: [EXISTING] });
+      const response = await post({
+        transactions: [row()],
+        duplicate_reviews: [{ index: 7, match_ids: ['tx-existing'], decision: 'import' }],
+      });
+
+      expect(response.status).toBe(400);
+      expect(fake.state.transactionInserts).toHaveLength(0);
+    });
+  });
+
+  describe('unresolved names', () => {
+    it('rejects the whole import when any account cannot be resolved', async () => {
+      const fake = setup();
+      const response = await post({
+        transactions: [row(), row({ account: 'Unknown bank', date: '2024-01-20' })],
+      });
+
+      expect(response.status).toBe(422);
+      const body = await response.json();
+      expect(body.error).toContain('Unknown bank');
+      expect(body.unresolved_accounts).toEqual(['Unknown bank']);
+      expect(fake.state.imports).toHaveLength(0);
+      expect(fake.state.transactionInserts).toHaveLength(0);
+    });
+
+    it('rejects an account_id that does not belong to the user', async () => {
+      const fake = setup();
+      const response = await post({ transactions: [row({ account_id: 'acc-foreign' })] });
+
+      expect(response.status).toBe(422);
+      expect(fake.state.transactionInserts).toHaveLength(0);
+    });
+
+    it('imports with a null category and reports unknown category names', async () => {
+      const fake = setup();
+      const response = await post({ transactions: [row({ category: 'Mystery' })] });
+
+      expect(response.status).toBe(201);
+      expect((await response.json()).errors[0]).toContain('Mystery');
+      expect(fake.state.transactionInserts[0][0].category_id).toBeNull();
+    });
+  });
+
+  describe('partial failures', () => {
+    it('marks the import failed and reports it when the transaction insert fails', async () => {
+      const fake = setup({ failTransactionInsert: 'insert failed' });
+      const response = await post({ transactions: [row()] });
+
+      expect(response.status).toBe(500);
+      const body = await response.json();
+      expect(body.error).toContain('insert failed');
+      expect(fake.state.transactions).toHaveLength(0);
+      expect(fake.state.importUpdates.at(-1)).toMatchObject({
+        status: 'failed',
+        imported_count: 0,
+      });
+    });
+
+    it('does not insert transactions when the import record cannot be created', async () => {
+      const fake = setup({ failImportInsert: 'imports down' });
+      const response = await post({ transactions: [row()] });
+
+      expect(response.status).toBe(500);
+      expect(fake.state.transactionInserts).toHaveLength(0);
+    });
+
+    it('still reports imported rows when only the final status update fails', async () => {
+      setup({ failImportUpdate: 'update failed' });
+      const response = await post({ transactions: [row()] });
+
+      expect(response.status).toBe(201);
+      const body = await response.json();
+      expect(body.imported).toBe(1);
+      expect(body.errors.join(' ')).toMatch(/status/i);
+    });
+  });
+
+  describe('validation and limits', () => {
+    it('returns 400 when no transactions are provided', async () => {
+      setup();
+      expect((await post({ transactions: [] })).status).toBe(400);
+    });
+
+    it('returns 400 for malformed rows', async () => {
+      const fake = setup();
+      const response = await post({ transactions: [row({ date: '2024-01-15),or(id.eq.x' })] });
+      expect(response.status).toBe(400);
+      expect(fake.state.transactionInserts).toHaveLength(0);
+    });
+
+    it('enforces the free plan limit on rows that will actually be inserted', async () => {
+      setup({ plan: 'free', transactionsCount: 49, transactions: [EXISTING] });
+      const response = await post({
+        transactions: [row(), row({ date: '2024-02-01' })],
+        duplicate_reviews: [{ index: 0, match_ids: ['tx-existing'], decision: 'skip' }],
+      });
+      expect(response.status).toBe(201);
+
+      const overLimit = await post({
+        transactions: [row({ date: '2024-03-01' }), row({ date: '2024-03-02' })],
+      });
+      expect(overLimit.status).toBe(403);
+    });
+
+    it('returns 401 when unauthenticated', async () => {
+      const { AuthError } = await import('@/lib/api/server');
+      vi.mocked(getUserClient).mockRejectedValue(new AuthError());
+      expect((await post({ transactions: [row()] })).status).toBe(401);
+    });
   });
 });

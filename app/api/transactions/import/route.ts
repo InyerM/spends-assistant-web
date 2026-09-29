@@ -1,214 +1,178 @@
 import type { NextRequest } from 'next/server';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { getUserClient, AuthError, jsonResponse, errorResponse } from '@/lib/api/server';
+import { findImportDuplicates, resolveImportReferences } from '@/lib/api/import';
+import {
+  buildImportInsertRow,
+  evaluateDuplicateReviews,
+  parseDuplicateReviews,
+  validateImportRows,
+  type ImportRowFields,
+} from '@/lib/utils/import-duplicates';
 
-interface ImportTransaction {
-  date: string;
-  time: string;
-  amount: number;
-  description: string;
-  notes: string | null;
-  type: string;
-  account: string;
+interface ImportTransaction extends ImportRowFields {
+  account?: string;
   account_id?: string;
-  category: string | null;
+  category?: string | null;
   category_id?: string | null;
-  payment_method: string | null;
-  source: string;
 }
 
 interface ImportBody {
-  transactions: ImportTransaction[];
-  resolve_names?: boolean;
+  transactions?: unknown;
+  duplicate_reviews?: unknown;
   file_name?: string;
   row_count?: number;
-  force?: boolean;
+  force?: unknown;
 }
 
-async function resolveNames(
-  transactions: ImportTransaction[],
-  supabase: Awaited<ReturnType<typeof getUserClient>>['supabase'],
-): Promise<{ resolved: Record<string, unknown>[]; errors: string[] }> {
-  const errors: string[] = [];
+async function checkFreePlanLimit(
+  supabase: SupabaseClient,
+  userId: string,
+  importCount: number,
+): Promise<string | null> {
+  const [{ data: subscription }, { data: usageData }, { data: limitSetting }] = await Promise.all([
+    supabase.from('subscriptions').select('plan').eq('user_id', userId).maybeSingle(),
+    supabase
+      .from('usage_tracking')
+      .select('transactions_count')
+      .eq('month', new Date().toISOString().slice(0, 7))
+      .maybeSingle(),
+    supabase
+      .from('app_settings')
+      .select('value')
+      .eq('key', 'free_transactions_limit')
+      .maybeSingle(),
+  ]);
 
-  const { data: accounts } = await supabase.from('accounts').select('id, name');
-  const { data: categories } = await supabase.from('categories').select('id, name');
+  const plan = (subscription?.plan as string | undefined) ?? 'free';
+  if (plan !== 'free') return null;
 
-  const accountsByName = new Map<string, string>();
-  for (const a of accounts ?? []) {
-    accountsByName.set((a.name as string).toLowerCase(), a.id as string);
-  }
+  const txLimit = (limitSetting?.value as number | undefined) ?? 50;
+  const currentCount = (usageData?.transactions_count as number | undefined) ?? 0;
+  if (currentCount + importCount <= txLimit) return null;
 
-  const categoriesByName = new Map<string, string>();
-  for (const c of categories ?? []) {
-    categoriesByName.set((c.name as string).toLowerCase(), c.id as string);
-  }
-
-  const resolved: Record<string, unknown>[] = [];
-  const unresolvedAccounts = new Set<string>();
-
-  for (const tx of transactions) {
-    const accountName = tx.account;
-    const categoryName = tx.category;
-
-    const accountId = tx.account_id ?? accountsByName.get(accountName.toLowerCase());
-    const categoryId =
-      tx.category_id ?? (categoryName ? categoriesByName.get(categoryName.toLowerCase()) : null);
-
-    if (!accountId) {
-      unresolvedAccounts.add(accountName);
-      continue;
-    }
-
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { account, category, ...rest } = tx;
-    resolved.push({
-      ...rest,
-      account_id: accountId,
-      category_id: categoryId ?? null,
-    });
-  }
-
-  if (unresolvedAccounts.size > 0) {
-    errors.push(`Could not resolve accounts: ${[...unresolvedAccounts].join(', ')}`);
-  }
-
-  return { resolved, errors };
+  const remaining = Math.max(0, txLimit - currentCount);
+  return `Transaction limit exceeded. You have ${remaining} transactions remaining this month (limit: ${txLimit}).`;
 }
 
+/**
+ * Final CSV import. Duplicate matching is re-run here against the database, so the
+ * preview is advisory: every row with an existing match must carry an explicit
+ * review listing the match ids the user saw. Replaying a request after its rows were
+ * inserted surfaces those rows as new, unreviewed matches and is rejected with 409.
+ */
 export async function POST(request: NextRequest): Promise<Response> {
   try {
     const { supabase, userId } = await getUserClient();
     const body = (await request.json()) as ImportBody;
 
-    if (!Array.isArray(body.transactions) || body.transactions.length === 0) {
-      return errorResponse('No transactions provided', 400);
+    const invalid = validateImportRows(body.transactions);
+    if (invalid) return errorResponse(invalid, 400);
+    const transactions = body.transactions as ImportTransaction[];
+
+    if (body.force !== undefined && body.force !== false) {
+      return errorResponse(
+        'force is not supported; send duplicate_reviews for each flagged row',
+        400,
+      );
+    }
+    const parsedReviews = parseDuplicateReviews(body.duplicate_reviews, transactions.length);
+    if ('error' in parsedReviews) return errorResponse(parsedReviews.error, 400);
+
+    const refs = await resolveImportReferences(supabase, transactions);
+    if (refs.unresolvedAccounts.length > 0) {
+      return jsonResponse(
+        {
+          error: `Could not resolve accounts: ${refs.unresolvedAccounts.join(', ')}`,
+          unresolved_accounts: refs.unresolvedAccounts,
+        },
+        422,
+      );
     }
 
-    // Check transaction limit for free plan
-    const [{ data: subscription }, { data: usageData }, { data: limitSetting }] = await Promise.all(
-      [
-        supabase.from('subscriptions').select('plan').eq('user_id', userId).maybeSingle(),
-        supabase
-          .from('usage_tracking')
-          .select('transactions_count')
-          .eq('month', new Date().toISOString().slice(0, 7))
-          .maybeSingle(),
-        supabase
-          .from('app_settings')
-          .select('value')
-          .eq('key', 'free_transactions_limit')
-          .maybeSingle(),
-      ],
+    const duplicates = await findImportDuplicates(
+      supabase,
+      transactions.map((tx, i) => ({
+        date: tx.date,
+        amount: tx.amount,
+        account_id: refs.accountIds[i],
+      })),
     );
-
-    const plan = (subscription?.plan as string | undefined) ?? 'free';
-    if (plan === 'free') {
-      const txLimit = (limitSetting?.value as number | undefined) ?? 50;
-      const txCountVal = usageData?.transactions_count as number | undefined;
-      const currentCount = txCountVal ?? 0;
-      const importCount = body.transactions.length;
-      if (currentCount + importCount > txLimit) {
-        const remaining = Math.max(0, txLimit - currentCount);
-        return errorResponse(
-          `Transaction limit exceeded. You have ${remaining} transactions remaining this month (limit: ${txLimit}).`,
-          403,
-        );
-      }
+    const review = evaluateDuplicateReviews(duplicates, parsedReviews.reviews);
+    if (review.unreviewed.length > 0 || review.stale.length > 0) {
+      return jsonResponse(
+        {
+          error: 'Possible duplicates need review before importing',
+          duplicates,
+          unreviewed: review.unreviewed,
+          stale: review.stale,
+        },
+        409,
+      );
     }
 
-    // Create import record first (status=pending)
-    const fileName = body.file_name ?? 'import.csv';
-    const rowCount = body.row_count ?? body.transactions.length;
+    const errors =
+      refs.unresolvedCategories.length > 0
+        ? [`Could not resolve categories: ${refs.unresolvedCategories.join(', ')}`]
+        : [];
+    const toInsert = transactions
+      .map((tx, index) => ({ tx, index }))
+      .filter(({ index }) => !review.skipIndices.has(index));
+    const skipped = transactions.length - toInsert.length;
+
+    if (toInsert.length === 0) {
+      return jsonResponse({ imported: 0, skipped, errors, import_id: null }, 200);
+    }
+
+    const limitError = await checkFreePlanLimit(supabase, userId, toInsert.length);
+    if (limitError) return errorResponse(limitError, 403);
 
     const { data: importRecord, error: importError } = await supabase
       .from('imports')
       .insert({
         user_id: userId,
         source: 'csv',
-        file_name: fileName,
+        file_name: body.file_name ?? 'import.csv',
         file_path: null,
-        row_count: rowCount,
+        row_count: body.row_count ?? transactions.length,
         imported_count: 0,
         status: 'pending',
       })
       .select()
       .single();
-
-    if (importError) return errorResponse(importError.message, 400);
+    if (importError) return errorResponse(`Failed to create import: ${importError.message}`, 500);
 
     const importId = importRecord.id as string;
+    const rows = toInsert.map(({ tx, index }) =>
+      buildImportInsertRow(tx, {
+        userId,
+        importId,
+        accountId: refs.accountIds[index] as string,
+        categoryId: refs.categoryIds[index],
+        confirmedDuplicate: review.confirmedIndices.has(index),
+      }),
+    );
 
-    if (body.resolve_names) {
-      const { resolved, errors } = await resolveNames(body.transactions, supabase);
-
-      if (resolved.length === 0) {
-        // Update import as failed
-        await supabase
-          .from('imports')
-          .update({ status: 'failed', imported_count: 0 })
-          .eq('id', importId);
-        return errorResponse(
-          errors.length > 0 ? errors[0] : 'No transactions could be resolved',
-          400,
-        );
-      }
-
-      // Add user_id and import_id to each resolved transaction
-      const withMeta = resolved.map((tx) => ({
-        ...tx,
-        user_id: userId,
-        import_id: importId,
-        ...(body.force ? { duplicate_status: 'confirmed' as const } : {}),
-      }));
-
-      const { data, error } = await supabase.from('transactions').insert(withMeta).select();
-
-      if (error) {
-        await supabase
-          .from('imports')
-          .update({ status: 'failed', imported_count: 0 })
-          .eq('id', importId);
-        return errorResponse(error.message, 400);
-      }
-
-      // Update import record with final counts
-      await supabase
-        .from('imports')
-        .update({ status: 'completed', imported_count: data.length })
-        .eq('id', importId);
-
-      const skipped = body.transactions.length - resolved.length;
-      return jsonResponse({ imported: data.length, skipped, errors, import_id: importId }, 201);
-    }
-
-    // Add user_id and import_id to each transaction
-    const withMeta = (body.transactions as unknown as Record<string, unknown>[]).map((tx) => ({
-      ...tx,
-      user_id: userId,
-      import_id: importId,
-      ...(body.force ? { duplicate_status: 'confirmed' as const } : {}),
-    }));
-
-    const { data, error } = await supabase.from('transactions').insert(withMeta).select();
-
+    // A single multi-row insert is one statement, so it either writes every row or none.
+    const { data, error } = await supabase.from('transactions').insert(rows).select('id');
     if (error) {
       await supabase
         .from('imports')
         .update({ status: 'failed', imported_count: 0 })
         .eq('id', importId);
-      return errorResponse(error.message, 400);
+      return jsonResponse({ error: `Import failed: ${error.message}`, import_id: importId }, 500);
     }
 
-    // Update import record with final counts
-    await supabase
+    const imported = (data as { id: string }[] | null)?.length ?? 0;
+    const { error: updateError } = await supabase
       .from('imports')
-      .update({ status: 'completed', imported_count: data.length })
+      .update({ status: 'completed', imported_count: imported })
       .eq('id', importId);
+    if (updateError) {
+      errors.push(`Transactions were imported but the import status could not be updated`);
+    }
 
-    return jsonResponse(
-      { imported: data.length, skipped: 0, errors: [], import_id: importId },
-      201,
-    );
+    return jsonResponse({ imported, skipped, errors, import_id: importId }, 201);
   } catch (error) {
     if (error instanceof AuthError) return errorResponse('Unauthorized', 401);
     return errorResponse('Failed to import transactions');

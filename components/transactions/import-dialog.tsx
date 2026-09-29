@@ -24,8 +24,11 @@ import {
   useImportTransactions,
   useUploadImportFile,
   useCheckImportDuplicates,
+  ImportReviewRequiredError,
 } from '@/lib/api/mutations/transaction.mutations';
 import type { DuplicateMatch } from '@/lib/api/mutations/transaction.mutations';
+import type { DuplicateReview } from '@/types/import';
+import { buildDuplicateReviews } from '@/lib/utils/import-duplicates';
 import { useUsage } from '@/hooks/use-usage';
 import { useSubscription } from '@/hooks/use-subscription';
 import { Upload, FileText, ArrowLeft, ArrowRight, AlertTriangle } from 'lucide-react';
@@ -125,28 +128,17 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps): React.R
     usage && isFree ? Math.max(0, usage.transactions_limit - usage.transactions_count) : Infinity;
   const importExceedsLimit = isFree && importCount > txRemaining;
 
-  const doImport = async (force: boolean, skipIndices?: Set<number>): Promise<void> => {
+  const doImport = async (duplicateReviews?: DuplicateReview[]): Promise<void> => {
     setIsImporting(true);
     try {
-      let transactions = parsedRowsRef.current.map((row) => transformRow(row, mapping));
-
-      if (skipIndices && skipIndices.size > 0) {
-        transactions = transactions.filter((_, i) => !skipIndices.has(i));
-      }
-
-      if (transactions.length === 0) {
-        toast.info(t('noTransactions'));
-        onOpenChange(false);
-        resetState();
-        return;
-      }
+      const transactions = parsedRowsRef.current.map((row) => transformRow(row, mapping));
 
       const result = await importMutation.mutateAsync({
         transactions,
         resolve_names: true,
         file_name: file?.name ?? 'import.csv',
         row_count: parsedRowsRef.current.length,
-        force,
+        duplicate_reviews: duplicateReviews,
       });
 
       if (result.errors.length > 0) {
@@ -177,6 +169,12 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps): React.R
       onOpenChange(false);
       resetState();
     } catch (error) {
+      if (error instanceof ImportReviewRequiredError) {
+        setDuplicates(error.duplicates);
+        setStep('duplicates');
+        toast.warning(t('duplicatesFound'));
+        return;
+      }
       toast.error(error instanceof Error ? error.message : t('importFailed'));
     } finally {
       setIsImporting(false);
@@ -208,16 +206,15 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps): React.R
       // If duplicate check fails, proceed anyway
     }
 
-    await doImport(false);
+    await doImport();
   };
 
   const handleSkipDuplicates = async (): Promise<void> => {
-    const skipIndices = new Set(duplicates.map((d) => d.index));
-    await doImport(false, skipIndices);
+    await doImport(buildDuplicateReviews(duplicates, 'skip'));
   };
 
   const handleImportAllAnyway = async (): Promise<void> => {
-    await doImport(true);
+    await doImport(buildDuplicateReviews(duplicates, 'import'));
   };
 
   const renderUploadStep = (): React.ReactElement => (

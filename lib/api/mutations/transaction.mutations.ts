@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { transactionKeys } from '@/lib/api/queries/transaction.queries';
 import { accountKeys } from '@/lib/api/queries/account.queries';
 import { usageKeys } from '@/hooks/use-usage';
+import type { DuplicateReview, ImportDuplicate } from '@/types/import';
 import type {
   Transaction,
   CreateTransactionInput,
@@ -244,14 +245,22 @@ export interface ImportTransactionsInput {
   resolve_names: boolean;
   file_name: string;
   row_count: number;
-  force: boolean;
+  duplicate_reviews?: DuplicateReview[];
 }
 
 export interface ImportTransactionsResult {
   imported: number;
   skipped: number;
   errors: string[];
-  import_id?: string;
+  import_id?: string | null;
+}
+
+/** Thrown when the server re-check finds matches that were not (or no longer) reviewed. */
+export class ImportReviewRequiredError extends Error {
+  public constructor(public readonly duplicates: DuplicateMatch[]) {
+    super('Possible duplicates need review before importing');
+    this.name = 'ImportReviewRequiredError';
+  }
 }
 
 export async function importTransactions(
@@ -262,6 +271,10 @@ export async function importTransactions(
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(input),
   });
+  if (res.status === 409) {
+    const body = (await res.json()) as { duplicates?: DuplicateMatch[] };
+    throw new ImportReviewRequiredError(body.duplicates ?? []);
+  }
   if (!res.ok) {
     const error = await res.json();
     throw new Error((error as { error: string }).error || 'Import failed');
@@ -315,13 +328,11 @@ export interface CheckDuplicatesInput {
   transactions: { date: string; amount: number; account: string }[];
 }
 
-export interface DuplicateMatch {
-  index: number;
-  match: { id: string; date: string; amount: number; description: string; account_id: string };
-}
+export type DuplicateMatch = ImportDuplicate;
 
 export interface CheckDuplicatesResult {
   duplicates: DuplicateMatch[];
+  unresolved_accounts: string[];
 }
 
 export async function checkImportDuplicates(
