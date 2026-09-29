@@ -6,6 +6,23 @@ Validate the actions on the intended iPhone and iOS version with synthetic messa
 a real sender. No historical messages or production transactions were imported while preparing this
 guide.
 
+## Why there is no `.shortcut` file in this repository
+
+On this macOS 27 machine, `/usr/bin/shortcuts` offers `run`, `list`, `view`, and `sign`; its manual
+says to use the Shortcuts app to **create or edit** a shortcut. The CLI does not offer a supported
+file-generation command.
+[Apple's Mac creation guide](https://support.apple.com/en-au/guide/shortcuts-mac/apd84c576f8c/mac)
+also builds actions in the app. A hand-written workflow plist would be an unverified artifact.
+
+Apple documents two file export audiences. **Anyone** sends a copy to Apple for validation; **People
+Who Know Me** is locally signed but includes the creator's contact information and is restricted to
+eligible recipients. Neither produces a validated, anonymous, generally installable file under this
+task's no-iCloud/no-personal-data constraints. A Shortcut built on this Mac also cannot be claimed
+to work on the target iPhone until it is imported and run there. Therefore the supported deliverable
+is the manual recipe below; no `.shortcut` file was generated, signed, or uploaded.
+[Apple's Mac export guide](https://support.apple.com/en-qa/guide/shortcuts-mac/apdf01f8c054/mac),
+[Apple's Mac import guide](https://support.apple.com/en-gb/guide/shortcuts-mac/apd02bffbaac/mac).
+
 ## Choose the source
 
 | Source                      | Practical use                                                                                                                                                                      | Limit                                                                                                                                                                                                                                                                                                                                                                     |
@@ -68,36 +85,47 @@ action still needs the synthetic device test below.
 [Apple API request guide](https://support.apple.com/en-euro/guide/shortcuts/apd58d46713f/ios),
 [Dictionary guide](https://support.apple.com/en-tj/guide/shortcuts/apd43b69f337/ios).
 
-1. Prepare a private `.json` file containing the complete object above, replacing the sample with
+1. In the Shortcuts app, use **New Shortcut** and name it `Spends Inbox Batch (Private)`; add
+   actions in the order below. This is the supported creation path on Mac and iPhone.
+   [Apple's Mac editor instructions](https://support.apple.com/en-au/guide/shortcuts-mac/apd84c576f8c/mac).
+2. Prepare a private `.json` file containing the complete object above, replacing the sample with
    **1–25 reviewed messages**. Keep the original file unchanged for retries. Split larger sets into
    numbered files of at most 25 items; ensure each file is under 128 KiB. A prepared JSON file
    avoids inserting unescaped message quotes or newlines into a Text template.
-2. Add **Select File** (or the available file-picking action on the installed Shortcuts version) to
+3. Add **Select File** (or the available file-picking action on the installed Shortcuts version) to
    choose one batch file. Add **Get Text from Input**, then **Get Dictionary from Input** using that
-   text, then **Get Dictionary Value** for `items` and **Count**. If Count is outside 1–25, stop
-   before the network call. Use **Quick Look** on the dictionary during setup and confirm `items`
-   remains an array of dictionaries, not one string. Remove Quick Look before unattended use.
-3. Add a **URL** action with the HTTPS inbox endpoint, followed by **Get Contents of URL**: Method
-   `POST`; Headers `Authorization` = `Bearer <per-user-key>` and `Content-Type` =
-   `application/json`; Request Body `File` = the original selected `.json` file. Do not put the key
-   in the URL or JSON file. If the installed version cannot send that file as raw JSON, stop and
-   validate a version-specific construction before using real messages.
-4. On the response, use **Get Dictionary Value** for `items`, then **Repeat with Each** item. Read
+   text, then **Get Dictionary Value** for `items` and **Count**. Add **If Count is less than 1** →
+   **Stop This Shortcut**, followed by **If Count is greater than 25** → **Stop This Shortcut**. Use
+   **Quick Look** on the dictionary during setup and confirm `items` remains an array of
+   dictionaries, not one string. Remove Quick Look before routine use.
+4. Add **Ask for Input** set to text, with the prompt `Spends inbox API key` and no default answer.
+   Add **Text** containing `Bearer ` followed by the Ask for Input variable. This keeps the key out
+   of the recipe and batch file, though it is still visible while being typed or in the temporary
+   workflow variable. This interactive step is for the **manual batch** shortcut; it cannot run
+   unattended.
+   [Apple's Ask for Input action](https://support.apple.com/en-au/guide/shortcuts-mac/apd68b5c9161/mac).
+5. Add a **URL** action with the HTTPS inbox endpoint, followed by **Get Contents of URL**: Method
+   `POST`; Headers `Authorization` = the Text action output and `Content-Type` = `application/json`;
+   Request Body `File` = the original selected `.json` file. Do not put the key in the URL or JSON
+   file. If the installed version cannot send that file as raw JSON, stop and validate a
+   version-specific construction before using real messages.
+6. On the response, use **Get Dictionary Value** for `items`, then **Repeat with Each** item. Read
    `index` and `status` from each result. Count both `received` and `previously_received` as saved;
    retain `invalid`, `conflict`, or `error` rows for manual correction or retry. A transport error,
    400, 401, or 413 is a failed batch. HTTP 207 is a partial result, so never treat a completed
    request alone as proof that every item was saved.
    [Response implementation](../../app/api/shortcut-inbox/route.ts),
    [Apple Repeat action](https://support.apple.com/en-gw/guide/shortcuts/apdc11deb2c1/ios).
-5. Keep a private local record of which batch file and item indices received each result. Do not
+7. Keep a private local record of which batch file and item indices received each result. Do not
    delete source files until the signed-in web inbox shows the expected rows. Rerun an unchanged
    file after a network failure; successful items return `previously_received`.
 
-**Device validation:** Use a synthetic message containing a quote, a newline, and a non-ASCII
-character. Inspect the signed-in inbox and confirm exact text and original timestamp, then resend
-the identical batch and confirm `previously_received` with the same inbox ID. Also test a 2-item
-file and inspect each result separately. This check is required because this guide has not executed
-Shortcuts on the user's iPhone.
+**Device validation:** Point the Shortcut at an approved local or staging inbox and use a synthetic
+message containing a quote, a newline, and a non-ASCII character. Inspect the inbox and confirm
+exact text and original timestamp, then resend the identical batch and confirm `previously_received`
+with the same inbox ID. Also test a 2-item file and inspect each result separately. This check is
+required because this guide has not executed Shortcuts on the user's iPhone. Do not send the
+synthetic test or real messages to production before the deployment and backfill are approved.
 
 ## Configure live capture only after the metadata check
 
