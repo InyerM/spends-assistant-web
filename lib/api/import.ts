@@ -13,6 +13,7 @@ export interface ImportReferenceRow {
   account_id?: string | null;
   category?: string | null;
   category_id?: string | null;
+  type?: string | null;
 }
 
 export interface ResolvedImportReferences {
@@ -39,15 +40,21 @@ export async function resolveImportReferences(
   const [{ data: accounts, error: accountsError }, { data: categories, error: categoriesError }] =
     await Promise.all([
       supabase.from('accounts').select('id, name').is('deleted_at', null),
-      supabase.from('categories').select('id, name'),
+      supabase.from('categories').select('id, name, type'),
     ]);
   if (accountsError) throw new Error(accountsError.message);
   if (categoriesError) throw new Error(categoriesError.message);
 
   const accountsByName = indexByLowerName(accounts);
-  const categoriesByName = indexByLowerName(categories);
+  const categoryRows = categories as { id: string; name: string; type: string }[];
+  const categoriesByNameAndType = new Map(
+    categoryRows.map((category) => [
+      `${category.type}:${category.name.toLowerCase()}`,
+      category.id,
+    ]),
+  );
   const accountIds = new Set(accountsByName.values());
-  const categoryIds = new Set(categoriesByName.values());
+  const categoriesById = new Map(categoryRows.map((category) => [category.id, category]));
   const unresolvedAccounts = new Set<string>();
   const unresolvedCategories = new Set<string>();
 
@@ -68,8 +75,13 @@ export async function resolveImportReferences(
     resolved.accountIds.push(accountId);
 
     let categoryId: string | null = null;
-    if (row.category_id && categoryIds.has(row.category_id)) categoryId = row.category_id;
-    else if (row.category) categoryId = categoriesByName.get(row.category.toLowerCase()) ?? null;
+    const transactionType = row.type ?? 'expense';
+    if (row.category_id && categoriesById.get(row.category_id)?.type === transactionType) {
+      categoryId = row.category_id;
+    } else if (row.category) {
+      categoryId =
+        categoriesByNameAndType.get(`${transactionType}:${row.category.toLowerCase()}`) ?? null;
+    }
     if (!categoryId && (row.category_id || row.category)) {
       unresolvedCategories.add(row.category ?? row.category_id ?? '');
     }

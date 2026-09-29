@@ -34,8 +34,19 @@ export function validateImportRows(rows: unknown): string | null {
     const label = `Invalid transaction at row ${i + 1}`;
     if (!isRecord(row)) return label;
     if (typeof row.date !== 'string' || !ISO_DATE.test(row.date)) return `${label}: date`;
-    if (typeof row.amount !== 'number' || !Number.isFinite(row.amount) || row.amount < 0) {
+    if (typeof row.amount !== 'number' || !Number.isFinite(row.amount) || row.amount <= 0) {
       return `${label}: amount`;
+    }
+    if (row.type === 'transfer') {
+      return `${label}: transfer rows require a destination account and cannot be imported from CSV`;
+    }
+    if (
+      row.type !== undefined &&
+      row.type !== null &&
+      row.type !== 'expense' &&
+      row.type !== 'income'
+    ) {
+      return `${label}: transaction type`;
     }
     if (!isNonEmptyString(row.account_id) && !isNonEmptyString(row.account)) {
       return `${label}: account`;

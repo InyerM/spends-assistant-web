@@ -5,20 +5,10 @@ import { useTranslations, useLocale } from 'next-intl';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectSeparator,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { SearchableSelect } from '@/components/shared/searchable-select';
-import { buildAccountItems, buildCategoryItems } from '@/lib/utils/select-items';
-import { useAccounts } from '@/lib/api/queries/account.queries';
+import { buildCategoryItems } from '@/lib/utils/select-items';
 import { useCategories } from '@/lib/api/queries/category.queries';
 import { useBulkUpdateTransactions } from '@/lib/api/mutations/transaction.mutations';
-import type { TransactionType } from '@/types';
 
 interface BulkEditDialogProps {
   open: boolean;
@@ -39,23 +29,15 @@ export function BulkEditDialog({
   const t = useTranslations('transactions');
   const tCommon = useTranslations('common');
   const locale = useLocale();
-  const { data: accounts } = useAccounts();
   const { data: categories } = useCategories();
   const bulkMutation = useBulkUpdateTransactions();
 
-  const [type, setType] = useState(UNCHANGED);
   const [categoryId, setCategoryId] = useState(UNCHANGED);
-  const [accountId, setAccountId] = useState(UNCHANGED);
-
-  const currentType = type === UNCHANGED ? undefined : (type as TransactionType);
-
-  const hasChanges = type !== UNCHANGED || categoryId !== UNCHANGED || accountId !== UNCHANGED;
+  const hasChanges = categoryId !== UNCHANGED;
 
   const handleSubmit = async (): Promise<void> => {
     const updates: Record<string, unknown> = {};
-    if (type !== UNCHANGED) updates.type = type;
     if (categoryId !== UNCHANGED) updates.category_id = categoryId === NONE ? null : categoryId;
-    if (accountId !== UNCHANGED) updates.account_id = accountId;
 
     try {
       await bulkMutation.mutateAsync({
@@ -72,9 +54,7 @@ export function BulkEditDialog({
 
   const handleOpenChange = (o: boolean): void => {
     if (!o) {
-      setType(UNCHANGED);
       setCategoryId(UNCHANGED);
-      setAccountId(UNCHANGED);
     }
     onOpenChange(o);
   };
@@ -90,36 +70,6 @@ export function BulkEditDialog({
           <p className='text-muted-foreground text-sm'>{t('bulkEditDescription')}</p>
 
           <div className='space-y-2'>
-            <label className='text-sm font-medium'>{t('type')}</label>
-            <Select value={type} onValueChange={setType}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={UNCHANGED}>{tCommon('noChange')}</SelectItem>
-                <SelectSeparator />
-                <SelectItem value='expense'>{t('expense')}</SelectItem>
-                <SelectItem value='income'>{t('income')}</SelectItem>
-                <SelectItem value='transfer'>{t('transfer')}</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className='space-y-2'>
-            <label className='text-sm font-medium'>{t('account')}</label>
-            <SearchableSelect
-              value={accountId}
-              onValueChange={setAccountId}
-              placeholder={tCommon('noChange')}
-              searchPlaceholder={t('searchAccounts')}
-              items={[
-                { value: UNCHANGED, label: tCommon('noChange') },
-                ...buildAccountItems(accounts ?? []),
-              ]}
-            />
-          </div>
-
-          <div className='space-y-2'>
             <label className='text-sm font-medium'>{t('category')}</label>
             <SearchableSelect
               value={categoryId}
@@ -129,7 +79,7 @@ export function BulkEditDialog({
               items={[
                 { value: UNCHANGED, label: tCommon('noChange') },
                 { value: NONE, label: t('noneRemoveCategory') },
-                ...buildCategoryItems(categories ?? [], currentType, {
+                ...buildCategoryItems(categories ?? [], undefined, {
                   locale: locale as 'en' | 'es' | 'pt',
                   allPrefix: (name: string): string => tCommon('allOf', { name }),
                 }),

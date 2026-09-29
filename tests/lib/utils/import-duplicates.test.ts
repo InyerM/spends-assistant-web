@@ -89,7 +89,9 @@ describe('validateImportRows', () => {
     expect(validateImportRows([{ ...row, date: '2024-01-15),or(id.eq.1' }])).toMatch(/row 1/);
     expect(validateImportRows([{ ...row, amount: 'NaN' }])).toMatch(/row 1/);
     expect(validateImportRows([row, { ...row, amount: -5 }])).toMatch(/row 2/);
+    expect(validateImportRows([{ ...row, amount: 0 }])).toMatch(/amount/);
     expect(validateImportRows([{ date: '2024-01-15', amount: 1 }])).toMatch(/row 1/);
+    expect(validateImportRows([{ ...row, type: 'transfer' }])).toMatch(/transfer/i);
   });
 });
 

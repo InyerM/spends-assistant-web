@@ -14,7 +14,11 @@ vi.mock('@/lib/api/server', () => ({
   errorResponse: (message: string, status = 500) => Response.json({ error: message }, { status }),
 }));
 
-function createChainableQuery(data: unknown, error: { message: string } | null = null) {
+function createChainableQuery(
+  data: unknown,
+  error: { message: string } | null = null,
+  category: { id: string; type: string } | null = null,
+) {
   const chain: Record<string, ReturnType<typeof vi.fn>> = {};
   ['select', 'eq', 'is', 'in', 'update'].forEach((m) => {
     chain[m] = vi.fn().mockReturnValue(chain);
@@ -29,6 +33,7 @@ function createChainableQuery(data: unknown, error: { message: string } | null =
     enumerable: false,
     configurable: true,
   });
+  chain.maybeSingle = vi.fn().mockResolvedValue({ data: category, error: null });
 
   return { from: vi.fn().mockReturnValue(chain), _chain: chain };
 }
@@ -38,11 +43,11 @@ describe('PATCH /api/transactions/bulk', () => {
     vi.restoreAllMocks();
   });
 
-  it('bulk updates transactions', async () => {
+  it('bulk updates transaction descriptions', async () => {
     const { getUserClient } = await import('@/lib/api/server');
     const updated = [
-      { id: 'tx-1', category_id: 'cat-1' },
-      { id: 'tx-2', category_id: 'cat-1' },
+      { id: 'tx-1', description: 'Reviewed' },
+      { id: 'tx-2', description: 'Reviewed' },
     ];
     vi.mocked(getUserClient).mockResolvedValue({
       supabase: createChainableQuery(updated) as never,
@@ -53,13 +58,48 @@ describe('PATCH /api/transactions/bulk', () => {
       method: 'PATCH',
       body: JSON.stringify({
         ids: ['tx-1', 'tx-2'],
-        updates: { category_id: 'cat-1' },
+        updates: { description: 'Reviewed' },
       }),
     });
     const response = await PATCH(request);
     expect(response.status).toBe(200);
     const body = await response.json();
     expect(body).toHaveLength(2);
+  });
+
+  it('rejects a category that does not match every selected transaction type', async () => {
+    const { getUserClient } = await import('@/lib/api/server');
+    const db = createChainableQuery([{ id: 'tx-1', type: 'income' }], null, {
+      id: 'cat-1',
+      type: 'expense',
+    });
+    vi.mocked(getUserClient).mockResolvedValue({ supabase: db as never, userId: 'test-user-id' });
+    const response = await PATCH(
+      new NextRequest('http://localhost/api/transactions/bulk', {
+        method: 'PATCH',
+        body: JSON.stringify({ ids: ['tx-1'], updates: { category_id: 'cat-1' } }),
+      }),
+    );
+    expect(response.status).toBe(400);
+    expect(db._chain.update).not.toHaveBeenCalled();
+  });
+
+  it('updates a category only when it belongs to the user and matches the selected type', async () => {
+    const { getUserClient } = await import('@/lib/api/server');
+    const db = createChainableQuery([{ id: 'tx-1', type: 'expense' }], null, {
+      id: 'cat-1',
+      type: 'expense',
+    });
+    vi.mocked(getUserClient).mockResolvedValue({ supabase: db as never, userId: 'test-user-id' });
+    const response = await PATCH(
+      new NextRequest('http://localhost/api/transactions/bulk', {
+        method: 'PATCH',
+        body: JSON.stringify({ ids: ['tx-1'], updates: { category_id: 'cat-1' } }),
+      }),
+    );
+    expect(response.status).toBe(200);
+    expect(db._chain.eq).toHaveBeenCalledWith('type', 'expense');
+    expect(db._chain.eq).toHaveBeenCalledWith('user_id', 'test-user-id');
   });
 
   it('returns 400 when ids empty', async () => {
@@ -91,6 +131,23 @@ describe('PATCH /api/transactions/bulk', () => {
     const response = await PATCH(request);
     expect(response.status).toBe(400);
   });
+
+  it.each(['amount', 'type', 'account_id', 'transfer_to_account_id', 'deleted_at', 'user_id'])(
+    'rejects bulk changes to %s before any write',
+    async (field) => {
+      const { getUserClient } = await import('@/lib/api/server');
+      const db = createChainableQuery([]);
+      vi.mocked(getUserClient).mockResolvedValue({ supabase: db as never, userId: 'test-user-id' });
+      const response = await PATCH(
+        new NextRequest('http://localhost/api/transactions/bulk', {
+          method: 'PATCH',
+          body: JSON.stringify({ ids: ['tx-1'], updates: { [field]: 100 } }),
+        }),
+      );
+      expect(response.status).toBe(400);
+      expect(db._chain.update).not.toHaveBeenCalled();
+    },
+  );
 
   it('returns 400 on DB error', async () => {
     const { getUserClient } = await import('@/lib/api/server');

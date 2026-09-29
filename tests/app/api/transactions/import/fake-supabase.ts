@@ -13,7 +13,7 @@ export interface FakeRow {
 
 export interface FakeDbOptions {
   accounts?: { id: string; name: string }[];
-  categories?: { id: string; name: string }[];
+  categories?: { id: string; name: string; type: string }[];
   transactions?: FakeRow[];
   failTransactionInsert?: string;
   failTransactionSelect?: string;

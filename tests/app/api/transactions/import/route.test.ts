@@ -17,7 +17,7 @@ vi.mock('@/lib/api/server', () => ({
 }));
 
 const ACCOUNTS = [{ id: 'acc-1', name: 'Checking' }];
-const CATEGORIES = [{ id: 'cat-1', name: 'Food' }];
+const CATEGORIES = [{ id: 'cat-1', name: 'Food', type: 'expense' }];
 
 function row(overrides: Record<string, unknown> = {}) {
   return {
@@ -91,6 +91,35 @@ describe('POST /api/transactions/import', () => {
       status: 'completed',
       imported_count: 2,
     });
+  });
+
+  it('rejects a transfer before an RPC can create a transaction without a destination', async () => {
+    const fake = setup();
+    const response = await post({ transactions: [row({ type: 'transfer' })] });
+    expect(response.status).toBe(400);
+    expect((await response.json()).error).toMatch(/transfer/i);
+    expect(fake.client.rpc).not.toHaveBeenCalled();
+    expect(fake.state.transactions).toHaveLength(0);
+  });
+
+  it('resolves a shared category name using each transaction type', async () => {
+    const fake = setup({
+      categories: [
+        { id: 'cat-expense', name: 'Other', type: 'expense' },
+        { id: 'cat-income', name: 'Other', type: 'income' },
+      ],
+    });
+    const response = await post({
+      transactions: [
+        row({ category: 'Other', type: 'expense' }),
+        row({ category: 'Other', type: 'income', date: '2024-01-16' }),
+      ],
+    });
+    expect(response.status).toBe(201);
+    expect(fake.state.transactionInserts[0].map((tx) => tx.category_id)).toEqual([
+      'cat-expense',
+      'cat-income',
+    ]);
   });
 
   it('keeps equal-amount payments in the same file after explicit review', async () => {
