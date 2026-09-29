@@ -4,7 +4,6 @@ import {
   AuthError,
   jsonResponse,
   errorResponse,
-  applyTransactionBalance,
   applyAutomationRules,
 } from '@/lib/api/server';
 
@@ -74,166 +73,46 @@ export async function GET(request: NextRequest): Promise<Response> {
 
 export async function POST(request: NextRequest): Promise<Response> {
   try {
-    const { supabase, userId } = await getUserClient();
+    const { supabase } = await getUserClient();
     const { searchParams } = request.nextUrl;
     const force = searchParams.get('force') === 'true';
     const replaceId = searchParams.get('replace');
+    const providedRequestId = request.headers.get('Idempotency-Key');
+    const uuidPattern =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    if (providedRequestId && !uuidPattern.test(providedRequestId)) {
+      return errorResponse('Invalid idempotency key', 400);
+    }
+    if (replaceId && !uuidPattern.test(replaceId)) {
+      return errorResponse('Invalid replacement ID', 400);
+    }
+    const requestId = providedRequestId ?? crypto.randomUUID();
     const body = (await request.json()) as Record<string, unknown>;
 
-    // Skip automation rules if already applied (e.g. from AI parse preview)
     const alreadyProcessed = Array.isArray(body.applied_rules) && body.applied_rules.length > 0;
     const processed = alreadyProcessed
       ? (body as Parameters<typeof applyAutomationRules>[1])
       : await applyAutomationRules(supabase, body as Parameters<typeof applyAutomationRules>[1]);
-
-    // Duplicate detection (skip if force=true)
-    if (!force && !replaceId) {
-      const date = processed.date as string;
-      const amount = processed.amount as number;
-      const accountId = processed.account_id as string;
-      const rawText = processed.raw_text as string | undefined;
-      const source = processed.source as string | undefined;
-
-      // Exact match: same raw_text + source
-      let match: Record<string, unknown> | null = null;
-      if (rawText && source) {
-        const { data: exactMatch } = await supabase
-          .from('transactions')
-          .select('*')
-          .eq('raw_text', rawText)
-          .eq('source', source)
-          .is('deleted_at', null)
-          .limit(1)
-          .maybeSingle();
-        match = exactMatch;
-      }
-
-      // Near match: same amount + account + date
-      if (!match) {
-        const { data: nearMatch } = await supabase
-          .from('transactions')
-          .select('*')
-          .eq('date', date)
-          .eq('amount', amount)
-          .eq('account_id', accountId)
-          .is('deleted_at', null)
-          .limit(1)
-          .maybeSingle();
-        match = nearMatch;
-      }
-
-      if (match) {
-        return jsonResponse({ duplicate: true, match }, 409);
-      }
+    const payload = force ? { ...processed, duplicate_status: 'confirmed' } : processed;
+    const { data, error } = await supabase.rpc('confirm_manual_transaction', {
+      p_request_id: requestId,
+      p_payload: payload,
+      p_force: force,
+      p_replace_id: replaceId,
+    });
+    if (error) {
+      if (error.message === 'Transaction limit exceeded') return errorResponse(error.message, 403);
+      if (error.message === 'Replacement transaction not found')
+        return errorResponse(error.message, 404);
+      return errorResponse(error.message, 400);
     }
-
-    const { data: subscription, error: subscriptionError } = await supabase
-      .from('subscriptions')
-      .select('plan, status')
-      .eq('user_id', userId)
-      .maybeSingle();
-    if (subscriptionError) return errorResponse('Failed to verify transaction limit');
-    if (subscription?.plan !== 'pro' || subscription.status !== 'active') {
-      const month = new Date().toISOString().slice(0, 7);
-      const [{ data: usage, error: usageError }, { data: setting, error: settingError }] =
-        await Promise.all([
-          supabase
-            .from('usage_tracking')
-            .select('transactions_count')
-            .eq('user_id', userId)
-            .eq('month', month)
-            .maybeSingle(),
-          supabase
-            .from('app_settings')
-            .select('value')
-            .eq('key', 'free_transactions_limit')
-            .maybeSingle(),
-        ]);
-      if (usageError || settingError) return errorResponse('Failed to verify transaction limit');
-      const used = Number(usage?.transactions_count ?? 0);
-      const limit = Number(setting?.value ?? 50);
-      if (!Number.isSafeInteger(used) || !Number.isSafeInteger(limit) || limit < 0) {
-        return errorResponse('Invalid transaction limit');
-      }
-      if (used >= limit) return errorResponse('Transaction limit exceeded', 403);
+    if (data?.status === 'duplicate') {
+      return jsonResponse({ duplicate: true, match: data.match }, 409);
     }
-
-    // If replacing, soft-delete the original transaction first
-    if (replaceId) {
-      const { data: original } = await supabase
-        .from('transactions')
-        .select('type, amount, account_id, transfer_to_account_id')
-        .eq('id', replaceId)
-        .is('deleted_at', null)
-        .single();
-
-      if (original) {
-        // Reverse the original transaction's balance impact
-        await applyTransactionBalance(
-          supabase,
-          original.type as string,
-          original.account_id as string,
-          original.amount as number,
-          original.transfer_to_account_id as string | null,
-          true,
-        );
-
-        await supabase
-          .from('transactions')
-          .update({ deleted_at: new Date().toISOString() })
-          .eq('id', replaceId);
-      }
+    if (data?.status !== 'created' || !data.transaction) {
+      return errorResponse('Invalid transaction confirmation response');
     }
-
-    // If force=true, mark as confirmed duplicate
-    if (force) {
-      (processed as Record<string, unknown>).duplicate_status = 'confirmed';
-    }
-
-    // Add user_id to the insert
-    (processed as Record<string, unknown>).user_id = userId;
-
-    const { data, error } = await supabase.from('transactions').insert(processed).select().single();
-
-    if (error) return errorResponse(error.message, 400);
-
-    await applyTransactionBalance(
-      supabase,
-      data.type as string,
-      data.account_id as string,
-      data.amount as number,
-      data.transfer_to_account_id as string | null,
-    );
-
-    // Increment monthly transaction count for usage tracking
-    const month = new Date().toISOString().slice(0, 7);
-    const { data: usageRow } = await supabase
-      .from('usage_tracking')
-      .select('id, transactions_count')
-      .eq('user_id', userId)
-      .eq('month', month)
-      .maybeSingle();
-
-    if (usageRow) {
-      await supabase
-        .from('usage_tracking')
-        .update({
-          transactions_count: (usageRow.transactions_count as number) + 1,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', usageRow.id);
-    } else {
-      await supabase.from('usage_tracking').insert({
-        user_id: userId,
-        month,
-        ai_parses_used: 0,
-        ai_parses_limit: 15,
-        transactions_count: 1,
-        transactions_limit: 50,
-      });
-    }
-
-    return jsonResponse(data, 201);
+    return jsonResponse(data.transaction, 201);
   } catch (error) {
     if (error instanceof AuthError) return errorResponse('Unauthorized', 401);
     return errorResponse('Failed to create transaction');
