@@ -27,6 +27,7 @@ import {
   Pencil,
   Trash2,
   History,
+  Inbox,
   FileText,
 } from 'lucide-react';
 import Link from 'next/link';
@@ -241,6 +242,12 @@ export default function TransactionsPage(): React.ReactElement {
                 {t('importHistory')}
               </Link>
             </Button>
+            <Button variant='ghost' size='sm' className='hidden cursor-pointer sm:flex' asChild>
+              <Link href='/transactions/shortcut-inbox'>
+                <Inbox className='mr-1.5 h-4 w-4' />
+                {t('shortcutInbox')}
+              </Link>
+            </Button>
             <Button size='sm' className='cursor-pointer' onClick={openNew}>
               <Plus className='mr-1 h-4 w-4' />
               <span className='hidden sm:inline'>{t('newTransaction')}</span>
@@ -270,6 +277,12 @@ export default function TransactionsPage(): React.ReactElement {
                   <Link href='/transactions/imports'>
                     <History className='mr-2 h-4 w-4' />
                     {t('importHistory')}
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild className='cursor-pointer'>
+                  <Link href='/transactions/shortcut-inbox'>
+                    <Inbox className='mr-2 h-4 w-4' />
+                    {t('shortcutInbox')}
                   </Link>
                 </DropdownMenuItem>
               </DropdownMenuContent>
