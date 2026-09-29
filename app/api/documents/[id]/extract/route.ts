@@ -1,5 +1,5 @@
 import type { NextRequest } from 'next/server';
-import { AuthError, errorResponse, getUserClient } from '@/lib/api/server';
+import { AuthError, errorResponse, getAdminClient, getUserClient } from '@/lib/api/server';
 import { workerConfig } from '@/lib/config';
 import { parseExtraction } from '@/lib/documents';
 
@@ -43,8 +43,9 @@ export async function POST(
     if (typeof claimToken !== 'string') return errorResponse('Invalid extraction claim', 502);
 
     const markFailed = async (code: string): Promise<void> => {
-      await supabase.rpc('fail_document_extraction', {
+      await getAdminClient().rpc('fail_document_extraction_server', {
         p_document_id: id,
+        p_owner_id: userId,
         p_claim_token: claimToken,
         p_error_code: code,
       });
@@ -92,13 +93,17 @@ export async function POST(
         source_excerpt: observation.source_excerpt,
         confidence: observation.confidence,
       }));
-      const { error: completionError } = await supabase.rpc('complete_document_extraction', {
-        p_document_id: id,
-        p_claim_token: claimToken,
-        p_document_type: extraction.draft.document_type,
-        p_model: extraction.model,
-        p_observations: observations,
-      });
+      const { error: completionError } = await getAdminClient().rpc(
+        'complete_document_extraction_server',
+        {
+          p_document_id: id,
+          p_owner_id: userId,
+          p_claim_token: claimToken,
+          p_document_type: extraction.draft.document_type,
+          p_model: extraction.model,
+          p_observations: observations,
+        },
+      );
       if (completionError) {
         await markFailed('PERSISTENCE_FAILED');
         return errorResponse('Failed to save extraction');

@@ -1,16 +1,20 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { POST } from '@/app/api/documents/[id]/extract/route';
 
-const { getUserClient, fetchMock, documentQuery, download, rpc } = vi.hoisted(() => ({
-  getUserClient: vi.fn(),
-  fetchMock: vi.fn(),
-  documentQuery: vi.fn(),
-  download: vi.fn(),
-  rpc: vi.fn(),
-}));
+const { getUserClient, getAdminClient, fetchMock, documentQuery, download, rpc, adminRpc } =
+  vi.hoisted(() => ({
+    getUserClient: vi.fn(),
+    getAdminClient: vi.fn(),
+    fetchMock: vi.fn(),
+    documentQuery: vi.fn(),
+    download: vi.fn(),
+    rpc: vi.fn(),
+    adminRpc: vi.fn(),
+  }));
 
 vi.mock('@/lib/api/server', () => ({
   getUserClient,
+  getAdminClient,
   AuthError: class AuthError extends Error {},
   jsonResponse: (data: unknown, status = 200) => Response.json(data, { status }),
   errorResponse: (error: string, status = 500) => Response.json({ error }, { status }),
@@ -41,6 +45,8 @@ describe('POST /api/documents/[id]/extract', () => {
           : { data: 1, error: null },
       ),
     );
+    adminRpc.mockResolvedValue({ data: 1, error: null });
+    getAdminClient.mockReturnValue({ rpc: adminRpc });
     getUserClient.mockResolvedValue({
       userId: 'user-1',
       supabase: {
@@ -84,13 +90,15 @@ describe('POST /api/documents/[id]/extract', () => {
     expect(fetchMock.mock.calls[0][1].headers.Authorization).toBe('Bearer jwt-1');
     expect(fetchMock.mock.calls[0][1].signal).toBeDefined();
     expect(rpc.mock.calls[0]).toEqual(['claim_document_extraction', { p_document_id: 'doc-1' }]);
-    expect(rpc.mock.calls[1][0]).toBe('complete_document_extraction');
-    expect(rpc.mock.calls[1][1].p_claim_token).toBe('11111111-1111-4111-8111-111111111111');
-    expect(rpc.mock.calls[1][1].p_observations[0]).toMatchObject({
+    expect(rpc).toHaveBeenCalledTimes(1);
+    expect(adminRpc.mock.calls[0][0]).toBe('complete_document_extraction_server');
+    expect(adminRpc.mock.calls[0][1].p_owner_id).toBe('user-1');
+    expect(adminRpc.mock.calls[0][1].p_claim_token).toBe('11111111-1111-4111-8111-111111111111');
+    expect(adminRpc.mock.calls[0][1].p_observations[0]).toMatchObject({
       description: 'Coffee',
     });
-    expect(JSON.stringify(rpc.mock.calls[1][1])).not.toContain('transaction_id');
-    expect(JSON.stringify(rpc.mock.calls[1][1])).not.toContain('usage');
+    expect(JSON.stringify(adminRpc.mock.calls[0][1])).not.toContain('transaction_id');
+    expect(JSON.stringify(adminRpc.mock.calls[0][1])).not.toContain('usage');
   });
 
   it('rejects extraction of another user document', async () => {
@@ -101,6 +109,7 @@ describe('POST /api/documents/[id]/extract', () => {
     expect(response.status).toBe(404);
     expect(fetchMock).not.toHaveBeenCalled();
     expect(rpc).not.toHaveBeenCalled();
+    expect(getAdminClient).not.toHaveBeenCalled();
   });
 
   it('returns conflict before download or Worker call when another extraction holds the claim', async () => {
@@ -112,6 +121,7 @@ describe('POST /api/documents/[id]/extract', () => {
     expect(download).not.toHaveBeenCalled();
     expect(fetchMock).not.toHaveBeenCalled();
     expect(rpc).toHaveBeenCalledTimes(1);
+    expect(getAdminClient).not.toHaveBeenCalled();
   });
 
   it('starts only one Worker request for simultaneous extraction attempts', async () => {
@@ -146,8 +156,9 @@ describe('POST /api/documents/[id]/extract', () => {
       params: Promise.resolve({ id: 'doc-1' }),
     });
     expect(response.status).toBe(400);
-    expect(rpc).toHaveBeenCalledWith('fail_document_extraction', {
+    expect(adminRpc).toHaveBeenCalledWith('fail_document_extraction_server', {
       p_document_id: 'doc-1',
+      p_owner_id: 'user-1',
       p_claim_token: '11111111-1111-4111-8111-111111111111',
       p_error_code: 'DOWNLOAD_FAILED',
     });
@@ -161,19 +172,19 @@ describe('POST /api/documents/[id]/extract', () => {
         usage: {},
       }),
     );
-    rpc.mockImplementation((name: string) =>
+    adminRpc.mockImplementation((name: string) =>
       Promise.resolve(
-        name === 'claim_document_extraction'
-          ? { data: '11111111-1111-4111-8111-111111111111', error: null }
-          : { data: null, error: { message: 'database unavailable' } },
+        name === 'complete_document_extraction_server'
+          ? { data: null, error: { message: 'database unavailable' } }
+          : { data: true, error: null },
       ),
     );
     const response = await POST(new Request('http://localhost') as never, {
       params: Promise.resolve({ id: 'doc-1' }),
     });
     expect(response.status).toBe(500);
-    expect(rpc).toHaveBeenCalledWith(
-      'fail_document_extraction',
+    expect(adminRpc).toHaveBeenCalledWith(
+      'fail_document_extraction_server',
       expect.objectContaining({
         p_error_code: 'PERSISTENCE_FAILED',
       }),
@@ -186,8 +197,8 @@ describe('POST /api/documents/[id]/extract', () => {
       params: Promise.resolve({ id: 'doc-1' }),
     });
     expect(response.status).toBe(502);
-    expect(rpc).toHaveBeenCalledWith(
-      'fail_document_extraction',
+    expect(adminRpc).toHaveBeenCalledWith(
+      'fail_document_extraction_server',
       expect.objectContaining({
         p_error_code: 'INVALID_RESPONSE',
       }),
@@ -198,11 +209,14 @@ describe('POST /api/documents/[id]/extract', () => {
     const tokenA = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
     const tokenB = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
     let claims = 0;
-    rpc.mockImplementation((name: string, args: { p_claim_token?: string }) => {
+    rpc.mockImplementation((name: string) => {
       if (name === 'claim_document_extraction') {
         claims += 1;
         return Promise.resolve({ data: claims === 1 ? tokenA : tokenB, error: null });
       }
+      return Promise.resolve({ data: null, error: { message: 'Unexpected user RPC' } });
+    });
+    adminRpc.mockImplementation((name: string, args: { p_claim_token?: string }) => {
       return Promise.resolve(
         args.p_claim_token === tokenB
           ? { data: 0, error: null }
@@ -233,20 +247,20 @@ describe('POST /api/documents/[id]/extract', () => {
     resolveOldWorker(workerResult());
     const staleResponse = await oldRequest;
     expect(staleResponse.status).toBe(500);
-    expect(rpc).toHaveBeenCalledWith(
-      'complete_document_extraction',
+    expect(adminRpc).toHaveBeenCalledWith(
+      'complete_document_extraction_server',
       expect.objectContaining({ p_claim_token: tokenB }),
     );
-    expect(rpc).toHaveBeenCalledWith(
-      'complete_document_extraction',
+    expect(adminRpc).toHaveBeenCalledWith(
+      'complete_document_extraction_server',
       expect.objectContaining({ p_claim_token: tokenA }),
     );
-    expect(rpc).toHaveBeenCalledWith(
-      'fail_document_extraction',
+    expect(adminRpc).toHaveBeenCalledWith(
+      'fail_document_extraction_server',
       expect.objectContaining({ p_claim_token: tokenA }),
     );
-    expect(rpc).not.toHaveBeenCalledWith(
-      'fail_document_extraction',
+    expect(adminRpc).not.toHaveBeenCalledWith(
+      'fail_document_extraction_server',
       expect.objectContaining({ p_claim_token: tokenB }),
     );
   });
