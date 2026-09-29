@@ -19,7 +19,7 @@ interface SavedPosition {
   quantity_atoms: string;
   cost_basis_minor: string;
   realized_return_minor: string;
-  investment_trades?: { id: string }[];
+  investment_trades?: { id: string; occurred_on: string }[];
   investment_valuations?: {
     id: string;
     as_of: string;
@@ -146,6 +146,15 @@ export default function InvestmentsPage(): React.ReactElement {
         market_value_minor: parseDecimalUnits(draft.gross, position.money_scale),
         evidence,
       });
+    }
+    const latestTradeDate = position.investment_trades?.reduce(
+      (latest, trade) => (trade.occurred_on > latest ? trade.occurred_on : latest),
+      '',
+    );
+    if (latestTradeDate && draft.date < latestTradeDate) {
+      throw new Error(
+        `Enter trades in chronological order. Latest recorded trade date: ${latestTradeDate}`,
+      );
     }
     const quantityAtoms = parseDecimalUnits(draft.quantity, position.quantity_scale);
     if (draft.action === 'opening') {
@@ -468,6 +477,12 @@ export default function InvestmentsPage(): React.ReactElement {
                     placeholder='YYYY-MM-DD'
                   />
                 </label>
+                {isTrade && (
+                  <p className='text-muted-foreground text-xs'>
+                    Enter the opening lot and trades in date order. Trades on the same date use
+                    confirmation order for cost basis.
+                  </p>
+                )}
                 {isTrade && (
                   <label
                     className='block space-y-1 text-sm font-medium'

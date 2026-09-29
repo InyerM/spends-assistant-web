@@ -24,6 +24,14 @@ evidence and dated values. The table columns storing money and quantity units ar
 to 38 digits, so PostgREST never parses them as unsafe JavaScript numbers. Quote units include
 three-letter currencies and tokens such as USDT; the position records both precision scales.
 
+When reconstructing historical holdings, create the position and enter its opening lot and trades
+from oldest to newest. The RPC rejects a new trade dated before the latest saved trade for that
+position, because inserting it later would change the basis allocated to already confirmed sales.
+Trades with the same date use confirmation order because the journal stores a date rather than an
+intraday timestamp. The form shows this rule before review and checks the latest date loaded from
+the position; the RPC repeats the check under the position lock in case another entry was saved
+concurrently. An idempotent retry of an earlier request still returns its original result.
+
 The browser and API reject malformed or over-precision amounts. The backend independently validates
 amounts and ownership. Authenticated clients can only `SELECT` their own rows; all writes go through
 the review RPC. A SQL test script at `supabase/tests/20260929000040_manual_investments.sql` covers

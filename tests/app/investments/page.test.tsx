@@ -73,4 +73,44 @@ describe('manual investment tracker', () => {
     await user.click(screen.getByRole('button', { name: 'Review entry' }));
     expect(screen.getByText('Review before saving')).toBeInTheDocument();
   });
+
+  it('stops review of a trade dated before the latest saved trade', async () => {
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        data: [
+          {
+            id: '00000000-0000-4000-8000-000000000222',
+            provider: 'binance',
+            symbol: 'BTC',
+            quote_currency: 'USDT',
+            quantity_scale: 0,
+            money_scale: 0,
+            quantity_atoms: '10',
+            cost_basis_minor: '1000',
+            realized_return_minor: '0',
+            investment_trades: [{ id: 'trade-1', occurred_on: '2026-09-29' }],
+          },
+        ],
+      }),
+    });
+    const user = userEvent.setup();
+    render(<InvestmentsPage />);
+    await screen.findByText('BTC');
+    await user.selectOptions(screen.getByLabelText('Entry type'), 'sell');
+    await user.selectOptions(
+      screen.getByLabelText('Position'),
+      '00000000-0000-4000-8000-000000000222',
+    );
+    await user.type(screen.getByLabelText('Trade date'), '2026-09-28');
+    await user.type(screen.getByLabelText(/Quantity/), '5');
+    await user.type(screen.getByLabelText('Gross amount (USDT)'), '700');
+    await user.type(screen.getByLabelText('Evidence reference'), 'Broker report');
+    await user.type(screen.getByLabelText('Evidence date'), '2026-09-28');
+    await user.click(screen.getByRole('button', { name: 'Review entry' }));
+
+    expect(screen.getByRole('alert')).toHaveTextContent('2026-09-29');
+    expect(screen.queryByText('Review before saving')).not.toBeInTheDocument();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
 });
