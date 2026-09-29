@@ -16,6 +16,8 @@ import {
   LogOut,
   Settings,
   Files,
+  TrendingUp,
+  Landmark,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -38,6 +40,8 @@ const navItems: NavItem[] = [
   { titleKey: 'transactions', href: '/transactions', icon: ArrowRightLeft },
   { titleKey: 'documents', href: '/documents', icon: Files },
   { titleKey: 'accounts', href: '/accounts', icon: Wallet },
+  { titleKey: 'investments', href: '/investments', icon: TrendingUp },
+  { titleKey: 'loans', href: '/loans', icon: Landmark },
   { titleKey: 'categories', href: '/categories', icon: Tags },
   { titleKey: 'automation', href: '/automation', icon: Zap },
 ];

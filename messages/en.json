@@ -57,7 +57,9 @@
     "settings": "Settings",
     "home": "Home",
     "more": "More",
-    "documents": "Documents"
+    "documents": "Documents",
+    "investments": "Investments",
+    "loans": "Loans"
   },
   "dashboard": {
     "title": "Dashboard",

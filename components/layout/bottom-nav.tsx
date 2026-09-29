@@ -13,6 +13,8 @@ import {
   Settings,
   LogOut,
   Files,
+  TrendingUp,
+  Landmark,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -36,6 +38,8 @@ const mainItems: NavItem[] = [
 
 const moreItems: NavItem[] = [
   { titleKey: 'documents', href: '/documents', icon: Files },
+  { titleKey: 'investments', href: '/investments', icon: TrendingUp },
+  { titleKey: 'loans', href: '/loans', icon: Landmark },
   { titleKey: 'automation', href: '/automation', icon: Zap },
   { titleKey: 'settings', href: '/settings', icon: Settings },
 ];

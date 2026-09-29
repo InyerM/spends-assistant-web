@@ -57,7 +57,9 @@
     "settings": "Configuración",
     "home": "Inicio",
     "more": "Más",
-    "documents": "Documentos"
+    "documents": "Documentos",
+    "investments": "Inversiones",
+    "loans": "Créditos"
   },
   "dashboard": {
     "title": "Panel",
