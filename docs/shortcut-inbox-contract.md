@@ -1,10 +1,11 @@
 # iOS Shortcut inbox contract
 
-This is the first, review-only slice of
+This implements capture and reviewed matching/creation for
 [web issue #3](https://github.com/InyerM/spends-assistant-web/issues/3). It requires backend
-migration `20260929000030_shortcut_inbox.sql` before use. The endpoint stores the original text in a
-private, owner-scoped inbox. Intake, status review, and export never create transactions or change
-account balances.
+migrations `20260929000030_shortcut_inbox.sql`, `20260929000080_shortcut_match_ack.sql`, and
+`20260929000110_shortcut_create_transaction.sql` before use. The intake endpoint stores the original
+text in a private, owner-scoped inbox. Intake, status review, and export never create transactions
+or change account balances; creation requires a separate signed-in review action.
 
 ## Authentication and request
 
@@ -146,8 +147,7 @@ counter once, appends an immutable decision snapshot, and marks the inbox item `
 with identical reviewed fields returns the original transaction and decision IDs without changing
 balances. A changed retry conflicts. The database applies the existing free-plan transaction quota
 to this route; canceled Pro subscriptions do not bypass it. Its monthly counter uses UTC, matching
-the existing web transaction route and Worker usage service. The atomic CSV import currently uses a
-Bogota month boundary and needs a separate consistency fix before release.
+the existing web transaction route, Worker usage service, and atomic CSV import migration.
 
 Soft deletion of the linked transaction preserves the historical decision and retry result. An
 intentional hard delete erases its decision snapshot and returns the surviving inbox item to pending
