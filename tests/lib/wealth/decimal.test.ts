@@ -12,6 +12,11 @@ describe('manual investment decimal conversion', () => {
     expect(formatDecimalUnits('10025', 2)).toBe('100.25');
   });
 
+  it('keeps whole COP units unchanged when the scale is zero', () => {
+    expect(parseDecimalUnits('12000', 0)).toBe('12000');
+    expect(formatDecimalUnits('12000', 0)).toBe('12000');
+  });
+
   it('rejects excess precision instead of rounding money', () => {
     expect(() => parseDecimalUnits('100.251', 2)).toThrow('precision');
   });

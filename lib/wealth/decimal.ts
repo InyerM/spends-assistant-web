@@ -5,7 +5,7 @@ export function parseDecimalUnits(value: string, scale: number): string {
   if (!match) throw new Error('invalid decimal amount');
   const fraction = match.at(2) ?? '';
   if (fraction.length > scale) throw new Error('amount exceeds supported precision');
-  const atoms = BigInt(`${match[1]}${fraction.padEnd(scale, '0') || '0'}`).toString();
+  const atoms = BigInt(`${match[1]}${fraction.padEnd(scale, '0')}`).toString();
   if (atoms.length > 38) throw new Error('amount exceeds supported range');
   return atoms;
 }
