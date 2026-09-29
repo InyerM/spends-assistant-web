@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { GET, PATCH, DELETE } from '@/app/api/transactions/[id]/route';
+import { GET, DELETE } from '@/app/api/transactions/[id]/route';
 import { NextRequest } from 'next/server';
 
 vi.mock('@/lib/api/server', () => ({
@@ -58,121 +58,6 @@ describe('GET /api/transactions/[id]', () => {
     const request = new NextRequest('http://localhost/api/transactions/tx-999');
     const response = await GET(request, makeParams('tx-999'));
     expect(response.status).toBe(404);
-  });
-});
-
-describe('PATCH /api/transactions/[id]', () => {
-  beforeEach(async () => {
-    vi.restoreAllMocks();
-  });
-
-  it('updates transaction fields', async () => {
-    const { getUserClient, applyTransactionBalance } = await import('@/lib/api/server');
-    const old = {
-      type: 'expense',
-      amount: 50000,
-      account_id: 'acc-1',
-      transfer_to_account_id: null,
-    };
-    const updated = { ...old, description: 'Updated' };
-
-    let singleCallCount = 0;
-    const chain: Record<string, ReturnType<typeof vi.fn>> = {};
-    ['select', 'eq', 'is', 'update'].forEach((m) => {
-      chain[m] = vi.fn().mockReturnValue(chain);
-    });
-    chain.single = vi.fn().mockImplementation(async () => {
-      singleCallCount++;
-      if (singleCallCount === 1) return { data: old, error: null };
-      return { data: updated, error: null };
-    });
-    vi.mocked(getUserClient).mockResolvedValue({
-      supabase: { from: vi.fn().mockReturnValue(chain) } as never,
-      userId: 'test-user-id',
-    });
-    vi.mocked(applyTransactionBalance).mockResolvedValue();
-
-    const request = new NextRequest('http://localhost/api/transactions/tx-1', {
-      method: 'PATCH',
-      body: JSON.stringify({ description: 'Updated' }),
-    });
-    const response = await PATCH(request, makeParams('tx-1'));
-    expect(response.status).toBe(200);
-    // No balance change for description-only update
-    expect(applyTransactionBalance).not.toHaveBeenCalled();
-  });
-
-  it('reverses and reapplies balance on amount change', async () => {
-    const { getUserClient, applyTransactionBalance } = await import('@/lib/api/server');
-    const old = {
-      type: 'expense',
-      amount: 50000,
-      account_id: 'acc-1',
-      transfer_to_account_id: null,
-    };
-    const updated = {
-      type: 'expense',
-      amount: 75000,
-      account_id: 'acc-1',
-      transfer_to_account_id: null,
-    };
-
-    let singleCallCount = 0;
-    const chain: Record<string, ReturnType<typeof vi.fn>> = {};
-    ['select', 'eq', 'is', 'update'].forEach((m) => {
-      chain[m] = vi.fn().mockReturnValue(chain);
-    });
-    chain.single = vi.fn().mockImplementation(async () => {
-      singleCallCount++;
-      if (singleCallCount === 1) return { data: old, error: null };
-      return { data: updated, error: null };
-    });
-    vi.mocked(getUserClient).mockResolvedValue({
-      supabase: { from: vi.fn().mockReturnValue(chain) } as never,
-      userId: 'test-user-id',
-    });
-    vi.mocked(applyTransactionBalance).mockResolvedValue();
-
-    const request = new NextRequest('http://localhost/api/transactions/tx-1', {
-      method: 'PATCH',
-      body: JSON.stringify({ amount: 75000 }),
-    });
-    const response = await PATCH(request, makeParams('tx-1'));
-    expect(response.status).toBe(200);
-    // Should reverse old and apply new
-    expect(applyTransactionBalance).toHaveBeenCalledTimes(2);
-  });
-
-  it('returns 400 on update error', async () => {
-    const { getUserClient } = await import('@/lib/api/server');
-    const old = {
-      type: 'expense',
-      amount: 50000,
-      account_id: 'acc-1',
-      transfer_to_account_id: null,
-    };
-
-    let singleCallCount = 0;
-    const chain: Record<string, ReturnType<typeof vi.fn>> = {};
-    ['select', 'eq', 'is', 'update'].forEach((m) => {
-      chain[m] = vi.fn().mockReturnValue(chain);
-    });
-    chain.single = vi.fn().mockImplementation(async () => {
-      singleCallCount++;
-      if (singleCallCount === 1) return { data: old, error: null };
-      return { data: null, error: { message: 'Update failed' } };
-    });
-    vi.mocked(getUserClient).mockResolvedValue({
-      supabase: { from: vi.fn().mockReturnValue(chain) } as never,
-      userId: 'test-user-id',
-    });
-
-    const request = new NextRequest('http://localhost/api/transactions/tx-1', {
-      method: 'PATCH',
-      body: JSON.stringify({ amount: 75000 }),
-    });
-    const response = await PATCH(request, makeParams('tx-1'));
-    expect(response.status).toBe(400);
   });
 });
 

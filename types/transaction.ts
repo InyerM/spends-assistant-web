@@ -57,8 +57,18 @@ export interface CreateTransactionInput {
   duplicate_of?: string;
 }
 
-export interface UpdateTransactionInput extends Partial<CreateTransactionInput> {
+export interface UpdateTransactionInput {
   id: string;
+  date?: string;
+  time?: string;
+  amount?: number;
+  description?: string;
+  notes?: string | null;
+  category_id?: string | null;
+  account_id?: string;
+  type?: TransactionType;
+  payment_method?: string | null;
+  transfer_to_account_id?: string | null;
 }
 
 export interface BulkUpdateTransactionInput {

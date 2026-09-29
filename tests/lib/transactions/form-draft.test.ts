@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { createTransactionFormSchema, fieldsAfterTypeChange } from '@/lib/transactions/form-draft';
+import {
+  createTransactionFormSchema,
+  fieldsAfterTypeChange,
+  toTransactionPatch,
+} from '@/lib/transactions/form-draft';
 
 const categories = [
   { id: 'expense-category', type: 'expense' as const },
@@ -74,5 +78,15 @@ describe('transaction form draft', () => {
       category_id: 'transfer-category',
       transfer_to_account_id: 'account-b',
     });
+  });
+
+  it('sends explicit nulls when review clears category or transfer destination', () => {
+    const patch = toTransactionPatch({
+      ...draft,
+      category_id: undefined,
+      transfer_to_account_id: undefined,
+    });
+    expect(patch).toMatchObject({ category_id: null, transfer_to_account_id: null });
+    expect(patch).not.toHaveProperty('source');
   });
 });

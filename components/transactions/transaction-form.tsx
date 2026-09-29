@@ -53,7 +53,11 @@ import { useUsage } from '@/hooks/use-usage';
 import { useSubscription } from '@/hooks/use-subscription';
 import { useAiParse } from '@/hooks/use-ai-parse';
 import { SKIPPED_REASON_KEYS } from '@/lib/utils/ai-parse';
-import { createTransactionFormSchema, fieldsAfterTypeChange } from '@/lib/transactions/form-draft';
+import {
+  createTransactionFormSchema,
+  fieldsAfterTypeChange,
+  toTransactionPatch,
+} from '@/lib/transactions/form-draft';
 import type { TransactionFormValues } from '@/lib/transactions/form-draft';
 import type { Transaction, CreateTransactionInput, TransactionType } from '@/types';
 
@@ -288,10 +292,7 @@ export function TransactionForm({
       if (isEditing) {
         await updateMutation.mutateAsync({
           id: transaction.id,
-          ...values,
-          source: transaction.source,
-          category_id: values.category_id ?? undefined,
-          transfer_to_account_id: values.transfer_to_account_id ?? undefined,
+          ...toTransactionPatch(values),
         });
         toast.success(t('transactionUpdated'));
         onOpenChange(false);

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { Category, TransactionType } from '@/types';
+import type { Category, TransactionType, UpdateTransactionInput } from '@/types';
 
 const baseSchema = z.object({
   date: z.string().min(1, 'Date is required'),
@@ -14,6 +14,16 @@ const baseSchema = z.object({
 });
 
 export type TransactionFormValues = z.infer<typeof baseSchema>;
+
+export function toTransactionPatch(
+  values: TransactionFormValues,
+): Omit<UpdateTransactionInput, 'id'> {
+  return {
+    ...values,
+    category_id: values.category_id || null,
+    transfer_to_account_id: values.transfer_to_account_id || null,
+  };
+}
 
 interface FormMessages {
   destinationRequired: string;

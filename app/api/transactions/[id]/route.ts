@@ -1,4 +1,5 @@
 import type { NextRequest } from 'next/server';
+import { z } from 'zod';
 import {
   getUserClient,
   AuthError,
@@ -10,6 +11,24 @@ import {
 interface RouteParams {
   params: Promise<{ id: string }>;
 }
+
+const patchSchema = z
+  .strictObject({
+    date: z.iso.date().optional(),
+    time: z
+      .string()
+      .regex(/^[0-9]{2}:[0-9]{2}(:[0-9]{2})?$/)
+      .optional(),
+    amount: z.number().positive().optional(),
+    description: z.string().trim().min(1).optional(),
+    notes: z.string().nullable().optional(),
+    category_id: z.uuid().nullable().optional(),
+    account_id: z.uuid().optional(),
+    type: z.enum(['expense', 'income', 'transfer']).optional(),
+    payment_method: z.string().max(50).nullable().optional(),
+    transfer_to_account_id: z.uuid().nullable().optional(),
+  })
+  .refine((patch) => Object.keys(patch).length > 0);
 
 export async function GET(_request: NextRequest, { params }: RouteParams): Promise<Response> {
   try {
@@ -35,54 +54,21 @@ export async function PATCH(request: NextRequest, { params }: RouteParams): Prom
   try {
     const { id } = await params;
     const { supabase } = await getUserClient();
-    const body = await request.json();
-
-    // Fetch old transaction to reverse its balance effect
-    const { data: old } = await supabase
-      .from('transactions')
-      .select('type, amount, account_id, transfer_to_account_id')
-      .eq('id', id)
-      .single();
-
-    const { data, error } = await supabase
-      .from('transactions')
-      .update(body)
-      .eq('id', id)
-      .select()
-      .single();
-
-    if (error) return errorResponse(error.message, 400);
-
-    // If amount, type, or account changed, reverse old and apply new
-    if (old) {
-      const amountChanged = (body.amount !== undefined && body.amount !== old.amount) as boolean;
-      const typeChanged = (body.type !== undefined && body.type !== old.type) as boolean;
-      const accountChanged = (body.account_id !== undefined &&
-        body.account_id !== old.account_id) as boolean;
-      const transferChanged = (body.transfer_to_account_id !== undefined &&
-        body.transfer_to_account_id !== old.transfer_to_account_id) as boolean;
-
-      if (amountChanged || typeChanged || accountChanged || transferChanged) {
-        // Reverse old
-        await applyTransactionBalance(
-          supabase,
-          old.type as string,
-          old.account_id as string,
-          old.amount as number,
-          old.transfer_to_account_id as string | null,
-          true,
-        );
-        // Apply new
-        await applyTransactionBalance(
-          supabase,
-          data.type as string,
-          data.account_id as string,
-          data.amount as number,
-          data.transfer_to_account_id as string | null,
-        );
+    if (!z.uuid().safeParse(id).success) return errorResponse('Invalid transaction ID', 400);
+    const parsed = patchSchema.safeParse(await request.json().catch(() => null));
+    if (!parsed.success) return errorResponse('Invalid transaction patch fields', 400);
+    const { data, error } = await supabase.rpc('patch_reviewed_transaction', {
+      p_transaction_id: id,
+      p_patch: parsed.data,
+    });
+    if (error) {
+      if (error.code === 'P0002') return errorResponse('Transaction not found', 404);
+      if (error.code === '23514') return errorResponse(error.message, 409);
+      if (error.code === '42501' || error.code.startsWith('22')) {
+        return errorResponse(error.message, 400);
       }
+      return errorResponse('Failed to update transaction');
     }
-
     return jsonResponse(data);
   } catch (error) {
     if (error instanceof AuthError) return errorResponse('Unauthorized', 401);
