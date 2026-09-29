@@ -31,6 +31,7 @@ import { ConfirmDeleteDialog } from '@/components/shared/confirm-delete-dialog';
 import { useUpdateAccount, useDeleteAccount } from '@/lib/api/mutations/account.mutations';
 import { useCreateTransaction } from '@/lib/api/mutations/transaction.mutations';
 import { useTransactionFormStore } from '@/lib/stores/transaction-form.store';
+import { buildBalanceAdjustment } from '@/lib/accounts/adjustment';
 import { formatCurrency } from '@/lib/utils/formatting';
 import { getCurrentColombiaTimes } from '@/lib/utils/date';
 import { ACCOUNT_TYPES } from '@/lib/utils/account-translations';
@@ -71,7 +72,7 @@ export function AccountEditDialog({
   const createTxMutation = useCreateTransaction();
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [adjustMode, setAdjustMode] = useState<'none' | 'transaction'>('none');
-  const [newBalance, setNewBalance] = useState('');
+  const [adjustmentAmount, setAdjustmentAmount] = useState('');
   const [balanceSign, setBalanceSign] = useState<'+' | '-'>('+');
   const { openNew } = useTransactionFormStore();
 
@@ -95,7 +96,7 @@ export function AccountEditDialog({
     setPrevOpenAccountId(openAccountId);
     if (openAccountId) {
       setAdjustMode('none');
-      setNewBalance('');
+      setAdjustmentAmount('');
       setBalanceSign('+');
     }
   }
@@ -146,22 +147,11 @@ export function AccountEditDialog({
     }
   }
 
-  function getSignedBalance(): number {
-    const raw = parseFloat(newBalance);
-    if (isNaN(raw)) return NaN;
-    return balanceSign === '-' ? -Math.abs(raw) : Math.abs(raw);
-  }
-
   async function handleTransactionAdjust(): Promise<void> {
     if (!account) return;
-    const target = getSignedBalance();
-    if (isNaN(target)) {
+    const adjustment = buildBalanceAdjustment(adjustmentAmount, balanceSign);
+    if (!adjustment) {
       toast.error(t('enterValidNumber'));
-      return;
-    }
-    const diff = target - account.balance;
-    if (diff === 0) {
-      toast.error(t('balanceAlreadyAtTarget'));
       return;
     }
     const times = getCurrentColombiaTimes();
@@ -169,15 +159,15 @@ export function AccountEditDialog({
       await createTxMutation.mutateAsync({
         date: times.date,
         time: times.time,
-        amount: Math.abs(diff),
+        amount: adjustment.amount,
         description: t('balanceAdjustment'),
         account_id: account.id,
-        type: diff > 0 ? 'income' : 'expense',
+        type: adjustment.type,
         source: 'web',
       });
       toast.success(
         t('adjustmentCreated', {
-          amount: `${diff > 0 ? '+' : ''}${formatCurrency(diff, account.currency, locale)}`,
+          amount: `${balanceSign}${formatCurrency(adjustment.amount, account.currency, locale)}`,
         }),
       );
       onOpenChange(false);
@@ -320,7 +310,7 @@ export function AccountEditDialog({
                   <div className='space-y-3'>
                     <div>
                       <Label className='text-muted-foreground mb-1 block text-xs'>
-                        {t('newBalance')}
+                        {t('adjustmentAmount')}
                       </Label>
                       <div className='flex min-w-0 gap-2'>
                         <Button
@@ -338,9 +328,9 @@ export function AccountEditDialog({
                           type='number'
                           inputMode='numeric'
                           step='1'
-                          value={newBalance}
-                          onChange={(e): void => setNewBalance(e.target.value)}
-                          placeholder={String(Math.abs(account.balance))}
+                          value={adjustmentAmount}
+                          onChange={(e): void => setAdjustmentAmount(e.target.value)}
+                          placeholder='0'
                           className='h-14 min-w-0 text-2xl font-semibold sm:h-11 sm:text-base sm:font-normal'
                         />
                       </div>

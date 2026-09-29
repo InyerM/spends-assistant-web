@@ -383,12 +383,11 @@
     "noTransactionsForAccount": "No transactions for this account",
     "deleteAccountConfirm": "Remove {name} from your accounts? Accounts with active transactions cannot be deleted.",
     "adjust": "Adjust",
-    "newBalance": "New balance",
+    "adjustmentAmount": "Adjustment amount",
     "withTransaction": "With transaction",
     "orCreateCustomTransaction": "Or create a custom transaction",
     "adjustmentCreated": "Adjustment transaction created ({amount})",
     "enterValidNumber": "Enter a valid number",
-    "balanceAlreadyAtTarget": "Balance is already at the target",
     "failedToCreateAdjustment": "Failed to create adjustment",
     "balanceAdjustment": "Balance adjustment"
   },

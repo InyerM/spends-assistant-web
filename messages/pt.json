@@ -383,12 +383,11 @@
     "noTransactionsForAccount": "Sem transações para esta conta",
     "deleteAccountConfirm": "Remover {name} das suas contas? Contas com transações ativas não podem ser excluídas.",
     "adjust": "Ajustar",
-    "newBalance": "Novo saldo",
+    "adjustmentAmount": "Valor do ajuste",
     "withTransaction": "Com transação",
     "orCreateCustomTransaction": "Ou crie uma transação personalizada",
     "adjustmentCreated": "Transação de ajuste criada ({amount})",
     "enterValidNumber": "Digite um número válido",
-    "balanceAlreadyAtTarget": "O saldo já está no valor desejado",
     "failedToCreateAdjustment": "Falha ao criar ajuste",
     "balanceAdjustment": "Ajuste de saldo"
   },
