@@ -38,7 +38,7 @@ export function createFakeSupabase(options: FakeDbOptions = {}) {
     const rows = args.p_rows as FakeRow[];
     const reviews = args.p_reviews as { index: number; match_ids: string[]; decision: string }[];
     const requestId = args.p_request_id as string;
-    const hash = JSON.stringify({ rows, reviews, file: args.p_file_name, count: args.p_row_count });
+    const hash = JSON.stringify(args.p_payload);
     const previous = requestHashes.get(requestId);
     if (previous) {
       if (previous !== hash)
@@ -58,22 +58,38 @@ export function createFakeSupabase(options: FakeDbOptions = {}) {
         error: null,
       };
     }
+    if (args.p_probe) return { data: { status: 'new' }, error: null };
     if (options.failTransactionSelect)
       return { data: null, error: { message: options.failTransactionSelect } };
     const duplicates: { index: number; match: FakeRow }[] = [];
     const unreviewed: number[] = [];
     const stale: number[] = [];
     rows.forEach((row, index) => {
-      const matches = state.transactions.filter(
+      const existing = state.transactions.filter(
         (tx) =>
           tx.date === row.date &&
           Number(tx.amount) === Number(row.amount) &&
           tx.account_id === row.account_id,
       );
+      const batch = rows
+        .slice(0, index)
+        .flatMap((prior, priorIndex) =>
+          prior.date === row.date &&
+          Number(prior.amount) === Number(row.amount) &&
+          prior.account_id === row.account_id
+            ? [{ ...prior, id: `batch:${priorIndex}` }]
+            : [],
+        );
+      const matches = [...existing, ...batch];
       duplicates.push(...matches.map((match) => ({ index, match })));
       const review = reviews.find((item) => item.index === index);
       if (matches.length && !review) unreviewed.push(index);
-      else if (matches.some((match) => !review?.match_ids.includes(match.id))) stale.push(index);
+      else if (
+        review &&
+        (matches.length !== review.match_ids.length ||
+          matches.some((match) => !review.match_ids.includes(match.id)))
+      )
+        stale.push(index);
     });
     if (unreviewed.length || stale.length)
       return { data: { status: 'review_required', duplicates, unreviewed, stale }, error: null };

@@ -93,9 +93,12 @@ describe('POST /api/transactions/import', () => {
     });
   });
 
-  it('keeps legitimate equal-amount payments in the same file when nothing exists yet', async () => {
+  it('keeps equal-amount payments in the same file after explicit review', async () => {
     const fake = setup();
-    const response = await post({ transactions: [row(), row()] });
+    const response = await post({
+      transactions: [row(), row()],
+      duplicate_reviews: [{ index: 1, match_ids: ['batch:0'], decision: 'import' }],
+    });
 
     expect(response.status).toBe(201);
     expect((await response.json()).imported).toBe(2);
@@ -186,6 +189,46 @@ describe('POST /api/transactions/import', () => {
   });
 
   describe('repeated submissions', () => {
+    it('replays a completed request after its account is removed', async () => {
+      const accounts = [...ACCOUNTS];
+      const fake = setup({ accounts });
+      const payload = { transactions: [row()] };
+
+      const first = await post(payload);
+      expect(first.status).toBe(201);
+      accounts.splice(0);
+
+      const replay = await post(payload);
+      expect(replay.status).toBe(200);
+      expect((await replay.json()).import_id).toBe((await first.json()).import_id);
+      expect(fake.state.transactions).toHaveLength(1);
+    });
+
+    it('requires review for repeated rows in the same CSV', async () => {
+      const fake = setup();
+      const response = await post({ transactions: [row(), row()] });
+
+      expect(response.status).toBe(409);
+      const body = await response.json();
+      expect(body.unreviewed).toEqual([1]);
+      expect(body.duplicates[0].match.id).toBe('batch:0');
+      expect(fake.state.transactions).toHaveLength(0);
+    });
+
+    it('rejects a review with an extra match id', async () => {
+      const fake = setup({ transactions: [EXISTING] });
+      const response = await post({
+        transactions: [row()],
+        duplicate_reviews: [
+          { index: 0, match_ids: ['tx-existing', 'tx-stale'], decision: 'import' },
+        ],
+      });
+
+      expect(response.status).toBe(409);
+      expect((await response.json()).stale).toEqual([0]);
+      expect(fake.state.transactionInserts).toHaveLength(0);
+    });
+
     it('replays an identical request without writing again', async () => {
       const fake = setup();
       const payload = { transactions: [row(), row({ date: '2024-01-16', amount: 10 })] };

@@ -8,10 +8,12 @@ CREATE UNIQUE INDEX IF NOT EXISTS imports_user_request_id_unique
 
 CREATE OR REPLACE FUNCTION public.confirm_csv_import(
   p_request_id uuid,
+  p_payload jsonb,
   p_rows jsonb,
   p_reviews jsonb,
   p_file_name text,
-  p_row_count integer
+  p_row_count integer,
+  p_probe boolean
 ) RETURNS jsonb
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp
 AS $$
@@ -33,15 +35,13 @@ DECLARE
   v_limit integer;
   v_used integer;
   v_plan text;
-  v_month text := to_char(now(), 'YYYY-MM');
+  v_month text := to_char(now() AT TIME ZONE 'America/Bogota', 'YYYY-MM');
 BEGIN
   IF v_user IS NULL THEN RAISE EXCEPTION 'Authentication required' USING ERRCODE = '28000'; END IF;
-  IF p_request_id IS NULL OR jsonb_typeof(p_rows) <> 'array' OR jsonb_array_length(p_rows) = 0
-     OR jsonb_typeof(p_reviews) <> 'array' THEN
+  IF p_request_id IS NULL OR jsonb_typeof(p_payload) IS DISTINCT FROM 'object' THEN
     RAISE EXCEPTION 'Invalid import payload' USING ERRCODE = '22023';
   END IF;
-  v_hash := md5(jsonb_build_object('rows', p_rows, 'reviews', p_reviews,
-    'file_name', p_file_name, 'row_count', p_row_count)::text);
+  v_hash := md5(p_payload::text);
 
   -- Serialize retries before consulting the durable request record.
   PERFORM pg_advisory_xact_lock(hashtextextended(v_user::text || ':' || p_request_id::text, 0));
@@ -56,6 +56,23 @@ BEGIN
     END IF;
     RETURN jsonb_build_object('status', 'completed', 'imported', v_existing.imported_count,
       'skipped', v_existing.skipped_count, 'import_id', v_existing.id, 'replayed', true);
+  END IF;
+  IF p_probe THEN RETURN jsonb_build_object('status', 'new'); END IF;
+  IF jsonb_typeof(p_rows) IS DISTINCT FROM 'array' OR jsonb_array_length(p_rows) = 0
+     OR jsonb_typeof(p_reviews) IS DISTINCT FROM 'array' THEN
+    RAISE EXCEPTION 'Invalid import payload' USING ERRCODE = '22023';
+  END IF;
+  IF EXISTS (SELECT 1 FROM jsonb_array_elements(p_reviews) AS r(value)
+    GROUP BY (r.value->>'index') HAVING count(*) > 1) THEN
+    RAISE EXCEPTION 'Duplicate review index' USING ERRCODE = '22023';
+  END IF;
+  IF EXISTS (SELECT 1 FROM jsonb_array_elements(p_reviews) AS r(value)
+    WHERE (r.value->>'index')::integer < 0
+      OR (r.value->>'index')::integer >= jsonb_array_length(p_rows)
+      OR r.value->>'decision' IS NULL
+      OR r.value->>'decision' NOT IN ('import', 'skip')
+      OR jsonb_typeof(r.value->'match_ids') IS DISTINCT FROM 'array') THEN
+    RAISE EXCEPTION 'Invalid duplicate review' USING ERRCODE = '22023';
   END IF;
 
   -- A transaction insert acquires KEY SHARE on its referenced account. FOR UPDATE
@@ -89,6 +106,20 @@ BEGIN
         AND t.account_id = (v_row->>'account_id')::uuid
         AND t.date = (v_row->>'date')::date
         AND t.amount = (v_row->>'amount')::numeric;
+    -- Earlier rows in this request are also candidates. Their stable synthetic IDs
+    -- let the caller review a repeated payment without silently discarding it.
+    v_matches := v_matches || coalesce((
+      SELECT jsonb_agg(jsonb_build_object('index', v_index, 'match',
+        jsonb_build_object('id', 'batch:' || (r.ordinality - 1)::text,
+          'date', r.value->>'date', 'amount', (r.value->>'amount')::numeric,
+          'description', coalesce(r.value->>'description', ''),
+          'account_id', r.value->>'account_id')) ORDER BY r.ordinality)
+      FROM jsonb_array_elements(p_rows) WITH ORDINALITY AS r(value, ordinality)
+      WHERE r.ordinality - 1 < v_index
+        AND r.value->>'date' = v_row->>'date'
+        AND (r.value->>'amount')::numeric = (v_row->>'amount')::numeric
+        AND r.value->>'account_id' = v_row->>'account_id'
+    ), '[]'::jsonb);
     v_duplicates := v_duplicates || v_matches;
     SELECT value INTO v_review FROM jsonb_array_elements(p_reviews)
       WHERE (value->>'index')::integer = v_index;
@@ -97,6 +128,7 @@ BEGIN
         v_unreviewed := v_unreviewed || to_jsonb(v_index);
       ELSIF v_review->>'decision' NOT IN ('import', 'skip')
         OR jsonb_typeof(v_review->'match_ids') <> 'array'
+        OR jsonb_array_length(v_review->'match_ids') <> jsonb_array_length(v_matches)
         OR EXISTS (SELECT 1 FROM jsonb_array_elements(v_matches) AS m(value)
           WHERE NOT ((v_review->'match_ids') ? (m.value->'match'->>'id'))) THEN
         v_stale := v_stale || to_jsonb(v_index);
@@ -168,5 +200,5 @@ BEGIN
     'skipped', v_skipped, 'import_id', v_import_id, 'replayed', false);
 END;
 $$;
-REVOKE ALL ON FUNCTION public.confirm_csv_import(uuid, jsonb, jsonb, text, integer) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public.confirm_csv_import(uuid, jsonb, jsonb, text, integer) TO authenticated;
+REVOKE ALL ON FUNCTION public.confirm_csv_import(uuid, jsonb, jsonb, jsonb, text, integer, boolean) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.confirm_csv_import(uuid, jsonb, jsonb, jsonb, text, integer, boolean) TO authenticated;

@@ -25,6 +25,7 @@ interface ImportBody {
 }
 
 type RpcResult =
+  | { status: 'new' }
   | { status: 'review_required'; duplicates: unknown[]; unreviewed: number[]; stale: number[] }
   | {
       status: 'completed';
@@ -35,6 +36,22 @@ type RpcResult =
     };
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function completedResponse(
+  result: Extract<RpcResult, { status: 'completed' }>,
+  errors: string[],
+): Response {
+  return jsonResponse(
+    {
+      imported: result.imported,
+      skipped: result.skipped,
+      errors,
+      import_id: result.import_id,
+      replayed: result.replayed ?? false,
+    },
+    result.replayed ? 200 : 201,
+  );
+}
 
 /** The RPC owns the duplicate check and every write in one database transaction. */
 export async function POST(request: NextRequest): Promise<Response> {
@@ -55,6 +72,26 @@ export async function POST(request: NextRequest): Promise<Response> {
     const transactions = body.transactions as ImportTransaction[];
     const parsed = parseDuplicateReviews(body.duplicate_reviews, transactions.length);
     if ('error' in parsed) return errorResponse(parsed.error, 400);
+
+    const payload = {
+      transactions,
+      duplicate_reviews: parsed.reviews,
+      file_name: body.file_name ?? 'import.csv',
+      row_count: body.row_count ?? transactions.length,
+    };
+    const { data: probeData, error: probeError } = await supabase.rpc('confirm_csv_import', {
+      p_request_id: body.request_id,
+      p_payload: payload,
+      p_rows: [],
+      p_reviews: [],
+      p_file_name: payload.file_name,
+      p_row_count: payload.row_count,
+      p_probe: true,
+    });
+    if (probeError) return errorResponse(`Import failed: ${probeError.message}`, 500);
+    const probe = probeData as RpcResult;
+    if (probe.status === 'completed') return completedResponse(probe, []);
+    if (probe.status !== 'new') return errorResponse('Invalid import state', 500);
 
     const refs = await resolveImportReferences(supabase, transactions);
     if (refs.unresolvedAccounts.length > 0) {
@@ -81,10 +118,12 @@ export async function POST(request: NextRequest): Promise<Response> {
     });
     const { data, error } = await supabase.rpc('confirm_csv_import', {
       p_request_id: body.request_id,
+      p_payload: payload,
       p_rows: rows,
       p_reviews: parsed.reviews,
-      p_file_name: body.file_name ?? 'import.csv',
-      p_row_count: body.row_count ?? rows.length,
+      p_file_name: payload.file_name,
+      p_row_count: payload.row_count,
+      p_probe: false,
     });
     if (error) {
       if (error.message === 'Transaction limit exceeded') return errorResponse(error.message, 403);
@@ -92,18 +131,12 @@ export async function POST(request: NextRequest): Promise<Response> {
     }
     const result = data as RpcResult;
     if (result.status === 'review_required') return jsonResponse(result, 409);
-    return jsonResponse(
-      {
-        imported: result.imported,
-        skipped: result.skipped,
-        errors:
-          refs.unresolvedCategories.length > 0
-            ? [`Could not resolve categories: ${refs.unresolvedCategories.join(', ')}`]
-            : [],
-        import_id: result.import_id,
-        replayed: result.replayed ?? false,
-      },
-      result.replayed ? 200 : 201,
+    if (result.status !== 'completed') return errorResponse('Invalid import state', 500);
+    return completedResponse(
+      result,
+      refs.unresolvedCategories.length > 0
+        ? [`Could not resolve categories: ${refs.unresolvedCategories.join(', ')}`]
+        : [],
     );
   } catch (error) {
     if (error instanceof AuthError) return errorResponse('Unauthorized', 401);
