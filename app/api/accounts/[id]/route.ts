@@ -1,5 +1,22 @@
 import type { NextRequest } from 'next/server';
+import { z } from 'zod';
 import { getUserClient, AuthError, jsonResponse, errorResponse } from '@/lib/api/server';
+
+const accountUpdateSchema = z
+  .object({
+    name: z.string().trim().min(1).max(100),
+    type: z.enum(['checking', 'savings', 'credit_card', 'cash', 'investment', 'crypto', 'credit']),
+    institution: z.string().max(100).nullable(),
+    last_four: z
+      .string()
+      .regex(/^\d{4}$/)
+      .nullable(),
+    color: z.string().max(7).nullable(),
+    icon: z.string().max(50).nullable(),
+  })
+  .partial()
+  .strict()
+  .refine((value) => Object.keys(value).length > 0);
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -28,17 +45,20 @@ export async function GET(_request: NextRequest, { params }: RouteParams): Promi
 export async function PATCH(request: NextRequest, { params }: RouteParams): Promise<Response> {
   try {
     const { id } = await params;
-    const { supabase } = await getUserClient();
-    const body = await request.json();
+    const { supabase, userId } = await getUserClient();
+    const result = accountUpdateSchema.safeParse(await request.json());
+    if (!result.success) return errorResponse('Invalid account update', 400);
 
     const { data, error } = await supabase
       .from('accounts')
-      .update(body)
+      .update(result.data)
       .eq('id', id)
+      .eq('user_id', userId)
+      .is('deleted_at', null)
       .select()
       .single();
 
-    if (error) return errorResponse(error.message, 400);
+    if (error) return errorResponse(error.message, error.code === 'PGRST116' ? 404 : 400);
     return jsonResponse(data);
   } catch (error) {
     if (error instanceof AuthError) return errorResponse('Unauthorized', 401);
@@ -50,36 +70,16 @@ export async function DELETE(_request: NextRequest, { params }: RouteParams): Pr
   try {
     const { id } = await params;
     const { supabase } = await getUserClient();
-
-    // Check if the account is a default account
-    const { data: account } = await supabase
-      .from('accounts')
-      .select('is_default')
-      .eq('id', id)
-      .single();
-
-    if (account?.is_default) {
-      return errorResponse('Default accounts cannot be deleted', 403);
+    const { data, error } = await supabase.rpc('soft_delete_empty_account', {
+      p_account_id: id,
+    });
+    if (error) {
+      if (error.code === 'P0002') return errorResponse(error.message, 404);
+      if (error.message.includes('Default account')) return errorResponse(error.message, 403);
+      if (error.message.includes('active transactions')) return errorResponse(error.message, 409);
+      return errorResponse(error.message, 400);
     }
-
-    const now = new Date().toISOString();
-
-    const { error: accountError } = await supabase
-      .from('accounts')
-      .update({ deleted_at: now })
-      .eq('id', id);
-
-    if (accountError) return errorResponse(accountError.message, 400);
-
-    const { error: txError } = await supabase
-      .from('transactions')
-      .update({ deleted_at: now })
-      .eq('account_id', id)
-      .is('deleted_at', null);
-
-    if (txError) return errorResponse(txError.message, 400);
-
-    return jsonResponse({ success: true });
+    return jsonResponse({ success: true, deleted: data });
   } catch (error) {
     if (error instanceof AuthError) return errorResponse('Unauthorized', 401);
     return errorResponse('Failed to delete account');

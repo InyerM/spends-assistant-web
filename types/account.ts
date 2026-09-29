@@ -36,6 +36,9 @@ export interface CreateAccountInput {
   icon?: string;
 }
 
-export interface UpdateAccountInput extends Partial<CreateAccountInput> {
+export interface UpdateAccountInput extends Omit<
+  Partial<CreateAccountInput>,
+  'balance' | 'currency'
+> {
   id: string;
 }

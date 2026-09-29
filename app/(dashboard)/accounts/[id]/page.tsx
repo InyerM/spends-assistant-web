@@ -80,7 +80,6 @@ export default function AccountDetailPage({
   const [editOpen, setEditOpen] = useState(false);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const deleteMutation = useDeleteAccount();
-  const txCount = txResult?.count ?? 0;
 
   async function handleDelete(): Promise<void> {
     if (!account) return;
@@ -254,7 +253,6 @@ export default function AccountDetailPage({
           <p className='text-muted-foreground text-sm'>
             {t('deleteAccountConfirm', {
               name: account.name,
-              txInfo: txCount > 0 ? t('andTransactions', { count: txCount }) : '',
             })}
           </p>
         }

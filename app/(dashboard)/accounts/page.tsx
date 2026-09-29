@@ -196,7 +196,6 @@ export default function AccountsPage(): React.ReactElement {
           <p className='text-muted-foreground text-sm'>
             {t('deleteAccountConfirm', {
               name: deleteTarget?.name ?? '',
-              txInfo: '',
             })}
           </p>
         }

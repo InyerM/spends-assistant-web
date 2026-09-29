@@ -30,7 +30,6 @@ import {
 import { ConfirmDeleteDialog } from '@/components/shared/confirm-delete-dialog';
 import { useUpdateAccount, useDeleteAccount } from '@/lib/api/mutations/account.mutations';
 import { useCreateTransaction } from '@/lib/api/mutations/transaction.mutations';
-import { useTransactions } from '@/lib/api/queries/transaction.queries';
 import { useTransactionFormStore } from '@/lib/stores/transaction-form.store';
 import { formatCurrency } from '@/lib/utils/formatting';
 import { getCurrentColombiaTimes } from '@/lib/utils/date';
@@ -70,13 +69,11 @@ export function AccountEditDialog({
   const updateMutation = useUpdateAccount();
   const deleteMutation = useDeleteAccount();
   const createTxMutation = useCreateTransaction();
-  const { data: txResult } = useTransactions(account ? { account_id: account.id, limit: 1 } : {});
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
-  const [adjustMode, setAdjustMode] = useState<'none' | 'direct' | 'transaction'>('none');
+  const [adjustMode, setAdjustMode] = useState<'none' | 'transaction'>('none');
   const [newBalance, setNewBalance] = useState('');
   const [balanceSign, setBalanceSign] = useState<'+' | '-'>('+');
   const { openNew } = useTransactionFormStore();
-  const txCount = txResult?.count ?? 0;
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -122,8 +119,12 @@ export function AccountEditDialog({
     if (!account) return;
     try {
       const payload = {
-        ...values,
+        name: values.name,
+        type: values.type,
+        institution: values.institution,
         last_four: values.last_four?.trim() || null,
+        color: values.color,
+        icon: values.icon,
       };
       await updateMutation.mutateAsync({ id: account.id, ...payload });
       toast.success(t('accountUpdated'));
@@ -149,24 +150,6 @@ export function AccountEditDialog({
     const raw = parseFloat(newBalance);
     if (isNaN(raw)) return NaN;
     return balanceSign === '-' ? -Math.abs(raw) : Math.abs(raw);
-  }
-
-  async function handleDirectAdjust(): Promise<void> {
-    if (!account) return;
-    const target = getSignedBalance();
-    if (isNaN(target)) {
-      toast.error(t('enterValidNumber'));
-      return;
-    }
-    try {
-      await updateMutation.mutateAsync({ id: account.id, balance: target });
-      toast.success(
-        t('balanceSetTo', { balance: formatCurrency(target, account.currency, locale) }),
-      );
-      onOpenChange(false);
-    } catch {
-      toast.error(t('failedToAdjust'));
-    }
   }
 
   async function handleTransactionAdjust(): Promise<void> {
@@ -327,7 +310,7 @@ export function AccountEditDialog({
                       variant='outline'
                       size='sm'
                       className='cursor-pointer'
-                      onClick={(): void => setAdjustMode('direct')}>
+                      onClick={(): void => setAdjustMode('transaction')}>
                       {t('adjust')}
                     </Button>
                   )}
@@ -374,15 +357,6 @@ export function AccountEditDialog({
                       <Button
                         type='button'
                         size='sm'
-                        className='cursor-pointer'
-                        disabled={updateMutation.isPending}
-                        onClick={handleDirectAdjust}>
-                        {updateMutation.isPending ? tCommon('saving') : t('setBalance')}
-                      </Button>
-                      <Button
-                        type='button'
-                        size='sm'
-                        variant='secondary'
                         className='cursor-pointer'
                         disabled={createTxMutation.isPending}
                         onClick={handleTransactionAdjust}>
@@ -435,7 +409,6 @@ export function AccountEditDialog({
             <p className='text-muted-foreground text-sm'>
               {t('deleteAccountConfirm', {
                 name: account.name,
-                txInfo: txCount > 0 ? t('andTransactions', { count: txCount }) : '',
               })}
             </p>
           }
