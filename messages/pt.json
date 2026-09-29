@@ -642,6 +642,7 @@
     "unclassified": "Sem classificação",
     "status": {
       "uploaded": "Pronto para extrair",
+      "processing": "Extraindo",
       "extracted": "Extraído",
       "failed": "Falha na extração"
     },

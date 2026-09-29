@@ -28,6 +28,7 @@ interface Document {
   document_type: string | null;
   status: string;
   created_at: string;
+  updated_at: string;
   document_observations: Observation[];
 }
 
@@ -168,7 +169,10 @@ export default function DocumentsPage(): React.ReactElement {
                   </div>
                   <div className='flex items-center gap-2'>
                     <Badge variant='outline'>{t(`status.${document.status}`)}</Badge>
-                    {(document.status === 'uploaded' || document.status === 'failed') && (
+                    {(document.status === 'uploaded' ||
+                      document.status === 'failed' ||
+                      (document.status === 'processing' &&
+                        Date.now() - new Date(document.updated_at).getTime() > 5 * 60 * 1000)) && (
                       <Button
                         size='sm'
                         variant='outline'

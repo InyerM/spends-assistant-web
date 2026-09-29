@@ -637,6 +637,7 @@
     "unclassified": "Sin clasificar",
     "status": {
       "uploaded": "Lista para extraer",
+      "processing": "Extrayendo",
       "extracted": "Extraída",
       "failed": "Error de extracción"
     },

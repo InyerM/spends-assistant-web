@@ -642,6 +642,7 @@
     "unclassified": "Unclassified",
     "status": {
       "uploaded": "Ready to extract",
+      "processing": "Extracting",
       "extracted": "Extracted",
       "failed": "Extraction failed"
     },

@@ -1,11 +1,14 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import DocumentsPage from '@/app/(dashboard)/documents/page';
 
 vi.mock('next-intl', () => ({ useTranslations: () => (key: string) => key }));
 
 describe('document inbox', () => {
-  afterEach(() => vi.unstubAllGlobals());
+  afterEach(() => {
+    cleanup();
+    vi.unstubAllGlobals();
+  });
 
   it('shows extracted observations as pending review without a create transaction action', async () => {
     vi.stubGlobal(
@@ -43,5 +46,29 @@ describe('document inbox', () => {
     await waitFor(() => expect(screen.getByText('Coffee')).toBeInTheDocument());
     expect(screen.getByText('pendingReview')).toBeInTheDocument();
     expect(screen.queryByText(/create transaction/i)).not.toBeInTheDocument();
+  });
+
+  it('offers retry when a processing claim is stale', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        Response.json({
+          data: [
+            {
+              id: 'doc-stale',
+              file_name: 'receipt.png',
+              status: 'processing',
+              document_type: null,
+              created_at: '2026-09-28T12:00:00Z',
+              updated_at: '2000-01-01T00:00:00Z',
+              document_observations: [],
+            },
+          ],
+        }),
+      ),
+    );
+    render(<DocumentsPage />);
+    await waitFor(() => expect(screen.getByText('receipt.png')).toBeInTheDocument());
+    expect(screen.getByRole('button', { name: 'extract' })).toBeInTheDocument();
   });
 });
