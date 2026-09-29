@@ -20,6 +20,7 @@ interface Observation {
   source_excerpt: string;
   confidence: number;
   status: string;
+  match_transaction_id?: string | null;
 }
 
 interface Document {
@@ -55,8 +56,10 @@ interface SuggestionGroup {
 
 function SuggestionPanel({
   group,
+  onReview,
 }: {
   group: SuggestionGroup | undefined;
+  onReview: (candidate: Candidate) => void;
 }): React.ReactElement | null {
   const t = useTranslations('documents');
   if (!group) return null;
@@ -91,6 +94,9 @@ function SuggestionPanel({
             {candidate.reference_hint ? ` · ${t('referenceHint')}` : ''}
             {candidate.description_hint ? ` · ${t('descriptionHint')}` : ''}
           </p>
+          <Button size='sm' variant='outline' className='mt-3' onClick={() => onReview(candidate)}>
+            {t('reviewMatch')}
+          </Button>
         </div>
       ))}
       {group.total_candidates > group.candidates.length && (
@@ -122,6 +128,18 @@ export default function DocumentsPage(): React.ReactElement {
   const [error, setError] = useState<string | null>(null);
   const [suggestions, setSuggestions] = useState<Partial<Record<string, SuggestionGroup[]>>>({});
   const [suggestionBusy, setSuggestionBusy] = useState<string | null>(null);
+  const [review, setReview] = useState<
+    | {
+        documentId: string;
+        observationId: string;
+        action: 'accept';
+        candidate: Candidate;
+        key: string;
+      }
+    | { documentId: string; observationId: string; action: 'reject_observation'; key: string }
+    | null
+  >(null);
+  const [decisionBusy, setDecisionBusy] = useState(false);
 
   const load = useCallback(async (): Promise<void> => {
     try {
@@ -192,6 +210,35 @@ export default function DocumentsPage(): React.ReactElement {
       setError(cause instanceof Error ? cause.message : t('suggestionsFailed'));
     } finally {
       setSuggestionBusy(null);
+    }
+  };
+
+  const submitDecision = async (): Promise<void> => {
+    if (!review || decisionBusy) return;
+    setDecisionBusy(true);
+    setError(null);
+    try {
+      const response = await fetch(`/api/documents/${review.documentId}/decisions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          observation_id: review.observationId,
+          action: review.action,
+          transaction_id: review.action === 'accept' ? review.candidate.transaction_id : null,
+          idempotency_key: review.key,
+        }),
+      });
+      if (!response.ok) throw new Error(await readError(response));
+      const documentId = review.documentId;
+      setReview(null);
+      setSuggestions((current) =>
+        Object.fromEntries(Object.entries(current).filter(([id]) => id !== documentId)),
+      );
+      await load();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : t('decisionFailed'));
+    } finally {
+      setDecisionBusy(false);
     }
   };
 
@@ -333,11 +380,82 @@ export default function DocumentsPage(): React.ReactElement {
                               })}{' '}
                               · {t(`observationStatus.${observation.status}`)}
                             </p>
+                            {observation.status === 'confirmed' &&
+                              observation.match_transaction_id && (
+                                <p className='text-primary mt-2 text-sm font-medium'>
+                                  {t('confirmedMatch')} · {observation.match_transaction_id}
+                                </p>
+                              )}
                             <SuggestionPanel
                               group={suggestions[document.id]?.find(
                                 (group) => group.observation_id === observation.id,
                               )}
+                              onReview={(candidate) =>
+                                setReview({
+                                  documentId: document.id,
+                                  observationId: observation.id,
+                                  action: 'accept',
+                                  candidate,
+                                  key: crypto.randomUUID(),
+                                })
+                              }
                             />
+                            {observation.status === 'pending' && (
+                              <Button
+                                size='sm'
+                                variant='ghost'
+                                className='mt-3'
+                                onClick={() =>
+                                  setReview({
+                                    documentId: document.id,
+                                    observationId: observation.id,
+                                    action: 'reject_observation',
+                                    key: crypto.randomUUID(),
+                                  })
+                                }>
+                                {t('reviewReject')}
+                              </Button>
+                            )}
+                            {review?.documentId === document.id &&
+                              review.observationId === observation.id && (
+                                <div
+                                  className='border-primary/30 bg-primary/5 mt-3 rounded-lg border p-4'
+                                  role='region'
+                                  aria-label={t('reviewDecision')}>
+                                  <p className='text-sm font-semibold'>{t('reviewDecision')}</p>
+                                  <p className='text-muted-foreground mt-1 text-sm'>
+                                    {review.action === 'accept'
+                                      ? t('confirmMatchSummary')
+                                      : t('confirmRejectSummary')}
+                                  </p>
+                                  {review.action === 'accept' && (
+                                    <p className='mt-2 text-sm'>
+                                      {review.candidate.description} · {review.candidate.date} ·{' '}
+                                      {review.candidate.account_name ?? ''} ·{' '}
+                                      {review.candidate.amount.toLocaleString()}
+                                    </p>
+                                  )}
+                                  <div className='mt-3 flex gap-2'>
+                                    <Button
+                                      size='sm'
+                                      disabled={decisionBusy}
+                                      onClick={() => void submitDecision()}>
+                                      {decisionBusy
+                                        ? t('savingDecision')
+                                        : review.action === 'accept'
+                                          ? t('confirmMatch')
+                                          : t('confirmReject')}
+                                    </Button>
+                                    <Button
+                                      size='sm'
+                                      variant='outline'
+                                      disabled={decisionBusy}
+                                      onClick={() => setReview(null)}>
+                                      {t('cancelReview')}
+                                    </Button>
+                                  </div>
+                                </div>
+                              )}
                           </div>
                         ))
                     )}

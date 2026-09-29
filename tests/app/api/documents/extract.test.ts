@@ -1,17 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { POST } from '@/app/api/documents/[id]/extract/route';
 
-const { getUserClient, fetchMock, documentQuery, download, rpc, update, updateEq } = vi.hoisted(
-  () => ({
-    getUserClient: vi.fn(),
-    fetchMock: vi.fn(),
-    documentQuery: vi.fn(),
-    download: vi.fn(),
-    rpc: vi.fn(),
-    update: vi.fn(),
-    updateEq: vi.fn(),
-  }),
-);
+const { getUserClient, fetchMock, documentQuery, download, rpc } = vi.hoisted(() => ({
+  getUserClient: vi.fn(),
+  fetchMock: vi.fn(),
+  documentQuery: vi.fn(),
+  download: vi.fn(),
+  rpc: vi.fn(),
+}));
 
 vi.mock('@/lib/api/server', () => ({
   getUserClient,
@@ -45,8 +41,6 @@ describe('POST /api/documents/[id]/extract', () => {
           : { data: 1, error: null },
       ),
     );
-    updateEq.mockImplementation(() => ({ eq: updateEq }));
-    update.mockReturnValue({ eq: updateEq });
     getUserClient.mockResolvedValue({
       userId: 'user-1',
       supabase: {
@@ -55,7 +49,6 @@ describe('POST /api/documents/[id]/extract', () => {
         rpc,
         from: () => ({
           select: () => ({ eq: () => ({ eq: () => ({ single: documentQuery }) }) }),
-          update,
         }),
       },
     });
@@ -117,7 +110,7 @@ describe('POST /api/documents/[id]/extract', () => {
     expect(response.status).toBe(409);
     expect(download).not.toHaveBeenCalled();
     expect(fetchMock).not.toHaveBeenCalled();
-    expect(update).not.toHaveBeenCalled();
+    expect(rpc).toHaveBeenCalledTimes(1);
   });
 
   it('starts only one Worker request for simultaneous extraction attempts', async () => {
@@ -152,16 +145,11 @@ describe('POST /api/documents/[id]/extract', () => {
       params: Promise.resolve({ id: 'doc-1' }),
     });
     expect(response.status).toBe(400);
-    expect(update).toHaveBeenCalledWith({
-      status: 'failed',
-      error_code: 'DOWNLOAD_FAILED',
-      processing_token: null,
+    expect(rpc).toHaveBeenCalledWith('fail_document_extraction', {
+      p_document_id: 'doc-1',
+      p_claim_token: '11111111-1111-4111-8111-111111111111',
+      p_error_code: 'DOWNLOAD_FAILED',
     });
-    expect(updateEq).toHaveBeenCalledWith(
-      'processing_token',
-      '11111111-1111-4111-8111-111111111111',
-    );
-    expect(rpc).toHaveBeenCalledTimes(1);
   });
 
   it('leaves no extracted result when atomic completion fails', async () => {
@@ -183,7 +171,12 @@ describe('POST /api/documents/[id]/extract', () => {
       params: Promise.resolve({ id: 'doc-1' }),
     });
     expect(response.status).toBe(500);
-    expect(update).toHaveBeenCalled();
+    expect(rpc).toHaveBeenCalledWith(
+      'fail_document_extraction',
+      expect.objectContaining({
+        p_error_code: 'PERSISTENCE_FAILED',
+      }),
+    );
   });
 
   it('marks malformed Worker JSON as an invalid response', async () => {
@@ -192,11 +185,12 @@ describe('POST /api/documents/[id]/extract', () => {
       params: Promise.resolve({ id: 'doc-1' }),
     });
     expect(response.status).toBe(502);
-    expect(update).toHaveBeenCalledWith({
-      status: 'failed',
-      error_code: 'INVALID_RESPONSE',
-      processing_token: null,
-    });
+    expect(rpc).toHaveBeenCalledWith(
+      'fail_document_extraction',
+      expect.objectContaining({
+        p_error_code: 'INVALID_RESPONSE',
+      }),
+    );
   });
 
   it('does not complete or fail a newer claim when a stale Worker response arrives', async () => {
@@ -246,7 +240,13 @@ describe('POST /api/documents/[id]/extract', () => {
       'complete_document_extraction',
       expect.objectContaining({ p_claim_token: tokenA }),
     );
-    expect(updateEq).toHaveBeenCalledWith('processing_token', tokenA);
-    expect(updateEq).not.toHaveBeenCalledWith('processing_token', tokenB);
+    expect(rpc).toHaveBeenCalledWith(
+      'fail_document_extraction',
+      expect.objectContaining({ p_claim_token: tokenA }),
+    );
+    expect(rpc).not.toHaveBeenCalledWith(
+      'fail_document_extraction',
+      expect.objectContaining({ p_claim_token: tokenB }),
+    );
   });
 });

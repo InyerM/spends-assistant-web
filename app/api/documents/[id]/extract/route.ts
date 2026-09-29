@@ -41,13 +41,11 @@ export async function POST(
     if (typeof claimToken !== 'string') return errorResponse('Invalid extraction claim', 502);
 
     const markFailed = async (code: string): Promise<void> => {
-      await supabase
-        .from('documents')
-        .update({ status: 'failed', error_code: code, processing_token: null })
-        .eq('id', id)
-        .eq('user_id', userId)
-        .eq('status', 'processing')
-        .eq('processing_token', claimToken);
+      await supabase.rpc('fail_document_extraction', {
+        p_document_id: id,
+        p_claim_token: claimToken,
+        p_error_code: code,
+      });
     };
 
     try {
