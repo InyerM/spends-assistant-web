@@ -82,13 +82,27 @@ immutable after insert. This slice stores only the current review status; a date
 audit is deferred. `GET /api/shortcut-inbox/export` downloads all of that user's rows, including raw
 text, as private JSON. Handle the downloaded file as financial data.
 
+## Read-only candidate suggestions
+
+The signed-in review page can request `GET /api/shortcut-inbox/{id}/candidates` for one owned inbox
+item. The endpoint reads owned, active transactions and returns at most 10 suggestions with
+evidence. An identical original message is marked a strong signal. A transaction with the same
+amount, date, and uniquely resolved masked account suffix is marked a possible match. Multiple
+same-value payments remain separate suggestions. Every database lookup is owner-scoped; the endpoint
+never changes an inbox item or transaction. It never calls a model or makes a duplicate decision.
+
+The parser only uses one explicitly stated currency amount after a supported payment verb, one
+explicit calendar date, and one masked four-digit account suffix. It does not infer missing dates or
+use a name-only account match. If an account suffix is missing, unknown, or ambiguous, the tuple
+query is skipped. An exact original-message comparison is always attempted, including when parsing
+fails. Empty results are inconclusive, and the response notes when the 10-result cap is reached.
+
 ## Deferred confirmation design
 
-This slice has no transaction-confirmation endpoint and does not claim that a matching transaction
-is a duplicate. Before confirmation is added, the flow needs deterministic candidate signals from
-account, amount, date/time, reference, and message context; same date/account/amount alone must
-remain a review candidate. Confirmation must recheck candidates under a database transaction,
-require an explicit per-item decision, create the financial record once, and update balances
-consistently. The dependency is
+There is no transaction-confirmation endpoint. Before confirmation is added, the flow needs richer
+deterministic candidate signals from account, amount, date/time, reference, and message context;
+same date/account/amount must remain a review candidate. Confirmation must recheck candidates under
+a database transaction, require an explicit per-item decision, create the financial record once, and
+update balances consistently. The dependency is
 [web issue #1](https://github.com/InyerM/spends-assistant-web/issues/1). No remote migration,
 deploy, or production backfill was performed for this contract.

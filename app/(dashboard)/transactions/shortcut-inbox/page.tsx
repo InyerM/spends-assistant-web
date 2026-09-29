@@ -23,6 +23,23 @@ interface InboxList {
   count: number;
 }
 
+interface Candidate {
+  id: string;
+  date: string;
+  amount: number;
+  description: string;
+  type: string;
+  source: string;
+  strength: 'strong' | 'possible';
+  signals: Array<'exact_raw_text' | 'same_amount_date_account'>;
+}
+
+interface CandidateResponse {
+  evidence: { amount: string | null; date: string | null; account: string };
+  candidates: Candidate[];
+  at_limit: boolean;
+}
+
 const PAGE_SIZE = 20;
 
 function formatDate(value: string): string {
@@ -40,6 +57,12 @@ export default function ShortcutInboxPage(): React.ReactElement {
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [candidateById, setCandidateById] = useState<Partial<Record<string, CandidateResponse>>>(
+    {},
+  );
+  const [openCandidateId, setOpenCandidateId] = useState<string | null>(null);
+  const [candidateBusyId, setCandidateBusyId] = useState<string | null>(null);
+  const [candidateErrorId, setCandidateErrorId] = useState<string | null>(null);
 
   const load = useCallback(async (): Promise<void> => {
     setLoading(true);
@@ -78,6 +101,27 @@ export default function ShortcutInboxPage(): React.ReactElement {
       setError(t('saveFailed'));
     } finally {
       setBusyId(null);
+    }
+  };
+
+  const showCandidates = async (id: string): Promise<void> => {
+    if (openCandidateId === id) {
+      setOpenCandidateId(null);
+      return;
+    }
+    setOpenCandidateId(id);
+    setCandidateErrorId(null);
+    if (candidateById[id]) return;
+    setCandidateBusyId(id);
+    try {
+      const response = await fetch(`/api/shortcut-inbox/${id}/candidates`, { cache: 'no-store' });
+      if (!response.ok) throw new Error('Candidate lookup failed');
+      const result = (await response.json()) as CandidateResponse;
+      setCandidateById((current) => ({ ...current, [id]: result }));
+    } catch {
+      setCandidateErrorId(id);
+    } finally {
+      setCandidateBusyId(null);
     }
   };
 
@@ -137,55 +181,101 @@ export default function ShortcutInboxPage(): React.ReactElement {
         </Card>
       ) : (
         <div className='space-y-3'>
-          {items.map((item) => (
-            <Card key={item.id}>
-              <CardContent className='space-y-4 py-4'>
-                <div className='flex flex-wrap items-center justify-between gap-2 text-xs'>
-                  <div className='flex flex-wrap items-center gap-2'>
-                    <Badge variant='outline'>{item.source}</Badge>
-                    <Badge variant={item.status === 'pending' ? 'secondary' : 'outline'}>
-                      {item.status === 'non_transaction' ? t('nonTransaction') : t(item.status)}
-                    </Badge>
+          {items.map((item) => {
+            const candidateResult = candidateById[item.id];
+            return (
+              <Card key={item.id}>
+                <CardContent className='space-y-4 py-4'>
+                  <div className='flex flex-wrap items-center justify-between gap-2 text-xs'>
+                    <div className='flex flex-wrap items-center gap-2'>
+                      <Badge variant='outline'>{item.source}</Badge>
+                      <Badge variant={item.status === 'pending' ? 'secondary' : 'outline'}>
+                        {item.status === 'non_transaction' ? t('nonTransaction') : t(item.status)}
+                      </Badge>
+                    </div>
+                    <time className='text-muted-foreground' dateTime={item.received_at}>
+                      {formatDate(item.received_at)}
+                    </time>
                   </div>
-                  <time className='text-muted-foreground' dateTime={item.received_at}>
-                    {formatDate(item.received_at)}
-                  </time>
-                </div>
-                <p className='text-foreground text-sm leading-relaxed wrap-break-word whitespace-pre-wrap'>
-                  {item.raw_text}
-                </p>
-                <div className='flex flex-wrap gap-2 border-t pt-3'>
-                  {item.status !== 'pending' && (
+                  <p className='text-foreground text-sm leading-relaxed wrap-break-word whitespace-pre-wrap'>
+                    {item.raw_text}
+                  </p>
+                  <div className='flex flex-wrap gap-2 border-t pt-3'>
                     <Button
                       size='sm'
                       variant='outline'
-                      disabled={busyId === item.id}
-                      onClick={(): void => void review(item.id, 'pending')}>
-                      {t('returnToPending')}
+                      onClick={(): void => void showCandidates(item.id)}>
+                      {openCandidateId === item.id ? t('hideCandidates') : t('showCandidates')}
                     </Button>
+                    {item.status !== 'pending' && (
+                      <Button
+                        size='sm'
+                        variant='outline'
+                        disabled={busyId === item.id}
+                        onClick={(): void => void review(item.id, 'pending')}>
+                        {t('returnToPending')}
+                      </Button>
+                    )}
+                    {item.status !== 'non_transaction' && (
+                      <Button
+                        size='sm'
+                        variant='outline'
+                        disabled={busyId === item.id}
+                        onClick={(): void => void review(item.id, 'non_transaction')}>
+                        {t('markNonTransaction')}
+                      </Button>
+                    )}
+                    {item.status !== 'dismissed' && (
+                      <Button
+                        size='sm'
+                        variant='ghost'
+                        disabled={busyId === item.id}
+                        onClick={(): void => void review(item.id, 'dismissed')}>
+                        {t('dismiss')}
+                      </Button>
+                    )}
+                  </div>
+                  {openCandidateId === item.id && (
+                    <div className='space-y-3 rounded-md border p-3 text-sm'>
+                      {candidateBusyId === item.id && <p>{t('candidateLoading')}</p>}
+                      {candidateErrorId === item.id && <p role='alert'>{t('candidateFailed')}</p>}
+                      {candidateResult && (
+                        <>
+                          <p className='text-muted-foreground'>{t('candidateCaution')}</p>
+                          {candidateResult.candidates.length === 0 && <p>{t('noCandidates')}</p>}
+                          {candidateResult.candidates.map((candidate) => (
+                            <div key={candidate.id} className='space-y-1 border-t pt-3'>
+                              <div className='flex flex-wrap items-center gap-2'>
+                                <Badge variant='outline'>
+                                  {candidate.strength === 'strong'
+                                    ? t('strongSignal')
+                                    : t('possibleMatch')}
+                                </Badge>
+                                <span>{candidate.description}</span>
+                              </div>
+                              <p className='text-muted-foreground'>
+                                {candidate.date} · {candidate.amount} · {candidate.source}
+                              </p>
+                              <p className='text-muted-foreground'>
+                                {candidate.signals
+                                  .map((signal) =>
+                                    signal === 'exact_raw_text'
+                                      ? t('exactRawText')
+                                      : t('sameAmountDateAccount'),
+                                  )
+                                  .join('; ')}
+                              </p>
+                            </div>
+                          ))}
+                          {candidateResult.at_limit && <p>{t('candidateLimit')}</p>}
+                        </>
+                      )}
+                    </div>
                   )}
-                  {item.status !== 'non_transaction' && (
-                    <Button
-                      size='sm'
-                      variant='outline'
-                      disabled={busyId === item.id}
-                      onClick={(): void => void review(item.id, 'non_transaction')}>
-                      {t('markNonTransaction')}
-                    </Button>
-                  )}
-                  {item.status !== 'dismissed' && (
-                    <Button
-                      size='sm'
-                      variant='ghost'
-                      disabled={busyId === item.id}
-                      onClick={(): void => void review(item.id, 'dismissed')}>
-                      {t('dismiss')}
-                    </Button>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       )}
 
