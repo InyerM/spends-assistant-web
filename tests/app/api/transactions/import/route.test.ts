@@ -48,7 +48,12 @@ function post(body: Record<string, unknown>) {
   return POST(
     new NextRequest('http://localhost/api/transactions/import', {
       method: 'POST',
-      body: JSON.stringify({ resolve_names: true, file_name: 'bank.csv', ...body }),
+      body: JSON.stringify({
+        resolve_names: true,
+        file_name: 'bank.csv',
+        request_id: '00000000-0000-4000-8000-000000000001',
+        ...body,
+      }),
     }),
   );
 }
@@ -82,7 +87,7 @@ describe('POST /api/transactions/import', () => {
     });
     expect(fake.state.transactionInserts[0][0]).not.toHaveProperty('account');
     expect(fake.state.transactionInserts[0][0]).not.toHaveProperty('duplicate_status');
-    expect(fake.state.importUpdates.at(-1)).toMatchObject({
+    expect(fake.state.imports.at(-1)).toMatchObject({
       status: 'completed',
       imported_count: 2,
     });
@@ -167,34 +172,34 @@ describe('POST /api/transactions/import', () => {
       expect(fake.state.transactionInserts).toHaveLength(0);
     });
 
-    it('returns 200 with nothing imported when every row is skipped', async () => {
+    it('records a completed import when every row is skipped', async () => {
       const fake = setup({ transactions: [EXISTING] });
       const response = await post({
         transactions: [row()],
         duplicate_reviews: [{ index: 0, match_ids: ['tx-existing'], decision: 'skip' }],
       });
 
-      expect(response.status).toBe(200);
+      expect(response.status).toBe(201);
       expect(await response.json()).toMatchObject({ imported: 0, skipped: 1 });
-      expect(fake.state.imports).toHaveLength(0);
+      expect(fake.state.imports).toHaveLength(1);
     });
   });
 
   describe('repeated submissions', () => {
-    it('blocks an identical second submission because the first import is now a match', async () => {
+    it('replays an identical request without writing again', async () => {
       const fake = setup();
       const payload = { transactions: [row(), row({ date: '2024-01-16', amount: 10 })] };
 
       expect((await post(payload)).status).toBe(201);
       const second = await post(payload);
 
-      expect(second.status).toBe(409);
-      expect((await second.json()).unreviewed).toEqual([0, 1]);
+      expect(second.status).toBe(200);
+      expect((await second.json()).replayed).toBe(true);
       expect(fake.state.transactionInserts).toHaveLength(1);
       expect(fake.state.transactions).toHaveLength(2);
     });
 
-    it('blocks replaying a reviewed request once its rows exist (review becomes stale)', async () => {
+    it('replays a reviewed request without writing again', async () => {
       const fake = setup({ transactions: [EXISTING] });
       const payload = {
         transactions: [row()],
@@ -204,8 +209,8 @@ describe('POST /api/transactions/import', () => {
       expect((await post(payload)).status).toBe(201);
       const replay = await post(payload);
 
-      expect(replay.status).toBe(409);
-      expect((await replay.json()).stale).toEqual([0]);
+      expect(replay.status).toBe(200);
+      expect((await replay.json()).replayed).toBe(true);
       expect(fake.state.transactionInserts).toHaveLength(1);
     });
   });
@@ -279,7 +284,15 @@ describe('POST /api/transactions/import', () => {
   });
 
   describe('partial failures', () => {
-    it('marks the import failed and reports it when the transaction insert fails', async () => {
+    it('rolls back rows when completing the import fails', async () => {
+      const fake = setup({ failImportUpdate: 'update failed' });
+      const response = await post({ transactions: [row()] });
+
+      expect(response.status).toBe(500);
+      expect(fake.state.transactions).toHaveLength(0);
+      expect(fake.state.imports).toHaveLength(0);
+    });
+    it('rolls back the import when the transaction insert fails', async () => {
       const fake = setup({ failTransactionInsert: 'insert failed' });
       const response = await post({ transactions: [row()] });
 
@@ -287,10 +300,7 @@ describe('POST /api/transactions/import', () => {
       const body = await response.json();
       expect(body.error).toContain('insert failed');
       expect(fake.state.transactions).toHaveLength(0);
-      expect(fake.state.importUpdates.at(-1)).toMatchObject({
-        status: 'failed',
-        imported_count: 0,
-      });
+      expect(fake.state.imports).toHaveLength(0);
     });
 
     it('does not insert transactions when the import record cannot be created', async () => {
@@ -301,14 +311,11 @@ describe('POST /api/transactions/import', () => {
       expect(fake.state.transactionInserts).toHaveLength(0);
     });
 
-    it('still reports imported rows when only the final status update fails', async () => {
-      setup({ failImportUpdate: 'update failed' });
-      const response = await post({ transactions: [row()] });
-
-      expect(response.status).toBe(201);
-      const body = await response.json();
-      expect(body.imported).toBe(1);
-      expect(body.errors.join(' ')).toMatch(/status/i);
+    it('rejects reusing a request id for changed rows', async () => {
+      const fake = setup();
+      expect((await post({ transactions: [row()] })).status).toBe(201);
+      expect((await post({ transactions: [row({ amount: 10 })] })).status).toBe(500);
+      expect(fake.state.transactions).toHaveLength(1);
     });
   });
 
@@ -334,6 +341,7 @@ describe('POST /api/transactions/import', () => {
       expect(response.status).toBe(201);
 
       const overLimit = await post({
+        request_id: '00000000-0000-4000-8000-000000000002',
         transactions: [row({ date: '2024-03-01' }), row({ date: '2024-03-02' })],
       });
       expect(overLimit.status).toBe(403);

@@ -61,6 +61,7 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps): React.R
   const [duplicates, setDuplicates] = useState<DuplicateMatch[]>([]);
   const fileRef = useRef<HTMLInputElement>(null);
   const parsedRowsRef = useRef<Record<string, string>[]>([]);
+  const requestIdRef = useRef<string>(crypto.randomUUID());
   const { data: usage } = useUsage();
   const { data: subscription } = useSubscription();
   const importMutation = useImportTransactions();
@@ -77,9 +78,11 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps): React.R
     setDuplicates([]);
     checkDuplicatesMutation.reset();
     parsedRowsRef.current = [];
+    requestIdRef.current = crypto.randomUUID();
   };
 
   const handleFileSelect = async (selectedFile: File): Promise<void> => {
+    requestIdRef.current = crypto.randomUUID();
     setFile(selectedFile);
     const text = await selectedFile.text();
     const { headers, rows } = parseCsv(text);
@@ -137,6 +140,7 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps): React.R
         transactions,
         resolve_names: true,
         file_name: file?.name ?? 'import.csv',
+        request_id: requestIdRef.current,
         row_count: parsedRowsRef.current.length,
         duplicate_reviews: duplicateReviews,
       });

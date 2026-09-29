@@ -244,6 +244,7 @@ export interface ImportTransactionsInput {
   }[];
   resolve_names: boolean;
   file_name: string;
+  request_id: string;
   row_count: number;
   duplicate_reviews?: DuplicateReview[];
 }

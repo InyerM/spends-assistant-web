@@ -32,6 +32,101 @@ export function createFakeSupabase(options: FakeDbOptions = {}) {
     importUpdates: [] as Record<string, unknown>[],
   };
   let seq = 0;
+  const requestHashes = new Map<string, string>();
+
+  const rpc = vi.fn(async (_name: string, args: Record<string, unknown>) => {
+    const rows = args.p_rows as FakeRow[];
+    const reviews = args.p_reviews as { index: number; match_ids: string[]; decision: string }[];
+    const requestId = args.p_request_id as string;
+    const hash = JSON.stringify({ rows, reviews, file: args.p_file_name, count: args.p_row_count });
+    const previous = requestHashes.get(requestId);
+    if (previous) {
+      if (previous !== hash)
+        return {
+          data: null,
+          error: { message: 'request_id already belongs to a different payload' },
+        };
+      const record = state.imports.find((item) => item.request_id === requestId)!;
+      return {
+        data: {
+          status: 'completed',
+          imported: record.imported_count,
+          skipped: record.skipped_count,
+          import_id: record.id,
+          replayed: true,
+        },
+        error: null,
+      };
+    }
+    if (options.failTransactionSelect)
+      return { data: null, error: { message: options.failTransactionSelect } };
+    const duplicates: { index: number; match: FakeRow }[] = [];
+    const unreviewed: number[] = [];
+    const stale: number[] = [];
+    rows.forEach((row, index) => {
+      const matches = state.transactions.filter(
+        (tx) =>
+          tx.date === row.date &&
+          Number(tx.amount) === Number(row.amount) &&
+          tx.account_id === row.account_id,
+      );
+      duplicates.push(...matches.map((match) => ({ index, match })));
+      const review = reviews.find((item) => item.index === index);
+      if (matches.length && !review) unreviewed.push(index);
+      else if (matches.some((match) => !review?.match_ids.includes(match.id))) stale.push(index);
+    });
+    if (unreviewed.length || stale.length)
+      return { data: { status: 'review_required', duplicates, unreviewed, stale }, error: null };
+    const toInsert = rows.filter(
+      (_, index) => reviews.find((review) => review.index === index)?.decision !== 'skip',
+    );
+    const skipped = rows.length - toInsert.length;
+    if (
+      (options.plan ?? 'pro') === 'free' &&
+      (options.transactionsCount ?? 0) + toInsert.length > 50
+    ) {
+      return { data: null, error: { message: 'Transaction limit exceeded' } };
+    }
+    if (options.failImportInsert || options.failTransactionInsert || options.failImportUpdate) {
+      return {
+        data: null,
+        error: {
+          message:
+            options.failImportInsert ?? options.failTransactionInsert ?? options.failImportUpdate,
+        },
+      };
+    }
+    const importId = `import-${++seq}`;
+    const created = toInsert.map((row) => ({
+      ...row,
+      id: `tx-new-${++seq}`,
+      user_id: 'test-user-id',
+      import_id: importId,
+      ...(reviews.find((review) => review.index === rows.indexOf(row))?.decision === 'import'
+        ? { duplicate_status: 'confirmed' }
+        : {}),
+    }));
+    state.transactionInserts.push(created);
+    state.transactions.push(...created);
+    state.imports.push({
+      id: importId,
+      request_id: requestId,
+      status: 'completed',
+      imported_count: created.length,
+      skipped_count: skipped,
+    });
+    requestHashes.set(requestId, hash);
+    return {
+      data: {
+        status: 'completed',
+        imported: created.length,
+        skipped,
+        import_id: importId,
+        replayed: false,
+      },
+      error: null,
+    };
+  });
 
   const matchesOrFilter = (row: FakeRow, filter: string): boolean => {
     const groups = [
@@ -111,5 +206,5 @@ export function createFakeSupabase(options: FakeDbOptions = {}) {
     return builder;
   });
 
-  return { client: { from }, state };
+  return { client: { from, rpc }, state };
 }
