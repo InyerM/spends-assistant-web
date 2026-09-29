@@ -1,12 +1,6 @@
 import type { NextRequest } from 'next/server';
 import { z } from 'zod';
-import {
-  getUserClient,
-  AuthError,
-  jsonResponse,
-  errorResponse,
-  applyTransactionBalance,
-} from '@/lib/api/server';
+import { getUserClient, AuthError, jsonResponse, errorResponse } from '@/lib/api/server';
 
 interface RouteParams {
   params: Promise<{ id: string }>;
