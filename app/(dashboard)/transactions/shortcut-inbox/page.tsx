@@ -7,6 +7,7 @@ import { useTranslations } from 'next-intl';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { ShortcutCreateForm } from '@/components/transactions/shortcut-create-form';
 
 interface InboxItem {
   id: string;
@@ -14,7 +15,7 @@ interface InboxItem {
   external_id: string | null;
   received_at: string;
   raw_text: string;
-  status: 'pending' | 'non_transaction' | 'dismissed' | 'matched';
+  status: 'pending' | 'non_transaction' | 'dismissed' | 'matched' | 'created';
   created_at: string;
   match?: { decision_id: string; transaction_id: string };
 }
@@ -70,6 +71,7 @@ export default function ShortcutInboxPage(): React.ReactElement {
   } | null>(null);
   const [matchBusyId, setMatchBusyId] = useState<string | null>(null);
   const [matchErrorId, setMatchErrorId] = useState<string | null>(null);
+  const [createInboxId, setCreateInboxId] = useState<string | null>(null);
 
   const load = useCallback(async (): Promise<void> => {
     setLoading(true);
@@ -190,6 +192,7 @@ export default function ShortcutInboxPage(): React.ReactElement {
           <option value='non_transaction'>{t('nonTransaction')}</option>
           <option value='dismissed'>{t('dismissed')}</option>
           <option value='matched'>{t('matched')}</option>
+          <option value='created'>{t('created')}</option>
         </select>
       </div>
 
@@ -229,13 +232,16 @@ export default function ShortcutInboxPage(): React.ReactElement {
                   <p className='text-foreground text-sm leading-relaxed wrap-break-word whitespace-pre-wrap'>
                     {item.raw_text}
                   </p>
-                  {item.status === 'matched' && item.match && (
+                  {(item.status === 'matched' || item.status === 'created') && item.match && (
                     <p className='text-muted-foreground text-xs'>
-                      {t('matchedTransaction')}: {item.match.transaction_id}
+                      {item.status === 'created'
+                        ? t('createdTransaction')
+                        : t('matchedTransaction')}
+                      : {item.match.transaction_id}
                     </p>
                   )}
                   <div className='flex flex-wrap gap-2 border-t pt-3'>
-                    {item.status !== 'matched' && (
+                    {item.status === 'pending' && (
                       <Button
                         size='sm'
                         variant='outline'
@@ -243,34 +249,62 @@ export default function ShortcutInboxPage(): React.ReactElement {
                         {openCandidateId === item.id ? t('hideCandidates') : t('showCandidates')}
                       </Button>
                     )}
-                    {item.status !== 'pending' && item.status !== 'matched' && (
+                    {item.status === 'pending' && (
                       <Button
                         size='sm'
                         variant='outline'
-                        disabled={busyId === item.id}
-                        onClick={(): void => void review(item.id, 'pending')}>
-                        {t('returnToPending')}
+                        onClick={(): void =>
+                          setCreateInboxId(createInboxId === item.id ? null : item.id)
+                        }>
+                        {t('createNew')}
                       </Button>
                     )}
-                    {item.status !== 'non_transaction' && item.status !== 'matched' && (
-                      <Button
-                        size='sm'
-                        variant='outline'
-                        disabled={busyId === item.id}
-                        onClick={(): void => void review(item.id, 'non_transaction')}>
-                        {t('markNonTransaction')}
-                      </Button>
-                    )}
-                    {item.status !== 'dismissed' && item.status !== 'matched' && (
-                      <Button
-                        size='sm'
-                        variant='ghost'
-                        disabled={busyId === item.id}
-                        onClick={(): void => void review(item.id, 'dismissed')}>
-                        {t('dismiss')}
-                      </Button>
-                    )}
+                    {item.status !== 'pending' &&
+                      item.status !== 'matched' &&
+                      item.status !== 'created' && (
+                        <Button
+                          size='sm'
+                          variant='outline'
+                          disabled={busyId === item.id}
+                          onClick={(): void => void review(item.id, 'pending')}>
+                          {t('returnToPending')}
+                        </Button>
+                      )}
+                    {item.status !== 'non_transaction' &&
+                      item.status !== 'matched' &&
+                      item.status !== 'created' && (
+                        <Button
+                          size='sm'
+                          variant='outline'
+                          disabled={busyId === item.id}
+                          onClick={(): void => void review(item.id, 'non_transaction')}>
+                          {t('markNonTransaction')}
+                        </Button>
+                      )}
+                    {item.status !== 'dismissed' &&
+                      item.status !== 'matched' &&
+                      item.status !== 'created' && (
+                        <Button
+                          size='sm'
+                          variant='ghost'
+                          disabled={busyId === item.id}
+                          onClick={(): void => void review(item.id, 'dismissed')}>
+                          {t('dismiss')}
+                        </Button>
+                      )}
                   </div>
+                  {createInboxId === item.id && item.status === 'pending' && (
+                    <ShortcutCreateForm
+                      inboxId={item.id}
+                      receivedAt={item.received_at}
+                      onCancel={(): void => setCreateInboxId(null)}
+                      onCreated={(): void => {
+                        setCreateInboxId(null);
+                        setPage(1);
+                        setFilter('created');
+                      }}
+                    />
+                  )}
                   {openCandidateId === item.id && (
                     <div className='space-y-3 rounded-md border p-3 text-sm'>
                       {candidateBusyId === item.id && <p>{t('candidateLoading')}</p>}

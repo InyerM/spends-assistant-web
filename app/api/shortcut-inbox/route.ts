@@ -84,7 +84,10 @@ export async function GET(request: NextRequest): Promise<Response> {
       .select('id,source,external_id,received_at,raw_text,status,created_at', { count: 'exact' })
       .eq('user_id', userId);
     const status = params.get('status');
-    if (status && ['pending', 'non_transaction', 'dismissed', 'matched'].includes(status)) {
+    if (
+      status &&
+      ['pending', 'non_transaction', 'dismissed', 'matched', 'created'].includes(status)
+    ) {
       query = query.eq('status', status);
     }
     const { data, count, error } = await query
@@ -92,7 +95,9 @@ export async function GET(request: NextRequest): Promise<Response> {
       .range(from, from + limit - 1);
     if (error) return errorResponse('Inbox list failed');
     const inboxRows = data as Array<Record<string, unknown> & { id: string; status: string }>;
-    const matchedIds = inboxRows.filter((item) => item.status === 'matched').map((item) => item.id);
+    const matchedIds = inboxRows
+      .filter((item) => ['matched', 'created'].includes(item.status))
+      .map((item) => item.id);
     if (matchedIds.length === 0) {
       return Response.json({ data, count, page, limit }, { headers: privateHeaders });
     }
@@ -121,7 +126,9 @@ export async function GET(request: NextRequest): Promise<Response> {
     return Response.json(
       {
         data: inboxRows.map((item) =>
-          item.status === 'matched' ? { ...item, match: matchByItem.get(item.id) } : item,
+          ['matched', 'created'].includes(item.status)
+            ? { ...item, match: matchByItem.get(item.id) }
+            : item,
         ),
         count,
         page,

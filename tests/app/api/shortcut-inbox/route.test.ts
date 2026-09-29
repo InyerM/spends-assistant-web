@@ -213,6 +213,31 @@ describe('/api/shortcut-inbox', () => {
     ]);
   });
 
+  it('shows the created transaction decision in the created filter', async () => {
+    const db = fakeDatabase();
+    db.rows.push({ id: 'created-1', user_id: 'owner-a', status: 'created' });
+    db.decisions.push({
+      id: 'decision-2',
+      user_id: 'owner-a',
+      inbox_item_id: 'created-1',
+      transaction_id: 'tx-2',
+    });
+    db.rows.push({ id: 'created-other', user_id: 'owner-b', status: 'created' });
+    getUserClient.mockResolvedValue({ supabase: db.supabase, userId: 'owner-a' });
+    const response = await GET(
+      new Request('https://example.test/api/shortcut-inbox?status=created') as never,
+    );
+    expect(response.status).toBe(200);
+    expect((await response.json()).data).toEqual([
+      {
+        id: 'created-1',
+        user_id: 'owner-a',
+        status: 'created',
+        match: { decision_id: 'decision-2', transaction_id: 'tx-2' },
+      },
+    ]);
+  });
+
   it('includes only owner-scoped decision summaries for matched rows', async () => {
     const decisionEq = vi.fn();
     const decisionIn = vi.fn().mockResolvedValue({

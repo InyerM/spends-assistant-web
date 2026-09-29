@@ -18,6 +18,14 @@ const { useTranslations } = vi.hoisted(() => {
       cancelMatch: 'Cancel match review',
       matched: 'Matched existing transaction',
       matchedTransaction: 'Linked transaction',
+      createNew: 'Create new transaction',
+      createAccount: 'Account',
+      createCategory: 'Category',
+      createAmount: 'Amount',
+      createDescription: 'Description',
+      saveReviewed: 'Save reviewed transaction',
+      confirmDistinct: 'Create distinct payment',
+      overflowCaution: 'Too many possible matches',
     })[key] ?? key;
   return { useTranslations: vi.fn(() => translate) };
 });
@@ -187,5 +195,160 @@ describe('Shortcut inbox review page', () => {
     );
     expect(await screen.findByText('Linked transaction: tx-1')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Mark non-transaction' })).not.toBeInTheDocument();
+  });
+
+  it('requires reviewed fields and a second explicit decision when the database finds a same-value transaction', async () => {
+    const fetchMock = vi.fn().mockImplementation((url: string, init?: RequestInit) => {
+      if (url === '/api/accounts')
+        return Promise.resolve(Response.json([{ id: 'account-1', name: 'Cash' }]));
+      if (url === '/api/categories')
+        return Promise.resolve(
+          Response.json([{ id: 'category-1', name: 'Food', type: 'expense' }]),
+        );
+      if (url.endsWith('/create')) {
+        const body = JSON.parse(init?.body as string) as Record<string, unknown>;
+        if (!body.confirm_distinct)
+          return Promise.resolve(
+            Response.json(
+              {
+                status: 'review_required',
+                candidate_hash: 'a'.repeat(32),
+                candidate_count: 1,
+                candidates: [
+                  {
+                    id: 'tx-1',
+                    date: '2026-09-28',
+                    amount: 1200.5,
+                    description: 'Existing payment',
+                    source: 'web',
+                  },
+                ],
+              },
+              { status: 409 },
+            ),
+          );
+        return Promise.resolve(
+          Response.json(
+            {
+              status: 'created',
+              transaction_id: 'tx-2',
+              decision_id: 'decision-2',
+              replayed: false,
+            },
+            { status: 201 },
+          ),
+        );
+      }
+      return Promise.resolve(
+        Response.json({
+          data: [
+            {
+              id: 'item-1',
+              source: 'sms-shortcut',
+              external_id: 'receipt-1',
+              received_at: '2026-09-29T10:00:00Z',
+              raw_text: 'Synthetic private message',
+              status: 'pending',
+              created_at: '2026-09-29T10:01:00Z',
+            },
+          ],
+          count: 1,
+        }),
+      );
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    render(<ShortcutInboxPage />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Create new transaction' }));
+    expect(
+      fetchMock.mock.calls.some(([url]) => typeof url === 'string' && url.endsWith('/create')),
+    ).toBe(false);
+    expect(await screen.findByRole('option', { name: 'Food' })).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Account'), { target: { value: 'account-1' } });
+    fireEvent.change(screen.getByLabelText('Category'), { target: { value: 'category-1' } });
+    fireEvent.change(screen.getByLabelText('Amount'), { target: { value: '1200.50' } });
+    fireEvent.change(screen.getByLabelText('Description'), {
+      target: { value: 'Reviewed market expense' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Save reviewed transaction' }));
+    expect(await screen.findByText(/Existing payment/u)).toBeInTheDocument();
+    expect(
+      fetchMock.mock.calls.filter(([url]) => typeof url === 'string' && url.endsWith('/create')),
+    ).toHaveLength(1);
+    fireEvent.click(screen.getByRole('button', { name: 'Create distinct payment' }));
+    await waitFor(() =>
+      expect(
+        fetchMock.mock.calls.filter(([url]) => typeof url === 'string' && url.endsWith('/create')),
+      ).toHaveLength(2),
+    );
+    const createCalls = fetchMock.mock.calls.filter(
+      ([url]) => typeof url === 'string' && url.endsWith('/create'),
+    );
+    expect(JSON.parse(createCalls.at(-1)?.[1]?.body as string)).toMatchObject({
+      amount: '1200.50',
+      category_id: 'category-1',
+      confirm_distinct: true,
+      reviewed_candidate_hash: 'a'.repeat(32),
+    });
+  });
+
+  it('shows a bounded candidate overflow and does not offer creation', async () => {
+    const fetchMock = vi.fn().mockImplementation((url: string) => {
+      if (url === '/api/accounts')
+        return Promise.resolve(Response.json([{ id: 'account-1', name: 'Cash' }]));
+      if (url === '/api/categories')
+        return Promise.resolve(
+          Response.json([{ id: 'category-1', name: 'Food', type: 'expense' }]),
+        );
+      if (url.endsWith('/create'))
+        return Promise.resolve(
+          Response.json(
+            {
+              status: 'review_overflow',
+              candidate_count: 21,
+              candidates: [
+                {
+                  id: 'tx-1',
+                  date: '2026-09-28',
+                  amount: '1200.50',
+                  description: 'Existing payment',
+                  source: 'web',
+                },
+              ],
+            },
+            { status: 409 },
+          ),
+        );
+      return Promise.resolve(
+        Response.json({
+          data: [
+            {
+              id: 'item-1',
+              source: 'sms-shortcut',
+              external_id: 'receipt-1',
+              received_at: '2026-09-29T10:00:00Z',
+              raw_text: 'Synthetic private message',
+              status: 'pending',
+              created_at: '2026-09-29T10:01:00Z',
+            },
+          ],
+          count: 1,
+        }),
+      );
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    render(<ShortcutInboxPage />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Create new transaction' }));
+    expect(await screen.findByRole('option', { name: 'Food' })).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Account'), { target: { value: 'account-1' } });
+    fireEvent.change(screen.getByLabelText('Category'), { target: { value: 'category-1' } });
+    fireEvent.change(screen.getByLabelText('Amount'), { target: { value: '1200.50' } });
+    fireEvent.change(screen.getByLabelText('Description'), {
+      target: { value: 'Reviewed expense' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Save reviewed transaction' }));
+    expect(await screen.findByText('Too many possible matches')).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Create distinct payment' }),
+    ).not.toBeInTheDocument();
   });
 });

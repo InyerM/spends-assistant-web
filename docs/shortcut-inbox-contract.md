@@ -117,13 +117,40 @@ intentional hard delete of a transaction is an erasure exception: matching decis
 snapshots are deleted, and surviving inbox items return to pending. Deleting an inbox item also
 erases its decision. Ordinary soft deletion retains the historical decision.
 
-## Deferred confirmation design
+## Reviewed new-transaction creation
 
-There is no endpoint to create a new transaction from an inbox message. That future path needs an
-explicit per-item decision and a single database transaction that locks the pending inbox item,
-rechecks owned candidates and active records, validates the reviewed financial fields, creates the
-new record once, updates the affected balance consistently, records an immutable decision, and marks
-the inbox item handled. Retries must return the original result, and any failure must roll back all
-financial and inbox changes. Same amount/date/account alone remains a candidate until the reviewer
-decides. The dependency is [web issue #1](https://github.com/InyerM/spends-assistant-web/issues/1).
-No remote migration, deploy, or production backfill was performed for this contract.
+Migration `20260929000110_shortcut_create_transaction.sql` must follow the inbox and existing-match
+migrations. The signed-in reviewer opens **Create new transaction** for one pending inbox item and
+chooses an owned active account, an active category matching the chosen expense/income type, an
+exact positive decimal amount, date, and description. The receipt date is suggested from the
+original message timestamp in the `America/Bogota` timezone; the reviewer must verify it. No
+category is inferred from ambiguous messages. Transfers are outside this form because they need a
+destination account and a separate balance rule.
+
+`POST /api/shortcut-inbox/{id}/create` takes the six reviewed fields as strings, including amount as
+a decimal string. It requires a browser session; a Shortcut API key cannot make a financial
+decision. The endpoint passes the payload to one owner-scoped SQL function. That function locks the
+inbox item and account, verifies account/category ownership and status, and checks active
+transactions with the same account/date/amount or identical original text. If any candidates exist,
+it returns HTTP 409 with `status: review_required`, a hash of their sorted server snapshots, count,
+and up to 20 candidate details; it writes nothing. More than 20 candidates returns
+`status: review_overflow` with only 20 details and blocks this creation path until the reviewer
+resolves the ambiguity manually. The reviewer can acknowledge a bounded result as a **distinct
+payment**. The form then resends the same fields with `reviewed_candidate_hash` and
+`confirm_distinct: true`. The SQL function recomputes the candidate set under locks; a changed set
+requires another review. Equal amount/date/account is never treated as proof of duplication.
+
+On confirmation, one database transaction inserts the financial row, stores the original source,
+receipt timestamp, external ID and raw text, updates the account balance and current monthly usage
+counter once, appends an immutable decision snapshot, and marks the inbox item `created`. A retry
+with identical reviewed fields returns the original transaction and decision IDs without changing
+balances. A changed retry conflicts. The database applies the existing free-plan transaction quota
+to this route; canceled Pro subscriptions do not bypass it. Its monthly counter uses UTC, matching
+the existing web transaction route and Worker usage service. The atomic CSV import currently uses a
+Bogota month boundary and needs a separate consistency fix before release.
+
+Soft deletion of the linked transaction preserves the historical decision and retry result. An
+intentional hard delete erases its decision snapshot and returns the surviving inbox item to pending
+review. The transaction deletion path remains responsible for reversing its balance, as with other
+transactions. The decision does not classify or create entries from messages automatically. No
+remote migration, deployment, or production backfill was performed for this contract.
