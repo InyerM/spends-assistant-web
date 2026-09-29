@@ -32,6 +32,82 @@ interface Document {
   document_observations: Observation[];
 }
 
+interface Candidate {
+  kind: 'candidate';
+  transaction_id: string;
+  amount: number;
+  amount_difference: number;
+  date: string;
+  description: string;
+  account_name: string | null;
+  basis: 'exact_date' | 'near_date' | 'amount_only';
+  reference_hint: boolean;
+  description_hint: boolean;
+}
+
+interface SuggestionGroup {
+  observation_id: string;
+  status: string;
+  candidates: Candidate[];
+  total_candidates: number;
+  search_limited: boolean;
+}
+
+function SuggestionPanel({
+  group,
+}: {
+  group: SuggestionGroup | undefined;
+}): React.ReactElement | null {
+  const t = useTranslations('documents');
+  if (!group) return null;
+  if (group.status !== 'pending') {
+    return <p className='text-muted-foreground mt-3 text-xs'>{t('alreadyReviewed')}</p>;
+  }
+  if (group.candidates.length === 0) {
+    return <p className='text-muted-foreground mt-3 text-sm'>{t('noCandidates')}</p>;
+  }
+  return (
+    <div className='border-border mt-4 space-y-2 border-t pt-3'>
+      {group.candidates.map((candidate) => (
+        <div key={candidate.transaction_id} className='border-border bg-card rounded-lg border p-3'>
+          <div className='flex flex-wrap items-start justify-between gap-2'>
+            <div>
+              <div className='flex items-center gap-2'>
+                <p className='text-sm font-medium'>{candidate.description}</p>
+                <Badge variant='outline'>{t('candidate')}</Badge>
+              </div>
+              <p className='text-muted-foreground mt-1 text-xs'>
+                {[candidate.date, candidate.account_name, t(`basis.${candidate.basis}`)]
+                  .filter(Boolean)
+                  .join(' · ')}
+              </p>
+            </div>
+            <span className='text-sm font-semibold tabular-nums'>
+              {candidate.amount.toLocaleString()}
+            </span>
+          </div>
+          <p className='text-muted-foreground mt-2 text-xs'>
+            {t('amountDifference', { amount: candidate.amount_difference })}
+            {candidate.reference_hint ? ` · ${t('referenceHint')}` : ''}
+            {candidate.description_hint ? ` · ${t('descriptionHint')}` : ''}
+          </p>
+        </div>
+      ))}
+      {group.total_candidates > group.candidates.length && (
+        <p className='text-muted-foreground text-xs'>
+          {t('showingCandidates', {
+            shown: group.candidates.length,
+            total: group.total_candidates,
+          })}
+        </p>
+      )}
+      {group.search_limited && (
+        <p className='text-muted-foreground text-xs'>{t('searchLimited')}</p>
+      )}
+    </div>
+  );
+}
+
 async function readError(response: Response): Promise<string> {
   const body = (await response.json().catch(() => ({}))) as { error?: string };
   return body.error ?? 'Request failed';
@@ -44,6 +120,8 @@ export default function DocumentsPage(): React.ReactElement {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [suggestions, setSuggestions] = useState<Partial<Record<string, SuggestionGroup[]>>>({});
+  const [suggestionBusy, setSuggestionBusy] = useState<string | null>(null);
 
   const load = useCallback(async (): Promise<void> => {
     try {
@@ -99,6 +177,21 @@ export default function DocumentsPage(): React.ReactElement {
       setError(cause instanceof Error ? cause.message : t('extractFailed'));
     } finally {
       setBusy(null);
+    }
+  };
+
+  const findSuggestions = async (id: string): Promise<void> => {
+    setSuggestionBusy(id);
+    setError(null);
+    try {
+      const response = await fetch(`/api/documents/${id}/suggestions`);
+      if (!response.ok) throw new Error(await readError(response));
+      const result = (await response.json()) as { data: SuggestionGroup[] };
+      setSuggestions((current) => ({ ...current, [id]: result.data }));
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : t('suggestionsFailed'));
+    } finally {
+      setSuggestionBusy(null);
     }
   };
 
@@ -190,9 +283,23 @@ export default function DocumentsPage(): React.ReactElement {
                 </div>
                 {document.status === 'extracted' && (
                   <div className='border-border space-y-3 border-t pt-4'>
-                    <p className='text-muted-foreground text-xs font-medium tracking-wide uppercase'>
-                      {t('pendingReview')}
-                    </p>
+                    <div className='flex flex-wrap items-center justify-between gap-2'>
+                      <p className='text-muted-foreground text-xs font-medium tracking-wide uppercase'>
+                        {t('observations')}
+                      </p>
+                      <Button
+                        size='sm'
+                        variant='outline'
+                        disabled={suggestionBusy !== null}
+                        onClick={() => void findSuggestions(document.id)}>
+                        {suggestionBusy === document.id
+                          ? t('findingSuggestions')
+                          : t('findSuggestions')}
+                      </Button>
+                    </div>
+                    {suggestions[document.id] && (
+                      <p className='text-muted-foreground text-xs'>{t('candidateOnly')}</p>
+                    )}
                     {document.document_observations.length === 0 ? (
                       <p className='text-muted-foreground text-sm'>{t('noObservations')}</p>
                     ) : (
@@ -224,8 +331,13 @@ export default function DocumentsPage(): React.ReactElement {
                               {t('confidence', {
                                 percent: Math.round(observation.confidence * 100),
                               })}{' '}
-                              · {t('pendingReview')}
+                              · {t(`observationStatus.${observation.status}`)}
                             </p>
+                            <SuggestionPanel
+                              group={suggestions[document.id]?.find(
+                                (group) => group.observation_id === observation.id,
+                              )}
+                            />
                           </div>
                         ))
                     )}
