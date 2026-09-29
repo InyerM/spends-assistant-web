@@ -56,7 +56,8 @@
     "automation": "Automatización",
     "settings": "Configuración",
     "home": "Inicio",
-    "more": "Más"
+    "more": "Más",
+    "documents": "Documentos"
   },
   "dashboard": {
     "title": "Panel",
@@ -162,7 +163,7 @@
     "failedToReplace": "Error al reemplazar transacción",
     "addAnother": "Agregar otra",
     "orCreateWithAi": "O crea con IA",
-    "usageInfo": "Transacciones: {txCount}/{txLimit} \u00b7 IA Análisis: {aiUsed}/{aiLimit}",
+    "usageInfo": "Transacciones: {txCount}/{txLimit} · IA Análisis: {aiUsed}/{aiLimit}",
     "aiTransaction": "Transacción IA",
     "aiTextPlaceholder": "Pega un mensaje bancario, SMS o describe una transacción...",
     "parseLimitReached": "Límite de análisis IA alcanzado este mes",
@@ -613,5 +614,38 @@
   "empty": {
     "title": "Nada aquí todavía",
     "description": "Comienza creando tu primer elemento."
+  },
+  "documents": {
+    "title": "Documentos",
+    "subtitle": "Sube recibos y capturas para revisar los datos extraídos antes de registrar algo.",
+    "chooseImage": "Elegir imagen",
+    "upload": "Subir imagen",
+    "uploading": "Subiendo…",
+    "loading": "Cargando documentos…",
+    "empty": "Aún no hay documentos",
+    "emptyHint": "PNG, JPEG o WebP · hasta 5 MB",
+    "invalidFile": "Elige una imagen PNG, JPEG o WebP de hasta 5 MB.",
+    "loadFailed": "No se pudieron cargar los documentos",
+    "uploadFailed": "No se pudo subir la imagen",
+    "extractFailed": "No se pudieron extraer los datos",
+    "extract": "Extraer datos",
+    "extracting": "Extrayendo…",
+    "pendingReview": "Pendiente de revisión",
+    "noObservations": "No se encontraron observaciones en esta imagen.",
+    "amountUnknown": "Importe desconocido",
+    "confidence": "{percent}% de confianza",
+    "unclassified": "Sin clasificar",
+    "status": {
+      "uploaded": "Lista para extraer",
+      "extracted": "Extraída",
+      "failed": "Error de extracción"
+    },
+    "type": {
+      "receipt": "Recibo",
+      "bank_screenshot": "Captura bancaria",
+      "sms_screenshot": "Captura de SMS",
+      "statement": "Extracto",
+      "other": "Otro"
+    }
   }
 }

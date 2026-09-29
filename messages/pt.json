@@ -56,7 +56,8 @@
     "automation": "Automação",
     "settings": "Configurações",
     "home": "Início",
-    "more": "Mais"
+    "more": "Mais",
+    "documents": "Documentos"
   },
   "dashboard": {
     "title": "Painel",
@@ -162,7 +163,7 @@
     "failedToReplace": "Falha ao substituir transação",
     "addAnother": "Adicionar outra",
     "orCreateWithAi": "Ou crie com IA",
-    "usageInfo": "Transações: {txCount}/{txLimit} \u00b7 IA Análises: {aiUsed}/{aiLimit}",
+    "usageInfo": "Transações: {txCount}/{txLimit} · IA Análises: {aiUsed}/{aiLimit}",
     "aiTransaction": "Transação IA",
     "aiTextPlaceholder": "Cole uma mensagem bancária, SMS ou descreva uma transação...",
     "parseLimitReached": "Limite de análise IA atingido este mês",
@@ -618,5 +619,38 @@
   "empty": {
     "title": "Nada aqui ainda",
     "description": "Comece criando seu primeiro item."
+  },
+  "documents": {
+    "title": "Documentos",
+    "subtitle": "Envie recibos e capturas para revisar os dados extraídos antes de registrar algo.",
+    "chooseImage": "Escolher imagem",
+    "upload": "Enviar imagem",
+    "uploading": "Enviando…",
+    "loading": "Carregando documentos…",
+    "empty": "Nenhum documento ainda",
+    "emptyHint": "PNG, JPEG ou WebP · até 5 MB",
+    "invalidFile": "Escolha uma imagem PNG, JPEG ou WebP de até 5 MB.",
+    "loadFailed": "Não foi possível carregar os documentos",
+    "uploadFailed": "Não foi possível enviar a imagem",
+    "extractFailed": "Não foi possível extrair os dados",
+    "extract": "Extrair dados",
+    "extracting": "Extraindo…",
+    "pendingReview": "Pendente de revisão",
+    "noObservations": "Nenhuma observação encontrada nesta imagem.",
+    "amountUnknown": "Valor desconhecido",
+    "confidence": "{percent}% de confiança",
+    "unclassified": "Sem classificação",
+    "status": {
+      "uploaded": "Pronto para extrair",
+      "extracted": "Extraído",
+      "failed": "Falha na extração"
+    },
+    "type": {
+      "receipt": "Recibo",
+      "bank_screenshot": "Captura bancária",
+      "sms_screenshot": "Captura de SMS",
+      "statement": "Extrato",
+      "other": "Outro"
+    }
   }
 }

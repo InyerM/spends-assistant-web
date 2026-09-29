@@ -15,6 +15,7 @@ import {
   Menu,
   LogOut,
   Settings,
+  Files,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -35,6 +36,7 @@ interface NavItem {
 const navItems: NavItem[] = [
   { titleKey: 'dashboard', href: '/dashboard', icon: LayoutDashboard },
   { titleKey: 'transactions', href: '/transactions', icon: ArrowRightLeft },
+  { titleKey: 'documents', href: '/documents', icon: Files },
   { titleKey: 'accounts', href: '/accounts', icon: Wallet },
   { titleKey: 'categories', href: '/categories', icon: Tags },
   { titleKey: 'automation', href: '/automation', icon: Zap },

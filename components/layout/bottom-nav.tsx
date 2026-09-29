@@ -12,6 +12,7 @@ import {
   Zap,
   Settings,
   LogOut,
+  Files,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -34,6 +35,7 @@ const mainItems: NavItem[] = [
 ];
 
 const moreItems: NavItem[] = [
+  { titleKey: 'documents', href: '/documents', icon: Files },
   { titleKey: 'automation', href: '/automation', icon: Zap },
   { titleKey: 'settings', href: '/settings', icon: Settings },
 ];

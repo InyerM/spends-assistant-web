@@ -6,6 +6,7 @@ import { useTranslations } from 'next-intl';
 const routeToKey: Record<string, string> = {
   '/dashboard': 'dashboard',
   '/transactions': 'transactions',
+  '/documents': 'documents',
   '/accounts': 'accounts',
   '/categories': 'categories',
   '/automation': 'automation',

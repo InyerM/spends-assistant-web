@@ -56,7 +56,8 @@
     "automation": "Automation",
     "settings": "Settings",
     "home": "Home",
-    "more": "More"
+    "more": "More",
+    "documents": "Documents"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -162,7 +163,7 @@
     "failedToReplace": "Failed to replace transaction",
     "addAnother": "Add another",
     "orCreateWithAi": "Or create with AI",
-    "usageInfo": "Transactions: {txCount}/{txLimit} \u00b7 AI Parses: {aiUsed}/{aiLimit}",
+    "usageInfo": "Transactions: {txCount}/{txLimit} · AI Parses: {aiUsed}/{aiLimit}",
     "aiTransaction": "AI Transaction",
     "aiTextPlaceholder": "Paste a bank message, SMS, or describe a transaction...",
     "parseLimitReached": "AI parse limit reached for this month",
@@ -618,5 +619,38 @@
   "empty": {
     "title": "Nothing here yet",
     "description": "Get started by creating your first item."
+  },
+  "documents": {
+    "title": "Documents",
+    "subtitle": "Upload receipts and screenshots to inspect extracted details before recording anything.",
+    "chooseImage": "Choose an image",
+    "upload": "Upload image",
+    "uploading": "Uploading…",
+    "loading": "Loading documents…",
+    "empty": "No documents yet",
+    "emptyHint": "PNG, JPEG, or WebP · up to 5 MB",
+    "invalidFile": "Choose a PNG, JPEG, or WebP image up to 5 MB.",
+    "loadFailed": "Could not load documents",
+    "uploadFailed": "Could not upload image",
+    "extractFailed": "Could not extract details",
+    "extract": "Extract details",
+    "extracting": "Extracting…",
+    "pendingReview": "Pending review",
+    "noObservations": "No observations found in this image.",
+    "amountUnknown": "Amount unknown",
+    "confidence": "{percent}% confidence",
+    "unclassified": "Unclassified",
+    "status": {
+      "uploaded": "Ready to extract",
+      "extracted": "Extracted",
+      "failed": "Extraction failed"
+    },
+    "type": {
+      "receipt": "Receipt",
+      "bank_screenshot": "Bank screenshot",
+      "sms_screenshot": "SMS screenshot",
+      "statement": "Statement",
+      "other": "Other"
+    }
   }
 }
