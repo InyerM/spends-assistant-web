@@ -1,55 +1,30 @@
 import type { NextRequest } from 'next/server';
-import {
-  getUserClient,
-  AuthError,
-  jsonResponse,
-  errorResponse,
-  applyTransactionBalance,
-} from '@/lib/api/server';
+import { getUserClient, AuthError, jsonResponse, errorResponse } from '@/lib/api/server';
 
 export async function POST(request: NextRequest): Promise<Response> {
   try {
     const { supabase } = await getUserClient();
     const body = (await request.json()) as { ids: string[] };
 
-    if (!body.ids.length) {
-      return errorResponse('ids are required', 400);
+    if (
+      !Array.isArray(body.ids) ||
+      body.ids.length === 0 ||
+      body.ids.length > 2000 ||
+      body.ids.some((id) => typeof id !== 'string')
+    ) {
+      return errorResponse('Provide between 1 and 2000 transaction IDs', 400);
     }
-
-    // Fetch all transactions to reverse their balances
-    const { data: transactions, error: fetchError } = await supabase
-      .from('transactions')
-      .select('id, type, amount, account_id, transfer_to_account_id')
-      .in('id', body.ids)
-      .is('deleted_at', null);
-
-    if (fetchError) return errorResponse(fetchError.message, 400);
-    if (!transactions.length) return errorResponse('No transactions found', 404);
-
-    // Soft-delete all transactions in one query
-    const { error: deleteError } = await supabase
-      .from('transactions')
-      .update({ deleted_at: new Date().toISOString() })
-      .in('id', body.ids)
-      .is('deleted_at', null);
-
-    if (deleteError) return errorResponse(deleteError.message, 400);
-
-    // Reverse balances for each deleted transaction
-    await Promise.all(
-      transactions.map((tx) =>
-        applyTransactionBalance(
-          supabase,
-          tx.type as string,
-          tx.account_id as string,
-          tx.amount as number,
-          tx.transfer_to_account_id as string | null,
-          true,
-        ),
-      ),
-    );
-
-    return jsonResponse({ success: true, deletedCount: transactions.length });
+    const { data, error } = await supabase.rpc('soft_delete_transactions', {
+      p_transaction_ids: body.ids,
+    });
+    if (error) {
+      const conflict =
+        error.message === 'Reviewed transaction cannot be deleted' ||
+        error.message === 'Transaction accounts changed during deletion';
+      return errorResponse(error.message, conflict ? 409 : 400);
+    }
+    if (data === 0) return errorResponse('No transactions found', 404);
+    return jsonResponse({ success: true, deletedCount: data });
   } catch (error) {
     if (error instanceof AuthError) return errorResponse('Unauthorized', 401);
     return errorResponse('Failed to bulk delete transactions');

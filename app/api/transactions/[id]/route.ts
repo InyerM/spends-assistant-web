@@ -94,32 +94,14 @@ export async function DELETE(_request: NextRequest, { params }: RouteParams): Pr
   try {
     const { id } = await params;
     const { supabase } = await getUserClient();
-
-    // Fetch transaction before deleting to reverse balance
-    const { data: tx } = await supabase
-      .from('transactions')
-      .select('type, amount, account_id, transfer_to_account_id')
-      .eq('id', id)
-      .is('deleted_at', null)
-      .single();
-
-    const { error } = await supabase
-      .from('transactions')
-      .update({ deleted_at: new Date().toISOString() })
-      .eq('id', id);
-
-    if (error) return errorResponse(error.message, 400);
-
-    // Reverse the balance effect
-    if (tx) {
-      await applyTransactionBalance(
-        supabase,
-        tx.type as string,
-        tx.account_id as string,
-        tx.amount as number,
-        tx.transfer_to_account_id as string | null,
-        true,
-      );
+    const { error } = await supabase.rpc('soft_delete_transactions', {
+      p_transaction_ids: [id],
+    });
+    if (error) {
+      const conflict =
+        error.message === 'Reviewed transaction cannot be deleted' ||
+        error.message === 'Transaction accounts changed during deletion';
+      return errorResponse(error.message, conflict ? 409 : 400);
     }
 
     return jsonResponse({ success: true });

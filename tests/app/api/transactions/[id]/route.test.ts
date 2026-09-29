@@ -177,80 +177,40 @@ describe('PATCH /api/transactions/[id]', () => {
 });
 
 describe('DELETE /api/transactions/[id]', () => {
-  beforeEach(async () => {
-    vi.restoreAllMocks();
-  });
+  beforeEach(() => vi.clearAllMocks());
 
-  it('soft-deletes and reverses balance for expense', async () => {
+  it('deletes through the atomic owner-scoped RPC without client-side balance changes', async () => {
     const { getUserClient, applyTransactionBalance } = await import('@/lib/api/server');
-    const tx = {
-      type: 'expense',
-      amount: 50000,
-      account_id: 'acc-1',
-      transfer_to_account_id: null,
-    };
-
-    const chain: Record<string, ReturnType<typeof vi.fn>> = {};
-    ['select', 'eq', 'is', 'update'].forEach((m) => {
-      chain[m] = vi.fn().mockReturnValue(chain);
-    });
-    chain.single = vi.fn().mockImplementation(async () => {
-      return { data: tx, error: null };
-    });
-
-    // Make update thenable for the delete update
-    Object.defineProperty(chain, 'then', {
-      value: (resolve: (v: unknown) => void) => resolve({ error: null }),
-      enumerable: false,
-      configurable: true,
-    });
-
+    const rpc = vi.fn().mockResolvedValue({ data: 1, error: null });
     vi.mocked(getUserClient).mockResolvedValue({
-      supabase: { from: vi.fn().mockReturnValue(chain) } as never,
+      supabase: { rpc } as never,
       userId: 'test-user-id',
     });
-    vi.mocked(applyTransactionBalance).mockResolvedValue();
 
     const request = new NextRequest('http://localhost/api/transactions/tx-1', {
       method: 'DELETE',
     });
     const response = await DELETE(request, makeParams('tx-1'));
     expect(response.status).toBe(200);
-    expect(applyTransactionBalance).toHaveBeenCalledWith(
-      expect.anything(),
-      'expense',
-      'acc-1',
-      50000,
-      null,
-      true,
-    );
+    expect(rpc).toHaveBeenCalledWith('soft_delete_transactions', { p_transaction_ids: ['tx-1'] });
+    expect(applyTransactionBalance).not.toHaveBeenCalled();
   });
 
-  it('returns 400 on delete error', async () => {
+  it('returns a conflict for a reviewed transaction', async () => {
     const { getUserClient } = await import('@/lib/api/server');
-
-    const chain: Record<string, ReturnType<typeof vi.fn>> = {};
-    ['select', 'eq', 'is', 'update'].forEach((m) => {
-      chain[m] = vi.fn().mockReturnValue(chain);
-    });
-    chain.single = vi.fn().mockResolvedValue({ data: null, error: null });
-
-    // Make update thenable with error
-    Object.defineProperty(chain, 'then', {
-      value: (resolve: (v: unknown) => void) => resolve({ error: { message: 'DB error' } }),
-      enumerable: false,
-      configurable: true,
-    });
-
     vi.mocked(getUserClient).mockResolvedValue({
-      supabase: { from: vi.fn().mockReturnValue(chain) } as never,
+      supabase: {
+        rpc: vi.fn().mockResolvedValue({
+          data: null,
+          error: { message: 'Reviewed transaction cannot be deleted' },
+        }),
+      } as never,
       userId: 'test-user-id',
     });
-
     const request = new NextRequest('http://localhost/api/transactions/tx-1', {
       method: 'DELETE',
     });
     const response = await DELETE(request, makeParams('tx-1'));
-    expect(response.status).toBe(400);
+    expect(response.status).toBe(409);
   });
 });
