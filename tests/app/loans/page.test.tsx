@@ -82,4 +82,43 @@ describe('manual loan ledger', () => {
       fee_minor: '45',
     });
   });
+
+  it('keeps a reviewed COP opening amount exact at zero decimal places', async () => {
+    const loanId = '00000000-0000-4000-8000-000000000223';
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        data: [
+          {
+            id: loanId,
+            lender: 'lulo_bank',
+            label: 'Opening from statement',
+            currency: 'COP',
+            money_scale: 0,
+            opening_recorded: false,
+            outstanding_minor: '0',
+            interest_expense_minor: '0',
+            insurance_expense_minor: '0',
+            fee_expense_minor: '0',
+          },
+        ],
+      }),
+    });
+    const user = userEvent.setup();
+    render(<LoansPage />);
+    await screen.findByText('Opening from statement');
+    expect(screen.getByText('Not recorded')).toBeInTheDocument();
+    await user.selectOptions(screen.getByLabelText('Entry type'), 'opening');
+    await user.selectOptions(screen.getByLabelText('Loan'), loanId);
+    await user.type(screen.getByLabelText('Entry date'), '2026-09-28');
+    await user.type(screen.getByLabelText('Known outstanding principal'), '123456789');
+    await user.type(screen.getByLabelText('Evidence reference'), 'Statement outstanding row');
+    await user.type(screen.getByLabelText('Evidence date'), '2026-09-28');
+    await user.click(screen.getByRole('button', { name: 'Review entry' }));
+    expect(screen.getByText('Opening principal: 123456789 COP')).toBeInTheDocument();
+    await user.click(screen.getByLabelText('I checked these details against the evidence'));
+    await user.click(screen.getByRole('button', { name: 'Confirm reviewed entry' }));
+    const body = JSON.parse(fetchMock.mock.calls[1][1].body as string);
+    expect(body.event.outstanding_minor).toBe('123456789');
+  });
 });
