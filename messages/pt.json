@@ -235,6 +235,7 @@
     "failedToUpdate": "Falha ao atualizar transação",
     "failedToDelete": "Falha ao excluir transação",
     "failedToReplace": "Falha ao substituir transação",
+    "replacementHasReviewLinks": "Esta transação está vinculada a um documento ou atalho revisado e não pode ser substituída",
     "addAnother": "Adicionar outra",
     "orCreateWithAi": "Ou crie com IA",
     "usageInfo": "Transações: {txCount}/{txLimit} · IA Análises: {aiUsed}/{aiLimit}",

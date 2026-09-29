@@ -40,10 +40,18 @@ export class ReviewAutomationRuleError extends ReviewTransactionError {
   }
 }
 
+export class ReplacementHasReviewLinksError extends Error {
+  public constructor() {
+    super('This transaction has active reviewed links');
+    this.name = 'ReplacementHasReviewLinksError';
+  }
+}
+
 async function transactionResponseError(response: Response): Promise<Error> {
   const body = (await response.json()) as { error?: string; code?: string };
   if (body.code === 'REVIEW_AUTOMATION_RULE') return new ReviewAutomationRuleError();
   if (body.code === 'REVIEW_TRANSACTION_FIELDS') return new ReviewTransactionError();
+  if (body.code === 'REPLACEMENT_HAS_REVIEW_LINKS') return new ReplacementHasReviewLinksError();
   return new Error(body.error || 'Failed to create transaction');
 }
 

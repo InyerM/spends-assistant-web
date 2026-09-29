@@ -125,6 +125,18 @@ export async function POST(request: NextRequest): Promise<Response> {
       if (error.message === 'Replacement transaction not found')
         return errorResponse(error.message, 404);
       if (
+        error.message === 'Replacement transaction has a reviewed document or Shortcut decision'
+      ) {
+        return jsonResponse(
+          {
+            error:
+              'This transaction is linked to a reviewed document or Shortcut item and cannot be replaced.',
+            code: 'REPLACEMENT_HAS_REVIEW_LINKS',
+          },
+          409,
+        );
+      }
+      if (
         error.message.startsWith('Category does not belong to caller or match transaction type') ||
         error.message.startsWith('Transfer destination must be distinct')
       ) {

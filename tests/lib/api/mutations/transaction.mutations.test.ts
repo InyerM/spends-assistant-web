@@ -221,6 +221,27 @@ describe('replaceTransaction', () => {
 
     await expect(replaceTransaction(INPUT, 'old-tx-id')).rejects.toThrow('Replace failed');
   });
+
+  it('identifies the reviewed-link conflict for the replacement dialog', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(
+        async () =>
+          new Response(
+            JSON.stringify({
+              error:
+                'This transaction is linked to a reviewed document or Shortcut item and cannot be replaced.',
+              code: 'REPLACEMENT_HAS_REVIEW_LINKS',
+            }),
+            { status: 409, headers: { 'Content-Type': 'application/json' } },
+          ),
+      ),
+    );
+
+    await expect(replaceTransaction(INPUT, 'old-tx-id')).rejects.toMatchObject({
+      name: 'ReplacementHasReviewLinksError',
+    });
+  });
 });
 
 describe('updateTransaction', () => {

@@ -235,6 +235,7 @@
     "failedToUpdate": "Error al actualizar transacción",
     "failedToDelete": "Error al eliminar transacción",
     "failedToReplace": "Error al reemplazar transacción",
+    "replacementHasReviewLinks": "Esta transacción tiene una conciliación con un documento o atajo y no se puede reemplazar",
     "addAnother": "Agregar otra",
     "orCreateWithAi": "O crea con IA",
     "usageInfo": "Transacciones: {txCount}/{txLimit} · IA Análisis: {aiUsed}/{aiLimit}",

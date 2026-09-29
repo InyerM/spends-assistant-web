@@ -119,6 +119,29 @@ describe('atomic manual transaction route', () => {
     expect(from).not.toHaveBeenCalled();
   });
 
+  it('returns a review conflict when a replacement has an active reconciliation decision', async () => {
+    const { getUserClient } = await import('@/lib/api/server');
+    const rpc = vi.fn().mockResolvedValue({
+      data: null,
+      error: { message: 'Replacement transaction has a reviewed document or Shortcut decision' },
+    });
+    const from = vi.fn();
+    vi.mocked(getUserClient).mockResolvedValue({
+      supabase: { rpc, from } as never,
+      userId: 'user-id',
+    });
+
+    const response = await POST(request(`/api/transactions?replace=${replaceId}`));
+
+    expect(response.status).toBe(409);
+    expect(await response.json()).toEqual({
+      error:
+        'This transaction is linked to a reviewed document or Shortcut item and cannot be replaced.',
+      code: 'REPLACEMENT_HAS_REVIEW_LINKS',
+    });
+    expect(from).not.toHaveBeenCalled();
+  });
+
   it('rejects a malformed idempotency key before invoking the RPC', async () => {
     const { getUserClient } = await import('@/lib/api/server');
     const rpc = vi.fn();

@@ -235,6 +235,7 @@
     "failedToUpdate": "Failed to update transaction",
     "failedToDelete": "Failed to delete transaction",
     "failedToReplace": "Failed to replace transaction",
+    "replacementHasReviewLinks": "This transaction has a reviewed document or Shortcut link and cannot be replaced",
     "addAnother": "Add another",
     "orCreateWithAi": "Or create with AI",
     "usageInfo": "Transactions: {txCount}/{txLimit} · AI Parses: {aiUsed}/{aiLimit}",

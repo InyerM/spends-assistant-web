@@ -13,6 +13,7 @@ import {
   forceCreateTransaction,
   replaceTransaction,
   ReviewAutomationRuleError,
+  ReplacementHasReviewLinksError,
   ReviewTransactionError,
 } from '@/lib/api/mutations/transaction.mutations';
 import { useQueryClient } from '@tanstack/react-query';
@@ -101,7 +102,9 @@ export function DuplicateWarningDialog({
       onOpenChange(false);
       onResolved();
     } catch (error) {
-      if (error instanceof ReviewTransactionError) {
+      if (error instanceof ReplacementHasReviewLinksError) {
+        toast.error(t('replacementHasReviewLinks'));
+      } else if (error instanceof ReviewTransactionError) {
         onOpenChange(false);
         toast.error(
           t(
