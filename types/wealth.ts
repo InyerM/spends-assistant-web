@@ -14,6 +14,7 @@ export interface PositionRecord {
   symbol: string;
   currency: string;
   quantityScale: number;
+  moneyScale: number;
   evidence: ReviewedEvidence;
 }
 
