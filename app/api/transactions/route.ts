@@ -93,6 +93,26 @@ export async function POST(request: NextRequest): Promise<Response> {
     const processed = alreadyProcessed
       ? (body as Parameters<typeof applyAutomationRules>[1])
       : await applyAutomationRules(supabase, body as Parameters<typeof applyAutomationRules>[1]);
+    const destination = processed.transfer_to_account_id;
+    if (
+      (processed.type === 'transfer' && (!destination || destination === processed.account_id)) ||
+      (processed.type !== 'transfer' && destination)
+    ) {
+      const automationChangedFields =
+        !alreadyProcessed &&
+        (processed.type !== body.type ||
+          processed.account_id !== body.account_id ||
+          processed.transfer_to_account_id !== body.transfer_to_account_id);
+      return jsonResponse(
+        {
+          error: automationChangedFields
+            ? 'An automation rule changed the transaction type or account incompatibly'
+            : 'Review the transaction type and destination account',
+          code: automationChangedFields ? 'REVIEW_AUTOMATION_RULE' : 'REVIEW_TRANSACTION_FIELDS',
+        },
+        400,
+      );
+    }
     const payload = force ? { ...processed, duplicate_status: 'confirmed' } : processed;
     const { data, error } = await supabase.rpc('confirm_manual_transaction', {
       p_request_id: requestId,
@@ -104,6 +124,18 @@ export async function POST(request: NextRequest): Promise<Response> {
       if (error.message === 'Transaction limit exceeded') return errorResponse(error.message, 403);
       if (error.message === 'Replacement transaction not found')
         return errorResponse(error.message, 404);
+      if (
+        error.message.startsWith('Category does not belong to caller or match transaction type') ||
+        error.message.startsWith('Transfer destination must be distinct')
+      ) {
+        return jsonResponse(
+          {
+            error: 'Review the transaction type, category, and destination',
+            code: 'REVIEW_TRANSACTION_FIELDS',
+          },
+          400,
+        );
+      }
       return errorResponse(error.message, 400);
     }
     if (data?.status === 'duplicate') {

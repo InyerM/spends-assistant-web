@@ -1,10 +1,9 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
-import { z } from 'zod';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -43,6 +42,8 @@ import {
   useDeleteTransaction,
   useResolveDuplicate,
   DuplicateError,
+  ReviewAutomationRuleError,
+  ReviewTransactionError,
 } from '@/lib/api/mutations/transaction.mutations';
 import { DuplicateWarningDialog } from '@/components/transactions/duplicate-warning-dialog';
 import { getCurrentColombiaTimes } from '@/lib/utils/date';
@@ -52,23 +53,12 @@ import { useUsage } from '@/hooks/use-usage';
 import { useSubscription } from '@/hooks/use-subscription';
 import { useAiParse } from '@/hooks/use-ai-parse';
 import { SKIPPED_REASON_KEYS } from '@/lib/utils/ai-parse';
-import type { Transaction, CreateTransactionInput } from '@/types';
+import { createTransactionFormSchema, fieldsAfterTypeChange } from '@/lib/transactions/form-draft';
+import type { TransactionFormValues } from '@/lib/transactions/form-draft';
+import type { Transaction, CreateTransactionInput, TransactionType } from '@/types';
 
 // --- Form schema ---
-
-const formSchema = z.object({
-  date: z.string().min(1, 'Date is required'),
-  time: z.string().min(1, 'Time is required'),
-  amount: z.number().positive('Amount must be positive'),
-  description: z.string().min(1, 'Description is required'),
-  notes: z.string().optional(),
-  type: z.enum(['expense', 'income', 'transfer']),
-  account_id: z.string().min(1, 'Account is required'),
-  category_id: z.string().optional(),
-  transfer_to_account_id: z.string().optional(),
-});
-
-type FormValues = z.infer<typeof formSchema>;
+type FormValues = TransactionFormValues;
 
 interface TransactionFormProps {
   open: boolean;
@@ -107,6 +97,16 @@ export function TransactionForm({
   const isEditing = !!transaction?.id;
   const isPro = subscription?.plan === 'pro';
   const atLimit = usage ? usage.ai_parses_used >= usage.ai_parses_limit : false;
+  const formSchema = useMemo(
+    () =>
+      createTransactionFormSchema(categories, {
+        destinationRequired: t('destinationRequired'),
+        destinationDistinct: t('destinationDistinct'),
+        destinationUnexpected: t('destinationUnexpected'),
+        categoryTypeMismatch: t('categoryTypeMismatch'),
+      }),
+    [categories, t],
+  );
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -161,6 +161,21 @@ export function TransactionForm({
 
   const watchType = form.watch('type');
 
+  function reviewDraft(fields: FormValues): boolean {
+    const parsed = formSchema.safeParse(fields);
+    if (parsed.success) return true;
+    form.reset(fields);
+    ai.setStep('form');
+    for (const issue of parsed.error.issues) {
+      const field = issue.path[0];
+      if (typeof field === 'string' && field in fields) {
+        form.setError(field as keyof FormValues, { message: issue.message });
+      }
+    }
+    toast.error(t('reviewTransactionFields'));
+    return false;
+  }
+
   // --- Quick create handlers (use AI parse result) ---
 
   function handleQuickCreate(): void {
@@ -178,6 +193,7 @@ export function TransactionForm({
   }
 
   async function quickSubmit(fields: FormValues): Promise<void> {
+    if (!reviewDraft(fields)) return;
     try {
       await createMutation.mutateAsync({
         ...fields,
@@ -199,6 +215,18 @@ export function TransactionForm({
         setDuplicateConflict({ match: err.match, input: err.input });
         return;
       }
+      if (err instanceof ReviewTransactionError) {
+        form.reset(fields);
+        ai.setStep('form');
+        toast.error(
+          t(
+            err instanceof ReviewAutomationRuleError
+              ? 'reviewAutomationRule'
+              : 'reviewTransactionFields',
+          ),
+        );
+        return;
+      }
       toast.error(t('failedToCreate'));
     }
   }
@@ -210,6 +238,7 @@ export function TransactionForm({
   }
 
   async function quickSubmitAndAnother(fields: FormValues): Promise<void> {
+    if (!reviewDraft(fields)) return;
     try {
       await createMutation.mutateAsync({
         ...fields,
@@ -229,6 +258,18 @@ export function TransactionForm({
     } catch (err) {
       if (err instanceof DuplicateError) {
         setDuplicateConflict({ match: err.match, input: err.input });
+        return;
+      }
+      if (err instanceof ReviewTransactionError) {
+        form.reset(fields);
+        ai.setStep('form');
+        toast.error(
+          t(
+            err instanceof ReviewAutomationRuleError
+              ? 'reviewAutomationRule'
+              : 'reviewTransactionFields',
+          ),
+        );
         return;
       }
       toast.error(t('failedToCreate'));
@@ -292,6 +333,16 @@ export function TransactionForm({
     } catch (err) {
       if (err instanceof DuplicateError) {
         setDuplicateConflict({ match: err.match, input: err.input });
+        return;
+      }
+      if (err instanceof ReviewTransactionError) {
+        toast.error(
+          t(
+            err instanceof ReviewAutomationRuleError
+              ? 'reviewAutomationRule'
+              : 'reviewTransactionFields',
+          ),
+        );
         return;
       }
       toast.error(isEditing ? t('failedToUpdate') : t('failedToCreate'));
@@ -769,7 +820,18 @@ export function TransactionForm({
                   render={({ field }): React.ReactElement => (
                     <FormItem>
                       <FormLabel>{t('type')}</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
+                      <Select
+                        onValueChange={(value): void => {
+                          const next = fieldsAfterTypeChange(
+                            form.getValues(),
+                            value as TransactionType,
+                          );
+                          field.onChange(next.type);
+                          form.setValue('category_id', next.category_id);
+                          form.setValue('transfer_to_account_id', next.transfer_to_account_id);
+                          form.clearErrors(['category_id', 'transfer_to_account_id']);
+                        }}
+                        value={field.value}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder={t('selectType')} />

@@ -12,6 +12,8 @@ import { formatCurrency } from '@/lib/utils/formatting';
 import {
   forceCreateTransaction,
   replaceTransaction,
+  ReviewAutomationRuleError,
+  ReviewTransactionError,
 } from '@/lib/api/mutations/transaction.mutations';
 import { useQueryClient } from '@tanstack/react-query';
 import { transactionKeys } from '@/lib/api/queries/transaction.queries';
@@ -72,8 +74,19 @@ export function DuplicateWarningDialog({
       toast.success(t('transactionCreated'));
       onOpenChange(false);
       onResolved();
-    } catch {
-      toast.error(t('failedToCreate'));
+    } catch (error) {
+      if (error instanceof ReviewTransactionError) {
+        onOpenChange(false);
+        toast.error(
+          t(
+            error instanceof ReviewAutomationRuleError
+              ? 'reviewAutomationRule'
+              : 'reviewTransactionFields',
+          ),
+        );
+      } else {
+        toast.error(t('failedToCreate'));
+      }
     } finally {
       setPending(null);
     }
@@ -87,8 +100,19 @@ export function DuplicateWarningDialog({
       toast.success(t('transactionReplaced'));
       onOpenChange(false);
       onResolved();
-    } catch {
-      toast.error(t('failedToReplace'));
+    } catch (error) {
+      if (error instanceof ReviewTransactionError) {
+        onOpenChange(false);
+        toast.error(
+          t(
+            error instanceof ReviewAutomationRuleError
+              ? 'reviewAutomationRule'
+              : 'reviewTransactionFields',
+          ),
+        );
+      } else {
+        toast.error(t('failedToReplace'));
+      }
     } finally {
       setPending(null);
     }

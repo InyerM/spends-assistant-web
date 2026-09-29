@@ -1,6 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
   DuplicateError,
+  ReviewAutomationRuleError,
+  ReviewTransactionError,
   createTransaction,
   forceCreateTransaction,
   replaceTransaction,
@@ -84,6 +86,60 @@ describe('createTransaction', () => {
     );
 
     await expect(createTransaction(INPUT)).rejects.toThrow('Server error');
+  });
+
+  it('keeps one idempotency key across reconstructed retries until success, then starts a new attempt', async () => {
+    const tx = createMockTransaction();
+    const fetchMock = vi.fn(async (url: string, init: RequestInit) => {
+      expect(url).toContain('/api/transactions');
+      expect(init.method).toBe('POST');
+      if (fetchMock.mock.calls.length <= 2) {
+        return Response.json({ error: 'Temporary failure' }, { status: 503 });
+      }
+      return new Response(JSON.stringify(tx), { status: 201 });
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(createTransaction({ ...INPUT })).rejects.toThrow('Temporary failure');
+    await expect(createTransaction({ ...INPUT })).rejects.toThrow('Temporary failure');
+    await createTransaction({ ...INPUT });
+    await createTransaction({ ...INPUT });
+    await forceCreateTransaction({ ...INPUT });
+
+    const key = (index: number) =>
+      (fetchMock.mock.calls[index][1].headers as Record<string, string>)['Idempotency-Key'];
+    expect(key(0)).toMatch(/^[0-9a-f-]{36}$/i);
+    expect(key(1)).toBe(key(0));
+    expect(key(2)).toBe(key(0));
+    expect(key(3)).not.toBe(key(0));
+    expect(key(4)).not.toBe(key(3));
+  });
+
+  it('marks a reviewed-fields response for a clear form error', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(
+        async () =>
+          new Response(
+            JSON.stringify({
+              error: 'Review the transaction fields',
+              code: 'REVIEW_TRANSACTION_FIELDS',
+            }),
+            { status: 400 },
+          ),
+      ),
+    );
+
+    await expect(createTransaction({ ...INPUT })).rejects.toBeInstanceOf(ReviewTransactionError);
+  });
+
+  it('identifies an automation rule that created incompatible transaction fields', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => Response.json({ code: 'REVIEW_AUTOMATION_RULE' }, { status: 400 })),
+    );
+
+    await expect(createTransaction({ ...INPUT })).rejects.toBeInstanceOf(ReviewAutomationRuleError);
   });
 });
 

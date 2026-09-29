@@ -129,4 +129,20 @@ describe('atomic manual transaction route', () => {
     expect(response.status).toBe(400);
     expect(rpc).not.toHaveBeenCalled();
   });
+
+  it('asks for review when automation adds a destination to a non-transfer', async () => {
+    const { getUserClient, applyAutomationRules } = await import('@/lib/api/server');
+    const rpc = vi.fn();
+    vi.mocked(getUserClient).mockResolvedValue({ supabase: { rpc } as never, userId: 'user-id' });
+    vi.mocked(applyAutomationRules).mockResolvedValueOnce({
+      ...tx,
+      transfer_to_account_id: 'destination-id',
+    } as never);
+
+    const response = await POST(request());
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toMatchObject({ code: 'REVIEW_AUTOMATION_RULE' });
+    expect(rpc).not.toHaveBeenCalled();
+  });
 });

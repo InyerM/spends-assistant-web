@@ -26,10 +26,52 @@ export class DuplicateError extends Error {
   }
 }
 
+export class ReviewTransactionError extends Error {
+  public constructor() {
+    super('Review the transaction type, category, and destination');
+    this.name = 'ReviewTransactionError';
+  }
+}
+
+export class ReviewAutomationRuleError extends ReviewTransactionError {
+  public constructor() {
+    super();
+    this.name = 'ReviewAutomationRuleError';
+  }
+}
+
+async function transactionResponseError(response: Response): Promise<Error> {
+  const body = (await response.json()) as { error?: string; code?: string };
+  if (body.code === 'REVIEW_AUTOMATION_RULE') return new ReviewAutomationRuleError();
+  if (body.code === 'REVIEW_TRANSACTION_FIELDS') return new ReviewTransactionError();
+  return new Error(body.error || 'Failed to create transaction');
+}
+
+// A failed attempt keeps its key across reconstructed payloads; success frees it for a new payment.
+const requestKeys = new Map<string, string>();
+
+function idempotencyKey(input: CreateTransactionInput, action: string): string {
+  const fingerprint = JSON.stringify([action, input]);
+  let key = requestKeys.get(fingerprint);
+  if (!key) {
+    key = crypto.randomUUID();
+    requestKeys.set(fingerprint, key);
+    if (requestKeys.size > 100) requestKeys.delete(requestKeys.keys().next().value!);
+  }
+  return key;
+}
+
+function finishAttempt(input: CreateTransactionInput, action: string): void {
+  requestKeys.delete(JSON.stringify([action, input]));
+}
+
 export async function createTransaction(input: CreateTransactionInput): Promise<Transaction> {
   const res = await fetch('/api/transactions', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'Idempotency-Key': idempotencyKey(input, 'create'),
+    },
     body: JSON.stringify(input),
   });
 
@@ -39,23 +81,28 @@ export async function createTransaction(input: CreateTransactionInput): Promise<
   }
 
   if (!res.ok) {
-    const error = await res.json();
-    throw new Error((error as { error: string }).error || 'Failed to create transaction');
+    throw await transactionResponseError(res);
   }
-  return res.json() as Promise<Transaction>;
+  const transaction = (await res.json()) as Transaction;
+  finishAttempt(input, 'create');
+  return transaction;
 }
 
 export async function forceCreateTransaction(input: CreateTransactionInput): Promise<Transaction> {
   const res = await fetch('/api/transactions?force=true', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'Idempotency-Key': idempotencyKey(input, 'force'),
+    },
     body: JSON.stringify(input),
   });
   if (!res.ok) {
-    const error = await res.json();
-    throw new Error((error as { error: string }).error || 'Failed to create transaction');
+    throw await transactionResponseError(res);
   }
-  return res.json() as Promise<Transaction>;
+  const transaction = (await res.json()) as Transaction;
+  finishAttempt(input, 'force');
+  return transaction;
 }
 
 export async function replaceTransaction(
@@ -64,14 +111,18 @@ export async function replaceTransaction(
 ): Promise<Transaction> {
   const res = await fetch(`/api/transactions?replace=${replaceId}`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'Idempotency-Key': idempotencyKey(input, `replace:${replaceId}`),
+    },
     body: JSON.stringify(input),
   });
   if (!res.ok) {
-    const error = await res.json();
-    throw new Error((error as { error: string }).error || 'Failed to replace transaction');
+    throw await transactionResponseError(res);
   }
-  return res.json() as Promise<Transaction>;
+  const transaction = (await res.json()) as Transaction;
+  finishAttempt(input, `replace:${replaceId}`);
+  return transaction;
 }
 
 export async function updateTransaction({
