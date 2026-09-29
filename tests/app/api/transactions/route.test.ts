@@ -163,6 +163,69 @@ describe('POST /api/transactions', () => {
     vi.restoreAllMocks();
   });
 
+  it.each([
+    { plan: 'pro', status: 'canceled', used: 50, expectedStatus: 403, expectedInserts: 0 },
+    { plan: 'pro', status: 'past_due', used: 50, expectedStatus: 403, expectedInserts: 0 },
+    { plan: 'free', status: 'active', used: 50, expectedStatus: 403, expectedInserts: 0 },
+    { plan: 'free', status: 'active', used: 49, expectedStatus: 201, expectedInserts: 1 },
+    { plan: 'pro', status: 'active', used: 50, expectedStatus: 201, expectedInserts: 1 },
+  ])(
+    'enforces the free transaction limit for $plan with status $status at $used used',
+    async ({ plan, status, used, expectedStatus, expectedInserts }) => {
+      const { getUserClient, applyTransactionBalance } = await import('@/lib/api/server');
+      const tx = {
+        id: 'tx-new',
+        type: 'expense',
+        amount: 50000,
+        account_id: 'acc-1',
+        transfer_to_account_id: null,
+      };
+      const transactions = createChainableQuery(tx)._chain;
+      const subscription = createChainableQuery(null)._chain;
+      subscription.maybeSingle.mockResolvedValue({ data: { plan, status }, error: null });
+      const usage = createChainableQuery(null)._chain;
+      usage.maybeSingle.mockResolvedValue({
+        data: { id: 'usage-1', transactions_count: used },
+        error: null,
+      });
+      const settings = createChainableQuery(null)._chain;
+      settings.maybeSingle.mockResolvedValue({ data: { value: 50 }, error: null });
+      const tables = {
+        transactions,
+        subscriptions: subscription,
+        usage_tracking: usage,
+        app_settings: settings,
+      };
+      const mockSb = {
+        from: vi.fn((table: keyof typeof tables) => tables[table]),
+      };
+      vi.mocked(getUserClient).mockResolvedValue({
+        supabase: mockSb as never,
+        userId: 'test-user-id',
+      });
+      vi.mocked(applyTransactionBalance).mockResolvedValue();
+
+      const response = await POST(
+        new NextRequest('http://localhost/api/transactions?force=true', {
+          method: 'POST',
+          body: JSON.stringify({
+            date: '2026-09-28',
+            time: '14:30',
+            amount: 50000,
+            description: 'Synthetic expense',
+            account_id: 'acc-1',
+            type: 'expense',
+            source: 'api',
+          }),
+        }),
+      );
+
+      expect(response.status).toBe(expectedStatus);
+      expect(transactions.insert).toHaveBeenCalledTimes(expectedInserts);
+      expect(usage.eq).toHaveBeenCalledWith('month', new Date().toISOString().slice(0, 7));
+    },
+  );
+
   it('creates a transaction', async () => {
     const { getUserClient, applyTransactionBalance } = await import('@/lib/api/server');
     const tx = {

@@ -127,6 +127,37 @@ export async function POST(request: NextRequest): Promise<Response> {
       }
     }
 
+    const { data: subscription, error: subscriptionError } = await supabase
+      .from('subscriptions')
+      .select('plan, status')
+      .eq('user_id', userId)
+      .maybeSingle();
+    if (subscriptionError) return errorResponse('Failed to verify transaction limit');
+    if (subscription?.plan !== 'pro' || subscription.status !== 'active') {
+      const month = new Date().toISOString().slice(0, 7);
+      const [{ data: usage, error: usageError }, { data: setting, error: settingError }] =
+        await Promise.all([
+          supabase
+            .from('usage_tracking')
+            .select('transactions_count')
+            .eq('user_id', userId)
+            .eq('month', month)
+            .maybeSingle(),
+          supabase
+            .from('app_settings')
+            .select('value')
+            .eq('key', 'free_transactions_limit')
+            .maybeSingle(),
+        ]);
+      if (usageError || settingError) return errorResponse('Failed to verify transaction limit');
+      const used = Number(usage?.transactions_count ?? 0);
+      const limit = Number(setting?.value ?? 50);
+      if (!Number.isSafeInteger(used) || !Number.isSafeInteger(limit) || limit < 0) {
+        return errorResponse('Invalid transaction limit');
+      }
+      if (used >= limit) return errorResponse('Transaction limit exceeded', 403);
+    }
+
     // If replacing, soft-delete the original transaction first
     if (replaceId) {
       const { data: original } = await supabase
