@@ -1,6 +1,8 @@
 import type { NextRequest } from 'next/server';
-import { AuthError, errorResponse, getUserClient, jsonResponse } from '@/lib/api/server';
+import { AuthError, errorResponse, getUserClient } from '@/lib/api/server';
 import { validateDocumentImage } from '@/lib/documents';
+
+const privateHeaders = { 'Cache-Control': 'private, no-store' };
 
 export async function GET(): Promise<Response> {
   try {
@@ -11,7 +13,7 @@ export async function GET(): Promise<Response> {
       .eq('user_id', userId)
       .order('created_at', { ascending: false });
     if (error) return errorResponse(error.message, 400);
-    return jsonResponse({ data });
+    return Response.json({ data }, { headers: privateHeaders });
   } catch (error) {
     return error instanceof AuthError
       ? errorResponse('Unauthorized', 401)
@@ -60,7 +62,7 @@ export async function POST(request: NextRequest): Promise<Response> {
       await supabase.storage.from('documents').remove([filePath]);
       return errorResponse(error.message, 400);
     }
-    return jsonResponse(data, 201);
+    return Response.json(data, { status: 201, headers: privateHeaders });
   } catch (error) {
     return error instanceof AuthError
       ? errorResponse('Unauthorized', 401)

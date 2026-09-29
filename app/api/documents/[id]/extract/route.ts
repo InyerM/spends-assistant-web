@@ -1,7 +1,9 @@
 import type { NextRequest } from 'next/server';
-import { AuthError, errorResponse, getUserClient, jsonResponse } from '@/lib/api/server';
+import { AuthError, errorResponse, getUserClient } from '@/lib/api/server';
 import { workerConfig } from '@/lib/config';
 import { parseExtraction } from '@/lib/documents';
+
+const privateHeaders = { 'Cache-Control': 'private, no-store' };
 
 export async function POST(
   _request: NextRequest,
@@ -101,11 +103,10 @@ export async function POST(
         await markFailed('PERSISTENCE_FAILED');
         return errorResponse('Failed to save extraction');
       }
-      return jsonResponse({
-        document_id: id,
-        document_type: extraction.draft.document_type,
-        observations,
-      });
+      return Response.json(
+        { document_id: id, document_type: extraction.draft.document_type, observations },
+        { headers: privateHeaders },
+      );
     } catch {
       await markFailed('EXTRACTION_FAILED');
       return errorResponse('Failed to extract document');

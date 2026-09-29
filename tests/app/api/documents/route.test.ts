@@ -56,6 +56,7 @@ describe('/api/documents', () => {
     };
     const response = await POST({ formData: async () => ({ get: () => file }) } as never);
     expect(response.status, JSON.stringify(await response.clone().json())).toBe(201);
+    expect(response.headers.get('Cache-Control')).toBe('private, no-store');
     expect(upload.mock.calls[0][0]).toMatch(/^user-1\//);
     expect(insert.mock.calls[0][0]).toMatchObject({
       user_id: 'user-1',
@@ -67,6 +68,7 @@ describe('/api/documents', () => {
   it('lists only the signed-in user documents', async () => {
     const response = await GET();
     expect(response.status).toBe(200);
+    expect(response.headers.get('Cache-Control')).toBe('private, no-store');
     expect(select).toHaveBeenCalled();
     expect(eq).toHaveBeenCalledWith('user_id', 'user-1');
   });

@@ -80,6 +80,7 @@ describe('POST /api/documents/[id]/extract', () => {
       params: Promise.resolve({ id: 'doc-1' }),
     });
     expect(response.status, JSON.stringify(await response.clone().json())).toBe(200);
+    expect(response.headers.get('Cache-Control')).toBe('private, no-store');
     expect(fetchMock.mock.calls[0][1].headers.Authorization).toBe('Bearer jwt-1');
     expect(fetchMock.mock.calls[0][1].signal).toBeDefined();
     expect(rpc.mock.calls[0]).toEqual(['claim_document_extraction', { p_document_id: 'doc-1' }]);
