@@ -54,6 +54,12 @@ describe('Shortcut inbox review', () => {
     expect(update).not.toHaveBeenCalled();
   });
 
+  it('reports immutable matched review state as a conflict', async () => {
+    maybeSingle.mockResolvedValue({ data: null, error: { code: '23514' } });
+    const response = await PATCH(request('dismissed') as never, context);
+    expect(response.status).toBe(409);
+  });
+
   it('rejects review without a browser session', async () => {
     getUserClient.mockRejectedValue(new AuthError());
     const response = await PATCH(request('dismissed') as never, context);

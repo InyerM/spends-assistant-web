@@ -34,6 +34,7 @@ export async function PATCH(request: NextRequest, context: Context): Promise<Res
       .eq('user_id', userId)
       .select('id,status')
       .maybeSingle();
+    if (error?.code === '23514') return errorResponse('Inbox item is already matched', 409);
     if (error) return errorResponse('Inbox review failed');
     if (!data) return errorResponse('Inbox item not found', 404);
     return Response.json(data, { headers: { 'Cache-Control': 'private, no-store' } });

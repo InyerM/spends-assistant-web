@@ -79,8 +79,8 @@ to classify it. In the signed-in web app, open **Transactions → Shortcut inbox
 `/transactions/shortcut-inbox`. Reviewers can mark a message as non-transaction, dismiss it, or
 return it to pending. Original source, receipt time, message ID, text, and idempotency key are
 immutable after insert. This slice stores only the current review status; a dated status-change
-audit is deferred. `GET /api/shortcut-inbox/export` downloads all of that user's rows, including raw
-text, as private JSON. Handle the downloaded file as financial data.
+audit for ordinary status changes is deferred. `GET /api/shortcut-inbox/export` downloads all of
+that user's rows, including raw text, as private JSON. Handle the downloaded file as financial data.
 
 ## Read-only candidate suggestions
 
@@ -97,12 +97,33 @@ use a name-only account match. If an account suffix is missing, unknown, or ambi
 query is skipped. An exact original-message comparison is always attempted, including when parsing
 fails. Empty results are inconclusive, and the response notes when the 10-result cap is reached.
 
+## Explicit existing-transaction acknowledgement
+
+After reading an inbox message and a candidate's evidence, a signed-in reviewer can choose **Review
+this match**, then **Acknowledge existing transaction**. The browser sends
+`POST /api/shortcut-inbox/{id}/match` with `{ "transaction_id": "<uuid>" }`. A Shortcut API key is
+insufficient; this action requires the browser session. The database RPC resolves the owner from the
+session, locks the pending inbox item, and verifies that the chosen transaction belongs to the same
+user and is active. Candidate ranking never invokes this action automatically. The RPC only inserts
+one immutable decision record and changes inbox status to `matched`; it does not modify a
+transaction or balance. Repeating the same item and transaction returns the original decision ID. A
+competing choice for the same item returns a conflict. Separately reviewed notifications may
+reference the same transaction because one real event can generate multiple messages.
+
+The response is `{ "decision_id": "<uuid>" }`. `GET /api/shortcut-inbox?status=matched` includes the
+linked transaction ID and decision ID for each returned item. Decision rows are owner-readable and
+append-only. The decision stores a transaction snapshot so the reviewed evidence is auditable. An
+intentional hard delete of a transaction is an erasure exception: matching decision rows and their
+snapshots are deleted, and surviving inbox items return to pending. Deleting an inbox item also
+erases its decision. Ordinary soft deletion retains the historical decision.
+
 ## Deferred confirmation design
 
-There is no transaction-confirmation endpoint. Before confirmation is added, the flow needs richer
-deterministic candidate signals from account, amount, date/time, reference, and message context;
-same date/account/amount must remain a review candidate. Confirmation must recheck candidates under
-a database transaction, require an explicit per-item decision, create the financial record once, and
-update balances consistently. The dependency is
-[web issue #1](https://github.com/InyerM/spends-assistant-web/issues/1). No remote migration,
-deploy, or production backfill was performed for this contract.
+There is no endpoint to create a new transaction from an inbox message. That future path needs an
+explicit per-item decision and a single database transaction that locks the pending inbox item,
+rechecks owned candidates and active records, validates the reviewed financial fields, creates the
+new record once, updates the affected balance consistently, records an immutable decision, and marks
+the inbox item handled. Retries must return the original result, and any failure must roll back all
+financial and inbox changes. Same amount/date/account alone remains a candidate until the reviewer
+decides. The dependency is [web issue #1](https://github.com/InyerM/spends-assistant-web/issues/1).
+No remote migration, deploy, or production backfill was performed for this contract.

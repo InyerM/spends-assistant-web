@@ -14,8 +14,9 @@ interface InboxItem {
   external_id: string | null;
   received_at: string;
   raw_text: string;
-  status: 'pending' | 'non_transaction' | 'dismissed';
+  status: 'pending' | 'non_transaction' | 'dismissed' | 'matched';
   created_at: string;
+  match?: { decision_id: string; transaction_id: string };
 }
 
 interface InboxList {
@@ -63,6 +64,12 @@ export default function ShortcutInboxPage(): React.ReactElement {
   const [openCandidateId, setOpenCandidateId] = useState<string | null>(null);
   const [candidateBusyId, setCandidateBusyId] = useState<string | null>(null);
   const [candidateErrorId, setCandidateErrorId] = useState<string | null>(null);
+  const [reviewCandidate, setReviewCandidate] = useState<{
+    inboxId: string;
+    transactionId: string;
+  } | null>(null);
+  const [matchBusyId, setMatchBusyId] = useState<string | null>(null);
+  const [matchErrorId, setMatchErrorId] = useState<string | null>(null);
 
   const load = useCallback(async (): Promise<void> => {
     setLoading(true);
@@ -125,6 +132,27 @@ export default function ShortcutInboxPage(): React.ReactElement {
     }
   };
 
+  const acknowledgeMatch = async (inboxId: string, transactionId: string): Promise<void> => {
+    setMatchBusyId(inboxId);
+    setMatchErrorId(null);
+    try {
+      const response = await fetch(`/api/shortcut-inbox/${inboxId}/match`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ transaction_id: transactionId }),
+      });
+      if (!response.ok) throw new Error('Match acknowledgement failed');
+      setReviewCandidate(null);
+      setOpenCandidateId(null);
+      setPage(1);
+      setFilter('matched');
+    } catch {
+      setMatchErrorId(inboxId);
+    } finally {
+      setMatchBusyId(null);
+    }
+  };
+
   const totalPages = Math.max(1, Math.ceil(count / PAGE_SIZE));
 
   return (
@@ -161,6 +189,7 @@ export default function ShortcutInboxPage(): React.ReactElement {
           <option value='pending'>{t('pending')}</option>
           <option value='non_transaction'>{t('nonTransaction')}</option>
           <option value='dismissed'>{t('dismissed')}</option>
+          <option value='matched'>{t('matched')}</option>
         </select>
       </div>
 
@@ -200,14 +229,21 @@ export default function ShortcutInboxPage(): React.ReactElement {
                   <p className='text-foreground text-sm leading-relaxed wrap-break-word whitespace-pre-wrap'>
                     {item.raw_text}
                   </p>
+                  {item.status === 'matched' && item.match && (
+                    <p className='text-muted-foreground text-xs'>
+                      {t('matchedTransaction')}: {item.match.transaction_id}
+                    </p>
+                  )}
                   <div className='flex flex-wrap gap-2 border-t pt-3'>
-                    <Button
-                      size='sm'
-                      variant='outline'
-                      onClick={(): void => void showCandidates(item.id)}>
-                      {openCandidateId === item.id ? t('hideCandidates') : t('showCandidates')}
-                    </Button>
-                    {item.status !== 'pending' && (
+                    {item.status !== 'matched' && (
+                      <Button
+                        size='sm'
+                        variant='outline'
+                        onClick={(): void => void showCandidates(item.id)}>
+                        {openCandidateId === item.id ? t('hideCandidates') : t('showCandidates')}
+                      </Button>
+                    )}
+                    {item.status !== 'pending' && item.status !== 'matched' && (
                       <Button
                         size='sm'
                         variant='outline'
@@ -216,7 +252,7 @@ export default function ShortcutInboxPage(): React.ReactElement {
                         {t('returnToPending')}
                       </Button>
                     )}
-                    {item.status !== 'non_transaction' && (
+                    {item.status !== 'non_transaction' && item.status !== 'matched' && (
                       <Button
                         size='sm'
                         variant='outline'
@@ -225,7 +261,7 @@ export default function ShortcutInboxPage(): React.ReactElement {
                         {t('markNonTransaction')}
                       </Button>
                     )}
-                    {item.status !== 'dismissed' && (
+                    {item.status !== 'dismissed' && item.status !== 'matched' && (
                       <Button
                         size='sm'
                         variant='ghost'
@@ -256,6 +292,45 @@ export default function ShortcutInboxPage(): React.ReactElement {
                               <p className='text-muted-foreground'>
                                 {candidate.date} · {candidate.amount} · {candidate.source}
                               </p>
+                              {item.status === 'pending' &&
+                                (reviewCandidate?.inboxId === item.id &&
+                                reviewCandidate.transactionId === candidate.id ? (
+                                  <div className='bg-muted space-y-2 rounded-md p-3'>
+                                    <p>{t('matchConfirmCaution')}</p>
+                                    {matchErrorId === item.id && (
+                                      <p role='alert'>{t('matchFailed')}</p>
+                                    )}
+                                    <div className='flex flex-wrap gap-2'>
+                                      <Button
+                                        size='sm'
+                                        disabled={matchBusyId === item.id}
+                                        onClick={(): void =>
+                                          void acknowledgeMatch(item.id, candidate.id)
+                                        }>
+                                        {t('acknowledgeMatch')}
+                                      </Button>
+                                      <Button
+                                        size='sm'
+                                        variant='outline'
+                                        disabled={matchBusyId === item.id}
+                                        onClick={(): void => setReviewCandidate(null)}>
+                                        {t('cancelMatch')}
+                                      </Button>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <Button
+                                    size='sm'
+                                    variant='outline'
+                                    onClick={(): void =>
+                                      setReviewCandidate({
+                                        inboxId: item.id,
+                                        transactionId: candidate.id,
+                                      })
+                                    }>
+                                    {t('reviewMatch')}
+                                  </Button>
+                                ))}
                               <p className='text-muted-foreground'>
                                 {candidate.signals
                                   .map((signal) =>

@@ -84,14 +84,51 @@ export async function GET(request: NextRequest): Promise<Response> {
       .select('id,source,external_id,received_at,raw_text,status,created_at', { count: 'exact' })
       .eq('user_id', userId);
     const status = params.get('status');
-    if (status && ['pending', 'non_transaction', 'dismissed'].includes(status)) {
+    if (status && ['pending', 'non_transaction', 'dismissed', 'matched'].includes(status)) {
       query = query.eq('status', status);
     }
     const { data, count, error } = await query
       .order('created_at', { ascending: false })
       .range(from, from + limit - 1);
     if (error) return errorResponse('Inbox list failed');
-    return Response.json({ data, count, page, limit }, { headers: privateHeaders });
+    const inboxRows = data as Array<Record<string, unknown> & { id: string; status: string }>;
+    const matchedIds = inboxRows.filter((item) => item.status === 'matched').map((item) => item.id);
+    if (matchedIds.length === 0) {
+      return Response.json({ data, count, page, limit }, { headers: privateHeaders });
+    }
+    const { data: decisions, error: decisionError } = await supabase
+      .from('shortcut_inbox_match_decisions')
+      .select('id,inbox_item_id,transaction_id')
+      .eq('user_id', userId)
+      .in('inbox_item_id', matchedIds);
+    if (decisionError || decisions.length !== matchedIds.length) {
+      return errorResponse('Inbox list failed');
+    }
+    const decisionRows = decisions as Array<{
+      id: string;
+      inbox_item_id: string;
+      transaction_id: string;
+    }>;
+    const matchByItem = new Map<string, { decision_id: string; transaction_id: string }>(
+      decisionRows.map((decision) => [
+        decision.inbox_item_id,
+        {
+          decision_id: decision.id,
+          transaction_id: decision.transaction_id,
+        },
+      ]),
+    );
+    return Response.json(
+      {
+        data: inboxRows.map((item) =>
+          item.status === 'matched' ? { ...item, match: matchByItem.get(item.id) } : item,
+        ),
+        count,
+        page,
+        limit,
+      },
+      { headers: privateHeaders },
+    );
   } catch (error) {
     return error instanceof AuthError
       ? errorResponse('Unauthorized', 401)

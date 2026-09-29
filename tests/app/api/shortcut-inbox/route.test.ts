@@ -24,9 +24,29 @@ function request(body: unknown): Request {
 
 function fakeDatabase() {
   const rows: Record<string, unknown>[] = [];
+  const decisions: Record<string, unknown>[] = [];
   const filters: [string, unknown][] = [];
   const supabase = {
     from(table: string) {
+      if (table === 'shortcut_inbox_match_decisions') {
+        let owner: unknown;
+        return {
+          select: () => ({
+            eq: (_column: string, value: unknown) => {
+              owner = value;
+              return {
+                in: (_column: string, ids: string[]) =>
+                  Promise.resolve({
+                    data: decisions.filter(
+                      (row) => row.user_id === owner && ids.includes(row.inbox_item_id as string),
+                    ),
+                    error: null,
+                  }),
+              };
+            },
+          }),
+        };
+      }
       expect(table).toBe('shortcut_inbox_items');
       return {
         insert(row: Record<string, unknown>) {
@@ -83,7 +103,7 @@ function fakeDatabase() {
       };
     },
   };
-  return { supabase, rows, filters };
+  return { supabase, rows, decisions, filters };
 }
 
 describe('/api/shortcut-inbox', () => {
@@ -166,5 +186,67 @@ describe('/api/shortcut-inbox', () => {
     expect(response.status).toBe(200);
     expect(db.filters).toContainEqual(['user_id', 'owner-a']);
     expect(getShortcutPostClient).not.toHaveBeenCalled();
+  });
+
+  it('can filter acknowledged inbox items by matched status', async () => {
+    const db = fakeDatabase();
+    db.rows.push({ id: 'matched-1', user_id: 'owner-a', status: 'matched' });
+    db.decisions.push({
+      id: 'decision-1',
+      user_id: 'owner-a',
+      inbox_item_id: 'matched-1',
+      transaction_id: 'tx-1',
+    });
+    db.rows.push({ id: 'pending-1', user_id: 'owner-a', status: 'pending' });
+    getUserClient.mockResolvedValue({ supabase: db.supabase, userId: 'owner-a' });
+    const response = await GET(
+      new Request('https://example.test/api/shortcut-inbox?status=matched') as never,
+    );
+    expect(response.status).toBe(200);
+    expect((await response.json()).data).toEqual([
+      {
+        id: 'matched-1',
+        user_id: 'owner-a',
+        status: 'matched',
+        match: { decision_id: 'decision-1', transaction_id: 'tx-1' },
+      },
+    ]);
+  });
+
+  it('includes only owner-scoped decision summaries for matched rows', async () => {
+    const decisionEq = vi.fn();
+    const decisionIn = vi.fn().mockResolvedValue({
+      data: [{ inbox_item_id: 'matched-1', transaction_id: 'tx-1', id: 'decision-1' }],
+      error: null,
+    });
+    decisionEq.mockReturnValue({ in: decisionIn });
+    const listQuery = {
+      eq: vi.fn().mockReturnThis(),
+      order: vi.fn().mockReturnThis(),
+      range: vi.fn().mockResolvedValue({
+        data: [{ id: 'matched-1', status: 'matched' }],
+        count: 1,
+        error: null,
+      }),
+    };
+    const from = vi.fn((table: string) =>
+      table === 'shortcut_inbox_items'
+        ? { select: () => listQuery }
+        : { select: () => ({ eq: decisionEq }) },
+    );
+    getUserClient.mockResolvedValue({ supabase: { from }, userId: 'owner-a' });
+    const response = await GET(
+      new Request('https://example.test/api/shortcut-inbox?status=matched') as never,
+    );
+    expect(response.status).toBe(200);
+    expect((await response.json()).data).toEqual([
+      {
+        id: 'matched-1',
+        status: 'matched',
+        match: { decision_id: 'decision-1', transaction_id: 'tx-1' },
+      },
+    ]);
+    expect(decisionEq).toHaveBeenCalledWith('user_id', 'owner-a');
+    expect(decisionIn).toHaveBeenCalledWith('inbox_item_id', ['matched-1']);
   });
 });
