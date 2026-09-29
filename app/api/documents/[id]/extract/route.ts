@@ -30,19 +30,24 @@ export async function POST(
     } = await supabase.auth.getSession();
     if (!session?.access_token) return errorResponse('No authentication token available', 401);
 
-    const { data: claimed, error: claimError } = await supabase.rpc('claim_document_extraction', {
-      p_document_id: id,
-    });
+    const { data: claimToken, error: claimError } = await supabase.rpc(
+      'claim_document_extraction',
+      {
+        p_document_id: id,
+      },
+    );
     if (claimError) return errorResponse('Failed to claim document extraction');
-    if (!claimed) return errorResponse('Document extraction already in progress', 409);
+    if (!claimToken) return errorResponse('Document extraction already in progress', 409);
+    if (typeof claimToken !== 'string') return errorResponse('Invalid extraction claim', 502);
 
     const markFailed = async (code: string): Promise<void> => {
       await supabase
         .from('documents')
-        .update({ status: 'failed', error_code: code })
+        .update({ status: 'failed', error_code: code, processing_token: null })
         .eq('id', id)
         .eq('user_id', userId)
-        .eq('status', 'processing');
+        .eq('status', 'processing')
+        .eq('processing_token', claimToken);
     };
 
     try {
@@ -89,6 +94,7 @@ export async function POST(
       }));
       const { error: completionError } = await supabase.rpc('complete_document_extraction', {
         p_document_id: id,
+        p_claim_token: claimToken,
         p_document_type: extraction.draft.document_type,
         p_model: extraction.model,
         p_observations: observations,

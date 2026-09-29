@@ -1,16 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { POST } from '@/app/api/documents/[id]/extract/route';
 
-const { getUserClient, fetchMock, documentQuery, download, rpc, update, documentUpdate } =
-  vi.hoisted(() => ({
+const { getUserClient, fetchMock, documentQuery, download, rpc, update, updateEq } = vi.hoisted(
+  () => ({
     getUserClient: vi.fn(),
     fetchMock: vi.fn(),
     documentQuery: vi.fn(),
     download: vi.fn(),
     rpc: vi.fn(),
     update: vi.fn(),
-    documentUpdate: vi.fn(),
-  }));
+    updateEq: vi.fn(),
+  }),
+);
 
 vi.mock('@/lib/api/server', () => ({
   getUserClient,
@@ -40,12 +41,12 @@ describe('POST /api/documents/[id]/extract', () => {
     rpc.mockImplementation((name: string) =>
       Promise.resolve(
         name === 'claim_document_extraction'
-          ? { data: true, error: null }
+          ? { data: '11111111-1111-4111-8111-111111111111', error: null }
           : { data: 1, error: null },
       ),
     );
-    documentUpdate.mockResolvedValue({ error: null });
-    update.mockReturnValue({ eq: () => ({ eq: () => ({ eq: documentUpdate }) }) });
+    updateEq.mockImplementation(() => ({ eq: updateEq }));
+    update.mockReturnValue({ eq: updateEq });
     getUserClient.mockResolvedValue({
       userId: 'user-1',
       supabase: {
@@ -90,6 +91,7 @@ describe('POST /api/documents/[id]/extract', () => {
     expect(fetchMock.mock.calls[0][1].signal).toBeDefined();
     expect(rpc.mock.calls[0]).toEqual(['claim_document_extraction', { p_document_id: 'doc-1' }]);
     expect(rpc.mock.calls[1][0]).toBe('complete_document_extraction');
+    expect(rpc.mock.calls[1][1].p_claim_token).toBe('11111111-1111-4111-8111-111111111111');
     expect(rpc.mock.calls[1][1].p_observations[0]).toMatchObject({
       description: 'Coffee',
     });
@@ -108,14 +110,14 @@ describe('POST /api/documents/[id]/extract', () => {
   });
 
   it('returns conflict before download or Worker call when another extraction holds the claim', async () => {
-    rpc.mockResolvedValue({ data: false, error: null });
+    rpc.mockResolvedValue({ data: null, error: null });
     const response = await POST(new Request('http://localhost') as never, {
       params: Promise.resolve({ id: 'doc-1' }),
     });
     expect(response.status).toBe(409);
     expect(download).not.toHaveBeenCalled();
     expect(fetchMock).not.toHaveBeenCalled();
-    expect(documentUpdate).not.toHaveBeenCalled();
+    expect(update).not.toHaveBeenCalled();
   });
 
   it('starts only one Worker request for simultaneous extraction attempts', async () => {
@@ -123,7 +125,7 @@ describe('POST /api/documents/[id]/extract', () => {
     rpc.mockImplementation((name: string) =>
       Promise.resolve(
         name === 'claim_document_extraction'
-          ? { data: ++claims === 1, error: null }
+          ? { data: ++claims === 1 ? '11111111-1111-4111-8111-111111111111' : null, error: null }
           : { data: 0, error: null },
       ),
     );
@@ -150,7 +152,15 @@ describe('POST /api/documents/[id]/extract', () => {
       params: Promise.resolve({ id: 'doc-1' }),
     });
     expect(response.status).toBe(400);
-    expect(documentUpdate).toHaveBeenCalled();
+    expect(update).toHaveBeenCalledWith({
+      status: 'failed',
+      error_code: 'DOWNLOAD_FAILED',
+      processing_token: null,
+    });
+    expect(updateEq).toHaveBeenCalledWith(
+      'processing_token',
+      '11111111-1111-4111-8111-111111111111',
+    );
     expect(rpc).toHaveBeenCalledTimes(1);
   });
 
@@ -165,7 +175,7 @@ describe('POST /api/documents/[id]/extract', () => {
     rpc.mockImplementation((name: string) =>
       Promise.resolve(
         name === 'claim_document_extraction'
-          ? { data: true, error: null }
+          ? { data: '11111111-1111-4111-8111-111111111111', error: null }
           : { data: null, error: { message: 'database unavailable' } },
       ),
     );
@@ -173,7 +183,7 @@ describe('POST /api/documents/[id]/extract', () => {
       params: Promise.resolve({ id: 'doc-1' }),
     });
     expect(response.status).toBe(500);
-    expect(documentUpdate).toHaveBeenCalled();
+    expect(update).toHaveBeenCalled();
   });
 
   it('marks malformed Worker JSON as an invalid response', async () => {
@@ -182,6 +192,61 @@ describe('POST /api/documents/[id]/extract', () => {
       params: Promise.resolve({ id: 'doc-1' }),
     });
     expect(response.status).toBe(502);
-    expect(update).toHaveBeenCalledWith({ status: 'failed', error_code: 'INVALID_RESPONSE' });
+    expect(update).toHaveBeenCalledWith({
+      status: 'failed',
+      error_code: 'INVALID_RESPONSE',
+      processing_token: null,
+    });
+  });
+
+  it('does not complete or fail a newer claim when a stale Worker response arrives', async () => {
+    const tokenA = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+    const tokenB = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+    let claims = 0;
+    rpc.mockImplementation((name: string, args: { p_claim_token?: string }) => {
+      if (name === 'claim_document_extraction') {
+        claims += 1;
+        return Promise.resolve({ data: claims === 1 ? tokenA : tokenB, error: null });
+      }
+      return Promise.resolve(
+        args.p_claim_token === tokenB
+          ? { data: 0, error: null }
+          : { data: null, error: { message: 'Claim was replaced' } },
+      );
+    });
+    const workerResult = () =>
+      Response.json({
+        draft: { document_type: 'other', observations: [] },
+        model: 'qwen',
+        usage: {},
+      });
+    let resolveOldWorker: (response: Response) => void = () => {};
+    fetchMock
+      .mockImplementationOnce(
+        () =>
+          new Promise<Response>((resolve) => {
+            resolveOldWorker = resolve;
+          }),
+      )
+      .mockImplementationOnce(async () => workerResult());
+
+    const context = { params: Promise.resolve({ id: 'doc-1' }) };
+    const oldRequest = POST(new Request('http://localhost') as never, context);
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    const newerResponse = await POST(new Request('http://localhost') as never, context);
+    expect(newerResponse.status).toBe(200);
+    resolveOldWorker(workerResult());
+    const staleResponse = await oldRequest;
+    expect(staleResponse.status).toBe(500);
+    expect(rpc).toHaveBeenCalledWith(
+      'complete_document_extraction',
+      expect.objectContaining({ p_claim_token: tokenB }),
+    );
+    expect(rpc).toHaveBeenCalledWith(
+      'complete_document_extraction',
+      expect.objectContaining({ p_claim_token: tokenA }),
+    );
+    expect(updateEq).toHaveBeenCalledWith('processing_token', tokenA);
+    expect(updateEq).not.toHaveBeenCalledWith('processing_token', tokenB);
   });
 });
