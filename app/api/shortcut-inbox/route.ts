@@ -103,19 +103,29 @@ export async function GET(request: NextRequest): Promise<Response> {
     }
     const { data: decisions, error: decisionError } = await supabase
       .from('shortcut_inbox_match_decisions')
-      .select('id,inbox_item_id,transaction_id')
+      .select('id,inbox_item_id,transaction_id,shortcut_inbox_match_reversals(id)')
       .eq('user_id', userId)
       .in('inbox_item_id', matchedIds);
-    if (decisionError || decisions.length !== matchedIds.length) {
+    if (decisionError) {
       return errorResponse('Inbox list failed');
     }
     const decisionRows = decisions as Array<{
       id: string;
       inbox_item_id: string;
       transaction_id: string;
+      shortcut_inbox_match_reversals?: Array<{ id: string }>;
     }>;
+    const activeDecisions = decisionRows.filter(
+      (decision) => !decision.shortcut_inbox_match_reversals?.length,
+    );
+    if (
+      activeDecisions.length !== matchedIds.length ||
+      new Set(activeDecisions.map((decision) => decision.inbox_item_id)).size !== matchedIds.length
+    ) {
+      return errorResponse('Inbox list failed');
+    }
     const matchByItem = new Map<string, { decision_id: string; transaction_id: string }>(
-      decisionRows.map((decision) => [
+      activeDecisions.map((decision) => [
         decision.inbox_item_id,
         {
           decision_id: decision.id,

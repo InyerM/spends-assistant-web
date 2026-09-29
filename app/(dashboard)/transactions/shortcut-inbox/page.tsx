@@ -71,6 +71,9 @@ export default function ShortcutInboxPage(): React.ReactElement {
   } | null>(null);
   const [matchBusyId, setMatchBusyId] = useState<string | null>(null);
   const [matchErrorId, setMatchErrorId] = useState<string | null>(null);
+  const [reverseInboxId, setReverseInboxId] = useState<string | null>(null);
+  const [reverseBusyId, setReverseBusyId] = useState<string | null>(null);
+  const [reverseErrorId, setReverseErrorId] = useState<string | null>(null);
   const [createInboxId, setCreateInboxId] = useState<string | null>(null);
 
   const load = useCallback(async (): Promise<void> => {
@@ -152,6 +155,26 @@ export default function ShortcutInboxPage(): React.ReactElement {
       setMatchErrorId(inboxId);
     } finally {
       setMatchBusyId(null);
+    }
+  };
+
+  const reverseMatch = async (inboxId: string, decisionId: string): Promise<void> => {
+    setReverseBusyId(inboxId);
+    setReverseErrorId(null);
+    try {
+      const response = await fetch(`/api/shortcut-inbox/${inboxId}/reverse`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ decision_id: decisionId }),
+      });
+      if (!response.ok) throw new Error('Match reversal failed');
+      setReverseInboxId(null);
+      setPage(1);
+      setFilter('pending');
+    } catch {
+      setReverseErrorId(inboxId);
+    } finally {
+      setReverseBusyId(null);
     }
   };
 
@@ -241,6 +264,17 @@ export default function ShortcutInboxPage(): React.ReactElement {
                     </p>
                   )}
                   <div className='flex flex-wrap gap-2 border-t pt-3'>
+                    {item.status === 'matched' && item.match && (
+                      <Button
+                        size='sm'
+                        variant='outline'
+                        onClick={(): void => {
+                          setReverseErrorId(null);
+                          setReverseInboxId(reverseInboxId === item.id ? null : item.id);
+                        }}>
+                        {t('reviewReversal')}
+                      </Button>
+                    )}
                     {item.status === 'pending' && (
                       <Button
                         size='sm'
@@ -293,6 +327,27 @@ export default function ShortcutInboxPage(): React.ReactElement {
                         </Button>
                       )}
                   </div>
+                  {item.status === 'matched' && item.match && reverseInboxId === item.id && (
+                    <div className='bg-muted space-y-2 rounded-md p-3 text-sm'>
+                      <p>{t('reversalCaution')}</p>
+                      {reverseErrorId === item.id && <p role='alert'>{t('reversalFailed')}</p>}
+                      <div className='flex flex-wrap gap-2'>
+                        <Button
+                          size='sm'
+                          disabled={reverseBusyId === item.id}
+                          onClick={(): void => void reverseMatch(item.id, item.match!.decision_id)}>
+                          {t('reverseMatch')}
+                        </Button>
+                        <Button
+                          size='sm'
+                          variant='outline'
+                          disabled={reverseBusyId === item.id}
+                          onClick={(): void => setReverseInboxId(null)}>
+                          {t('cancelReversal')}
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                   {createInboxId === item.id && item.status === 'pending' && (
                     <ShortcutCreateForm
                       inboxId={item.id}

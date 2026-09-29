@@ -213,6 +213,34 @@ describe('/api/shortcut-inbox', () => {
     ]);
   });
 
+  it('shows the current match after an earlier acknowledgement was reversed', async () => {
+    const db = fakeDatabase();
+    db.rows.push({ id: 'matched-1', user_id: 'owner-a', status: 'matched' });
+    db.decisions.push({
+      id: 'old-decision',
+      user_id: 'owner-a',
+      inbox_item_id: 'matched-1',
+      transaction_id: 'old-tx',
+      shortcut_inbox_match_reversals: [{ id: 'reversal-1' }],
+    });
+    db.decisions.push({
+      id: 'new-decision',
+      user_id: 'owner-a',
+      inbox_item_id: 'matched-1',
+      transaction_id: 'new-tx',
+      shortcut_inbox_match_reversals: [],
+    });
+    getUserClient.mockResolvedValue({ supabase: db.supabase, userId: 'owner-a' });
+    const response = await GET(
+      new Request('https://example.test/api/shortcut-inbox?status=matched') as never,
+    );
+    expect(response.status).toBe(200);
+    expect((await response.json()).data[0].match).toEqual({
+      decision_id: 'new-decision',
+      transaction_id: 'new-tx',
+    });
+  });
+
   it('shows the created transaction decision in the created filter', async () => {
     const db = fakeDatabase();
     db.rows.push({ id: 'created-1', user_id: 'owner-a', status: 'created' });

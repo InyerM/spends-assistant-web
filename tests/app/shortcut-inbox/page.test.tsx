@@ -18,6 +18,11 @@ const { useTranslations } = vi.hoisted(() => {
       cancelMatch: 'Cancel match review',
       matched: 'Matched existing transaction',
       matchedTransaction: 'Linked transaction',
+      reviewReversal: 'Review incorrect match',
+      reverseMatch: 'Undo match and review again',
+      cancelReversal: 'Keep this match',
+      reversalCaution:
+        'The message returns to review, but it cannot be linked to this same transaction again. Choose a different existing transaction or create a reviewed one. The transaction and balance remain unchanged.',
       createNew: 'Create new transaction',
       createAccount: 'Account',
       createCategory: 'Category',
@@ -195,6 +200,60 @@ describe('Shortcut inbox review page', () => {
     );
     expect(await screen.findByText('Linked transaction: tx-1')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Mark non-transaction' })).not.toBeInTheDocument();
+  });
+
+  it('requires explicit confirmation to undo an existing match and return the message to review', async () => {
+    const fetchMock = vi.fn().mockImplementation((url: string, init?: RequestInit) => {
+      if (url.endsWith('/reverse')) {
+        expect(init).toEqual({
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ decision_id: 'decision-1' }),
+        });
+        return Promise.resolve(Response.json({ reversal_id: 'reversal-1' }));
+      }
+      const pending = url.includes('status=pending');
+      return Promise.resolve(
+        Response.json({
+          data: [
+            {
+              id: 'item-1',
+              source: 'sms-shortcut',
+              external_id: null,
+              received_at: '2026-09-29T10:00:00Z',
+              raw_text: 'Synthetic private message',
+              status: pending ? 'pending' : 'matched',
+              created_at: '2026-09-29T10:01:00Z',
+              ...(!pending && { match: { decision_id: 'decision-1', transaction_id: 'tx-1' } }),
+            },
+          ],
+          count: 1,
+        }),
+      );
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    render(<ShortcutInboxPage />);
+    fireEvent.change(screen.getByLabelText('statusFilter'), { target: { value: 'matched' } });
+    expect(await screen.findByText('Linked transaction: tx-1')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Review incorrect match' }));
+    expect(
+      screen.getByText(
+        'The message returns to review, but it cannot be linked to this same transaction again. Choose a different existing transaction or create a reviewed one. The transaction and balance remain unchanged.',
+      ),
+    ).toBeInTheDocument();
+    expect(
+      fetchMock.mock.calls.some(([url]) => typeof url === 'string' && url.endsWith('/reverse')),
+    ).toBe(false);
+    fireEvent.click(screen.getByRole('button', { name: 'Undo match and review again' }));
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith(
+        '/api/shortcut-inbox/item-1/reverse',
+        expect.anything(),
+      ),
+    );
+    expect(
+      await screen.findByRole('button', { name: 'Show possible matches' }),
+    ).toBeInTheDocument();
   });
 
   it('requires reviewed fields and a second explicit decision when the database finds a same-value transaction', async () => {

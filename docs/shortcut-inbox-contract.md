@@ -3,9 +3,10 @@
 This implements capture and reviewed matching/creation for
 [web issue #3](https://github.com/InyerM/spends-assistant-web/issues/3). It requires backend
 migrations `20260929000030_shortcut_inbox.sql`, `20260929000080_shortcut_match_ack.sql`, and
-`20260929000110_shortcut_create_transaction.sql` before use. The intake endpoint stores the original
-text in a private, owner-scoped inbox. Intake, status review, and export never create transactions
-or change account balances; creation requires a separate signed-in review action.
+`20260929000110_shortcut_create_transaction.sql`, and `20260929000120_shortcut_match_reversal.sql`
+before use. The intake endpoint stores the original text in a private, owner-scoped inbox. Intake,
+status review, and export never create transactions or change account balances; creation requires a
+separate signed-in review action.
 
 ## Authentication and request
 
@@ -107,16 +108,39 @@ insufficient; this action requires the browser session. The database RPC resolve
 session, locks the pending inbox item, and verifies that the chosen transaction belongs to the same
 user and is active. Candidate ranking never invokes this action automatically. The RPC only inserts
 one immutable decision record and changes inbox status to `matched`; it does not modify a
-transaction or balance. Repeating the same item and transaction returns the original decision ID. A
-competing choice for the same item returns a conflict. Separately reviewed notifications may
-reference the same transaction because one real event can generate multiple messages.
+transaction or balance. Repeating the same item and transaction while its match is current returns
+the original decision ID. A competing choice for the same item returns a conflict. Separately
+reviewed notifications may reference the same transaction because one real event can generate
+multiple messages.
 
 The response is `{ "decision_id": "<uuid>" }`. `GET /api/shortcut-inbox?status=matched` includes the
 linked transaction ID and decision ID for each returned item. Decision rows are owner-readable and
 append-only. The decision stores a transaction snapshot so the reviewed evidence is auditable. An
 intentional hard delete of a transaction is an erasure exception: matching decision rows and their
-snapshots are deleted, and surviving inbox items return to pending. Deleting an inbox item also
-erases its decision. Ordinary soft deletion retains the historical decision.
+snapshots are deleted, and surviving inbox items return to pending only when that transaction was
+their current decision. Deleting a transaction tied to a reversed historical decision does not
+disturb a later match. Deleting an inbox item also erases its decisions. Ordinary soft deletion
+retains the historical decision.
+
+## Correcting an existing match
+
+In the **Matched existing transaction** filter, a signed-in reviewer can choose **Review incorrect
+match**, inspect the linked transaction ID, then choose **Undo match and review again**. The browser
+sends `POST /api/shortcut-inbox/{id}/reverse` with `{ "decision_id": "<uuid>" }`. The owner-scoped
+database function locks the inbox item, requires a current existing-transaction decision, appends
+one immutable reversal record, and returns the original message to `pending`. It changes no
+transaction, account balance, or usage counter. An identical retry returns the same reversal ID,
+including after a later review. A stale retry of the old match cannot reinstate the same
+transaction.
+
+The original acknowledgement and its snapshot remain in the private audit history. After reversal,
+the same inbox item cannot be linked to that same transaction again; this prevents a delayed retry
+from silently reinstating a mistaken match. The reviewer can acknowledge a different existing
+transaction or create a separately reviewed transaction. Deliberate reselection of the original
+target would require a separate, versioned review flow. Only the current decision appears on the
+inbox list. This action cannot reverse a `created` decision: correcting a financial row requires its
+own transaction edit/deletion workflow. Full multi-connection PostgreSQL contention and remote
+migration validation remain deployment gates.
 
 ## Reviewed new-transaction creation
 
