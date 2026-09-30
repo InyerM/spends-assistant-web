@@ -14,7 +14,7 @@ describe('dashboard summary', () => {
         { type: 'expense', amount: 120_000, financial_role: 'earmarked_relief_outlay' },
         { type: 'transfer', amount: 50_000, financial_role: null },
       ]),
-    ).toEqual({ personalIncome: 1_046_000, expenses: 300_000, cashFlow: 436_000 });
+    ).toEqual({ personalIncome: 1_000_000, expenses: 300_000, cashFlow: 436_000 });
   });
 
   it('uses ordinary cash movement semantics when no review role exists', () => {
