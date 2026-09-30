@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import Link from 'next/link';
 import { Landmark } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -217,6 +218,13 @@ export default function LoansPage(): React.ReactElement {
         </div>
         <p className='text-muted-foreground text-sm'>
           Record sourced Lulo Bank and Bancolombia balances and payment allocations.
+        </p>
+        <p className='text-muted-foreground text-sm'>
+          Loans you made to other people are tracked separately in{' '}
+          <Link href='/receivables' className='underline'>
+            Money owed to you
+          </Link>
+          .
         </p>
         <p className='border-border bg-muted/40 text-muted-foreground rounded-lg border px-4 py-3 text-sm'>
           This journal is separate from bank accounts, transactions, spending reports, and net
