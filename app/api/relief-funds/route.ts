@@ -1,0 +1,47 @@
+import type { NextRequest } from 'next/server';
+import { AuthError, errorResponse, getUserClient } from '@/lib/api/server';
+import { reliefFundConfirmSchema } from '@/lib/relief-funds/journal';
+
+const privateHeaders = { 'Cache-Control': 'private, no-store' };
+
+export async function GET(): Promise<Response> {
+  try {
+    const { supabase, userId } = await getUserClient();
+    const { data, error } = await supabase
+      .from('relief_funds')
+      .select('*, relief_fund_entries(*)')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+    if (error) return errorResponse('Failed to list relief funds');
+    return Response.json({ data }, { headers: privateHeaders });
+  } catch (error) {
+    return error instanceof AuthError
+      ? errorResponse('Unauthorized', 401)
+      : errorResponse('Failed to list relief funds');
+  }
+}
+
+export async function POST(request: NextRequest): Promise<Response> {
+  try {
+    const { supabase } = await getUserClient();
+    const parsed = reliefFundConfirmSchema.safeParse(await request.json());
+    if (!parsed.success) return errorResponse('Review and valid exact amounts are required', 400);
+    const { data, error } = await supabase.rpc('confirm_relief_fund_event', {
+      p_request_id: parsed.data.request_id,
+      p_reviewed: true,
+      p_event: parsed.data.event,
+    });
+    if (error) {
+      if (error.code === '42501') return errorResponse('Relief fund not found', 404);
+      if (error.code === '22023' || error.code === '23505')
+        return errorResponse(error.message, 400);
+      return errorResponse('Failed to save relief fund entry');
+    }
+    const result = data as { replayed: boolean };
+    return Response.json(result, { status: result.replayed ? 200 : 201, headers: privateHeaders });
+  } catch (error) {
+    return error instanceof AuthError
+      ? errorResponse('Unauthorized', 401)
+      : errorResponse('Failed to save relief fund entry');
+  }
+}
