@@ -26,6 +26,17 @@ function ensureLocaleCookie(request: NextRequest, response: NextResponse): void 
 }
 
 export async function proxy(request: NextRequest): Promise<NextResponse> {
+  const pathname = request.nextUrl.pathname;
+
+  // The Shortcut inbox handler validates bearer API keys without a browser session.
+  if (
+    pathname === '/api/shortcut-inbox' &&
+    request.method === 'POST' &&
+    request.headers.has('authorization')
+  ) {
+    return NextResponse.next({ request });
+  }
+
   let supabaseResponse = NextResponse.next({ request });
 
   const supabase = createServerClient(
@@ -57,8 +68,6 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-
-  const pathname = request.nextUrl.pathname;
 
   // Redirect unauthenticated users to login
   if (!user && !isPublicPath(pathname)) {
