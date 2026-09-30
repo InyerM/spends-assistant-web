@@ -1,4 +1,5 @@
 import type { NextRequest } from 'next/server';
+import type { IncomingFlowRole } from '@/types/transaction';
 import {
   getUserClient,
   AuthError,
@@ -6,6 +7,20 @@ import {
   errorResponse,
   applyAutomationRules,
 } from '@/lib/api/server';
+
+function reviewedIncomingRole(value: unknown): IncomingFlowRole | null {
+  const correction: unknown = Array.isArray(value) ? (value[0] as unknown) : value;
+  if (!correction || typeof correction !== 'object') return null;
+  const role = (correction as { flow_role?: unknown }).flow_role;
+  if (
+    role === 'receivable_principal_repayment' ||
+    role === 'personal_sale_proceeds' ||
+    role === 'earmarked_relief_donation'
+  ) {
+    return role;
+  }
+  return null;
+}
 
 export async function GET(request: NextRequest): Promise<Response> {
   try {
@@ -31,7 +46,10 @@ export async function GET(request: NextRequest): Promise<Response> {
 
     let query = supabase
       .from('transactions')
-      .select('*', { count: 'exact' })
+      .select(
+        '*,incoming_correction:shortcut_incoming_type_corrections!shortcut_incoming_correction_transaction_fk(flow_role)',
+        { count: 'exact' },
+      )
       .is('deleted_at', null);
 
     if (sortBy === 'amount') {
@@ -64,7 +82,14 @@ export async function GET(request: NextRequest): Promise<Response> {
     const { data, error, count } = await query;
     if (error) return errorResponse(error.message, 400);
 
-    return jsonResponse({ data, count });
+    const transactionRows = data as Array<Record<string, unknown>>;
+    const transactions = transactionRows.map(({ incoming_correction, ...transaction }) => {
+      return {
+        ...transaction,
+        financial_role: reviewedIncomingRole(incoming_correction),
+      };
+    });
+    return jsonResponse({ data: transactions, count });
   } catch (error) {
     if (error instanceof AuthError) return errorResponse('Unauthorized', 401);
     return errorResponse('Failed to fetch transactions');

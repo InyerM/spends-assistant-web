@@ -74,6 +74,34 @@ describe('GET /api/transactions', () => {
     expect(body.data).toHaveLength(2);
   });
 
+  it('includes the reviewed role so restricted cash is not reported as personal income', async () => {
+    const { getUserClient } = await import('@/lib/api/server');
+    const mockSb = createChainableQuery([
+      {
+        id: 'tx-donation',
+        type: 'income',
+        incoming_correction: { flow_role: 'earmarked_relief_donation' },
+      },
+      { id: 'tx-salary', type: 'income', incoming_correction: null },
+    ]);
+    vi.mocked(getUserClient).mockResolvedValue({
+      supabase: mockSb as never,
+      userId: 'test-user-id',
+    });
+
+    const response = await GET(new NextRequest('http://localhost/api/transactions'));
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.data).toEqual([
+      { id: 'tx-donation', type: 'income', financial_role: 'earmarked_relief_donation' },
+      { id: 'tx-salary', type: 'income', financial_role: null },
+    ]);
+    expect(mockSb._chain.select).toHaveBeenCalledWith(
+      expect.stringContaining('shortcut_incoming_correction_transaction_fk'),
+      { count: 'exact' },
+    );
+  });
+
   it('filters by type', async () => {
     const { getUserClient } = await import('@/lib/api/server');
     const mockSb = createChainableQuery([]);

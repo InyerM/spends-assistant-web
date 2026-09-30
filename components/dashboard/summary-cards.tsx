@@ -5,6 +5,7 @@ import { useTranslations, useLocale } from 'next-intl';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatCurrency } from '@/lib/utils/formatting';
+import { calculateDashboardSummary } from '@/lib/transactions/dashboard-summary';
 import { TrendingUp, TrendingDown, Scale } from 'lucide-react';
 import type { Transaction } from '@/types';
 
@@ -18,21 +19,13 @@ export function SummaryCards({ transactions, isLoading }: SummaryCardsProps): Re
   const locale = useLocale();
 
   const stats = useMemo(() => {
-    let income = 0;
-    let expenses = 0;
-
-    for (const tx of transactions) {
-      if (tx.type === 'income') income += tx.amount;
-      else if (tx.type === 'expense') expenses += tx.amount;
-    }
-
-    return { income, expenses, cashFlow: income - expenses };
+    return calculateDashboardSummary(transactions);
   }, [transactions]);
 
   const cards = [
     {
       label: t('income'),
-      value: stats.income,
+      value: stats.personalIncome,
       colorClass: 'text-success',
       icon: TrendingUp,
       iconBg: 'bg-success/15',

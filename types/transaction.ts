@@ -1,4 +1,8 @@
 export type TransactionType = 'expense' | 'income' | 'transfer';
+export type IncomingFlowRole =
+  | 'receivable_principal_repayment'
+  | 'personal_sale_proceeds'
+  | 'earmarked_relief_donation';
 
 export interface AppliedRule {
   rule_id: string;
@@ -17,6 +21,7 @@ export interface Transaction {
   category_id: string | null;
   account_id: string;
   type: TransactionType;
+  financial_role?: IncomingFlowRole | null;
   payment_method: string | null;
   source: string;
   confidence: number | null;
