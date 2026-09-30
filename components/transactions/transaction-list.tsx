@@ -162,17 +162,19 @@ function TransactionRow({
   const Icon = config.icon;
   const hasMetadata = tx.raw_text || tx.parsed_data || tx.notes;
   const financialRoleLabel =
-    tx.financial_role === 'receivable_principal_repayment'
-      ? t('receivableRepayment')
-      : tx.financial_role === 'personal_sale_proceeds'
-        ? t('personalSale')
-        : tx.financial_role === 'earmarked_relief_donation'
-          ? t('reliefDonation')
-          : tx.financial_role === 'receivable_disbursement'
-            ? t('receivableDisbursement')
-            : tx.financial_role === 'earmarked_relief_outlay'
-              ? t('reliefOutlay')
-              : null;
+    tx.financial_role === 'credit_card_refund'
+      ? t('creditCardRefund')
+      : tx.financial_role === 'receivable_principal_repayment'
+        ? t('receivableRepayment')
+        : tx.financial_role === 'personal_sale_proceeds'
+          ? t('personalSale')
+          : tx.financial_role === 'earmarked_relief_donation'
+            ? t('reliefDonation')
+            : tx.financial_role === 'receivable_disbursement'
+              ? t('receivableDisbursement')
+              : tx.financial_role === 'earmarked_relief_outlay'
+                ? t('reliefOutlay')
+                : null;
 
   const longPressHandlers = useLongPress({
     onLongPress: (): void => onLongPress?.(tx.id),

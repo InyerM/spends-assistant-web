@@ -32,7 +32,8 @@ export function calculateDashboardSummary(
       if (
         transaction.financial_role !== 'receivable_principal_repayment' &&
         transaction.financial_role !== 'earmarked_relief_donation' &&
-        transaction.financial_role !== 'personal_sale_proceeds'
+        transaction.financial_role !== 'personal_sale_proceeds' &&
+        transaction.financial_role !== 'credit_card_refund'
       ) {
         personalIncome += transaction.amount;
       }

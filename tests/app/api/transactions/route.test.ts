@@ -102,6 +102,32 @@ describe('GET /api/transactions', () => {
     );
   });
 
+  it('exposes the audited card refund role through its transaction relation', async () => {
+    const { getUserClient } = await import('@/lib/api/server');
+    const mockSb = createChainableQuery([
+      {
+        id: 'tx-refund',
+        type: 'income',
+        incoming_correction: null,
+        card_refund_correction: { id: 'audit-1' },
+      },
+    ]);
+    vi.mocked(getUserClient).mockResolvedValue({
+      supabase: mockSb as never,
+      userId: 'test-user-id',
+    });
+
+    const response = await GET(new NextRequest('http://localhost/api/transactions'));
+    expect(response.status).toBe(200);
+    expect((await response.json()).data).toEqual([
+      { id: 'tx-refund', type: 'income', financial_role: 'credit_card_refund' },
+    ]);
+    expect(mockSb._chain.select).toHaveBeenCalledWith(
+      expect.stringContaining('shortcut_card_refund_transaction_fk'),
+      { count: 'exact' },
+    );
+  });
+
   it('marks linked loan disbursements and relief outlays separately from personal expenses', async () => {
     const { getUserClient } = await import('@/lib/api/server');
     const loanId = '11111111-1111-4111-8111-111111111111';

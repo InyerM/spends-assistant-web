@@ -187,6 +187,7 @@
     "notesPlaceholder": "Optional notes...",
     "expense": "Expense",
     "income": "Income",
+    "creditCardRefund": "Credit card refund",
     "receivableRepayment": "Loan principal repayment",
     "personalSale": "Personal sale",
     "reliefDonation": "Relief donation",

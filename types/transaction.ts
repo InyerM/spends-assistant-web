@@ -2,7 +2,8 @@ export type TransactionType = 'expense' | 'income' | 'transfer';
 export type IncomingFlowRole =
   | 'receivable_principal_repayment'
   | 'personal_sale_proceeds'
-  | 'earmarked_relief_donation';
+  | 'earmarked_relief_donation'
+  | 'credit_card_refund';
 export type FinancialRole =
   | IncomingFlowRole
   | 'receivable_disbursement'

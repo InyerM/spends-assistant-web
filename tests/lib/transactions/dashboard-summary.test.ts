@@ -9,12 +9,13 @@ describe('dashboard summary', () => {
         { type: 'income', amount: 100_000, financial_role: 'receivable_principal_repayment' },
         { type: 'income', amount: 510_000, financial_role: 'earmarked_relief_donation' },
         { type: 'income', amount: 46_000, financial_role: 'personal_sale_proceeds' },
+        { type: 'income', amount: 89_991, financial_role: 'credit_card_refund' },
         { type: 'expense', amount: 300_000, financial_role: null },
         { type: 'expense', amount: 800_000, financial_role: 'receivable_disbursement' },
         { type: 'expense', amount: 120_000, financial_role: 'earmarked_relief_outlay' },
         { type: 'transfer', amount: 50_000, financial_role: null },
       ]),
-    ).toEqual({ personalIncome: 1_000_000, expenses: 300_000, cashFlow: 436_000 });
+    ).toEqual({ personalIncome: 1_000_000, expenses: 300_000, cashFlow: 525_991 });
   });
 
   it('uses ordinary cash movement semantics when no review role exists', () => {

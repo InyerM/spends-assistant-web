@@ -22,6 +22,15 @@ function reviewedIncomingRole(value: unknown): IncomingFlowRole | null {
   return null;
 }
 
+function hasReviewedCardRefund(value: unknown): boolean {
+  const correction: unknown = Array.isArray(value) ? (value[0] as unknown) : value;
+  return (
+    !!correction &&
+    typeof correction === 'object' &&
+    typeof (correction as { id?: unknown }).id === 'string'
+  );
+}
+
 export async function GET(request: NextRequest): Promise<Response> {
   try {
     const { supabase } = await getUserClient();
@@ -47,7 +56,7 @@ export async function GET(request: NextRequest): Promise<Response> {
     let query = supabase
       .from('transactions')
       .select(
-        '*,incoming_correction:shortcut_incoming_type_corrections!shortcut_incoming_correction_transaction_fk(flow_role)',
+        '*,incoming_correction:shortcut_incoming_type_corrections!shortcut_incoming_correction_transaction_fk(flow_role),card_refund_correction:shortcut_card_refund_corrections!shortcut_card_refund_transaction_fk(id)',
         { count: 'exact' },
       )
       .is('deleted_at', null);
@@ -126,13 +135,21 @@ export async function GET(request: NextRequest): Promise<Response> {
         expenseRoles.set(entry.transaction_id, 'earmarked_relief_outlay');
       }
     }
-    const transactions = transactionRows.map(({ incoming_correction, ...transaction }) => {
-      return {
-        ...transaction,
-        financial_role:
-          expenseRoles.get(transaction.id as string) ?? reviewedIncomingRole(incoming_correction),
-      };
-    });
+    const transactions = transactionRows.map(
+      ({ incoming_correction, card_refund_correction, ...transaction }) => {
+        if (hasReviewedCardRefund(card_refund_correction) && transaction.type !== 'income') {
+          throw new Error('Audited card refund has an invalid transaction direction');
+        }
+        return {
+          ...transaction,
+          financial_role:
+            expenseRoles.get(transaction.id as string) ??
+            (hasReviewedCardRefund(card_refund_correction)
+              ? 'credit_card_refund'
+              : reviewedIncomingRole(incoming_correction)),
+        };
+      },
+    );
     return jsonResponse({ data: transactions, count });
   } catch (error) {
     if (error instanceof AuthError) return errorResponse('Unauthorized', 401);
