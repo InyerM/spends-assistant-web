@@ -165,6 +165,16 @@ payment**. The form then resends the same fields with `reviewed_candidate_hash` 
 `confirm_distinct: true`. The SQL function recomputes the candidate set under locks; a changed set
 requires another review. Equal amount/date/account is never treated as proof of duplication.
 
+If the original purchase time differs from message receipt, the reviewer may enter an **Original
+transaction time** and explicitly confirm it against the message or their records. This adds
+`event_at` in RFC 3339 form with an explicit offset and `event_time_confirmed: true` to the reviewed
+fields. The transaction date must match the event's `America/Bogota` calendar date, including when a
+message arrives after midnight. The database rejects malformed, unconfirmed, or implausibly delayed
+event times. `received_at` remains the immutable receipt instant; the reviewed event instant is
+stored separately in the transaction and decision audit. Leaving the time blank preserves the
+existing receipt-based behavior. Migration `20260929000180_shortcut_reviewed_event_time.sql` must be
+applied before deploying the web form that sends these fields.
+
 On confirmation, one database transaction inserts the financial row, stores the original source,
 receipt timestamp, external ID and raw text, updates the account balance and current monthly usage
 counter once, appends an immutable decision snapshot, and marks the inbox item `created`. A retry

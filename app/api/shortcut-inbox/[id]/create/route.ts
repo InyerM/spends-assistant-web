@@ -10,12 +10,34 @@ const amount = /^(0|[1-9][0-9]{0,12})(?:\.[0-9]{1,2})?$/u;
 const hash = /^[a-f0-9]{32}$/u;
 const privateHeaders = { 'Cache-Control': 'private, no-store' };
 const requiredFields = ['account_id', 'category_id', 'type', 'amount', 'date', 'description'];
-const allowedFields = new Set([...requiredFields, 'reviewed_candidate_hash', 'confirm_distinct']);
+const allowedFields = new Set([
+  ...requiredFields,
+  'reviewed_candidate_hash',
+  'confirm_distinct',
+  'event_at',
+  'event_time_confirmed',
+]);
 
 function validDate(value: string): boolean {
   if (!/^\d{4}-\d{2}-\d{2}$/u.test(value)) return false;
   const parsed = new Date(`${value}T00:00:00.000Z`);
   return !Number.isNaN(parsed.valueOf()) && parsed.toISOString().slice(0, 10) === value;
+}
+
+function validEventAt(value: string, date: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?(?:Z|[+-]\d{2}:\d{2})$/u.test(value)) {
+    return false;
+  }
+  const instant = new Date(value);
+  if (Number.isNaN(instant.valueOf())) return false;
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/Bogota',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(instant);
+  const part = (kind: string): string => parts.find(({ type }) => type === kind)?.value ?? '';
+  return `${part('year')}-${part('month')}-${part('day')}` === date;
 }
 
 export async function POST(request: NextRequest, context: Context): Promise<Response> {
@@ -57,7 +79,12 @@ export async function POST(request: NextRequest, context: Context): Promise<Resp
         (typeof body.reviewed_candidate_hash !== 'string' ||
           !hash.test(body.reviewed_candidate_hash))) ||
       (body.confirm_distinct !== undefined && typeof body.confirm_distinct !== 'boolean') ||
-      (body.confirm_distinct === true && !body.reviewed_candidate_hash)
+      (body.confirm_distinct === true && !body.reviewed_candidate_hash) ||
+      (body.event_at === undefined) !== (body.event_time_confirmed === undefined) ||
+      (body.event_at !== undefined &&
+        (typeof body.event_at !== 'string' ||
+          !validEventAt(body.event_at, body.date as string) ||
+          body.event_time_confirmed !== true))
     ) {
       return errorResponse('Invalid reviewed transaction', 400);
     }
@@ -69,6 +96,9 @@ export async function POST(request: NextRequest, context: Context): Promise<Resp
       amount: body.amount,
       date: body.date,
       description: body.description.trim(),
+      ...(body.event_at !== undefined
+        ? { event_at: body.event_at, event_time_confirmed: true }
+        : {}),
     };
     const { data, error } = await supabase.rpc('confirm_shortcut_transaction', {
       p_inbox_item_id: id,

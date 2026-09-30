@@ -28,6 +28,8 @@ const { useTranslations } = vi.hoisted(() => {
       createCategory: 'Category',
       createAmount: 'Amount',
       createDescription: 'Description',
+      createEventTime: 'Original transaction time',
+      confirmEventTime: 'I confirmed this original time',
       saveReviewed: 'Save reviewed transaction',
       confirmDistinct: 'Create distinct payment',
       overflowCaution: 'Too many possible matches',
@@ -347,6 +349,67 @@ describe('Shortcut inbox review page', () => {
       category_id: 'category-1',
       confirm_distinct: true,
       reviewed_candidate_hash: 'a'.repeat(32),
+    });
+  });
+
+  it('requires explicit time confirmation and sends the original instant for a delayed SMS', async () => {
+    const fetchMock = vi.fn().mockImplementation((url: string) => {
+      if (url === '/api/accounts')
+        return Promise.resolve(Response.json([{ id: 'account-1', name: 'Savings' }]));
+      if (url === '/api/categories')
+        return Promise.resolve(
+          Response.json([{ id: 'category-1', name: 'Food', type: 'expense' }]),
+        );
+      if (url.endsWith('/create'))
+        return Promise.resolve(
+          Response.json({ status: 'created', replayed: false }, { status: 201 }),
+        );
+      return Promise.resolve(
+        Response.json({
+          data: [
+            {
+              id: 'item-1',
+              source: 'sms-shortcut',
+              external_id: 'receipt-1',
+              received_at: '2026-09-28T19:49:00Z',
+              raw_text: 'Purchase at 14:29',
+              status: 'pending',
+              created_at: '2026-09-28T19:50:00Z',
+            },
+          ],
+          count: 1,
+        }),
+      );
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    render(<ShortcutInboxPage />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Create new transaction' }));
+    expect(await screen.findByRole('option', { name: 'Food' })).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Account'), { target: { value: 'account-1' } });
+    fireEvent.change(screen.getByLabelText('Category'), { target: { value: 'category-1' } });
+    fireEvent.change(screen.getByLabelText('Amount'), { target: { value: '1200.50' } });
+    fireEvent.change(screen.getByLabelText('Description'), { target: { value: 'Reviewed meal' } });
+    fireEvent.change(screen.getByLabelText('Original transaction time'), {
+      target: { value: '14:29' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Save reviewed transaction' }));
+    expect(
+      fetchMock.mock.calls.some(([url]) => typeof url === 'string' && url.endsWith('/create')),
+    ).toBe(false);
+    fireEvent.click(screen.getByLabelText('I confirmed this original time'));
+    fireEvent.click(screen.getByRole('button', { name: 'Save reviewed transaction' }));
+    await waitFor(() =>
+      expect(
+        fetchMock.mock.calls.some(([url]) => typeof url === 'string' && url.endsWith('/create')),
+      ).toBe(true),
+    );
+    const createCall = fetchMock.mock.calls.find(
+      ([url]) => typeof url === 'string' && url.endsWith('/create'),
+    );
+    expect(JSON.parse(createCall?.[1]?.body as string)).toMatchObject({
+      date: '2026-09-28',
+      event_at: '2026-09-28T14:29:00-05:00',
+      event_time_confirmed: true,
     });
   });
 

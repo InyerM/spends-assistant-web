@@ -58,6 +58,8 @@ export function ShortcutCreateForm({
   const [type, setType] = useState<'expense' | 'income'>('expense');
   const [amount, setAmount] = useState('');
   const [date, setDate] = useState(() => bogotaDate(receivedAt));
+  const [eventTime, setEventTime] = useState('');
+  const [eventTimeConfirmed, setEventTimeConfirmed] = useState(false);
   const [description, setDescription] = useState('');
   const [review, setReview] = useState<CandidateReview | null>(null);
   const [busy, setBusy] = useState(false);
@@ -93,6 +95,10 @@ export function ShortcutCreateForm({
     setError(null);
   };
   const submit = async (confirmDistinct = false): Promise<void> => {
+    if (eventTime && !eventTimeConfirmed) {
+      setError(t('eventTimeNeedsConfirmation'));
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
@@ -106,6 +112,9 @@ export function ShortcutCreateForm({
           amount,
           date,
           description,
+          ...(eventTime
+            ? { event_at: `${date}T${eventTime}:00-05:00`, event_time_confirmed: true }
+            : {}),
           ...(confirmDistinct && review?.status === 'review_required'
             ? {
                 reviewed_candidate_hash: review.candidate_hash,
@@ -224,10 +233,38 @@ export function ShortcutCreateForm({
             required
             onChange={(event): void => {
               setDate(event.target.value);
+              setEventTimeConfirmed(false);
               clearReview();
             }}
           />
         </label>
+        <label className='space-y-1'>
+          {t('createEventTime')}
+          <input
+            className='border-input bg-background block w-full rounded-md border p-2'
+            type='time'
+            step={60}
+            value={eventTime}
+            onChange={(event): void => {
+              setEventTime(event.target.value);
+              setEventTimeConfirmed(false);
+              clearReview();
+            }}
+          />
+        </label>
+        {eventTime && (
+          <label className='flex items-center gap-2 sm:col-span-2'>
+            <input
+              type='checkbox'
+              checked={eventTimeConfirmed}
+              onChange={(event): void => {
+                setEventTimeConfirmed(event.target.checked);
+                clearReview();
+              }}
+            />
+            {t('confirmEventTime')}
+          </label>
+        )}
         <label className='space-y-1 sm:col-span-2'>
           {t('createDescription')}
           <input

@@ -55,6 +55,34 @@ describe('Shortcut reviewed transaction creation route', () => {
     expect(response.headers.get('cache-control')).toContain('no-store');
   });
 
+  it('passes an explicitly confirmed original event instant into the immutable review payload', async () => {
+    const eventReview = {
+      ...reviewed,
+      event_at: '2026-09-28T04:40:00-05:00',
+      event_time_confirmed: true,
+    };
+    const response = await POST(request(eventReview) as never, context);
+    expect(response.status).toBe(201);
+    expect(rpc).toHaveBeenCalledWith(
+      'confirm_shortcut_transaction',
+      expect.objectContaining({ p_reviewed_payload: eventReview }),
+    );
+  });
+
+  it('rejects unsupported or unconfirmed event times before reaching the database', async () => {
+    for (const body of [
+      { ...reviewed, event_at: '2026-09-28T04:40:00-05:00' },
+      { ...reviewed, event_time_confirmed: true },
+      { ...reviewed, event_at: '2026-09-28T04:40:00-05:00', event_time_confirmed: false },
+      { ...reviewed, event_at: '2026-09-28T04:40:00', event_time_confirmed: true },
+      { ...reviewed, event_at: '2026-09-27T23:50:00-05:00', event_time_confirmed: true },
+      { ...reviewed, event_at: '2026-02-30T04:40:00-05:00', event_time_confirmed: true },
+    ]) {
+      expect((await POST(request(body) as never, context)).status).toBe(400);
+    }
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
   it('returns owner-scoped live candidate review without creating a row', async () => {
     rpc.mockResolvedValue({
       data: {
