@@ -9,6 +9,7 @@ import { formatCurrency } from '@/lib/utils/formatting';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import type { Transaction } from '@/types';
 import type { SpendingNature } from '@/types/category';
+import { isPersonalExpense } from '@/lib/transactions/dashboard-summary';
 
 const NATURE_COLORS: Record<Exclude<SpendingNature, 'none'>, string> = {
   must: '#ef4444',
@@ -101,7 +102,7 @@ export function SpendingNatureCards({
     const dayMap = new Map<string, { must: number; need: number; want: number }>();
 
     for (const tx of transactions) {
-      if (tx.type !== 'expense') continue;
+      if (!isPersonalExpense(tx)) continue;
       const nature = tx.category_id ? categoryNatureMap.get(tx.category_id) : undefined;
       if (!nature || nature === 'none') continue;
 

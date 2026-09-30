@@ -12,6 +12,7 @@ import { ArrowRight } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import type { Locale } from '@/i18n/config';
 import type { Transaction } from '@/types';
+import { isPersonalExpense } from '@/lib/transactions/dashboard-summary';
 
 const CHART_COLORS = [
   '#10b981',
@@ -69,7 +70,7 @@ export function SpendingByCategory({
 
   const { data: categories, isLoading: catLoading } = useCategories();
 
-  const expenses = transactions.filter((tx) => tx.type === 'expense');
+  const expenses = transactions.filter(isPersonalExpense);
   const spending: CategorySpending[] = [];
 
   if (expenses.length > 0 && categories) {

@@ -59,7 +59,9 @@
     "more": "More",
     "documents": "Documents",
     "investments": "Investments",
-    "loans": "Loans"
+    "loans": "Loans",
+    "receivables": "Personal loans made",
+    "reliefFunds": "Relief funds"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -67,7 +69,7 @@
     "balanceOverview": "Balance Overview",
     "totalBalance": "Total Balance",
     "income": "Personal Income",
-    "expenses": "Expenses",
+    "expenses": "Personal expenses",
     "transfers": "Transfers",
     "cashFlow": "Cash Flow",
     "spendingByCategory": "Spending by Categories",
@@ -188,6 +190,8 @@
     "receivableRepayment": "Loan principal repayment",
     "personalSale": "Personal sale",
     "reliefDonation": "Relief donation",
+    "receivableDisbursement": "Loan principal lent",
+    "reliefOutlay": "Relief purchase",
     "transfer": "Transfer",
     "transferTo": "Transfer To",
     "noTransactions": "No transactions found",

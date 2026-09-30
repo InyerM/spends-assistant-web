@@ -59,7 +59,9 @@
     "more": "Mais",
     "documents": "Documentos",
     "investments": "Investimentos",
-    "loans": "Empréstimos"
+    "loans": "Empréstimos",
+    "receivables": "Empréstimos concedidos",
+    "reliefFunds": "Fundos de ajuda"
   },
   "dashboard": {
     "title": "Painel",
@@ -67,7 +69,7 @@
     "balanceOverview": "Visão Geral do Saldo",
     "totalBalance": "Saldo Total",
     "income": "Receitas pessoais",
-    "expenses": "Despesas",
+    "expenses": "Despesas pessoais",
     "transfers": "Transferências",
     "cashFlow": "Fluxo de Caixa",
     "spendingByCategory": "Gastos por Categorias",
@@ -188,6 +190,8 @@
     "receivableRepayment": "Pagamento do principal do empréstimo",
     "personalSale": "Venda pessoal",
     "reliefDonation": "Doação para ajuda",
+    "receivableDisbursement": "Principal emprestado",
+    "reliefOutlay": "Compra para ajuda",
     "transfer": "Transferência",
     "transferTo": "Transferir para",
     "noTransactions": "Nenhuma transação encontrada",

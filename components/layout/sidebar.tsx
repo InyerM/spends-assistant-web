@@ -18,6 +18,8 @@ import {
   Files,
   TrendingUp,
   Landmark,
+  HandCoins,
+  HeartHandshake,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -42,6 +44,8 @@ const navItems: NavItem[] = [
   { titleKey: 'accounts', href: '/accounts', icon: Wallet },
   { titleKey: 'investments', href: '/investments', icon: TrendingUp },
   { titleKey: 'loans', href: '/loans', icon: Landmark },
+  { titleKey: 'receivables', href: '/receivables', icon: HandCoins },
+  { titleKey: 'reliefFunds', href: '/relief-funds', icon: HeartHandshake },
   { titleKey: 'categories', href: '/categories', icon: Tags },
   { titleKey: 'automation', href: '/automation', icon: Zap },
 ];

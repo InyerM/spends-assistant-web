@@ -168,7 +168,11 @@ function TransactionRow({
         ? t('personalSale')
         : tx.financial_role === 'earmarked_relief_donation'
           ? t('reliefDonation')
-          : null;
+          : tx.financial_role === 'receivable_disbursement'
+            ? t('receivableDisbursement')
+            : tx.financial_role === 'earmarked_relief_outlay'
+              ? t('reliefOutlay')
+              : null;
 
   const longPressHandlers = useLongPress({
     onLongPress: (): void => onLongPress?.(tx.id),

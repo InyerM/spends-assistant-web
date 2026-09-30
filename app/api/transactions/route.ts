@@ -1,5 +1,5 @@
 import type { NextRequest } from 'next/server';
-import type { IncomingFlowRole } from '@/types/transaction';
+import type { FinancialRole, IncomingFlowRole } from '@/types/transaction';
 import {
   getUserClient,
   AuthError,
@@ -82,11 +82,55 @@ export async function GET(request: NextRequest): Promise<Response> {
     const { data, error, count } = await query;
     if (error) return errorResponse(error.message, 400);
 
-    const transactionRows = data as Array<Record<string, unknown>>;
+    const transactionRows = (data as unknown as Array<Record<string, unknown>> | null) ?? [];
+    const expenseIds = transactionRows
+      .filter((transaction) => transaction.type === 'expense' && typeof transaction.id === 'string')
+      .map((transaction) => transaction.id as string);
+    const expenseRoles = new Map<string, FinancialRole>();
+    const chunks: string[][] = [];
+    for (let offset = 0; offset < expenseIds.length; offset += 80) {
+      chunks.push(expenseIds.slice(offset, offset + 80));
+    }
+    const linkedExpenses = await Promise.all(
+      chunks.map(async (ids) => {
+        const [receivables, relief] = await Promise.all([
+          supabase
+            .from('personal_receivable_events')
+            .select('source_transaction_id,kind')
+            .in('source_transaction_id', ids),
+          supabase
+            .from('relief_fund_entries')
+            .select('transaction_id,kind')
+            .in('transaction_id', ids),
+        ]);
+        if (receivables.error || relief.error) {
+          throw new Error('Unable to load reviewed financial links');
+        }
+        return {
+          receivables: (receivables.data as unknown as Array<Record<string, unknown>> | null) ?? [],
+          relief: (relief.data as unknown as Array<Record<string, unknown>> | null) ?? [],
+        };
+      }),
+    );
+    for (const links of linkedExpenses) {
+      for (const event of links.receivables) {
+        if (event.kind === 'disbursement' && typeof event.source_transaction_id === 'string') {
+          expenseRoles.set(event.source_transaction_id, 'receivable_disbursement');
+        }
+      }
+      for (const entry of links.relief) {
+        if (entry.kind !== 'outlay' || typeof entry.transaction_id !== 'string') continue;
+        if (expenseRoles.has(entry.transaction_id)) {
+          throw new Error('Conflicting reviewed financial links');
+        }
+        expenseRoles.set(entry.transaction_id, 'earmarked_relief_outlay');
+      }
+    }
     const transactions = transactionRows.map(({ incoming_correction, ...transaction }) => {
       return {
         ...transaction,
-        financial_role: reviewedIncomingRole(incoming_correction),
+        financial_role:
+          expenseRoles.get(transaction.id as string) ?? reviewedIncomingRole(incoming_correction),
       };
     });
     return jsonResponse({ data: transactions, count });

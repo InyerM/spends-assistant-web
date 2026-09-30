@@ -3,6 +3,10 @@ export type IncomingFlowRole =
   | 'receivable_principal_repayment'
   | 'personal_sale_proceeds'
   | 'earmarked_relief_donation';
+export type FinancialRole =
+  | IncomingFlowRole
+  | 'receivable_disbursement'
+  | 'earmarked_relief_outlay';
 
 export interface AppliedRule {
   rule_id: string;
@@ -21,7 +25,7 @@ export interface Transaction {
   category_id: string | null;
   account_id: string;
   type: TransactionType;
-  financial_role?: IncomingFlowRole | null;
+  financial_role?: FinancialRole | null;
   payment_method: string | null;
   source: string;
   confidence: number | null;

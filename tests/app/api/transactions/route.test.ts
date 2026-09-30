@@ -102,6 +102,48 @@ describe('GET /api/transactions', () => {
     );
   });
 
+  it('marks linked loan disbursements and relief outlays separately from personal expenses', async () => {
+    const { getUserClient } = await import('@/lib/api/server');
+    const loanId = '11111111-1111-4111-8111-111111111111';
+    const reliefId = '22222222-2222-4222-8222-222222222222';
+    const ordinaryId = '33333333-3333-4333-8333-333333333333';
+    const transactions = createChainableQuery([
+      { id: loanId, type: 'expense', incoming_correction: null },
+      { id: reliefId, type: 'expense', incoming_correction: null },
+      { id: ordinaryId, type: 'expense', incoming_correction: null },
+    ]);
+    const receivables = createChainableQuery([
+      { source_transaction_id: loanId, kind: 'disbursement' },
+    ]);
+    const relief = createChainableQuery([{ transaction_id: reliefId, kind: 'outlay' }]);
+    const mockSb = {
+      from: vi.fn((table: string) => {
+        if (table === 'transactions') return transactions._chain;
+        if (table === 'personal_receivable_events') return receivables._chain;
+        if (table === 'relief_fund_entries') return relief._chain;
+        throw new Error(`Unexpected table ${table}`);
+      }),
+    };
+    vi.mocked(getUserClient).mockResolvedValue({
+      supabase: mockSb as never,
+      userId: 'test-user-id',
+    });
+
+    const response = await GET(new NextRequest('http://localhost/api/transactions'));
+    expect(response.status).toBe(200);
+    expect((await response.json()).data).toEqual([
+      { id: loanId, type: 'expense', financial_role: 'receivable_disbursement' },
+      { id: reliefId, type: 'expense', financial_role: 'earmarked_relief_outlay' },
+      { id: ordinaryId, type: 'expense', financial_role: null },
+    ]);
+    expect(receivables._chain.in).toHaveBeenCalledWith('source_transaction_id', [
+      loanId,
+      reliefId,
+      ordinaryId,
+    ]);
+    expect(relief._chain.in).toHaveBeenCalledWith('transaction_id', [loanId, reliefId, ordinaryId]);
+  });
+
   it('filters by type', async () => {
     const { getUserClient } = await import('@/lib/api/server');
     const mockSb = createChainableQuery([]);
