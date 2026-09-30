@@ -157,9 +157,18 @@ function TransactionRow({
   showHint,
   onLongPress,
 }: TransactionRowProps): React.ReactElement {
+  const t = useTranslations('transactions');
   const config = typeConfig[tx.type];
   const Icon = config.icon;
   const hasMetadata = tx.raw_text || tx.parsed_data || tx.notes;
+  const financialRoleLabel =
+    tx.financial_role === 'receivable_principal_repayment'
+      ? t('receivableRepayment')
+      : tx.financial_role === 'personal_sale_proceeds'
+        ? t('personalSale')
+        : tx.financial_role === 'earmarked_relief_donation'
+          ? t('reliefDonation')
+          : null;
 
   const longPressHandlers = useLongPress({
     onLongPress: (): void => onLongPress?.(tx.id),
@@ -221,6 +230,13 @@ function TransactionRow({
                   : undefined
               }>
               {categoryInfo.name}
+            </Badge>
+          )}
+          {financialRoleLabel && (
+            <Badge
+              variant='secondary'
+              className='mt-0.5 h-5 max-w-full truncate px-1.5 text-[10px]'>
+              {financialRoleLabel}
             </Badge>
           )}
         </div>
