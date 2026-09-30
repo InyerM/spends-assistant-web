@@ -3,8 +3,9 @@
 Checked against Apple's Shortcuts and Messages documentation on 2026-09-29. This is a setup guide
 for the existing [inbox contract](../shortcut-inbox-contract.md), not an installable Shortcut.
 Validate the actions on the intended iPhone and iOS version with synthetic messages before enabling
-a real sender. No historical messages or production transactions were imported while preparing this
-guide.
+a real sender. This guide was written before the 2026-09-30 production import. The historical export
+was later accepted into the inbox and partly reconciled; the iPhone Shortcut itself remains untested
+on the owner's device.
 
 ## Why there is no `.shortcut` file in this repository
 
@@ -124,8 +125,9 @@ action still needs the synthetic device test below.
 message containing a quote, a newline, and a non-ASCII character. Inspect the inbox and confirm
 exact text and original timestamp, then resend the identical batch and confirm `previously_received`
 with the same inbox ID. Also test a 2-item file and inspect each result separately. This check is
-required because this guide has not executed Shortcuts on the user's iPhone. Do not send the
-synthetic test or real messages to production before the deployment and backfill are approved.
+required because this guide has not executed Shortcuts on the user's iPhone. For a production device
+test, use a disposable synthetic message and verify its inbox status before enabling live capture;
+the production deployment and historical inbox import were approved on 2026-09-30.
 
 ## Configure live capture only after the metadata check
 

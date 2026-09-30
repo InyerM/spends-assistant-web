@@ -139,8 +139,8 @@ from silently reinstating a mistaken match. The reviewer can acknowledge a diffe
 transaction or create a separately reviewed transaction. Deliberate reselection of the original
 target would require a separate, versioned review flow. Only the current decision appears on the
 inbox list. This action cannot reverse a `created` decision: correcting a financial row requires its
-own transaction edit/deletion workflow. Full multi-connection PostgreSQL contention and remote
-migration validation remain deployment gates.
+own transaction edit/deletion workflow. Local multi-connection PostgreSQL contention and remote
+migration validation were completed before deployment on 2026-09-30.
 
 ## Reviewed new-transaction creation
 
@@ -176,5 +176,6 @@ the existing web transaction route, Worker usage service, and atomic CSV import 
 Soft deletion of the linked transaction preserves the historical decision and retry result. An
 intentional hard delete erases its decision snapshot and returns the surviving inbox item to pending
 review. The transaction deletion path remains responsible for reversing its balance, as with other
-transactions. The decision does not classify or create entries from messages automatically. No
-remote migration, deployment, or production backfill was performed for this contract.
+transactions. The decision does not classify or create entries from messages automatically. The
+database and web application were deployed on 2026-09-30. The reviewed 2026 backfill is in progress;
+see the backend release manifest for verified counts and outstanding review.
