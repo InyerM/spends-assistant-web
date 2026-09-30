@@ -190,6 +190,87 @@ describe('GET Shortcut inbox candidates', () => {
     expect(db.calls.some((call) => call.table === 'accounts')).toBe(false);
   });
 
+  it('suggests an owned same-card purchase for a structured Lulo email without matching it automatically', async () => {
+    const luloText = [
+      'From: Lulo alerts <notificaciones@lulobank.com>',
+      'Subject: Compra realizada',
+      '',
+      'Realizaste una compra en Example Network por $492,041.3',
+      'Origen tarjeta de crédito •8456',
+      'Fecha 25 de septiembre de 2026',
+      'Hora 7:18 p.m.',
+    ].join('\n');
+    const db = fakeDatabase({
+      inbox: [
+        {
+          id: inboxId,
+          user_id: 'owner-a',
+          source: 'lulo-email-backfill',
+          received_at: '2026-09-26T01:20:00Z',
+          raw_text: luloText,
+        },
+      ],
+      accounts: [{ id: 'lulo-card', user_id: 'owner-a', last_four: '8456', deleted_at: null }],
+      transactions: [
+        {
+          id: 'tx-card',
+          user_id: 'owner-a',
+          date: '2026-09-25',
+          amount: 492041.3,
+          account_id: 'lulo-card',
+          raw_text: 'Different notice',
+          description: 'Example Network',
+          type: 'expense',
+          source: 'web',
+          deleted_at: null,
+        },
+      ],
+    });
+    getUserClient.mockResolvedValue({ supabase: db.supabase, userId: 'owner-a' });
+    const body = await (await GET(request() as never, context)).json();
+    expect(body.evidence).toMatchObject({
+      amount: '492041.30',
+      date: '2026-09-25',
+      account: 'unique',
+    });
+    expect(body.candidates).toMatchObject([
+      { id: 'tx-card', strength: 'possible', signals: ['same_amount_date_account'] },
+    ]);
+    expect(
+      db.calls.every((call) =>
+        call.filters.some(([column, value]) => column === 'user_id' && value === 'owner-a'),
+      ),
+    ).toBe(true);
+  });
+
+  it('never tuple-matches a zero-amount Lulo notice', async () => {
+    const luloText = [
+      'From: Lulo alerts <notificaciones@lulobank.com>',
+      'Subject: Compra realizada',
+      '',
+      'Realizaste una compra en Demo Store por $0',
+      'Origen tarjeta de crédito •8456',
+      'Fecha 25 de septiembre de 2026',
+      'Hora 7:17 p.m.',
+    ].join('\n');
+    const db = fakeDatabase({
+      inbox: [
+        {
+          id: inboxId,
+          user_id: 'owner-a',
+          source: 'lulo-email-backfill',
+          received_at: '2026-09-26T01:20:00Z',
+          raw_text: luloText,
+        },
+      ],
+    });
+    getUserClient.mockResolvedValue({ supabase: db.supabase, userId: 'owner-a' });
+    const body = await (await GET(request() as never, context)).json();
+    expect(body.evidence.amount).toBeNull();
+    expect(db.calls.some((call) => call.table === 'accounts')).toBe(false);
+    expect(db.calls.filter((call) => call.table === 'transactions')).toHaveLength(1);
+  });
+
   it('withholds tuple suggestions when a masked suffix maps to multiple owned accounts', async () => {
     const db = fakeDatabase({
       accounts: [

@@ -99,6 +99,27 @@ use a name-only account match. If an account suffix is missing, unknown, or ambi
 query is skipped. An exact original-message comparison is always attempted, including when parsing
 fails. Empty results are inconclusive, and the response notes when the 10-result cap is reached.
 
+### Lulo Gmail notice preview
+
+The private Gmail export described in the backend `docs/guides/lulo-gmail-backfill.md` prepares
+individual messages under the `lulo-email-backfill` source. It has not been run in the owner's
+mailbox. The web app reads only the owner's existing inbox rows; it does not access Gmail. For this
+source, a text-only preview recognizes the observed `Compra realizada` template, showing the Gmail
+message timestamp separately from the bank event date and time, masked card suffix, merchant, and
+the original amount text. The `$` symbol does not establish whether the amount was COP or USD. The
+preview's confidence describes template completeness, not sender authenticity or settlement. It
+retains short source excerpts so the reviewer can check each extracted field.
+
+A zero-amount notice is labeled as a possible authorization and is never used for amount/date/card
+candidate matching. A nonzero structured purchase may yield owner-scoped, bounded candidate
+suggestions by amount, bank event date, and uniquely resolved card suffix. These are suggestions,
+not duplicate decisions. Multiple event lines, malformed fields, other senders, and unsupported
+payment templates remain in manual review. The Lulo preview does not offer the **Create new
+transaction** action; acknowledging an existing match and nonfinancial inbox status changes remain
+separate explicit review actions. No transaction, card balance, or loan balance is changed by the
+preview or candidate lookup. Run the owner export and compare a small batch against Lulo card
+statements before broad backfill or enabling any creation flow.
+
 ## Explicit existing-transaction acknowledgement
 
 After reading an inbox message and a candidate's evidence, a signed-in reviewer can choose **Review

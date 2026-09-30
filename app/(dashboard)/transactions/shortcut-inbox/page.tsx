@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { ShortcutCreateForm } from '@/components/transactions/shortcut-create-form';
+import { previewLuloNotice, type LuloNoticePreview } from '@/lib/shortcut-inbox/lulo-preview';
 
 interface InboxItem {
   id: string;
@@ -47,6 +48,66 @@ const PAGE_SIZE = 20;
 function formatDate(value: string): string {
   return new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(
     new Date(value),
+  );
+}
+
+function formatBogotaDate(value: string): string {
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+    timeZone: 'America/Bogota',
+  }).format(new Date(value));
+}
+
+function LuloPreview({ preview }: { preview: LuloNoticePreview }): React.ReactElement {
+  const t = useTranslations('shortcutInbox');
+  const kindLabel = {
+    card_purchase: 'luloCardPurchase',
+    zero_amount_authorization: 'luloZeroAmount',
+    needs_review: 'luloNeedsReview',
+  } as const;
+  return (
+    <div className='bg-muted/50 space-y-2 rounded-md border p-3 text-sm'>
+      <div className='flex flex-wrap items-center gap-2'>
+        <Badge variant='secondary'>{t(kindLabel[preview.kind])}</Badge>
+        <span className='text-muted-foreground text-xs'>
+          {t(preview.confidence === 'structured' ? 'luloStructured' : 'luloLow')}
+        </span>
+      </div>
+      <dl className='grid gap-x-4 gap-y-2 sm:grid-cols-2'>
+        <div>
+          <dt className='text-muted-foreground'>{t('luloEmailTime')}</dt>
+          <dd>{formatBogotaDate(preview.messageReceivedAt)}</dd>
+        </div>
+        <div>
+          <dt className='text-muted-foreground'>{t('luloBankTime')}</dt>
+          <dd>{preview.bankEventAt ? formatBogotaDate(preview.bankEventAt) : '—'}</dd>
+        </div>
+        <div>
+          <dt className='text-muted-foreground'>{t('luloMerchant')}</dt>
+          <dd>{preview.merchant ?? '—'}</dd>
+        </div>
+        <div>
+          <dt className='text-muted-foreground'>{t('luloCard')}</dt>
+          <dd>{preview.cardLastFour ?? '—'}</dd>
+        </div>
+        <div>
+          <dt className='text-muted-foreground'>{t('luloOriginalAmount')}</dt>
+          <dd>{preview.amountText ?? '—'}</dd>
+        </div>
+      </dl>
+      <p className='text-muted-foreground text-xs'>{t('luloCurrencyUnknown')}</p>
+      <p className='text-muted-foreground text-xs'>{t('luloCaution')}</p>
+      {preview.kind === 'zero_amount_authorization' && (
+        <p className='text-sm font-medium'>{t('luloZeroCaution')}</p>
+      )}
+      <details className='text-xs'>
+        <summary className='cursor-pointer font-medium'>{t('luloEvidence')}</summary>
+        <pre className='mt-2 overflow-x-auto break-all whitespace-pre-wrap'>
+          {Object.values(preview.excerpts).filter(Boolean).join('\n')}
+        </pre>
+      </details>
+    </div>
   );
 }
 
@@ -238,6 +299,7 @@ export default function ShortcutInboxPage(): React.ReactElement {
         <div className='space-y-3'>
           {items.map((item) => {
             const candidateResult = candidateById[item.id];
+            const luloPreview = previewLuloNotice(item.source, item.raw_text, item.received_at);
             return (
               <Card key={item.id}>
                 <CardContent className='space-y-4 py-4'>
@@ -255,6 +317,7 @@ export default function ShortcutInboxPage(): React.ReactElement {
                   <p className='text-foreground text-sm leading-relaxed wrap-break-word whitespace-pre-wrap'>
                     {item.raw_text}
                   </p>
+                  {luloPreview && <LuloPreview preview={luloPreview} />}
                   {(item.status === 'matched' || item.status === 'created') && item.match && (
                     <p className='text-muted-foreground text-xs'>
                       {item.status === 'created'
@@ -283,7 +346,7 @@ export default function ShortcutInboxPage(): React.ReactElement {
                         {openCandidateId === item.id ? t('hideCandidates') : t('showCandidates')}
                       </Button>
                     )}
-                    {item.status === 'pending' && (
+                    {item.status === 'pending' && !luloPreview && (
                       <Button
                         size='sm'
                         variant='outline'
@@ -348,7 +411,7 @@ export default function ShortcutInboxPage(): React.ReactElement {
                       </div>
                     </div>
                   )}
-                  {createInboxId === item.id && item.status === 'pending' && (
+                  {createInboxId === item.id && item.status === 'pending' && !luloPreview && (
                     <ShortcutCreateForm
                       inboxId={item.id}
                       receivedAt={item.received_at}

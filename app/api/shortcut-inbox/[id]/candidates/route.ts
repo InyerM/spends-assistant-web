@@ -6,6 +6,7 @@ import {
   rankCandidates,
   type CandidateTransaction,
 } from '@/lib/shortcut-inbox/candidates';
+import { previewLuloNotice } from '@/lib/shortcut-inbox/lulo-preview';
 
 interface Context {
   params: Promise<{ id: string }>;
@@ -22,14 +23,24 @@ export async function GET(_request: NextRequest, context: Context): Promise<Resp
     }
     const { data: inbox, error: inboxError } = await supabase
       .from('shortcut_inbox_items')
-      .select('id,raw_text')
+      .select('id,source,received_at,raw_text')
       .eq('id', id)
       .eq('user_id', userId)
       .single();
     if (inboxError?.code === 'PGRST116') return errorResponse('Inbox item not found', 404);
     if (inboxError) return errorResponse('Candidate lookup failed');
 
-    const evidence = extractCandidateEvidence(inbox.raw_text as string);
+    const ownedInbox = inbox as { source: string; raw_text: string; received_at: string };
+    const lulo = previewLuloNotice(ownedInbox.source, ownedInbox.raw_text, ownedInbox.received_at);
+    const evidence = lulo
+      ? lulo.kind === 'card_purchase'
+        ? {
+            amount: lulo.amountDecimal,
+            date: lulo.bankEventAt?.slice(0, 10) ?? null,
+            lastFour: lulo.cardLastFour,
+          }
+        : { amount: null, date: null, lastFour: null }
+      : extractCandidateEvidence(inbox.raw_text as string);
     const { data: exactRaw, error: rawError } = await supabase
       .from('transactions')
       .select(transactionFields)

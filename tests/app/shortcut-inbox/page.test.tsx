@@ -33,6 +33,20 @@ const { useTranslations } = vi.hoisted(() => {
       saveReviewed: 'Save reviewed transaction',
       confirmDistinct: 'Create distinct payment',
       overflowCaution: 'Too many possible matches',
+      luloCardPurchase: 'Possible card purchase',
+      luloZeroAmount: 'Zero-amount card notice',
+      luloNeedsReview: 'Unrecognized Lulo notice',
+      luloStructured: 'Structured text',
+      luloLow: 'Incomplete text',
+      luloEmailTime: 'Gmail message time',
+      luloBankTime: 'Bank event time',
+      luloMerchant: 'Merchant',
+      luloCard: 'Card',
+      luloOriginalAmount: 'Original amount',
+      luloCurrencyUnknown: 'Currency unverified',
+      luloEvidence: 'Source excerpts',
+      luloCaution: 'Verify against the card statement before a financial decision.',
+      luloZeroCaution: 'No charge inferred from a zero-amount notice.',
     })[key] ?? key;
   return { useTranslations: vi.fn(() => translate) };
 });
@@ -43,6 +57,87 @@ describe('Shortcut inbox review page', () => {
   afterEach(() => {
     cleanup();
     vi.unstubAllGlobals();
+  });
+
+  it('previews a zero-amount Lulo notice without offering transaction creation', async () => {
+    const rawText = [
+      'From: Lulo alerts <notificaciones@lulobank.com>',
+      'Subject: Compra realizada',
+      '',
+      'Realizaste una compra en Demo Store por $0',
+      'Origen tarjeta de crédito •8456',
+      'Fecha 25 de septiembre de 2026',
+      'Hora 7:17 p.m.',
+    ].join('\n');
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        Response.json({
+          data: [
+            {
+              id: 'lulo-1',
+              source: 'lulo-email-backfill',
+              external_id: 'synthetic-message-1',
+              received_at: '2026-09-26T01:20:00.000Z',
+              raw_text: rawText,
+              status: 'pending',
+              created_at: '2026-09-26T01:21:00.000Z',
+            },
+          ],
+          count: 1,
+        }),
+      ),
+    );
+    render(<ShortcutInboxPage />);
+    expect(await screen.findByText('Zero-amount card notice')).toBeInTheDocument();
+    expect(screen.getByText('No charge inferred from a zero-amount notice.')).toBeInTheDocument();
+    expect(screen.getByText('Gmail message time')).toBeInTheDocument();
+    expect(screen.getByText('Bank event time')).toBeInTheDocument();
+    expect(screen.getByText('Original amount')).toBeInTheDocument();
+    expect(screen.getByText('$0')).toBeInTheDocument();
+    expect(screen.getByText('Currency unverified')).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Create new transaction' }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('previews a Lulo purchase with source excerpts and keeps it read-only', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        Response.json({
+          data: [
+            {
+              id: 'lulo-2',
+              source: 'lulo-email-backfill',
+              external_id: 'synthetic-message-2',
+              received_at: '2026-09-26T01:20:00.000Z',
+              raw_text: [
+                'From: Lulo alerts <notificaciones@lulobank.com>',
+                'Subject: Compra realizada',
+                '',
+                'Realizaste una compra en Example Network por $492,041.3',
+                'Origen tarjeta de crédito •8456',
+                'Fecha 25 de septiembre de 2026',
+                'Hora 7:18 p.m.',
+              ].join('\n'),
+              status: 'pending',
+              created_at: '2026-09-26T01:21:00.000Z',
+            },
+          ],
+          count: 1,
+        }),
+      ),
+    );
+    render(<ShortcutInboxPage />);
+    expect(await screen.findByText('Possible card purchase')).toBeInTheDocument();
+    expect(screen.getByText('$492,041.3')).toBeInTheDocument();
+    expect(screen.getByText('Example Network')).toBeInTheDocument();
+    expect(screen.getByText('8456')).toBeInTheDocument();
+    expect(screen.getByText('Source excerpts')).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Create new transaction' }),
+    ).not.toBeInTheDocument();
   });
 
   it('shows private intake text with reversible review actions and no confirmation action', async () => {
