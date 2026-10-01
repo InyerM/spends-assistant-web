@@ -115,10 +115,12 @@ candidate matching. A nonzero structured purchase may yield owner-scoped, bounde
 suggestions by amount, bank event date, and uniquely resolved card suffix. These are suggestions,
 not duplicate decisions. Multiple event lines, malformed fields, other senders, and unsupported
 payment templates remain in manual review. The Lulo preview does not offer the **Create new
-transaction** action; acknowledging an existing match and nonfinancial inbox status changes remain
-separate explicit review actions. No transaction, card balance, or loan balance is changed by the
-preview or candidate lookup. Run the owner export and compare a small batch against Lulo card
-statements before broad backfill or enabling any creation flow.
+transaction** action, and the signed-in web creation route rejects an owned Lulo inbox item before
+calling its financial RPC. Acknowledging an existing match and nonfinancial inbox status changes
+remain separate explicit review actions. No transaction, card balance, or loan balance is changed by
+the preview or candidate lookup. Run the owner export and compare a small batch against Lulo card
+statements before broad backfill or enabling any creation flow. The web route guard alone does not
+block direct RPC calls; deploy the database-level Lulo source guard before a real Lulo import.
 
 ## Explicit existing-transaction acknowledgement
 

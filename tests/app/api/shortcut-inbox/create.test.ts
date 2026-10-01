@@ -2,7 +2,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { POST } from '@/app/api/shortcut-inbox/[id]/create/route';
 import { AuthError } from '@/lib/api/server';
 
-const { getUserClient, rpc } = vi.hoisted(() => ({ getUserClient: vi.fn(), rpc: vi.fn() }));
+const { getUserClient, rpc, from, eq, lookupInbox } = vi.hoisted(() => ({
+  getUserClient: vi.fn(),
+  rpc: vi.fn(),
+  from: vi.fn(),
+  eq: vi.fn(),
+  lookupInbox: vi.fn(),
+}));
 vi.mock('@/lib/api/server', () => ({
   getUserClient,
   AuthError: class AuthError extends Error {},
@@ -31,7 +37,12 @@ const request = (body: unknown): Request =>
 describe('Shortcut reviewed transaction creation route', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    getUserClient.mockResolvedValue({ userId: 'owner-a', supabase: { rpc } });
+    const query = { select: vi.fn(), eq, maybeSingle: lookupInbox };
+    query.select.mockReturnValue(query);
+    eq.mockReturnValue(query);
+    from.mockReturnValue(query);
+    lookupInbox.mockResolvedValue({ data: { source: 'sms-shortcut' }, error: null });
+    getUserClient.mockResolvedValue({ userId: 'owner-a', supabase: { from, rpc } });
     rpc.mockResolvedValue({
       data: {
         status: 'created',
@@ -41,6 +52,28 @@ describe('Shortcut reviewed transaction creation route', () => {
       },
       error: null,
     });
+  });
+
+  it('rejects an owned Lulo email before the financial RPC', async () => {
+    lookupInbox.mockResolvedValue({ data: { source: 'lulo-email-backfill' }, error: null });
+    const response = await POST(request(reviewed) as never, context);
+    expect(response.status).toBe(409);
+    expect(from).toHaveBeenCalledWith('shortcut_inbox_items');
+    expect(eq).toHaveBeenCalledWith('id', inboxId);
+    expect(eq).toHaveBeenCalledWith('user_id', 'owner-a');
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it('does not reach the financial RPC for an inbox item outside the owner scope', async () => {
+    lookupInbox.mockResolvedValue({ data: null, error: null });
+    expect((await POST(request(reviewed) as never, context)).status).toBe(404);
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it('fails closed when the owned source lookup fails', async () => {
+    lookupInbox.mockResolvedValue({ data: null, error: { code: 'synthetic_failure' } });
+    expect((await POST(request(reviewed) as never, context)).status).toBe(500);
+    expect(rpc).not.toHaveBeenCalled();
   });
 
   it('sends exact decimal text and reviewed fields to one database RPC', async () => {

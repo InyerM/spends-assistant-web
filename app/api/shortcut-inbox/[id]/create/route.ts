@@ -42,7 +42,7 @@ function validEventAt(value: string, date: string): boolean {
 
 export async function POST(request: NextRequest, context: Context): Promise<Response> {
   try {
-    const { supabase } = await getUserClient();
+    const { supabase, userId } = await getUserClient();
     const { id } = await context.params;
     if (!uuid.test(id)) return errorResponse('Invalid inbox item ID', 400);
     const raw = await request.text();
@@ -100,6 +100,17 @@ export async function POST(request: NextRequest, context: Context): Promise<Resp
         ? { event_at: body.event_at, event_time_confirmed: true }
         : {}),
     };
+    const { data: inbox, error: inboxError } = await supabase
+      .from('shortcut_inbox_items')
+      .select('source')
+      .eq('id', id)
+      .eq('user_id', userId)
+      .maybeSingle();
+    if (inboxError) return errorResponse('Inbox lookup failed');
+    if (!inbox) return errorResponse('Inbox item not found', 404);
+    if ((inbox as { source: string }).source === 'lulo-email-backfill') {
+      return errorResponse('Lulo email review is read-only', 409);
+    }
     const { data, error } = await supabase.rpc('confirm_shortcut_transaction', {
       p_inbox_item_id: id,
       p_reviewed_payload: reviewedPayload,
