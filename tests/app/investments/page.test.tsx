@@ -3,6 +3,22 @@ import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import InvestmentsPage from '@/app/(dashboard)/investments/page';
 
+vi.mock('next-intl', async () => {
+  const messages = (await import('@/messages/wealth.en.json')).default;
+  return {
+    useLocale: () => 'en',
+    useTranslations:
+      () =>
+      (key: string, values?: Record<string, string | number>): string => {
+        const message = (messages.investments as Record<string, string>)[key] ?? key;
+        return Object.entries(values ?? {}).reduce(
+          (result, [name, value]) => result.replace(`{${name}}`, String(value)),
+          message,
+        );
+      },
+  };
+});
+
 describe('manual investment tracker', () => {
   const fetchMock = vi.fn();
   beforeEach(() => {
@@ -32,6 +48,43 @@ describe('manual investment tracker', () => {
       '/api/investments',
       expect.objectContaining({ method: 'POST' }),
     );
+  });
+
+  it('keeps a fully sold position in the history tab with its events', async () => {
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        data: [
+          {
+            id: '00000000-0000-4000-8000-000000000333',
+            provider: 'tyba',
+            symbol: 'Past fund',
+            quote_currency: 'COP',
+            quantity_scale: 0,
+            money_scale: 0,
+            quantity_atoms: '0',
+            cost_basis_minor: '0',
+            realized_return_minor: '15000',
+            investment_trades: [
+              {
+                id: 'trade-1',
+                kind: 'sell',
+                occurred_on: '2026-09-28',
+                quantity_atoms: '1',
+                gross_minor: '1015000',
+              },
+            ],
+          },
+        ],
+      }),
+    });
+    const user = userEvent.setup();
+    render(<InvestmentsPage />);
+    await screen.findByText(/No current positions/);
+    expect(screen.queryByText('Past fund')).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /History \(1\)/ }));
+    expect(screen.getByText('Past fund')).toBeInTheDocument();
+    expect(screen.getByText('Recorded events (1)')).toBeInTheDocument();
   });
 
   it('treats zero opening basis as a reviewed known value', async () => {

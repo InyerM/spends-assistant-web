@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { formatDecimalUnits, parseDecimalUnits } from '@/lib/wealth/decimal';
+import {
+  formatDecimalUnits,
+  formatLocalizedDecimalUnits,
+  parseDecimalUnits,
+} from '@/lib/wealth/decimal';
 
 describe('manual investment decimal conversion', () => {
   it('preserves the smallest supported crypto fraction', () => {
@@ -15,6 +19,12 @@ describe('manual investment decimal conversion', () => {
   it('keeps whole COP units unchanged when the scale is zero', () => {
     expect(parseDecimalUnits('12000', 0)).toBe('12000');
     expect(formatDecimalUnits('12000', 0)).toBe('12000');
+  });
+
+  it('groups large values for the selected locale without losing crypto precision', () => {
+    expect(formatLocalizedDecimalUnits('3015000', 0, 'es-CO')).toBe('3.015.000');
+    expect(formatLocalizedDecimalUnits('123456789', 8, 'en-US')).toBe('1.23456789');
+    expect(formatLocalizedDecimalUnits('123456789', 8, 'es-CO')).toBe('1,23456789');
   });
 
   it('rejects excess precision instead of rounding money', () => {

@@ -163,7 +163,7 @@ export function TransactionFiltersBar({
       {/* Category filter - hierarchical multiselect */}
       <Popover>
         <PopoverTrigger asChild>
-          <Button variant='outline' className='h-9 max-w-[180px] cursor-pointer text-sm'>
+          <Button variant='outline' className='h-9 cursor-pointer text-sm'>
             <Tag className='mr-1.5 h-3.5 w-3.5 shrink-0' />
             <span className='truncate'>
               {selectedCategoryIds.length > 0

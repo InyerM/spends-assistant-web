@@ -81,21 +81,24 @@ describe('DELETE /api/transactions/[id]', () => {
     expect(applyTransactionBalance).not.toHaveBeenCalled();
   });
 
-  it('returns a conflict for a reviewed transaction', async () => {
-    const { getUserClient } = await import('@/lib/api/server');
-    vi.mocked(getUserClient).mockResolvedValue({
-      supabase: {
-        rpc: vi.fn().mockResolvedValue({
-          data: null,
-          error: { message: 'Reviewed transaction cannot be deleted' },
-        }),
-      } as never,
-      userId: 'test-user-id',
-    });
-    const request = new NextRequest('http://localhost/api/transactions/tx-1', {
-      method: 'DELETE',
-    });
-    const response = await DELETE(request, makeParams('tx-1'));
-    expect(response.status).toBe(409);
-  });
+  it.each(['Reviewed transaction cannot be deleted', 'Transaction has a reviewed wealth link'])(
+    'returns a conflict for %s',
+    async (message) => {
+      const { getUserClient } = await import('@/lib/api/server');
+      vi.mocked(getUserClient).mockResolvedValue({
+        supabase: {
+          rpc: vi.fn().mockResolvedValue({
+            data: null,
+            error: { message },
+          }),
+        } as never,
+        userId: 'test-user-id',
+      });
+      const request = new NextRequest('http://localhost/api/transactions/tx-1', {
+        method: 'DELETE',
+      });
+      const response = await DELETE(request, makeParams('tx-1'));
+      expect(response.status).toBe(409);
+    },
+  );
 });

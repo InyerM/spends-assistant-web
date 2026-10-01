@@ -3,6 +3,22 @@ import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import ReliefFundsPage from '@/app/(dashboard)/relief-funds/page';
 
+vi.mock('next-intl', async () => {
+  const messages = (await import('@/messages/wealth.en.json')).default;
+  return {
+    useLocale: () => 'en',
+    useTranslations:
+      () =>
+      (key: string, values?: Record<string, string | number>): string => {
+        const message = (messages.reliefFunds as Record<string, string>)[key] ?? key;
+        return Object.entries(values ?? {}).reduce(
+          (result, [name, value]) => result.replace(`{${name}}`, String(value)),
+          message,
+        );
+      },
+  };
+});
+
 const fundId = '11111111-1111-4111-8111-111111111111';
 const savedFund = {
   id: fundId,

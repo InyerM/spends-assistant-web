@@ -1,12 +1,18 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { FileImage, LoaderCircle, ScanText, Upload } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 import { MAX_DOCUMENT_BYTES } from '@/lib/documents';
+import { useAccounts } from '@/lib/api/queries/account.queries';
+import { useCategories } from '@/lib/api/queries/category.queries';
+import { createTransaction, DuplicateError } from '@/lib/api/mutations/transaction.mutations';
+import type { Transaction } from '@/types';
 
 interface Observation {
   id: string;
@@ -52,6 +58,23 @@ interface SuggestionGroup {
   candidates: Candidate[];
   total_candidates: number;
   search_limited: boolean;
+}
+
+interface CreateDraft {
+  documentId: string;
+  observationId: string;
+  date: string;
+  time: string;
+  amount: string;
+  signedAmount: number;
+  description: string;
+  type: 'expense' | 'income' | 'transfer';
+  accountId: string;
+  destinationAccountId: string;
+  categoryId: string;
+  sourceExcerpt: string;
+  decisionKey: string;
+  createdId: string | null;
 }
 
 function SuggestionPanel({
@@ -121,6 +144,8 @@ async function readError(response: Response): Promise<string> {
 
 export default function DocumentsPage(): React.ReactElement {
   const t = useTranslations('documents');
+  const { data: accounts } = useAccounts();
+  const { data: categories } = useCategories();
   const inputRef = useRef<HTMLInputElement>(null);
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
@@ -140,6 +165,10 @@ export default function DocumentsPage(): React.ReactElement {
     | null
   >(null);
   const [decisionBusy, setDecisionBusy] = useState(false);
+  const [createDraft, setCreateDraft] = useState<CreateDraft | null>(null);
+  const [createChecked, setCreateChecked] = useState(false);
+  const [createBusy, setCreateBusy] = useState(false);
+  const [duplicateMatch, setDuplicateMatch] = useState<Transaction | null>(null);
 
   const load = useCallback(async (): Promise<void> => {
     try {
@@ -239,6 +268,105 @@ export default function DocumentsPage(): React.ReactElement {
       setError(cause instanceof Error ? cause.message : t('decisionFailed'));
     } finally {
       setDecisionBusy(false);
+    }
+  };
+
+  const startCreate = (document: Document, observation: Observation): void => {
+    const occurred = observation.occurred_at_text ?? '';
+    setCreateDraft({
+      documentId: document.id,
+      observationId: observation.id,
+      date: /^\d{4}-\d{2}-\d{2}(?:$|T| )/.test(occurred) ? occurred.slice(0, 10) : '',
+      time: /^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}/.test(occurred) ? occurred.slice(11, 16) : '',
+      amount: String(Math.abs(observation.amount ?? 0)),
+      signedAmount: observation.amount ?? 0,
+      description: observation.description,
+      type: 'expense',
+      accountId: '',
+      destinationAccountId: '',
+      categoryId: '',
+      sourceExcerpt: observation.source_excerpt,
+      decisionKey: crypto.randomUUID(),
+      createdId: null,
+    });
+    setCreateChecked(false);
+    setDuplicateMatch(null);
+    setError(null);
+  };
+
+  const updateCreateDraft = (patch: Partial<CreateDraft>): void => {
+    setCreateDraft((current) => current && { ...current, ...patch });
+    setCreateChecked(false);
+    setDuplicateMatch(null);
+  };
+
+  const confirmCreate = async (): Promise<void> => {
+    if (!createDraft || !createChecked || createBusy) return;
+    const amount = Number(createDraft.amount);
+    if (
+      !/^\d{4}-\d{2}-\d{2}$/.test(createDraft.date) ||
+      !/^\d{2}:\d{2}$/.test(createDraft.time) ||
+      !createDraft.accountId ||
+      (createDraft.type === 'transfer' &&
+        (!createDraft.destinationAccountId ||
+          createDraft.destinationAccountId === createDraft.accountId)) ||
+      !createDraft.description.trim() ||
+      !Number.isFinite(amount) ||
+      amount <= 0
+    ) {
+      setError(t('createFieldsRequired'));
+      return;
+    }
+    setCreateBusy(true);
+    setError(null);
+    try {
+      let transactionId = createDraft.createdId;
+      if (!transactionId) {
+        const transaction = await createTransaction({
+          date: createDraft.date,
+          time: createDraft.time,
+          amount,
+          description: createDraft.description.trim(),
+          type: createDraft.type,
+          account_id: createDraft.accountId,
+          transfer_to_account_id:
+            createDraft.type === 'transfer' ? createDraft.destinationAccountId : undefined,
+          category_id:
+            createDraft.type === 'transfer' ? undefined : createDraft.categoryId || undefined,
+          source: 'web-document',
+          raw_text: createDraft.sourceExcerpt,
+          parsed_data: {
+            document_id: createDraft.documentId,
+            observation_id: createDraft.observationId,
+          },
+        });
+        transactionId = transaction.id;
+        setCreateDraft((current) => current && { ...current, createdId: transaction.id });
+      }
+      const response = await fetch(`/api/documents/${createDraft.documentId}/decisions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          observation_id: createDraft.observationId,
+          action: 'accept',
+          transaction_id: transactionId,
+          idempotency_key: createDraft.decisionKey,
+        }),
+      });
+      if (!response.ok) throw new Error(await readError(response));
+      setCreateDraft(null);
+      setCreateChecked(false);
+      setDuplicateMatch(null);
+      await load();
+    } catch (cause) {
+      if (cause instanceof DuplicateError) {
+        setDuplicateMatch(cause.match);
+        setError(t('duplicateFound'));
+      } else {
+        setError(cause instanceof Error ? cause.message : t('createFailed'));
+      }
+    } finally {
+      setCreateBusy(false);
     }
   };
 
@@ -382,9 +510,12 @@ export default function DocumentsPage(): React.ReactElement {
                             </p>
                             {observation.status === 'confirmed' &&
                               observation.match_transaction_id && (
-                                <p className='text-primary mt-2 text-sm font-medium'>
-                                  {t('confirmedMatch')} · {observation.match_transaction_id}
-                                </p>
+                                <Link
+                                  href={`/transactions/${observation.match_transaction_id}`}
+                                  className='text-primary mt-2 inline-block text-sm font-medium underline underline-offset-2'>
+                                  {t('confirmedMatch')} ·{' '}
+                                  {observation.match_transaction_id.slice(0, 8)}
+                                </Link>
                               )}
                             <SuggestionPanel
                               group={suggestions[document.id]?.find(
@@ -400,6 +531,237 @@ export default function DocumentsPage(): React.ReactElement {
                                 })
                               }
                             />
+                            {observation.status === 'pending' &&
+                              observation.amount !== null &&
+                              (observation.currency === null || observation.currency === 'COP') && (
+                                <Button
+                                  size='sm'
+                                  variant='outline'
+                                  className='mt-3 mr-2'
+                                  onClick={() => startCreate(document, observation)}>
+                                  {t('createTransaction')}
+                                </Button>
+                              )}
+                            {observation.status === 'pending' &&
+                              observation.amount !== null &&
+                              observation.currency !== null &&
+                              observation.currency !== 'COP' && (
+                                <p className='text-muted-foreground mt-3 text-xs'>
+                                  {t('unsupportedCurrency', { currency: observation.currency })}
+                                </p>
+                              )}
+                            {createDraft?.observationId === observation.id &&
+                              createDraft.documentId === document.id && (
+                                <div className='border-primary/30 bg-background mt-4 space-y-3 rounded-lg border p-4'>
+                                  <h4 className='font-medium'>{t('reviewCreate')}</h4>
+                                  <p className='text-muted-foreground text-xs'>
+                                    {t('reviewCreateHint')}
+                                  </p>
+                                  <div className='grid gap-3 sm:grid-cols-2'>
+                                    <label className='space-y-1 text-sm'>
+                                      {t('transactionDate')}
+                                      <Input
+                                        type='date'
+                                        aria-label={t('transactionDate')}
+                                        value={createDraft.date}
+                                        disabled={createDraft.createdId !== null}
+                                        onChange={(event) =>
+                                          updateCreateDraft({ date: event.target.value })
+                                        }
+                                      />
+                                    </label>
+                                    <label className='space-y-1 text-sm'>
+                                      {t('transactionTime')}
+                                      <Input
+                                        type='time'
+                                        aria-label={t('transactionTime')}
+                                        value={createDraft.time}
+                                        disabled={createDraft.createdId !== null}
+                                        onChange={(event) =>
+                                          updateCreateDraft({ time: event.target.value })
+                                        }
+                                      />
+                                    </label>
+                                    <label className='space-y-1 text-sm'>
+                                      {t('transactionAmount')}
+                                      <Input
+                                        type='number'
+                                        min='0.01'
+                                        step='0.01'
+                                        aria-label={t('transactionAmount')}
+                                        value={createDraft.amount}
+                                        disabled={createDraft.createdId !== null}
+                                        onChange={(event) =>
+                                          updateCreateDraft({ amount: event.target.value })
+                                        }
+                                      />
+                                    </label>
+                                    <label className='space-y-1 text-sm'>
+                                      {t('transactionType')}
+                                      <select
+                                        aria-label={t('transactionType')}
+                                        className='border-input bg-background h-9 w-full rounded-md border px-3'
+                                        value={createDraft.type}
+                                        disabled={createDraft.createdId !== null}
+                                        onChange={(event) =>
+                                          updateCreateDraft({
+                                            type: event.target.value as CreateDraft['type'],
+                                            categoryId: '',
+                                            destinationAccountId: '',
+                                          })
+                                        }>
+                                        <option value='expense'>{t('expense')}</option>
+                                        <option
+                                          value='income'
+                                          disabled={createDraft.signedAmount < 0}>
+                                          {t('income')}
+                                        </option>
+                                        <option value='transfer'>{t('transfer')}</option>
+                                      </select>
+                                    </label>
+                                    <label className='space-y-1 text-sm'>
+                                      {t('transactionAccount')}
+                                      <select
+                                        aria-label={t('transactionAccount')}
+                                        className='border-input bg-background h-9 w-full rounded-md border px-3'
+                                        value={createDraft.accountId}
+                                        disabled={createDraft.createdId !== null}
+                                        onChange={(event) =>
+                                          updateCreateDraft({ accountId: event.target.value })
+                                        }>
+                                        <option value=''>{t('selectAccount')}</option>
+                                        {(accounts ?? [])
+                                          .filter(
+                                            (account) =>
+                                              account.currency === 'COP' && !account.deleted_at,
+                                          )
+                                          .map((account) => (
+                                            <option key={account.id} value={account.id}>
+                                              {account.name}
+                                            </option>
+                                          ))}
+                                      </select>
+                                    </label>
+                                    {createDraft.type === 'transfer' && (
+                                      <label className='space-y-1 text-sm'>
+                                        {t('destinationAccount')}
+                                        <select
+                                          aria-label={t('destinationAccount')}
+                                          className='border-input bg-background h-9 w-full rounded-md border px-3'
+                                          value={createDraft.destinationAccountId}
+                                          disabled={createDraft.createdId !== null}
+                                          onChange={(event) =>
+                                            updateCreateDraft({
+                                              destinationAccountId: event.target.value,
+                                            })
+                                          }>
+                                          <option value=''>{t('selectAccount')}</option>
+                                          {(accounts ?? [])
+                                            .filter(
+                                              (account) =>
+                                                account.currency === 'COP' &&
+                                                !account.deleted_at &&
+                                                account.id !== createDraft.accountId,
+                                            )
+                                            .map((account) => (
+                                              <option key={account.id} value={account.id}>
+                                                {account.name}
+                                              </option>
+                                            ))}
+                                        </select>
+                                      </label>
+                                    )}
+                                    <label className='space-y-1 text-sm'>
+                                      {t('transactionCategory')}
+                                      <select
+                                        aria-label={t('transactionCategory')}
+                                        className='border-input bg-background h-9 w-full rounded-md border px-3'
+                                        value={createDraft.categoryId}
+                                        disabled={
+                                          createDraft.createdId !== null ||
+                                          createDraft.type === 'transfer'
+                                        }
+                                        onChange={(event) =>
+                                          updateCreateDraft({ categoryId: event.target.value })
+                                        }>
+                                        <option value=''>{t('selectCategory')}</option>
+                                        {(categories ?? [])
+                                          .filter(
+                                            (category) =>
+                                              category.type === createDraft.type &&
+                                              category.is_active,
+                                          )
+                                          .map((category) => (
+                                            <option key={category.id} value={category.id}>
+                                              {category.name}
+                                            </option>
+                                          ))}
+                                      </select>
+                                    </label>
+                                  </div>
+                                  <label className='block space-y-1 text-sm'>
+                                    {t('transactionDescription')}
+                                    <Input
+                                      aria-label={t('transactionDescription')}
+                                      value={createDraft.description}
+                                      disabled={createDraft.createdId !== null}
+                                      onChange={(event) =>
+                                        updateCreateDraft({ description: event.target.value })
+                                      }
+                                    />
+                                  </label>
+                                  {duplicateMatch && (
+                                    <Button
+                                      size='sm'
+                                      variant='outline'
+                                      onClick={() => {
+                                        setCreateDraft(
+                                          (current) =>
+                                            current && { ...current, createdId: duplicateMatch.id },
+                                        );
+                                        setDuplicateMatch(null);
+                                        setCreateChecked(false);
+                                      }}>
+                                      {t('linkDuplicate', {
+                                        description: duplicateMatch.description,
+                                      })}
+                                    </Button>
+                                  )}
+                                  {createDraft.createdId && (
+                                    <p className='text-muted-foreground text-xs'>
+                                      {t('createdNeedsLink')}
+                                    </p>
+                                  )}
+                                  <label className='flex items-start gap-2 text-sm'>
+                                    <input
+                                      type='checkbox'
+                                      aria-label={t('createChecked')}
+                                      checked={createChecked}
+                                      onChange={(event) => setCreateChecked(event.target.checked)}
+                                    />
+                                    {t('createChecked')}
+                                  </label>
+                                  <div className='flex flex-wrap gap-2'>
+                                    <Button
+                                      size='sm'
+                                      disabled={!createChecked || createBusy}
+                                      onClick={() => void confirmCreate()}>
+                                      {createBusy
+                                        ? t('savingDecision')
+                                        : createDraft.createdId
+                                          ? t('confirmLink')
+                                          : t('confirmCreate')}
+                                    </Button>
+                                    <Button
+                                      size='sm'
+                                      variant='ghost'
+                                      disabled={createBusy}
+                                      onClick={() => setCreateDraft(null)}>
+                                      {t('cancelReview')}
+                                    </Button>
+                                  </div>
+                                </div>
+                              )}
                             {observation.status === 'pending' && (
                               <Button
                                 size='sm'

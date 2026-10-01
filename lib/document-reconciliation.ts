@@ -75,7 +75,7 @@ export function rankCandidates(
   observation: ReconciliationObservation,
   transactions: ReconciliationTransaction[],
 ): ReconciliationCandidate[] {
-  const cents = observation.amount === null ? null : amountCents(observation.amount);
+  const cents = observation.amount === null ? null : amountCents(Math.abs(observation.amount));
   if (cents === null) return [];
   const observedAt = parseDate(observation.occurred_at_text);
   const reference = normalizedText(observation.reference ?? '').replace(/[^a-z0-9]/g, '');
@@ -84,6 +84,8 @@ export function rankCandidates(
   return transactions
     .flatMap((transaction) => {
       if (amountCents(transaction.amount) !== cents) return [];
+      if (observation.amount !== null && observation.amount < 0 && transaction.type === 'income')
+        return [];
       const transactionAt = parseDate(transaction.date);
       if (transactionAt === null) return [];
       const daysApart = observedAt === null ? null : Math.abs(transactionAt - observedAt) / DAY_MS;

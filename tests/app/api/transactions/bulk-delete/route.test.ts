@@ -52,17 +52,20 @@ describe('POST /api/transactions/bulk-delete', () => {
     expect(rpc).not.toHaveBeenCalled();
   });
 
-  it('returns 409 when any requested transaction has a reviewed link', async () => {
-    const { getUserClient } = await import('@/lib/api/server');
-    vi.mocked(getUserClient).mockResolvedValue({
-      supabase: {
-        rpc: vi.fn().mockResolvedValue({
-          data: null,
-          error: { message: 'Reviewed transaction cannot be deleted' },
-        }),
-      } as never,
-      userId: 'owner',
-    });
-    expect((await POST(request(['tx-a']))).status).toBe(409);
-  });
+  it.each(['Reviewed transaction cannot be deleted', 'Transaction has a reviewed wealth link'])(
+    'returns 409 when a requested transaction is protected by %s',
+    async (message) => {
+      const { getUserClient } = await import('@/lib/api/server');
+      vi.mocked(getUserClient).mockResolvedValue({
+        supabase: {
+          rpc: vi.fn().mockResolvedValue({
+            data: null,
+            error: { message },
+          }),
+        } as never,
+        userId: 'owner',
+      });
+      expect((await POST(request(['tx-a']))).status).toBe(409);
+    },
+  );
 });

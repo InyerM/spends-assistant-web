@@ -19,3 +19,15 @@ export function formatDecimalUnits(value: string, scale: number): string {
   const fraction = padded.slice(-scale).replace(/0+$/, '');
   return fraction ? `${whole}.${fraction}` : whole;
 }
+
+/** Formats exact integer units for display without converting money to a floating point number. */
+export function formatLocalizedDecimalUnits(value: string, scale: number, locale: string): string {
+  const decimal = formatDecimalUnits(value, scale);
+  const [whole, fraction] = decimal.split('.');
+  const formatter = new Intl.NumberFormat(locale);
+  const grouped = formatter.format(BigInt(whole));
+  if (!fraction) return grouped;
+  const separator =
+    formatter.formatToParts(1.1).find((part) => part.type === 'decimal')?.value ?? '.';
+  return `${grouped}${separator}${fraction}`;
+}

@@ -7,31 +7,11 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { TransactionList } from '@/components/transactions/transaction-list';
 import { TransactionFiltersBar } from '@/components/transactions/transaction-filters';
-import { PeriodSelector } from '@/components/transactions/period-selector';
+import { TransactionToolbar } from '@/components/transactions/transaction-toolbar';
 import { BulkEditDialog } from '@/components/transactions/bulk-edit-dialog';
 import { ConfirmDeleteDialog } from '@/components/shared/confirm-delete-dialog';
 
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import {
-  Plus,
-  Upload,
-  Download,
-  MoreVertical,
-  CheckSquare,
-  X,
-  Pencil,
-  Trash2,
-  History,
-  Inbox,
-  FileText,
-  FileSearch,
-} from 'lucide-react';
-import Link from 'next/link';
+import { X, Pencil, Trash2, FileText } from 'lucide-react';
 import { ImportDialog } from '@/components/transactions/import-dialog';
 import { exportTransactionsCsv } from '@/lib/utils/export';
 import { useTransactions } from '@/lib/api/queries/transaction.queries';
@@ -205,103 +185,16 @@ export default function TransactionsPage(): React.ReactElement {
           </div>
         </div>
       ) : (
-        <div className='flex items-center justify-between gap-3'>
-          <PeriodSelector
-            dateFrom={effectiveFilters.date_from ?? ''}
-            dateTo={effectiveFilters.date_to ?? ''}
-            onChange={handlePeriodChange}
-          />
-          <div className='flex shrink-0 gap-2'>
-            <Button
-              variant='outline'
-              size='sm'
-              className='cursor-pointer'
-              onClick={(): void => setSelectMode(true)}>
-              <CheckSquare className='h-4 w-4 sm:mr-1.5' />
-              <span className='hidden sm:inline'>{tCommon('select')}</span>
-            </Button>
-            <Button
-              variant='outline'
-              size='sm'
-              className='hidden cursor-pointer sm:flex'
-              onClick={(): void => setImportOpen(true)}>
-              <Upload className='mr-1.5 h-4 w-4' />
-              {tCommon('import')}
-            </Button>
-            <Button
-              variant='outline'
-              size='sm'
-              className='hidden cursor-pointer sm:flex'
-              onClick={(): void => void handleExport()}
-              disabled={isExporting || !infiniteData?.pages[0]?.data?.length}>
-              <Download className='mr-1.5 h-4 w-4' />
-              {tCommon('export')}
-            </Button>
-            <Button variant='ghost' size='sm' className='hidden cursor-pointer sm:flex' asChild>
-              <Link href='/transactions/imports'>
-                <History className='mr-1.5 h-4 w-4' />
-                {t('importHistory')}
-              </Link>
-            </Button>
-            <Button variant='ghost' size='sm' className='hidden cursor-pointer sm:flex' asChild>
-              <Link href='/transactions/shortcut-inbox'>
-                <Inbox className='mr-1.5 h-4 w-4' />
-                {t('shortcutInbox')}
-              </Link>
-            </Button>
-            <Button variant='ghost' size='sm' className='hidden cursor-pointer sm:flex' asChild>
-              <Link href='/transactions/account-corrections'>
-                <FileSearch className='mr-1.5 h-4 w-4' />
-                {t('accountCorrections')}
-              </Link>
-            </Button>
-            <Button size='sm' className='cursor-pointer' onClick={openNew}>
-              <Plus className='mr-1 h-4 w-4' />
-              <span className='hidden sm:inline'>{t('newTransaction')}</span>
-              <span className='sm:hidden'>{tCommon('new')}</span>
-            </Button>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant='outline' size='sm' className='cursor-pointer px-2 sm:hidden'>
-                  <MoreVertical className='h-4 w-4' />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align='end'>
-                <DropdownMenuItem
-                  className='cursor-pointer'
-                  onClick={(): void => setImportOpen(true)}>
-                  <Upload className='mr-2 h-4 w-4' />
-                  {tCommon('import')}
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  className='cursor-pointer'
-                  onClick={(): void => void handleExport()}
-                  disabled={isExporting || !infiniteData?.pages[0]?.data?.length}>
-                  <Download className='mr-2 h-4 w-4' />
-                  {tCommon('export')}
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild className='cursor-pointer'>
-                  <Link href='/transactions/imports'>
-                    <History className='mr-2 h-4 w-4' />
-                    {t('importHistory')}
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild className='cursor-pointer'>
-                  <Link href='/transactions/shortcut-inbox'>
-                    <Inbox className='mr-2 h-4 w-4' />
-                    {t('shortcutInbox')}
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild className='cursor-pointer'>
-                  <Link href='/transactions/account-corrections'>
-                    <FileSearch className='mr-2 h-4 w-4' />
-                    {t('accountCorrections')}
-                  </Link>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        </div>
+        <TransactionToolbar
+          dateFrom={effectiveFilters.date_from ?? ''}
+          dateTo={effectiveFilters.date_to ?? ''}
+          onPeriodChange={handlePeriodChange}
+          onNew={openNew}
+          onImport={(): void => setImportOpen(true)}
+          onExport={(): void => void handleExport()}
+          onSelect={(): void => setSelectMode(true)}
+          exportDisabled={isExporting || !infiniteData?.pages[0]?.data?.length}
+        />
       )}
 
       {/* Import filter banner */}

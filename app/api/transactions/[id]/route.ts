@@ -80,6 +80,7 @@ export async function DELETE(_request: NextRequest, { params }: RouteParams): Pr
     if (error) {
       const conflict =
         error.message === 'Reviewed transaction cannot be deleted' ||
+        error.message === 'Transaction has a reviewed wealth link' ||
         error.message === 'Transaction accounts changed during deletion';
       return errorResponse(error.message, conflict ? 409 : 400);
     }

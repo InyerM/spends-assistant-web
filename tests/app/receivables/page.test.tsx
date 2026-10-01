@@ -3,6 +3,17 @@ import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import ReceivablesPage from '@/app/(dashboard)/receivables/page';
 
+vi.mock('next-intl', async () => {
+  const messages = (await import('@/messages/wealth.en.json')).default;
+  return {
+    useLocale: () => 'en',
+    useTranslations:
+      () =>
+      (key: string): string =>
+        (messages.receivables as Record<string, string>)[key] ?? key,
+  };
+});
+
 const loanId = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
 const transactionId = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
 
@@ -63,7 +74,7 @@ describe('personal receivables review', () => {
       'Owner-confirmed principal repayment',
     );
     await user.click(screen.getByRole('button', { name: 'Review entry' }));
-    expect(screen.getByText(/Remaining principal: 700000 COP/)).toBeInTheDocument();
+    expect(screen.getByText(/Remaining principal: 700,000 COP/)).toBeInTheDocument();
     expect(fetchMock).toHaveBeenCalledTimes(2);
     await user.click(screen.getByLabelText('I checked this against the transaction and evidence'));
     await user.click(screen.getByRole('button', { name: 'Confirm reviewed entry' }));

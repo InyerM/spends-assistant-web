@@ -3,6 +3,17 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import DocumentsPage from '@/app/(dashboard)/documents/page';
 
 vi.mock('next-intl', () => ({ useTranslations: () => (key: string) => key }));
+vi.mock('@/lib/api/queries/account.queries', () => ({
+  useAccounts: () => ({
+    data: [
+      { id: 'account-1', name: 'Bancolombia', currency: 'COP', deleted_at: null },
+      { id: 'account-2', name: 'Nequi', currency: 'COP', deleted_at: null },
+    ],
+  }),
+}));
+vi.mock('@/lib/api/queries/category.queries', () => ({
+  useCategories: () => ({ data: [] }),
+}));
 
 describe('document inbox', () => {
   afterEach(() => {
@@ -10,7 +21,7 @@ describe('document inbox', () => {
     vi.unstubAllGlobals();
   });
 
-  it('shows extracted observations as pending review without a create transaction action', async () => {
+  it('offers reviewed transaction creation from a pending observation', async () => {
     vi.stubGlobal(
       'fetch',
       vi.fn().mockResolvedValue(
@@ -46,7 +57,150 @@ describe('document inbox', () => {
     await waitFor(() => expect(screen.getByText('Coffee')).toBeInTheDocument());
     expect(screen.getByText('observations')).toBeInTheDocument();
     expect(screen.getByText(/observationStatus.pending/)).toBeInTheDocument();
-    expect(screen.queryByText(/create transaction/i)).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'createTransaction' })).toBeInTheDocument();
+  });
+
+  it('creates and links a signed bank debit only after the user reviews its fields', async () => {
+    const fetchMock = vi.fn().mockImplementation((url: string, options?: RequestInit) => {
+      if (url === '/api/transactions' && options?.method === 'POST') {
+        return Promise.resolve(Response.json({ id: 'tx-created' }, { status: 201 }));
+      }
+      if (url === '/api/documents/doc-1/decisions') {
+        return Promise.resolve(Response.json({ decision_id: 'decision-1' }));
+      }
+      return Promise.resolve(
+        Response.json({
+          data: [
+            {
+              id: 'doc-1',
+              file_name: 'bank.png',
+              status: 'extracted',
+              document_type: 'bank_screenshot',
+              created_at: '2026-09-28T12:00:00Z',
+              document_observations: [
+                {
+                  id: 'obs-1',
+                  ordinal: 0,
+                  amount: -12000,
+                  currency: 'COP',
+                  occurred_at_text: '2026-09-28',
+                  description: 'Cafe North',
+                  counterparty: 'Cafe North',
+                  reference: null,
+                  source_excerpt: 'Bank debit 12,000',
+                  confidence: 0.9,
+                  status: 'pending',
+                },
+              ],
+            },
+          ],
+        }),
+      );
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    render(<DocumentsPage />);
+    await screen.findByText('Cafe North');
+    fireEvent.click(screen.getByRole('button', { name: 'createTransaction' }));
+    expect(fetchMock.mock.calls.every(([, options]) => options?.method !== 'POST')).toBe(true);
+    fireEvent.change(screen.getByLabelText('transactionTime'), { target: { value: '13:25' } });
+    fireEvent.change(screen.getByLabelText('transactionAccount'), {
+      target: { value: 'account-1' },
+    });
+    fireEvent.click(screen.getByLabelText('createChecked'));
+    fireEvent.click(screen.getByRole('button', { name: 'confirmCreate' }));
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith(
+        '/api/documents/doc-1/decisions',
+        expect.objectContaining({ method: 'POST' }),
+      ),
+    );
+    const payload = JSON.parse(
+      fetchMock.mock.calls.find(([url]) => url === '/api/transactions')?.[1]?.body as string,
+    );
+    expect(payload).toMatchObject({
+      amount: 12000,
+      type: 'expense',
+      date: '2026-09-28',
+      account_id: 'account-1',
+      source: 'web-document',
+      parsed_data: {
+        document_id: 'doc-1',
+        observation_id: 'obs-1',
+      },
+    });
+  });
+
+  it('requires a distinct destination account for a reviewed transfer', async () => {
+    const fetchMock = vi.fn().mockImplementation((url: string, options?: RequestInit) => {
+      if (url === '/api/transactions' && options?.method === 'POST')
+        return Promise.resolve(Response.json({ id: 'tx-created' }, { status: 201 }));
+      if (url.endsWith('/decisions'))
+        return Promise.resolve(Response.json({ decision_id: 'decision-1' }));
+      return Promise.resolve(
+        Response.json({
+          data: [
+            {
+              id: 'doc-1',
+              file_name: 'bank.png',
+              status: 'extracted',
+              document_type: 'bank_screenshot',
+              created_at: '2026-09-28T12:00:00Z',
+              document_observations: [
+                {
+                  id: 'obs-1',
+                  ordinal: 0,
+                  amount: -12000,
+                  currency: 'COP',
+                  occurred_at_text: '2026-09-28',
+                  description: 'Own account transfer',
+                  counterparty: null,
+                  reference: null,
+                  source_excerpt: 'Transfer 12000',
+                  confidence: 0.9,
+                  status: 'pending',
+                },
+              ],
+            },
+          ],
+        }),
+      );
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    render(<DocumentsPage />);
+    await screen.findByText('Own account transfer');
+    fireEvent.click(screen.getByRole('button', { name: 'createTransaction' }));
+    fireEvent.change(screen.getByLabelText('transactionTime'), { target: { value: '13:25' } });
+    fireEvent.change(screen.getByLabelText('transactionType'), { target: { value: 'transfer' } });
+    fireEvent.change(screen.getByLabelText('transactionAccount'), {
+      target: { value: 'account-1' },
+    });
+    fireEvent.click(screen.getByLabelText('createChecked'));
+    fireEvent.click(screen.getByRole('button', { name: 'confirmCreate' }));
+    expect(
+      fetchMock.mock.calls.filter(
+        ([url, options]) => url === '/api/transactions' && options?.method === 'POST',
+      ),
+    ).toHaveLength(0);
+    fireEvent.change(screen.getByLabelText('destinationAccount'), {
+      target: { value: 'account-2' },
+    });
+    fireEvent.click(screen.getByLabelText('createChecked'));
+    fireEvent.click(screen.getByRole('button', { name: 'confirmCreate' }));
+    await waitFor(() =>
+      expect(
+        fetchMock.mock.calls.some(
+          ([url, options]) => url === '/api/transactions' && options?.method === 'POST',
+        ),
+      ).toBe(true),
+    );
+    const payload = JSON.parse(
+      fetchMock.mock.calls.find(([url]) => url === '/api/transactions')?.[1]?.body as string,
+    );
+    expect(payload).toMatchObject({
+      type: 'transfer',
+      account_id: 'account-1',
+      transfer_to_account_id: 'account-2',
+    });
   });
 
   it('offers retry when a processing claim is stale', async () => {

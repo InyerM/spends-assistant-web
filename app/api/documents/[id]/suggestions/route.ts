@@ -49,7 +49,7 @@ export async function GET(
         observation.status !== 'pending' ||
         observation.amount === null ||
         !Number.isFinite(observation.amount) ||
-        observation.amount <= 0
+        observation.amount === 0
       )
         continue;
       const window = dateWindow(observation.occurred_at_text);
@@ -61,7 +61,8 @@ export async function GET(
         .select('id, amount, date, description, account_id, type, raw_text')
         .eq('user_id', userId)
         .is('deleted_at', null)
-        .eq('amount', observation.amount);
+        .eq('amount', Math.abs(observation.amount));
+      if (observation.amount < 0) query = query.in('type', ['expense', 'transfer']);
       if (window) query = query.gte('date', window.from).lte('date', window.to);
       const { data, error } = await query.order('date', { ascending: false }).limit(SEARCH_LIMIT);
       if (error) return errorResponse('Failed to search transactions');

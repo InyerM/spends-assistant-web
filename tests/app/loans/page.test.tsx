@@ -3,6 +3,22 @@ import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import LoansPage from '@/app/(dashboard)/loans/page';
 
+vi.mock('next-intl', async () => {
+  const messages = (await import('@/messages/wealth.en.json')).default;
+  return {
+    useLocale: () => 'en',
+    useTranslations:
+      () =>
+      (key: string, values?: Record<string, string | number>): string => {
+        const message = (messages.loans as Record<string, string>)[key] ?? key;
+        return Object.entries(values ?? {}).reduce(
+          (result, [name, value]) => result.replace(`{${name}}`, String(value)),
+          message,
+        );
+      },
+  };
+});
+
 describe('manual loan ledger', () => {
   const fetchMock = vi.fn();
   beforeEach(() => {
@@ -17,6 +33,45 @@ describe('manual loan ledger', () => {
       'href',
       '/receivables',
     );
+  });
+  it('keeps a paid-off loan in the history tab', async () => {
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        data: [
+          {
+            id: '00000000-0000-4000-8000-000000000333',
+            lender: 'lulo_bank',
+            label: 'Paid loan',
+            currency: 'COP',
+            money_scale: 0,
+            opening_recorded: true,
+            outstanding_minor: '0',
+            interest_expense_minor: '0',
+            insurance_expense_minor: '0',
+            fee_expense_minor: '0',
+            manual_loan_events: [
+              {
+                id: 'event-1',
+                kind: 'payment',
+                occurred_on: '2026-09-28',
+                cash_paid_minor: '1000',
+                principal_minor: '900',
+                interest_minor: '100',
+                insurance_minor: '0',
+                fee_minor: '0',
+              },
+            ],
+          },
+        ],
+      }),
+    });
+    const user = userEvent.setup();
+    render(<LoansPage />);
+    await screen.findByText(/No current loans/);
+    await user.click(screen.getByRole('button', { name: /History \(1\)/ }));
+    expect(screen.getByText('Paid loan')).toBeInTheDocument();
+    expect(screen.getByText('Recorded events (1)')).toBeInTheDocument();
   });
   it('requires review before creating a lender record', async () => {
     const user = userEvent.setup();
@@ -76,7 +131,7 @@ describe('manual loan ledger', () => {
     ])
       await user.type(screen.getByLabelText(label), amount);
     await user.click(screen.getByRole('button', { name: 'Review entry' }));
-    expect(screen.getByText(/principal 10000 COP; interest 2000 COP/)).toBeInTheDocument();
+    expect(screen.getByText(/principal 10,000 COP; interest 2,000 COP/)).toBeInTheDocument();
     expect(fetchMock).toHaveBeenCalledTimes(1);
     await user.click(screen.getByLabelText('I checked these details against the evidence'));
     await user.click(screen.getByRole('button', { name: 'Confirm reviewed entry' }));
@@ -122,7 +177,7 @@ describe('manual loan ledger', () => {
     await user.type(screen.getByLabelText('Evidence reference'), 'Statement outstanding row');
     await user.type(screen.getByLabelText('Evidence date'), '2026-09-28');
     await user.click(screen.getByRole('button', { name: 'Review entry' }));
-    expect(screen.getByText('Opening principal: 123456789 COP')).toBeInTheDocument();
+    expect(screen.getByText('Opening principal: 123,456,789 COP')).toBeInTheDocument();
     await user.click(screen.getByLabelText('I checked these details against the evidence'));
     await user.click(screen.getByRole('button', { name: 'Confirm reviewed entry' }));
     const body = JSON.parse(fetchMock.mock.calls[1][1].body as string);

@@ -41,6 +41,15 @@ describe('document reconciliation candidates', () => {
     ]);
   });
 
+  it('matches a signed bank debit to an expense with its absolute amount', () => {
+    expect(
+      rankCandidates({ ...observation, amount: -12000 }, [
+        transaction('expense'),
+        transaction('income', { type: 'income' }),
+      ]).map((candidate) => candidate.transaction_id),
+    ).toEqual(['expense']);
+  });
+
   it('excludes false positives with a different amount or distant date', () => {
     expect(
       rankCandidates(observation, [

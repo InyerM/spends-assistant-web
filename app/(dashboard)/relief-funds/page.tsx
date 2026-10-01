@@ -1,11 +1,13 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import Link from 'next/link';
+import { useLocale, useTranslations } from 'next-intl';
 import { HeartHandshake, CircleAlert } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { formatDecimalUnits, parseDecimalUnits } from '@/lib/wealth/decimal';
+import { formatLocalizedDecimalUnits, parseDecimalUnits } from '@/lib/wealth/decimal';
 import {
   reliefFundEventSchema,
   summarizeReliefFund,
@@ -60,13 +62,16 @@ const emptyDraft: Draft = {
   transactionId: '',
 };
 
-function amountLabel(value: string): string {
+function amountLabel(value: string, locale: string): string {
   const negative = value.startsWith('-');
   const units = negative ? value.slice(1) : value;
-  return `${negative ? '-' : ''}${formatDecimalUnits(units, 2)} COP`;
+  return `${negative ? '-' : ''}${formatLocalizedDecimalUnits(units, 2, locale)} COP`;
 }
 
 export default function ReliefFundsPage(): React.ReactElement {
+  const t = useTranslations('wealth.reliefFunds');
+  const locale = useLocale();
+  const loadError = t('loadFailed');
   const [funds, setFunds] = useState<SavedFund[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -76,20 +81,20 @@ export default function ReliefFundsPage(): React.ReactElement {
   const [checked, setChecked] = useState(false);
   const requestId = useRef<string | null>(null);
 
-  async function loadFunds(): Promise<void> {
+  const loadFunds = useCallback(async (): Promise<void> => {
     const response = await fetch('/api/relief-funds');
-    if (!response.ok) throw new Error('Could not load relief funds');
+    if (!response.ok) throw new Error(loadError);
     const body = (await response.json()) as { data?: SavedFund[] };
     setFunds(body.data ?? []);
-  }
+  }, [loadError]);
 
   useEffect(() => {
     void loadFunds()
       .catch((cause: unknown) => {
-        setError(cause instanceof Error ? cause.message : 'Could not load relief funds');
+        setError(cause instanceof Error ? cause.message : loadError);
       })
       .finally(() => setLoading(false));
-  }, []);
+  }, [loadFunds, loadError]);
 
   function change<K extends keyof Draft>(key: K, value: Draft[K]): void {
     setDraft((previous) => ({ ...previous, [key]: value }));
@@ -149,7 +154,7 @@ export default function ReliefFundsPage(): React.ReactElement {
       requestId.current = crypto.randomUUID();
       setError(null);
     } catch {
-      setError('Check the date, exact amount, source, and description');
+      setError(t('checkSource'));
     }
   }
 
@@ -165,7 +170,7 @@ export default function ReliefFundsPage(): React.ReactElement {
       });
       if (!response.ok) {
         const body = (await response.json()) as { error?: string };
-        throw new Error(body.error ?? 'Could not save reviewed entry');
+        throw new Error(body.error ?? t('saveFailed'));
       }
       await loadFunds();
       setDraft(emptyDraft);
@@ -173,7 +178,7 @@ export default function ReliefFundsPage(): React.ReactElement {
       setChecked(false);
       requestId.current = null;
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Could not save reviewed entry');
+      setError(cause instanceof Error ? cause.message : t('saveFailed'));
     } finally {
       setSaving(false);
     }
@@ -187,15 +192,12 @@ export default function ReliefFundsPage(): React.ReactElement {
             <HeartHandshake className='h-5 w-5' />
           </div>
           <div>
-            <h1 className='text-2xl font-semibold tracking-tight'>Relief funds</h1>
-            <p className='text-muted-foreground text-sm'>
-              Track money earmarked for emergency purchases and what you can verify was spent.
-            </p>
+            <h1 className='text-2xl font-semibold tracking-tight'>{t('title')}</h1>
+            <p className='text-muted-foreground text-sm'>{t('subtitle')}</p>
           </div>
         </div>
         <p className='border-border bg-muted/40 text-muted-foreground rounded-lg border px-4 py-3 text-sm'>
-          This reviewed journal does not create transactions or change bank balances. A linked
-          transaction is a reference to an existing ledger movement, not a second expense.
+          {t('journalNote')}
         </p>
       </header>
 
@@ -208,17 +210,15 @@ export default function ReliefFundsPage(): React.ReactElement {
       )}
 
       <div className='grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(340px,420px)]'>
-        <section aria-label='Saved relief funds' className='space-y-3'>
-          <h2 className='text-lg font-semibold'>Saved funds</h2>
+        <section aria-label={t('savedFunds')} className='space-y-3'>
+          <h2 className='text-lg font-semibold'>{t('savedFunds')}</h2>
           {loading ? (
-            <p className='text-muted-foreground text-sm'>Loading funds…</p>
+            <p className='text-muted-foreground text-sm'>{t('loading')}</p>
           ) : funds.length === 0 ? (
             <Card>
               <CardContent className='pt-6'>
-                <p className='font-medium'>No relief funds yet</p>
-                <p className='text-muted-foreground text-sm'>
-                  Create a fund, then add only reviewed receipts and purchases.
-                </p>
+                <p className='font-medium'>{t('empty')}</p>
+                <p className='text-muted-foreground text-sm'>{t('emptyHint')}</p>
               </CardContent>
             </Card>
           ) : (
@@ -238,24 +238,25 @@ export default function ReliefFundsPage(): React.ReactElement {
                   <CardContent className='space-y-4'>
                     <div className='grid gap-2 text-sm sm:grid-cols-3'>
                       <p>
-                        <span className='text-muted-foreground block text-xs'>Received</span>
-                        {amountLabel(summary.receiptsMinor)}
-                      </p>
-                      <p>
-                        <span className='text-muted-foreground block text-xs'>Known outlays</span>
-                        {amountLabel(summary.outlaysMinor)}
+                        <span className='text-muted-foreground block text-xs'>{t('received')}</span>
+                        {amountLabel(summary.receiptsMinor, locale)}
                       </p>
                       <p>
                         <span className='text-muted-foreground block text-xs'>
-                          Known receipts minus known outlays
+                          {t('knownOutlays')}
                         </span>
-                        {amountLabel(summary.knownRemainderMinor)}
+                        {amountLabel(summary.outlaysMinor, locale)}
+                      </p>
+                      <p>
+                        <span className='text-muted-foreground block text-xs'>
+                          {t('knownRemainder')}
+                        </span>
+                        {amountLabel(summary.knownRemainderMinor, locale)}
                       </p>
                     </div>
                     {!summary.actualRemainderKnown && (
                       <p className='rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-sm'>
-                        Actual remainder unknown: {summary.unknownSpendCount} unquantified spending
-                        note{summary.unknownSpendCount === 1 ? '' : 's'}.
+                        {t('unknownRemainder', { count: summary.unknownSpendCount })}
                       </p>
                     )}
                     <ul className='divide-border divide-y text-sm'>
@@ -263,17 +264,30 @@ export default function ReliefFundsPage(): React.ReactElement {
                         <li key={entry.id} className='flex flex-wrap justify-between gap-x-3 py-2'>
                           <span>
                             <span className='text-muted-foreground mr-2'>
-                              {entry.occurred_on ?? 'Date unknown'}
+                              {entry.occurred_on ?? t('dateUnknown')}
                             </span>
                             {entry.description}
                             <span className='text-muted-foreground block text-xs'>
-                              {entry.source_kind.replaceAll('_', ' ')} · {entry.source_reference}
+                              {t(
+                                `source${entry.source_kind
+                                  .split('_')
+                                  .map((part) => part[0].toUpperCase() + part.slice(1))
+                                  .join('')}`,
+                              )}{' '}
+                              · {entry.source_reference}
                             </span>
+                            {entry.transaction_id && (
+                              <Link
+                                href={`/transactions/${entry.transaction_id}`}
+                                className='text-primary mt-1 block text-xs underline underline-offset-2'>
+                                {t('viewTransaction')}
+                              </Link>
+                            )}
                           </span>
                           <span className='font-mono tabular-nums'>
                             {entry.amount_minor === null
-                              ? 'Amount unknown'
-                              : `${entry.kind === 'outlay' ? '-' : '+'}${amountLabel(entry.amount_minor)}`}
+                              ? t('amountUnknown')
+                              : `${entry.kind === 'outlay' ? '-' : '+'}${amountLabel(entry.amount_minor, locale)}`}
                           </span>
                         </li>
                       ))}
@@ -285,42 +299,40 @@ export default function ReliefFundsPage(): React.ReactElement {
           )}
         </section>
 
-        <section aria-label='New relief fund entry'>
+        <section aria-label={t('newEntry')}>
           <Card>
             <CardHeader>
-              <CardTitle>New reviewed entry</CardTitle>
-              <CardDescription>
-                Use the exact source amount when known. Leave unknown spending unquantified.
-              </CardDescription>
+              <CardTitle>{t('newEntry')}</CardTitle>
+              <CardDescription>{t('entryHint')}</CardDescription>
             </CardHeader>
             <CardContent className='space-y-4'>
               <label className='block space-y-1 text-sm'>
-                Entry type
+                {t('entryType')}
                 <select
-                  aria-label='Entry type'
+                  aria-label={t('entryType')}
                   className='border-input bg-background w-full rounded-md border p-2'
                   value={draft.entryType}
                   onChange={(event) => changeType(event.target.value as EntryType)}>
-                  <option value='create_fund'>Create fund</option>
-                  <option value='receipt'>Donation received</option>
-                  <option value='outlay'>Known purchase</option>
-                  <option value='unknown_spend'>Spend, amount unknown</option>
+                  <option value='create_fund'>{t('createFund')}</option>
+                  <option value='receipt'>{t('donationReceived')}</option>
+                  <option value='outlay'>{t('knownPurchase')}</option>
+                  <option value='unknown_spend'>{t('unknownSpend')}</option>
                 </select>
               </label>
               {draft.entryType === 'create_fund' ? (
                 <>
                   <label className='block space-y-1 text-sm'>
-                    Fund title
+                    {t('fundTitle')}
                     <Input
-                      aria-label='Fund title'
+                      aria-label={t('fundTitle')}
                       value={draft.title}
                       onChange={(event) => change('title', event.target.value)}
                     />
                   </label>
                   <label className='block space-y-1 text-sm'>
-                    Purpose
+                    {t('purpose')}
                     <Input
-                      aria-label='Purpose'
+                      aria-label={t('purpose')}
                       value={draft.purpose}
                       onChange={(event) => change('purpose', event.target.value)}
                     />
@@ -329,13 +341,13 @@ export default function ReliefFundsPage(): React.ReactElement {
               ) : (
                 <>
                   <label className='block space-y-1 text-sm'>
-                    Fund
+                    {t('fund')}
                     <select
-                      aria-label='Fund'
+                      aria-label={t('fund')}
                       className='border-input bg-background w-full rounded-md border p-2'
                       value={draft.fundId}
                       onChange={(event) => change('fundId', event.target.value)}>
-                      <option value=''>Select fund</option>
+                      <option value=''>{t('selectFund')}</option>
                       {funds.map((fund) => (
                         <option key={fund.id} value={fund.id}>
                           {fund.title}
@@ -344,9 +356,11 @@ export default function ReliefFundsPage(): React.ReactElement {
                     </select>
                   </label>
                   <label className='block space-y-1 text-sm'>
-                    {draft.entryType === 'unknown_spend' ? 'Date (optional)' : 'Date'}
+                    {draft.entryType === 'unknown_spend' ? t('optionalDate') : t('date')}
                     <Input
-                      aria-label={draft.entryType === 'unknown_spend' ? 'Date (optional)' : 'Date'}
+                      aria-label={
+                        draft.entryType === 'unknown_spend' ? t('optionalDate') : t('date')
+                      }
                       type='date'
                       value={draft.date}
                       onChange={(event) => change('date', event.target.value)}
@@ -354,9 +368,9 @@ export default function ReliefFundsPage(): React.ReactElement {
                   </label>
                   {draft.entryType !== 'unknown_spend' && (
                     <label className='block space-y-1 text-sm'>
-                      Exact amount (COP)
+                      {t('exactAmount')}
                       <Input
-                        aria-label='Exact amount (COP)'
+                        aria-label={t('exactAmount')}
                         inputMode='decimal'
                         value={draft.amount}
                         onChange={(event) => change('amount', event.target.value)}
@@ -364,45 +378,45 @@ export default function ReliefFundsPage(): React.ReactElement {
                     </label>
                   )}
                   <label className='block space-y-1 text-sm'>
-                    Description
+                    {t('description')}
                     <Input
-                      aria-label='Description'
+                      aria-label={t('description')}
                       value={draft.description}
                       onChange={(event) => change('description', event.target.value)}
                     />
                   </label>
                   <label className='block space-y-1 text-sm'>
-                    Source type
+                    {t('sourceType')}
                     <select
-                      aria-label='Source type'
+                      aria-label={t('sourceType')}
                       className='border-input bg-background w-full rounded-md border p-2'
                       value={draft.sourceKind}
                       onChange={(event) => {
                         change('sourceKind', event.target.value as SourceKind);
                         change('transactionId', '');
                       }}>
-                      <option value='bank_notice'>Bank notice</option>
-                      <option value='cash'>Cash</option>
-                      <option value='receipt'>Receipt</option>
-                      <option value='manual_recollection'>Manual recollection</option>
+                      <option value='bank_notice'>{t('bankNotice')}</option>
+                      <option value='cash'>{t('cash')}</option>
+                      <option value='receipt'>{t('receipt')}</option>
+                      <option value='manual_recollection'>{t('manualRecollection')}</option>
                       {draft.entryType !== 'unknown_spend' && (
-                        <option value='ledger_transaction'>Existing ledger transaction</option>
+                        <option value='ledger_transaction'>{t('ledgerTransaction')}</option>
                       )}
                     </select>
                   </label>
                   <label className='block space-y-1 text-sm'>
-                    Source reference
+                    {t('sourceReference')}
                     <Input
-                      aria-label='Source reference'
+                      aria-label={t('sourceReference')}
                       value={draft.sourceReference}
                       onChange={(event) => change('sourceReference', event.target.value)}
                     />
                   </label>
                   {draft.sourceKind === 'ledger_transaction' && (
                     <label className='block space-y-1 text-sm'>
-                      Transaction ID
+                      {t('transactionId')}
                       <Input
-                        aria-label='Transaction ID'
+                        aria-label={t('transactionId')}
                         value={draft.transactionId}
                         onChange={(event) => change('transactionId', event.target.value)}
                       />
@@ -411,33 +425,33 @@ export default function ReliefFundsPage(): React.ReactElement {
                 </>
               )}
               <Button onClick={review} disabled={saving}>
-                Review entry
+                {t('reviewEntry')}
               </Button>
               {reviewEvent && (
                 <div className='border-border space-y-3 rounded-lg border p-3 text-sm'>
-                  <p className='font-medium'>Review before saving</p>
+                  <p className='font-medium'>{t('reviewBeforeSaving')}</p>
                   <p>
                     {reviewEvent.action === 'create_fund'
                       ? `${reviewEvent.title} · ${reviewEvent.purpose}`
-                      : `${reviewEvent.occurred_on ?? 'Date unknown'} · ${reviewEvent.description} · ${reviewEvent.amount_minor === null ? 'amount unknown' : amountLabel(reviewEvent.amount_minor)}`}
+                      : `${reviewEvent.occurred_on ?? t('dateUnknown')} · ${reviewEvent.description} · ${reviewEvent.amount_minor === null ? t('amountUnknown') : amountLabel(reviewEvent.amount_minor, locale)}`}
                   </p>
                   <label className='flex items-center gap-2'>
                     <input
                       type='checkbox'
                       checked={checked}
                       onChange={(event) => setChecked(event.target.checked)}
-                      aria-label='I checked this against the source'
+                      aria-label={t('checked')}
                     />
-                    I checked this against the source
+                    {t('checked')}
                   </label>
                   <Button onClick={() => void confirm()} disabled={!checked || saving}>
-                    Confirm reviewed entry
+                    {t('confirm')}
                   </Button>
                 </div>
               )}
               <p className='text-muted-foreground flex items-start gap-2 text-xs'>
-                <CircleAlert className='mt-0.5 h-3.5 w-3.5 shrink-0' />A recalled amount is not a
-                confirmed outlay. Save an unknown-spending note until you have evidence.
+                <CircleAlert className='mt-0.5 h-3.5 w-3.5 shrink-0' />
+                {t('reviewHint')}
               </p>
             </CardContent>
           </Card>

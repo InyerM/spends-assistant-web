@@ -12,6 +12,7 @@ const {
   observationEq,
   observationOwnerEq,
   transactionEq,
+  transactionAmountEq,
   transactionGte,
   transactionLte,
   accountEq,
@@ -26,6 +27,7 @@ const {
   observationEq: vi.fn(),
   observationOwnerEq: vi.fn(),
   transactionEq: vi.fn(),
+  transactionAmountEq: vi.fn(),
   transactionGte: vi.fn(),
   transactionLte: vi.fn(),
   accountEq: vi.fn(),
@@ -77,11 +79,13 @@ describe('GET document reconciliation suggestions', () => {
     observationOwnerEq.mockReturnValue({ order: observationQuery });
     const transactionBuilder = { select: () => ({ eq: transactionEq }) };
     const transactionTail = {
+      in: () => transactionTail,
       gte: transactionGte,
       lte: transactionLte,
       order: () => ({ limit: transactionQuery }),
     };
-    transactionEq.mockReturnValue({ is: () => ({ eq: () => transactionTail }) });
+    transactionEq.mockReturnValue({ is: () => ({ eq: transactionAmountEq }) });
+    transactionAmountEq.mockReturnValue(transactionTail);
     transactionGte.mockReturnValue(transactionTail);
     transactionLte.mockReturnValue(transactionTail);
     const accountBuilder = { select: () => ({ eq: accountEq }) };
@@ -124,6 +128,15 @@ describe('GET document reconciliation suggestions', () => {
     expect(transactionGte).toHaveBeenCalledWith('date', '2026-09-25');
     expect(transactionLte).toHaveBeenCalledWith('date', '2026-10-01');
     expect(accountEq).toHaveBeenCalledWith('user_id', 'user-1');
+  });
+
+  it('searches signed bank debits by absolute amount', async () => {
+    observationQuery.mockResolvedValue({ data: [{ ...observation, amount: -12000 }], error: null });
+    const response = await request();
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.data[0].candidates).toHaveLength(1);
+    expect(transactionAmountEq).toHaveBeenCalledWith('amount', 12000);
   });
 
   it('refuses suggestions for another user document', async () => {
