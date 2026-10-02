@@ -5,10 +5,22 @@ import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { AlertCircle, Check, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
+import { DocumentReviewFields } from '@/components/documents/document-review-fields';
+import {
+  DocumentAccountSelect,
+  DocumentRejectReasonSelect,
+} from '@/components/documents/document-review-selects';
+import {
+  decideDocumentObservation,
+  recoverDocumentTransaction,
+  reviseDocumentObservation,
+} from '@/lib/api/mutations/document.mutations';
+import type { DocumentSuggestionGroup } from '@/lib/api/queries/document.queries';
 import { createTransaction, DuplicateError } from '@/lib/api/mutations/transaction.mutations';
 import {
   suggestDocumentReview,
+  inferAccountFromEvidence,
   validateDocumentDraft,
   type ApprovalDraft,
   type ReviewHistoryObservation,
@@ -41,11 +53,7 @@ interface Props {
   accounts: Account[];
   categories: Category[];
   onRefresh: () => Promise<void>;
-}
-
-async function responseError(response: Response): Promise<string> {
-  const body = (await response.json().catch(() => ({}))) as { error?: string };
-  return body.error ?? 'Review request failed';
+  suggestions?: DocumentSuggestionGroup[];
 }
 
 export function DocumentBatchReview({
@@ -55,6 +63,7 @@ export function DocumentBatchReview({
   accounts,
   categories,
   onRefresh,
+  suggestions = [],
 }: Props): React.ReactElement | null {
   const t = useTranslations('documents');
   const [selected, setSelected] = useState<string[]>([]);
@@ -62,6 +71,8 @@ export function DocumentBatchReview({
   const [bulkAccount, setBulkAccount] = useState('');
   const [confirmed, setConfirmed] = useState(false);
   const [rejectConfirmation, setRejectConfirmation] = useState(false);
+  const [rejectReason, setRejectReason] = useState('other');
+  const [rowRejectReasons, setRowRejectReasons] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -104,10 +115,11 @@ export function DocumentBatchReview({
       suggestion.transaction?.type === 'transfer'
         ? suggestion.transaction.type
         : inferredType;
-    const preferredCurrency = suggestion.currency?.value ?? row.currency ?? sharedCurrency ?? '';
+    const preferredCurrency = suggestion.currency?.value ?? row.currency ?? 'COP';
+    const evidenceAccount = inferAccountFromEvidence(row.source_excerpt, accounts);
     const suggestedAccount = accounts.find(
       (account) =>
-        account.id === suggestion.transaction?.accountId &&
+        account.id === evidenceAccount?.accountId &&
         account.is_active &&
         !account.deleted_at &&
         account.currency === preferredCurrency,
@@ -122,14 +134,27 @@ export function DocumentBatchReview({
       type,
       accountId: suggestedAccount?.id ?? bulkAccount,
       destinationAccountId: '',
-      categoryId: suggestion.transaction?.categoryId ?? '',
+      categoryId: ((): string => {
+        const proposed = suggestions.find(
+          (group) => group.observation_id === row.id,
+        )?.category_suggestion;
+        return proposed &&
+          categories.some(
+            (category) =>
+              category.id === proposed.categoryId && category.is_active && category.type === type,
+          )
+          ? proposed.categoryId
+          : (suggestion.transaction?.categoryId ?? '');
+      })(),
       sourceExcerpt: row.source_excerpt,
       originalAmount: row.amount ?? 0,
       originalCurrency: row.currency,
       originalDateTime: row.occurred_at_text,
       originalDescription: row.description,
       suggested: suggestion.currency !== null,
-      learned: suggestion.transaction !== null,
+      learned:
+        suggestion.transaction !== null ||
+        suggestions.some((group) => group.observation_id === row.id && !!group.category_suggestion),
     };
   };
 
@@ -177,19 +202,17 @@ export function DocumentBatchReview({
     observationId: string,
     action: 'accept' | 'reject_observation',
     transactionId?: string,
+    reason?: string,
   ): Promise<void> => {
     decisionKeys.current[observationId] ??= crypto.randomUUID();
-    const response = await fetch(`/api/documents/${documentId}/decisions`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        observation_id: observationId,
-        action,
-        transaction_id: transactionId ?? null,
-        idempotency_key: decisionKeys.current[observationId],
-      }),
+    await decideDocumentObservation({
+      documentId,
+      observationId,
+      action,
+      transactionId,
+      reason,
+      key: decisionKeys.current[observationId],
     });
-    if (!response.ok) throw new Error(await responseError(response));
   };
 
   const approve = async (): Promise<void> => {
@@ -231,20 +254,12 @@ export function DocumentBatchReview({
             occurredAt !== draft.originalDateTime ||
             draft.description.trim() !== draft.originalDescription)
         ) {
-          const correction = await fetch(`/api/documents/${documentId}/observations/${row.id}`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: correctionFingerprint,
-          });
-          if (!correction.ok) throw new Error(await responseError(correction));
+          await reviseDocumentObservation(documentId, row.id, correctionBody);
           correctedFingerprints.current[row.id] = correctionFingerprint;
         }
         let transactionId: string | undefined = createdIds.current[row.id];
         if (!transactionId) {
-          const recovery = await fetch(`/api/documents/${documentId}/observations/${row.id}`);
-          if (!recovery.ok) throw new Error(await responseError(recovery));
-          const recovered = (await recovery.json()) as { transaction_id: string | null };
-          transactionId = recovered.transaction_id ?? undefined;
+          transactionId = (await recoverDocumentTransaction(documentId, row.id)) ?? undefined;
         }
         if (!transactionId) {
           const transaction = await createTransaction({
@@ -286,14 +301,14 @@ export function DocumentBatchReview({
     await onRefresh();
   };
 
-  const reject = async (): Promise<void> => {
-    if (!rejectConfirmation || busy || chosen.length === 0) return;
+  const rejectRows = async (targetRows: DocumentReviewRow[], reason: string): Promise<void> => {
+    if (busy || targetRows.length === 0) return;
     setBusy(true);
     const nextErrors: Record<string, string> = {};
     const done: string[] = [];
-    for (const row of chosen) {
+    for (const row of targetRows) {
       try {
-        await decide(row.id, 'reject_observation');
+        await decide(row.id, 'reject_observation', undefined, reason);
         done.push(row.id);
       } catch (cause) {
         nextErrors[row.id] = cause instanceof Error ? cause.message : t('decisionFailed');
@@ -303,7 +318,7 @@ export function DocumentBatchReview({
     setSelected((current) => current.filter((id) => !done.includes(id)));
     setRejectConfirmation(false);
     setBusy(false);
-    setProgress(t('reviewResult', { completed: done.length, total: chosen.length }));
+    setProgress(t('reviewResult', { completed: done.length, total: targetRows.length }));
     await onRefresh();
   };
 
@@ -329,18 +344,37 @@ export function DocumentBatchReview({
         {pending.map((row) => {
           const draft = drafts[row.id];
           const suggestion = suggestDocumentReview(row, history, sharedCurrency);
+          const reviewHint = suggestions.find((group) => group.observation_id === row.id);
+          const proposedCategory = reviewHint?.category_suggestion;
+          const historicalCategory =
+            proposedCategory &&
+            (row.amount === null ||
+              (row.amount > 0
+                ? proposedCategory.type === 'income'
+                : proposedCategory.type !== 'income')) &&
+            categories.some(
+              (category) =>
+                category.id === proposedCategory.categoryId &&
+                category.is_active &&
+                category.type === proposedCategory.type,
+            )
+              ? proposedCategory
+              : null;
+          const accountEvidence = inferAccountFromEvidence(row.source_excerpt, accounts);
+          const evidencedAccountName = accounts.find(
+            (account) => account.id === accountEvidence?.accountId,
+          )?.name;
           return (
             <article
               key={row.id}
               className='border-border bg-muted/20 rounded-lg border p-3 sm:p-4'>
               <div className='flex items-start gap-3'>
-                <input
-                  type='checkbox'
-                  className='accent-primary mt-1 size-5 shrink-0'
+                <Checkbox
+                  className='mt-1 size-5 shrink-0'
                   aria-label={t('selectObservation', { description: row.description })}
                   checked={selected.includes(row.id)}
                   disabled={busy}
-                  onChange={() => toggle(row)}
+                  onCheckedChange={() => toggle(row)}
                 />
                 <div className='min-w-0 flex-1'>
                   <div className='flex flex-wrap items-start justify-between gap-2'>
@@ -353,7 +387,7 @@ export function DocumentBatchReview({
                     <strong className='whitespace-nowrap tabular-nums'>
                       {row.amount === null
                         ? t('amountUnknown')
-                        : `${row.currency ?? '?'} ${row.amount.toLocaleString()}`}
+                        : `${suggestion.currency?.value ?? row.currency ?? 'COP'} ${row.amount.toLocaleString()}`}
                     </strong>
                   </div>
                   {suggestion.currency && (
@@ -362,10 +396,58 @@ export function DocumentBatchReview({
                       {t('currencySuggestion', { currency: suggestion.currency.value })}
                     </p>
                   )}
+                  {evidencedAccountName && (
+                    <p className='text-muted-foreground mt-1 text-xs'>
+                      {t('accountEvidenceHint', { name: evidencedAccountName })}
+                    </p>
+                  )}
                   {suggestion.previouslyRejected && (
                     <p className='mt-1 text-xs text-amber-700 dark:text-amber-300'>
                       {t('previouslyRejectedHint')}
                     </p>
+                  )}
+                  {reviewHint?.candidates.map((candidate) => (
+                    <p
+                      key={candidate.transaction_id}
+                      className='mt-2 rounded-md border border-amber-500/30 bg-amber-500/5 p-2 text-xs'>
+                      {t('possibleDuplicate', {
+                        description: candidate.description,
+                        date: candidate.date,
+                      })}{' '}
+                      <Link
+                        className='text-primary underline'
+                        href={`/transactions/${candidate.transaction_id}`}>
+                        {t('reviewExistingTransaction')}
+                      </Link>
+                    </p>
+                  ))}
+                  {historicalCategory && (
+                    <div className='mt-2 flex flex-wrap items-center gap-2'>
+                      <p className='text-muted-foreground text-xs'>
+                        {t('categoryHistoryHint', {
+                          name:
+                            categories.find(
+                              (category) => category.id === historicalCategory.categoryId,
+                            )?.name ?? t('selectCategory'),
+                          count: historicalCategory.evidenceCount,
+                        })}
+                      </p>
+                      {selected.includes(row.id) &&
+                        draft.categoryId !== historicalCategory.categoryId && (
+                          <Button
+                            size='sm'
+                            variant='outline'
+                            disabled={busy}
+                            onClick={() =>
+                              updateDraft(row.id, {
+                                categoryId: historicalCategory.categoryId,
+                                type: historicalCategory.type as ReviewDraft['type'],
+                              })
+                            }>
+                            {t('applyCategorySuggestion')}
+                          </Button>
+                        )}
+                    </div>
                   )}
                   {errors[row.id] && (
                     <p role='alert' className='text-destructive mt-2 text-xs'>
@@ -387,145 +469,13 @@ export function DocumentBatchReview({
                         <ChevronDown className='size-4' aria-hidden='true' />
                         {t('editObservation')}
                       </summary>
-                      <div className='mt-3 grid gap-3 sm:grid-cols-2'>
-                        <label className='space-y-1 text-sm'>
-                          {t('transactionDate')}
-                          <Input
-                            type='date'
-                            value={draft.date}
-                            disabled={busy || !!createdIds.current[row.id]}
-                            onChange={(event) => updateDraft(row.id, { date: event.target.value })}
-                          />
-                        </label>
-                        <label className='space-y-1 text-sm'>
-                          {t('transactionTime')}
-                          <Input
-                            type='time'
-                            value={draft.time}
-                            disabled={busy || !!createdIds.current[row.id]}
-                            onChange={(event) => updateDraft(row.id, { time: event.target.value })}
-                          />
-                          <span className='text-muted-foreground block text-xs'>
-                            {t('timeOptional')}
-                          </span>
-                        </label>
-                        <label className='space-y-1 text-sm'>
-                          {t('transactionAmount')}
-                          <Input
-                            type='number'
-                            min='0.01'
-                            step='0.01'
-                            value={draft.amount}
-                            disabled={busy || !!createdIds.current[row.id]}
-                            onChange={(event) =>
-                              updateDraft(row.id, { amount: event.target.value })
-                            }
-                          />
-                        </label>
-                        <label className='space-y-1 text-sm'>
-                          {t('transactionCurrency')}
-                          <select
-                            className='border-input bg-background h-10 w-full rounded-md border px-3'
-                            value={draft.currency}
-                            disabled={busy || !!createdIds.current[row.id]}
-                            onChange={(event) =>
-                              updateDraft(row.id, { currency: event.target.value })
-                            }>
-                            <option value=''>{t('selectCurrency')}</option>
-                            <option value='COP'>COP</option>
-                            <option value='USD'>USD</option>
-                          </select>
-                        </label>
-                        <label className='space-y-1 text-sm'>
-                          {t('transactionType')}
-                          <select
-                            className='border-input bg-background h-10 w-full rounded-md border px-3'
-                            value={draft.type}
-                            disabled={busy || !!createdIds.current[row.id]}
-                            onChange={(event) =>
-                              updateDraft(row.id, {
-                                type: event.target.value as ReviewDraft['type'],
-                                categoryId: '',
-                                destinationAccountId: '',
-                              })
-                            }>
-                            <option value='expense'>{t('expense')}</option>
-                            <option value='income'>{t('income')}</option>
-                            <option value='transfer'>{t('transfer')}</option>
-                          </select>
-                        </label>
-                        <label className='space-y-1 text-sm'>
-                          {t('transactionAccount')}
-                          <select
-                            className='border-input bg-background h-10 w-full rounded-md border px-3'
-                            value={draft.accountId}
-                            disabled={busy || !!createdIds.current[row.id]}
-                            onChange={(event) =>
-                              updateDraft(row.id, { accountId: event.target.value })
-                            }>
-                            <option value=''>{t('selectAccount')}</option>
-                            {activeAccounts.map((account) => (
-                              <option key={account.id} value={account.id}>
-                                {account.name}
-                              </option>
-                            ))}
-                          </select>
-                        </label>
-                        {draft.type === 'transfer' && (
-                          <label className='space-y-1 text-sm'>
-                            {t('destinationAccount')}
-                            <select
-                              className='border-input bg-background h-10 w-full rounded-md border px-3'
-                              value={draft.destinationAccountId}
-                              disabled={busy || !!createdIds.current[row.id]}
-                              onChange={(event) =>
-                                updateDraft(row.id, { destinationAccountId: event.target.value })
-                              }>
-                              <option value=''>{t('selectAccount')}</option>
-                              {activeAccounts
-                                .filter((account) => account.id !== draft.accountId)
-                                .map((account) => (
-                                  <option key={account.id} value={account.id}>
-                                    {account.name}
-                                  </option>
-                                ))}
-                            </select>
-                          </label>
-                        )}
-                        {draft.type !== 'transfer' && (
-                          <label className='space-y-1 text-sm'>
-                            {t('transactionCategory')}
-                            <select
-                              className='border-input bg-background h-10 w-full rounded-md border px-3'
-                              value={draft.categoryId}
-                              disabled={busy || !!createdIds.current[row.id]}
-                              onChange={(event) =>
-                                updateDraft(row.id, { categoryId: event.target.value })
-                              }>
-                              <option value=''>{t('selectCategory')}</option>
-                              {categories
-                                .filter(
-                                  (category) => category.type === draft.type && category.is_active,
-                                )
-                                .map((category) => (
-                                  <option key={category.id} value={category.id}>
-                                    {category.name}
-                                  </option>
-                                ))}
-                            </select>
-                          </label>
-                        )}
-                        <label className='space-y-1 text-sm sm:col-span-2'>
-                          {t('transactionDescription')}
-                          <Input
-                            value={draft.description}
-                            disabled={busy || !!createdIds.current[row.id]}
-                            onChange={(event) =>
-                              updateDraft(row.id, { description: event.target.value })
-                            }
-                          />
-                        </label>
-                      </div>
+                      <DocumentReviewFields
+                        draft={draft}
+                        accounts={accounts}
+                        categories={categories}
+                        disabled={busy || !!createdIds.current[row.id]}
+                        onChange={(patch) => updateDraft(row.id, patch)}
+                      />
                       {draft.learned && (
                         <p className='text-muted-foreground mt-2 text-xs'>
                           {t('learnedSuggestion')}
@@ -536,6 +486,22 @@ export function DocumentBatchReview({
                       </p>
                     </details>
                   )}
+                  <div className='mt-3 flex flex-wrap items-center gap-2 border-t pt-3'>
+                    <DocumentRejectReasonSelect
+                      value={rowRejectReasons[row.id] ?? 'other'}
+                      disabled={busy}
+                      onChange={(reason) =>
+                        setRowRejectReasons((current) => ({ ...current, [row.id]: reason }))
+                      }
+                    />
+                    <Button
+                      size='sm'
+                      variant='outline'
+                      disabled={busy}
+                      onClick={() => void rejectRows([row], rowRejectReasons[row.id] ?? 'other')}>
+                      {t('reviewReject')}
+                    </Button>
+                  </div>
                 </div>
               </div>
             </article>
@@ -545,31 +511,24 @@ export function DocumentBatchReview({
       {chosen.length > 0 && (
         <div className='border-primary/30 bg-primary/5 space-y-3 rounded-lg border p-4'>
           <p className='font-semibold'>{t('selectedCount', { count: chosen.length })}</p>
-          <label className='block space-y-1 text-sm'>
-            {t('bulkAccount')}
-            <select
-              aria-label={t('bulkAccount')}
-              className='border-input bg-background h-10 w-full rounded-md border px-3'
+          <div className='space-y-1 text-sm'>
+            <label>{t('bulkAccount')}</label>
+            <DocumentAccountSelect
               value={bulkAccount}
+              accounts={activeAccounts}
               disabled={busy}
-              onChange={(event) => selectAccount(event.target.value)}>
-              <option value=''>{t('selectAccount')}</option>
-              {activeAccounts.map((account) => (
-                <option key={account.id} value={account.id}>
-                  {account.name}
-                </option>
-              ))}
-            </select>
-          </label>
+              label={t('bulkAccount')}
+              onChange={selectAccount}
+            />
+          </div>
           <p className='text-muted-foreground text-xs'>{t('batchReviewWarning')}</p>
           <label className='flex items-start gap-2 text-sm'>
-            <input
-              type='checkbox'
-              className='accent-primary mt-1 size-4'
+            <Checkbox
+              className='mt-1'
               aria-label={t('confirmSelected')}
               checked={confirmed}
               disabled={busy}
-              onChange={(event) => setConfirmed(event.target.checked)}
+              onCheckedChange={(value) => setConfirmed(value === true)}
             />
             {t('confirmSelected')}
           </label>
@@ -592,12 +551,19 @@ export function DocumentBatchReview({
               aria-label={t('bulkRejectConfirmation')}
               className='border-destructive/30 rounded-md border p-3 text-sm'>
               <p>{t('confirmRejectSelectedHint', { count: chosen.length })}</p>
+              <div className='mt-3'>
+                <DocumentRejectReasonSelect
+                  value={rejectReason}
+                  disabled={busy}
+                  onChange={setRejectReason}
+                />
+              </div>
               <div className='mt-3 flex gap-2'>
                 <Button
                   size='sm'
                   variant='destructive'
                   disabled={busy}
-                  onClick={() => void reject()}>
+                  onClick={() => void rejectRows(chosen, rejectReason)}>
                   {t('confirmRejectSelected')}
                 </Button>
                 <Button

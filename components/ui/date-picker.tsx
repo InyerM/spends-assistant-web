@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { format, parseISO } from 'date-fns';
+import { enUS, es } from 'date-fns/locale';
 import { CalendarIcon } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
@@ -11,6 +12,10 @@ interface DatePickerProps {
   value: string;
   onChange: (date: string) => void;
   className?: string;
+  locale?: 'en' | 'es';
+  placeholder?: string;
+  ariaLabel?: string;
+  disabled?: boolean;
 }
 
 function formatYYYYMMDD(date: Date): string {
@@ -20,12 +25,22 @@ function formatYYYYMMDD(date: Date): string {
   return `${y}-${m}-${d}`;
 }
 
-export function DatePicker({ value, onChange, className }: DatePickerProps): React.ReactElement {
+export function DatePicker({
+  value,
+  onChange,
+  className,
+  locale = 'en',
+  placeholder,
+  ariaLabel,
+  disabled,
+}: DatePickerProps): React.ReactElement {
   const [open, setOpen] = useState(false);
 
   const selectedDate = value ? parseISO(value) : undefined;
 
-  const displayText = selectedDate ? format(selectedDate, 'MMM d, yyyy') : 'Pick a date';
+  const displayText = selectedDate
+    ? format(selectedDate, 'PP', { locale: locale === 'es' ? es : enUS })
+    : (placeholder ?? (locale === 'es' ? 'Elige una fecha' : 'Pick a date'));
 
   function handleSelect(date: Date): void {
     onChange(formatYYYYMMDD(date));
@@ -37,6 +52,8 @@ export function DatePicker({ value, onChange, className }: DatePickerProps): Rea
       <PopoverTrigger asChild>
         <button
           type='button'
+          aria-label={ariaLabel}
+          disabled={disabled}
           className={cn(
             'border-border flex h-11 w-full cursor-pointer items-center gap-2 rounded-md border bg-transparent px-3 py-2 text-sm shadow-xs transition-[color,box-shadow] outline-none sm:h-9',
             'focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]',
@@ -48,7 +65,7 @@ export function DatePicker({ value, onChange, className }: DatePickerProps): Rea
         </button>
       </PopoverTrigger>
       <PopoverContent className='w-[320px] p-3' align='start'>
-        <Calendar selected={selectedDate} onSelect={handleSelect} />
+        <Calendar selected={selectedDate} onSelect={handleSelect} locale={locale} />
       </PopoverContent>
     </Popover>
   );

@@ -14,6 +14,7 @@ export interface Account {
   type: AccountType;
   institution: string | null;
   last_four: string | null;
+  bank_account_last_four?: string | null;
   currency: string;
   balance: number;
   is_active: boolean;

@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { suggestDocumentReview, validateDocumentDraft } from '@/lib/document-review';
+import {
+  inferAccountFromEvidence,
+  inferCategoryFromHistory,
+  suggestDocumentReview,
+  validateDocumentDraft,
+} from '@/lib/document-review';
 
 const current = {
   id: 'current',
@@ -56,6 +61,68 @@ describe('document review suggestions', () => {
       accountId: 'account-1',
     });
     expect(suggestion.previouslyRejected).toBe(true);
+  });
+
+  it('defaults ambiguous Colombian amounts to COP even with a USD account', () => {
+    expect(suggestDocumentReview(current, [], null).currency).toEqual({
+      value: 'COP',
+      reason: 'default',
+    });
+  });
+
+  it('uses explicit card or bank suffix for account suggestions and leaves issuer-only evidence unresolved', () => {
+    const accounts = [
+      {
+        id: 'debit',
+        institution: 'Bancolombia',
+        name: 'Ahorros',
+        type: 'savings',
+        last_four: '7799',
+        bank_account_last_four: '2651',
+        currency: 'COP',
+        is_active: true,
+      },
+      {
+        id: 'card',
+        institution: 'Bancolombia',
+        name: 'Mastercard',
+        type: 'credit_card',
+        last_four: '0265',
+        bank_account_last_four: null,
+        currency: 'COP',
+        is_active: true,
+      },
+    ];
+    expect(inferAccountFromEvidence('Bancolombia: compraste con tarjeta *0265', accounts)).toEqual({
+      accountId: 'card',
+      basis: 'suffix',
+    });
+    expect(inferAccountFromEvidence('Bancolombia: recibiste en cuenta 2651', accounts)).toEqual({
+      accountId: 'debit',
+      basis: 'suffix',
+    });
+    expect(inferAccountFromEvidence('Bancolombia: pago realizado', accounts)).toBeNull();
+  });
+
+  it('suggests Mercamas category from similar approved ledger merchants without copying their account', () => {
+    const result = inferCategoryFromHistory('SUPERMERCADO MERCAMAS', [
+      { description: 'SUPERMERCADO MERCAMA', type: 'expense', category_id: 'groceries' },
+      { description: 'SUPERMERCADO MERCAMA', type: 'expense', category_id: 'groceries' },
+      { description: 'SUPERMERCADO MERCAMA', type: 'expense', category_id: 'groceries' },
+    ]);
+    expect(result).toEqual({ type: 'expense', categoryId: 'groceries', evidenceCount: 3 });
+    expect(
+      inferCategoryFromHistory('SUPERMERCADO MERCAMAS', [
+        { description: 'SUPERMERCADO MERCAMA', type: 'expense', category_id: 'groceries' },
+        { description: 'SUPERMERCADO MERCAMA', type: 'expense', category_id: 'other' },
+      ]),
+    ).toBeNull();
+    expect(
+      inferCategoryFromHistory('SUPERMERCADO MERCAMAS', [
+        { description: 'Compra Mercama', type: 'expense', category_id: 'groceries' },
+        { description: 'Pago Mercamas', type: 'expense', category_id: 'groceries' },
+      ]),
+    ).toEqual({ type: 'expense', categoryId: 'groceries', evidenceCount: 2 });
   });
 });
 

@@ -6,6 +6,7 @@ import {
   type ReconciliationObservation,
   type ReconciliationTransaction,
 } from '@/lib/document-reconciliation';
+import { inferCategoryFromHistory } from '@/lib/document-review';
 
 const SEARCH_LIMIT = 100;
 const DISPLAY_LIMIT = 5;
@@ -41,6 +42,20 @@ export async function GET(
       .order('ordinal', { ascending: true });
     if (observationError) return errorResponse('Failed to load observations');
     const observations = (rawObservations as StoredObservation[] | null) ?? [];
+    let merchantHistory: Array<{ description: string; type: string; category_id: string | null }> =
+      [];
+    if (observations.some((observation) => observation.status === 'pending')) {
+      const { data: history, error: historyError } = await supabase
+        .from('transactions')
+        .select('description,type,category_id')
+        .eq('user_id', userId)
+        .is('deleted_at', null)
+        .not('category_id', 'is', null)
+        .order('date', { ascending: false })
+        .limit(2000);
+      if (historyError) return errorResponse('Failed to load category history');
+      merchantHistory = (history as typeof merchantHistory | null) ?? [];
+    }
     const transactionCache = new Map<string, StoredTransaction[]>();
     const limitedKeys = new Set<string>();
 
@@ -108,6 +123,13 @@ export async function GET(
         candidates: ranked.slice(0, DISPLAY_LIMIT),
         total_candidates: ranked.length,
         search_limited: limitedKeys.has(key),
+        category_suggestion:
+          observation.status === 'pending'
+            ? (inferCategoryFromHistory(
+                observation.counterparty || observation.description,
+                merchantHistory,
+              ) ?? inferCategoryFromHistory(observation.description, merchantHistory))
+            : null,
       };
     });
     return Response.json({ data }, { headers: { 'Cache-Control': 'no-store' } });

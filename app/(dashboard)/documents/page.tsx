@@ -1,68 +1,42 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
+import { useQueryClient } from '@tanstack/react-query';
 import { FileImage, LoaderCircle, ScanText, Upload } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
 import { DocumentBatchReview } from '@/components/documents/document-batch-review';
+import { DocumentReviewFields } from '@/components/documents/document-review-fields';
 import { MAX_DOCUMENT_BYTES } from '@/lib/documents';
 import { useAccounts } from '@/lib/api/queries/account.queries';
 import { useCategories } from '@/lib/api/queries/category.queries';
 import { createTransaction, DuplicateError } from '@/lib/api/mutations/transaction.mutations';
+import {
+  decideDocumentObservation,
+  extractDocument,
+  restoreDocumentObservation,
+  setDocumentArchived,
+  uploadDocument,
+} from '@/lib/api/mutations/document.mutations';
+import {
+  documentKeys,
+  fetchDocumentSuggestions,
+  useDocuments,
+  type DocumentObservation,
+  type DocumentSuggestionGroup,
+  type StoredDocument,
+} from '@/lib/api/queries/document.queries';
+import type { ReconciliationCandidate } from '@/lib/document-reconciliation';
 import type { Transaction } from '@/types';
 
-interface Observation {
-  id: string;
-  ordinal: number;
-  amount: number | null;
-  currency: string | null;
-  occurred_at_text: string | null;
-  description: string;
-  counterparty: string | null;
-  reference: string | null;
-  source_excerpt: string;
-  confidence: number;
-  status: string;
-  match_transaction_id?: string | null;
-  reviewed_at?: string | null;
-  extracted_snapshot?: { currency?: string | null } | null;
-  matched_transaction?: { type: string; category_id: string | null; account_id: string } | null;
-}
-
-interface Document {
-  id: string;
-  file_name: string;
-  document_type: string | null;
-  status: string;
-  created_at: string;
-  updated_at: string;
-  document_observations: Observation[];
-}
-
-interface Candidate {
-  kind: 'candidate';
-  transaction_id: string;
-  amount: number;
-  amount_difference: number;
-  date: string;
-  description: string;
-  account_name: string | null;
-  basis: 'exact_date' | 'near_date' | 'amount_only';
-  reference_hint: boolean;
-  description_hint: boolean;
-}
-
-interface SuggestionGroup {
-  observation_id: string;
-  status: string;
-  candidates: Candidate[];
-  total_candidates: number;
-  search_limited: boolean;
-}
+type Observation = DocumentObservation;
+type Document = StoredDocument;
+type Candidate = ReconciliationCandidate;
+type SuggestionGroup = DocumentSuggestionGroup;
 
 interface CreateDraft {
   documentId: string;
@@ -70,6 +44,7 @@ interface CreateDraft {
   date: string;
   time: string;
   amount: string;
+  currency: string;
   signedAmount: number;
   description: string;
   type: 'expense' | 'income' | 'transfer';
@@ -141,18 +116,17 @@ function SuggestionPanel({
   );
 }
 
-async function readError(response: Response): Promise<string> {
-  const body = (await response.json().catch(() => ({}))) as { error?: string };
-  return body.error ?? 'Request failed';
-}
-
 export default function DocumentsPage(): React.ReactElement {
   const t = useTranslations('documents');
+  const queryClient = useQueryClient();
+  const documentQuery = useDocuments();
+  const refetchDocuments = documentQuery.refetch;
+  const documents = documentQuery.data ?? [];
+  const loading = documentQuery.isPending;
   const { data: accounts } = useAccounts();
   const { data: categories } = useCategories();
   const inputRef = useRef<HTMLInputElement>(null);
-  const [documents, setDocuments] = useState<Document[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [showArchived, setShowArchived] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [suggestions, setSuggestions] = useState<Partial<Record<string, SuggestionGroup[]>>>({});
@@ -175,22 +149,10 @@ export default function DocumentsPage(): React.ReactElement {
   const [duplicateMatch, setDuplicateMatch] = useState<Transaction | null>(null);
 
   const load = useCallback(async (): Promise<void> => {
-    try {
-      const response = await fetch('/api/documents');
-      if (!response.ok) throw new Error(await readError(response));
-      const result = (await response.json()) as { data: Document[] };
-      setDocuments(result.data);
-      setError(null);
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : t('loadFailed'));
-    } finally {
-      setLoading(false);
-    }
-  }, [t]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
+    const result = await refetchDocuments();
+    if (result.error) throw result.error;
+    setError(null);
+  }, [refetchDocuments]);
 
   const upload = async (file: File): Promise<void> => {
     if (
@@ -204,10 +166,7 @@ export default function DocumentsPage(): React.ReactElement {
     setBusy('upload');
     setError(null);
     try {
-      const body = new FormData();
-      body.set('file', file);
-      const response = await fetch('/api/documents', { method: 'POST', body });
-      if (!response.ok) throw new Error(await readError(response));
+      await uploadDocument(file);
       await load();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : t('uploadFailed'));
@@ -221,8 +180,7 @@ export default function DocumentsPage(): React.ReactElement {
     setBusy(id);
     setError(null);
     try {
-      const response = await fetch(`/api/documents/${id}/extract`, { method: 'POST' });
-      if (!response.ok) throw new Error(await readError(response));
+      await extractDocument(id);
       await load();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : t('extractFailed'));
@@ -235,14 +193,40 @@ export default function DocumentsPage(): React.ReactElement {
     setSuggestionBusy(id);
     setError(null);
     try {
-      const response = await fetch(`/api/documents/${id}/suggestions`);
-      if (!response.ok) throw new Error(await readError(response));
-      const result = (await response.json()) as { data: SuggestionGroup[] };
-      setSuggestions((current) => ({ ...current, [id]: result.data }));
+      const result = await queryClient.fetchQuery({
+        queryKey: documentKeys.suggestions(id),
+        queryFn: () => fetchDocumentSuggestions(id),
+        staleTime: 0,
+      });
+      setSuggestions((current) => ({ ...current, [id]: result }));
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : t('suggestionsFailed'));
     } finally {
       setSuggestionBusy(null);
+    }
+  };
+
+  const archiveCapture = async (id: string, archived: boolean): Promise<void> => {
+    setBusy(id);
+    try {
+      await setDocumentArchived(id, archived);
+      await load();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : t('loadFailed'));
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const restoreObservation = async (documentId: string, observationId: string): Promise<void> => {
+    setBusy(observationId);
+    try {
+      await restoreDocumentObservation(documentId, observationId);
+      await load();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : t('decisionFailed'));
+    } finally {
+      setBusy(null);
     }
   };
 
@@ -251,17 +235,14 @@ export default function DocumentsPage(): React.ReactElement {
     setDecisionBusy(true);
     setError(null);
     try {
-      const response = await fetch(`/api/documents/${review.documentId}/decisions`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          observation_id: review.observationId,
-          action: review.action,
-          transaction_id: review.action === 'accept' ? review.candidate.transaction_id : null,
-          idempotency_key: review.key,
-        }),
+      await decideDocumentObservation({
+        documentId: review.documentId,
+        observationId: review.observationId,
+        action: review.action,
+        transactionId: review.action === 'accept' ? review.candidate.transaction_id : undefined,
+        key: review.key,
+        reason: review.action === 'reject_observation' ? 'other' : undefined,
       });
-      if (!response.ok) throw new Error(await readError(response));
       const documentId = review.documentId;
       setReview(null);
       setSuggestions((current) =>
@@ -283,6 +264,7 @@ export default function DocumentsPage(): React.ReactElement {
       date: /^\d{4}-\d{2}-\d{2}(?:$|T| )/.test(occurred) ? occurred.slice(0, 10) : '',
       time: /^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}/.test(occurred) ? occurred.slice(11, 16) : '',
       amount: String(Math.abs(observation.amount ?? 0)),
+      currency: 'COP',
       signedAmount: observation.amount ?? 0,
       description: observation.description,
       type: 'expense',
@@ -311,6 +293,7 @@ export default function DocumentsPage(): React.ReactElement {
       !/^\d{4}-\d{2}-\d{2}$/.test(createDraft.date) ||
       !/^\d{2}:\d{2}$/.test(createDraft.time) ||
       !createDraft.accountId ||
+      createDraft.currency !== 'COP' ||
       (createDraft.type === 'transfer' &&
         (!createDraft.destinationAccountId ||
           createDraft.destinationAccountId === createDraft.accountId)) ||
@@ -347,17 +330,13 @@ export default function DocumentsPage(): React.ReactElement {
         transactionId = transaction.id;
         setCreateDraft((current) => current && { ...current, createdId: transaction.id });
       }
-      const response = await fetch(`/api/documents/${createDraft.documentId}/decisions`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          observation_id: createDraft.observationId,
-          action: 'accept',
-          transaction_id: transactionId,
-          idempotency_key: createDraft.decisionKey,
-        }),
+      await decideDocumentObservation({
+        documentId: createDraft.documentId,
+        observationId: createDraft.observationId,
+        action: 'accept',
+        transactionId,
+        key: createDraft.decisionKey,
       });
-      if (!response.ok) throw new Error(await readError(response));
       setCreateDraft(null);
       setCreateChecked(false);
       setDuplicateMatch(null);
@@ -400,18 +379,24 @@ export default function DocumentsPage(): React.ReactElement {
           )}
           {busy === 'upload' ? t('uploading') : t('upload')}
         </Button>
+        <Button variant='outline' onClick={() => setShowArchived((current) => !current)}>
+          {showArchived
+            ? t('activeCaptures')
+            : `${t('archivedCaptures')} · ${documents.filter((document) => !!document.archived_at).length}`}
+        </Button>
       </div>
 
-      {error && (
+      {(error || documentQuery.error) && (
         <p
           role='alert'
           className='text-destructive rounded-lg border border-current/20 p-3 text-sm'>
-          {error}
+          {error ?? documentQuery.error?.message}
         </p>
       )}
       {loading ? (
         <p className='text-muted-foreground text-sm'>{t('loading')}</p>
-      ) : documents.length === 0 ? (
+      ) : documents.filter((document) => Boolean(document.archived_at) === showArchived).length ===
+        0 ? (
         <Card>
           <CardContent className='flex flex-col items-center py-12 text-center'>
             <FileImage className='text-muted-foreground mb-3 h-10 w-10' />
@@ -421,491 +406,358 @@ export default function DocumentsPage(): React.ReactElement {
         </Card>
       ) : (
         <div className='space-y-4'>
-          {documents.map((document) => (
-            <Card key={document.id} className='gap-0 py-0'>
-              <CardContent className='space-y-4 p-5'>
-                <div className='flex flex-wrap items-start justify-between gap-3'>
-                  <div className='flex min-w-0 items-start gap-3'>
-                    <span className='bg-primary/10 text-primary rounded-lg p-2'>
-                      <FileImage className='h-5 w-5' />
-                    </span>
-                    <div className='min-w-0'>
-                      <h3 className='truncate font-medium'>{document.file_name}</h3>
-                      <p className='text-muted-foreground mt-1 text-xs'>
-                        {new Date(document.created_at).toLocaleString()} ·{' '}
-                        {document.document_type
-                          ? t(`type.${document.document_type}`)
-                          : t('unclassified')}
-                      </p>
+          {documents
+            .filter((document) => Boolean(document.archived_at) === showArchived)
+            .map((document) => (
+              <Card key={document.id} className='gap-0 py-0'>
+                <CardContent className='space-y-4 p-5'>
+                  <div className='flex flex-wrap items-start justify-between gap-3'>
+                    <div className='flex min-w-0 items-start gap-3'>
+                      <span className='bg-primary/10 text-primary rounded-lg p-2'>
+                        <FileImage className='h-5 w-5' />
+                      </span>
+                      <div className='min-w-0'>
+                        <h3 className='truncate font-medium'>{document.file_name}</h3>
+                        <p className='text-muted-foreground mt-1 text-xs'>
+                          {new Date(document.created_at).toLocaleString()} ·{' '}
+                          {document.document_type
+                            ? t(`type.${document.document_type}`)
+                            : t('unclassified')}
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                  <div className='flex items-center gap-2'>
-                    <Badge variant='outline'>{t(`status.${document.status}`)}</Badge>
-                    {(document.status === 'uploaded' ||
-                      document.status === 'failed' ||
-                      (document.status === 'processing' &&
-                        Date.now() - new Date(document.updated_at).getTime() > 5 * 60 * 1000)) && (
+                    <div className='flex items-center gap-2'>
+                      <Badge variant='outline'>{t(`status.${document.status}`)}</Badge>
                       <Button
                         size='sm'
-                        variant='outline'
+                        variant='ghost'
                         disabled={busy !== null}
-                        onClick={() => void extract(document.id)}>
-                        {busy === document.id ? (
-                          <LoaderCircle className='mr-2 h-4 w-4 animate-spin' />
-                        ) : (
-                          <ScanText className='mr-2 h-4 w-4' />
-                        )}
-                        {busy === document.id ? t('extracting') : t('extract')}
+                        onClick={() => void archiveCapture(document.id, !document.archived_at)}>
+                        {document.archived_at ? t('restoreCapture') : t('archiveCapture')}
                       </Button>
-                    )}
-                  </div>
-                </div>
-                {document.status === 'extracted' && (
-                  <details className='border-border border-t pt-4'>
-                    <summary className='text-foreground cursor-pointer text-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-2'>
-                      {t('observations')} · {document.document_observations.length}
-                    </summary>
-                    <div className='mt-4 space-y-4'>
-                      <DocumentBatchReview
-                        documentId={document.id}
-                        rows={document.document_observations.map((observation) => ({
-                          ...observation,
-                          document_type: document.document_type,
-                        }))}
-                        history={documents.flatMap((entry) =>
-                          entry.document_observations.map((observation) => ({
-                            ...observation,
-                            document_type: entry.document_type,
-                          })),
+                      {!document.archived_at &&
+                        (document.status === 'uploaded' ||
+                          document.status === 'failed' ||
+                          (document.status === 'processing' &&
+                            Date.now() - new Date(document.updated_at).getTime() >
+                              5 * 60 * 1000)) && (
+                          <Button
+                            size='sm'
+                            variant='outline'
+                            disabled={busy !== null}
+                            onClick={() => void extract(document.id)}>
+                            {busy === document.id ? (
+                              <LoaderCircle className='mr-2 h-4 w-4 animate-spin' />
+                            ) : (
+                              <ScanText className='mr-2 h-4 w-4' />
+                            )}
+                            {busy === document.id ? t('extracting') : t('extract')}
+                          </Button>
                         )}
-                        accounts={accounts ?? []}
-                        categories={categories ?? []}
-                        onRefresh={load}
-                      />
-                      <details className='border-border border-t pt-3'>
-                        <summary className='text-muted-foreground cursor-pointer text-sm focus-visible:outline-2 focus-visible:outline-offset-2'>
-                          {t('advancedReview')}
-                        </summary>
-                        <div className='mt-3 space-y-3'>
-                          <div className='flex flex-wrap items-center justify-between gap-2'>
-                            <p className='text-muted-foreground text-xs font-medium tracking-wide uppercase'>
-                              {t('observations')}
-                            </p>
-                            <Button
-                              size='sm'
-                              variant='outline'
-                              disabled={suggestionBusy !== null}
-                              onClick={() => void findSuggestions(document.id)}>
-                              {suggestionBusy === document.id
-                                ? t('findingSuggestions')
-                                : t('findSuggestions')}
-                            </Button>
-                          </div>
-                          {suggestions[document.id] && (
-                            <p className='text-muted-foreground text-xs'>{t('candidateOnly')}</p>
+                    </div>
+                  </div>
+                  {document.status === 'extracted' && !document.archived_at && (
+                    <details
+                      className='border-border border-t pt-4'
+                      onToggle={(event) => {
+                        if (
+                          event.currentTarget.open &&
+                          !suggestions[document.id] &&
+                          suggestionBusy !== document.id
+                        )
+                          void findSuggestions(document.id);
+                      }}>
+                      <summary className='text-foreground cursor-pointer text-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-2'>
+                        {t('observations')} · {document.document_observations.length}
+                      </summary>
+                      <div className='mt-4 space-y-4'>
+                        <DocumentBatchReview
+                          documentId={document.id}
+                          rows={document.document_observations.map((observation) => ({
+                            ...observation,
+                            document_type: document.document_type,
+                          }))}
+                          history={documents.flatMap((entry) =>
+                            entry.document_observations.map((observation) => ({
+                              ...observation,
+                              document_type: entry.document_type,
+                            })),
                           )}
-                          {document.document_observations.length === 0 ? (
-                            <p className='text-muted-foreground text-sm'>{t('noObservations')}</p>
-                          ) : (
-                            [...document.document_observations]
-                              .filter((observation) => observation.status !== 'rejected')
-                              .sort((a, b) => a.ordinal - b.ordinal)
-                              .map((observation) => (
-                                <div key={observation.id} className='bg-muted/40 rounded-lg p-4'>
-                                  <div className='flex flex-wrap items-start justify-between gap-2'>
-                                    <div>
-                                      <p className='font-medium'>{observation.description}</p>
-                                      <p className='text-muted-foreground mt-1 text-sm'>
-                                        {[observation.counterparty, observation.occurred_at_text]
-                                          .filter(Boolean)
-                                          .join(' · ')}
-                                      </p>
-                                    </div>
-                                    <span className='font-semibold tabular-nums'>
-                                      {observation.amount === null
-                                        ? t('amountUnknown')
-                                        : `${observation.currency ?? ''} ${observation.amount.toLocaleString()}`}
-                                    </span>
-                                  </div>
-                                  {observation.source_excerpt && (
-                                    <p className='text-muted-foreground mt-3 border-l-2 pl-3 text-xs'>
-                                      {observation.source_excerpt}
-                                    </p>
-                                  )}
-                                  <p className='text-muted-foreground mt-2 text-xs'>
-                                    {t('confidence', {
-                                      percent: Math.round(observation.confidence * 100),
-                                    })}{' '}
-                                    · {t(`observationStatus.${observation.status}`)}
-                                  </p>
-                                  {observation.status === 'confirmed' &&
-                                    observation.match_transaction_id && (
-                                      <Link
-                                        href={`/transactions/${observation.match_transaction_id}`}
-                                        className='text-primary mt-2 inline-block text-sm font-medium underline underline-offset-2'>
-                                        {t('confirmedMatch')} ·{' '}
-                                        {observation.match_transaction_id.slice(0, 8)}
-                                      </Link>
-                                    )}
-                                  <SuggestionPanel
-                                    group={suggestions[document.id]?.find(
-                                      (group) => group.observation_id === observation.id,
-                                    )}
-                                    onReview={(candidate) =>
-                                      setReview({
-                                        documentId: document.id,
-                                        observationId: observation.id,
-                                        action: 'accept',
-                                        candidate,
-                                        key: crypto.randomUUID(),
-                                      })
-                                    }
-                                  />
-                                  {observation.status === 'pending' &&
-                                    observation.amount !== null &&
-                                    (observation.currency === null ||
-                                      observation.currency === 'COP') && (
-                                      <Button
-                                        size='sm'
-                                        variant='outline'
-                                        className='mt-3 mr-2'
-                                        onClick={() => startCreate(document, observation)}>
-                                        {t('createTransaction')}
-                                      </Button>
-                                    )}
-                                  {observation.status === 'pending' &&
-                                    observation.amount !== null &&
-                                    observation.currency !== null &&
-                                    observation.currency !== 'COP' && (
-                                      <p className='text-muted-foreground mt-3 text-xs'>
-                                        {t('unsupportedCurrency', {
-                                          currency: observation.currency,
-                                        })}
-                                      </p>
-                                    )}
-                                  {createDraft?.observationId === observation.id &&
-                                    createDraft.documentId === document.id && (
-                                      <div className='border-primary/30 bg-background mt-4 space-y-3 rounded-lg border p-4'>
-                                        <h4 className='font-medium'>{t('reviewCreate')}</h4>
-                                        <p className='text-muted-foreground text-xs'>
-                                          {t('reviewCreateHint')}
+                          accounts={accounts ?? []}
+                          categories={categories ?? []}
+                          suggestions={suggestions[document.id]}
+                          onRefresh={load}
+                        />
+                        <details className='border-border border-t pt-3'>
+                          <summary className='text-muted-foreground cursor-pointer text-sm focus-visible:outline-2 focus-visible:outline-offset-2'>
+                            {t('advancedReview')}
+                          </summary>
+                          <div className='mt-3 space-y-3'>
+                            <div className='flex flex-wrap items-center justify-between gap-2'>
+                              <p className='text-muted-foreground text-xs font-medium tracking-wide uppercase'>
+                                {t('observations')}
+                              </p>
+                              <Button
+                                size='sm'
+                                variant='outline'
+                                disabled={suggestionBusy !== null}
+                                onClick={() => void findSuggestions(document.id)}>
+                                {suggestionBusy === document.id
+                                  ? t('findingSuggestions')
+                                  : t('findSuggestions')}
+                              </Button>
+                            </div>
+                            {suggestions[document.id] && (
+                              <p className='text-muted-foreground text-xs'>{t('candidateOnly')}</p>
+                            )}
+                            {document.document_observations.length === 0 ? (
+                              <p className='text-muted-foreground text-sm'>{t('noObservations')}</p>
+                            ) : (
+                              [...document.document_observations]
+                                .filter((observation) => observation.status !== 'rejected')
+                                .sort((a, b) => a.ordinal - b.ordinal)
+                                .map((observation) => (
+                                  <div key={observation.id} className='bg-muted/40 rounded-lg p-4'>
+                                    <div className='flex flex-wrap items-start justify-between gap-2'>
+                                      <div>
+                                        <p className='font-medium'>{observation.description}</p>
+                                        <p className='text-muted-foreground mt-1 text-sm'>
+                                          {[observation.counterparty, observation.occurred_at_text]
+                                            .filter(Boolean)
+                                            .join(' · ')}
                                         </p>
-                                        <div className='grid gap-3 sm:grid-cols-2'>
-                                          <label className='space-y-1 text-sm'>
-                                            {t('transactionDate')}
-                                            <Input
-                                              type='date'
-                                              aria-label={t('transactionDate')}
-                                              value={createDraft.date}
-                                              disabled={createDraft.createdId !== null}
-                                              onChange={(event) =>
-                                                updateCreateDraft({ date: event.target.value })
-                                              }
-                                            />
-                                          </label>
-                                          <label className='space-y-1 text-sm'>
-                                            {t('transactionTime')}
-                                            <Input
-                                              type='time'
-                                              aria-label={t('transactionTime')}
-                                              value={createDraft.time}
-                                              disabled={createDraft.createdId !== null}
-                                              onChange={(event) =>
-                                                updateCreateDraft({ time: event.target.value })
-                                              }
-                                            />
-                                          </label>
-                                          <label className='space-y-1 text-sm'>
-                                            {t('transactionAmount')}
-                                            <Input
-                                              type='number'
-                                              min='0.01'
-                                              step='0.01'
-                                              aria-label={t('transactionAmount')}
-                                              value={createDraft.amount}
-                                              disabled={createDraft.createdId !== null}
-                                              onChange={(event) =>
-                                                updateCreateDraft({ amount: event.target.value })
-                                              }
-                                            />
-                                          </label>
-                                          <label className='space-y-1 text-sm'>
-                                            {t('transactionType')}
-                                            <select
-                                              aria-label={t('transactionType')}
-                                              className='border-input bg-background h-9 w-full rounded-md border px-3'
-                                              value={createDraft.type}
-                                              disabled={createDraft.createdId !== null}
-                                              onChange={(event) =>
-                                                updateCreateDraft({
-                                                  type: event.target.value as CreateDraft['type'],
-                                                  categoryId: '',
-                                                  destinationAccountId: '',
-                                                })
-                                              }>
-                                              <option value='expense'>{t('expense')}</option>
-                                              <option
-                                                value='income'
-                                                disabled={createDraft.signedAmount < 0}>
-                                                {t('income')}
-                                              </option>
-                                              <option value='transfer'>{t('transfer')}</option>
-                                            </select>
-                                          </label>
-                                          <label className='space-y-1 text-sm'>
-                                            {t('transactionAccount')}
-                                            <select
-                                              aria-label={t('transactionAccount')}
-                                              className='border-input bg-background h-9 w-full rounded-md border px-3'
-                                              value={createDraft.accountId}
-                                              disabled={createDraft.createdId !== null}
-                                              onChange={(event) =>
-                                                updateCreateDraft({ accountId: event.target.value })
-                                              }>
-                                              <option value=''>{t('selectAccount')}</option>
-                                              {(accounts ?? [])
-                                                .filter(
-                                                  (account) =>
-                                                    account.currency === 'COP' &&
-                                                    !account.deleted_at,
-                                                )
-                                                .map((account) => (
-                                                  <option key={account.id} value={account.id}>
-                                                    {account.name}
-                                                  </option>
-                                                ))}
-                                            </select>
-                                          </label>
-                                          {createDraft.type === 'transfer' && (
-                                            <label className='space-y-1 text-sm'>
-                                              {t('destinationAccount')}
-                                              <select
-                                                aria-label={t('destinationAccount')}
-                                                className='border-input bg-background h-9 w-full rounded-md border px-3'
-                                                value={createDraft.destinationAccountId}
-                                                disabled={createDraft.createdId !== null}
-                                                onChange={(event) =>
-                                                  updateCreateDraft({
-                                                    destinationAccountId: event.target.value,
-                                                  })
-                                                }>
-                                                <option value=''>{t('selectAccount')}</option>
-                                                {(accounts ?? [])
-                                                  .filter(
-                                                    (account) =>
-                                                      account.currency === 'COP' &&
-                                                      !account.deleted_at &&
-                                                      account.id !== createDraft.accountId,
-                                                  )
-                                                  .map((account) => (
-                                                    <option key={account.id} value={account.id}>
-                                                      {account.name}
-                                                    </option>
-                                                  ))}
-                                              </select>
-                                            </label>
-                                          )}
-                                          <label className='space-y-1 text-sm'>
-                                            {t('transactionCategory')}
-                                            <select
-                                              aria-label={t('transactionCategory')}
-                                              className='border-input bg-background h-9 w-full rounded-md border px-3'
-                                              value={createDraft.categoryId}
-                                              disabled={
-                                                createDraft.createdId !== null ||
-                                                createDraft.type === 'transfer'
-                                              }
-                                              onChange={(event) =>
-                                                updateCreateDraft({
-                                                  categoryId: event.target.value,
-                                                })
-                                              }>
-                                              <option value=''>{t('selectCategory')}</option>
-                                              {(categories ?? [])
-                                                .filter(
-                                                  (category) =>
-                                                    category.type === createDraft.type &&
-                                                    category.is_active,
-                                                )
-                                                .map((category) => (
-                                                  <option key={category.id} value={category.id}>
-                                                    {category.name}
-                                                  </option>
-                                                ))}
-                                            </select>
-                                          </label>
-                                        </div>
-                                        <label className='block space-y-1 text-sm'>
-                                          {t('transactionDescription')}
-                                          <Input
-                                            aria-label={t('transactionDescription')}
-                                            value={createDraft.description}
-                                            disabled={createDraft.createdId !== null}
-                                            onChange={(event) =>
-                                              updateCreateDraft({ description: event.target.value })
-                                            }
-                                          />
-                                        </label>
-                                        {duplicateMatch && (
-                                          <Button
-                                            size='sm'
-                                            variant='outline'
-                                            onClick={() => {
-                                              setCreateDraft(
-                                                (current) =>
-                                                  current && {
-                                                    ...current,
-                                                    createdId: duplicateMatch.id,
-                                                  },
-                                              );
-                                              setDuplicateMatch(null);
-                                              setCreateChecked(false);
-                                            }}>
-                                            {t('linkDuplicate', {
-                                              description: duplicateMatch.description,
-                                            })}
-                                          </Button>
-                                        )}
-                                        {createDraft.createdId && (
-                                          <p className='text-muted-foreground text-xs'>
-                                            {t('createdNeedsLink')}
-                                          </p>
-                                        )}
-                                        <label className='flex items-start gap-2 text-sm'>
-                                          <input
-                                            type='checkbox'
-                                            aria-label={t('createChecked')}
-                                            checked={createChecked}
-                                            onChange={(event) =>
-                                              setCreateChecked(event.target.checked)
-                                            }
-                                          />
-                                          {t('createChecked')}
-                                        </label>
-                                        <div className='flex flex-wrap gap-2'>
-                                          <Button
-                                            size='sm'
-                                            disabled={!createChecked || createBusy}
-                                            onClick={() => void confirmCreate()}>
-                                            {createBusy
-                                              ? t('savingDecision')
-                                              : createDraft.createdId
-                                                ? t('confirmLink')
-                                                : t('confirmCreate')}
-                                          </Button>
-                                          <Button
-                                            size='sm'
-                                            variant='ghost'
-                                            disabled={createBusy}
-                                            onClick={() => setCreateDraft(null)}>
-                                            {t('cancelReview')}
-                                          </Button>
-                                        </div>
                                       </div>
+                                      <span className='font-semibold tabular-nums'>
+                                        {observation.amount === null
+                                          ? t('amountUnknown')
+                                          : `${observation.currency ?? ''} ${observation.amount.toLocaleString()}`}
+                                      </span>
+                                    </div>
+                                    {observation.source_excerpt && (
+                                      <p className='text-muted-foreground mt-3 border-l-2 pl-3 text-xs'>
+                                        {observation.source_excerpt}
+                                      </p>
                                     )}
-                                  {observation.status === 'pending' && (
-                                    <Button
-                                      size='sm'
-                                      variant='ghost'
-                                      className='mt-3'
-                                      onClick={() =>
+                                    <p className='text-muted-foreground mt-2 text-xs'>
+                                      {t('confidence', {
+                                        percent: Math.round(observation.confidence * 100),
+                                      })}{' '}
+                                      · {t(`observationStatus.${observation.status}`)}
+                                    </p>
+                                    {observation.status === 'confirmed' &&
+                                      observation.match_transaction_id && (
+                                        <Link
+                                          href={`/transactions/${observation.match_transaction_id}`}
+                                          className='text-primary mt-2 inline-block text-sm font-medium underline underline-offset-2'>
+                                          {t('confirmedMatch')} ·{' '}
+                                          {observation.match_transaction_id.slice(0, 8)}
+                                        </Link>
+                                      )}
+                                    <SuggestionPanel
+                                      group={suggestions[document.id]?.find(
+                                        (group) => group.observation_id === observation.id,
+                                      )}
+                                      onReview={(candidate) =>
                                         setReview({
                                           documentId: document.id,
                                           observationId: observation.id,
-                                          action: 'reject_observation',
+                                          action: 'accept',
+                                          candidate,
                                           key: crypto.randomUUID(),
                                         })
-                                      }>
-                                      {t('reviewReject')}
-                                    </Button>
-                                  )}
-                                  {review?.documentId === document.id &&
-                                    review.observationId === observation.id && (
-                                      <div
-                                        className='border-primary/30 bg-primary/5 mt-3 rounded-lg border p-4'
-                                        role='region'
-                                        aria-label={t('reviewDecision')}>
-                                        <p className='text-sm font-semibold'>
-                                          {t('reviewDecision')}
+                                      }
+                                    />
+                                    {observation.status === 'pending' &&
+                                      observation.amount !== null &&
+                                      (observation.currency === null ||
+                                        observation.currency === 'COP') && (
+                                        <Button
+                                          size='sm'
+                                          variant='outline'
+                                          className='mt-3 mr-2'
+                                          onClick={() => startCreate(document, observation)}>
+                                          {t('createTransaction')}
+                                        </Button>
+                                      )}
+                                    {observation.status === 'pending' &&
+                                      observation.amount !== null &&
+                                      observation.currency !== null &&
+                                      observation.currency !== 'COP' && (
+                                        <p className='text-muted-foreground mt-3 text-xs'>
+                                          {t('unsupportedCurrency', {
+                                            currency: observation.currency,
+                                          })}
                                         </p>
-                                        <p className='text-muted-foreground mt-1 text-sm'>
-                                          {review.action === 'accept'
-                                            ? t('confirmMatchSummary')
-                                            : t('confirmRejectSummary')}
-                                        </p>
-                                        {review.action === 'accept' && (
-                                          <p className='mt-2 text-sm'>
-                                            {review.candidate.description} · {review.candidate.date}{' '}
-                                            · {review.candidate.account_name ?? ''} ·{' '}
-                                            {review.candidate.amount.toLocaleString()}
+                                      )}
+                                    {createDraft?.observationId === observation.id &&
+                                      createDraft.documentId === document.id && (
+                                        <div className='border-primary/30 bg-background mt-4 space-y-3 rounded-lg border p-4'>
+                                          <h4 className='font-medium'>{t('reviewCreate')}</h4>
+                                          <p className='text-muted-foreground text-xs'>
+                                            {t('reviewCreateHint')}
                                           </p>
-                                        )}
-                                        <div className='mt-3 flex gap-2'>
-                                          <Button
-                                            size='sm'
-                                            disabled={decisionBusy}
-                                            onClick={() => void submitDecision()}>
-                                            {decisionBusy
-                                              ? t('savingDecision')
-                                              : review.action === 'accept'
-                                                ? t('confirmMatch')
-                                                : t('confirmReject')}
-                                          </Button>
-                                          <Button
-                                            size='sm'
-                                            variant='outline'
-                                            disabled={decisionBusy}
-                                            onClick={() => setReview(null)}>
-                                            {t('cancelReview')}
-                                          </Button>
+                                          <DocumentReviewFields
+                                            draft={createDraft}
+                                            accounts={accounts ?? []}
+                                            categories={categories ?? []}
+                                            disabled={createDraft.createdId !== null}
+                                            onChange={updateCreateDraft}
+                                          />
+                                          {duplicateMatch && (
+                                            <Button
+                                              size='sm'
+                                              variant='outline'
+                                              onClick={() => {
+                                                setCreateDraft(
+                                                  (current) =>
+                                                    current && {
+                                                      ...current,
+                                                      createdId: duplicateMatch.id,
+                                                    },
+                                                );
+                                                setDuplicateMatch(null);
+                                                setCreateChecked(false);
+                                              }}>
+                                              {t('linkDuplicate', {
+                                                description: duplicateMatch.description,
+                                              })}
+                                            </Button>
+                                          )}
+                                          {createDraft.createdId && (
+                                            <p className='text-muted-foreground text-xs'>
+                                              {t('createdNeedsLink')}
+                                            </p>
+                                          )}
+                                          <label className='flex items-start gap-2 text-sm'>
+                                            <Checkbox
+                                              aria-label={t('createChecked')}
+                                              checked={createChecked}
+                                              onCheckedChange={(value) =>
+                                                setCreateChecked(value === true)
+                                              }
+                                            />
+                                            {t('createChecked')}
+                                          </label>
+                                          <div className='flex flex-wrap gap-2'>
+                                            <Button
+                                              size='sm'
+                                              disabled={!createChecked || createBusy}
+                                              onClick={() => void confirmCreate()}>
+                                              {createBusy
+                                                ? t('savingDecision')
+                                                : createDraft.createdId
+                                                  ? t('confirmLink')
+                                                  : t('confirmCreate')}
+                                            </Button>
+                                            <Button
+                                              size='sm'
+                                              variant='ghost'
+                                              disabled={createBusy}
+                                              onClick={() => setCreateDraft(null)}>
+                                              {t('cancelReview')}
+                                            </Button>
+                                          </div>
                                         </div>
-                                      </div>
-                                    )}
-                                </div>
-                              ))
-                          )}
-                        </div>
-                      </details>
-                      {document.document_observations.some(
-                        (observation) => observation.status === 'rejected',
-                      ) && (
-                        <details className='border-border border-t pt-3'>
-                          <summary className='text-muted-foreground cursor-pointer text-sm focus-visible:outline-2 focus-visible:outline-offset-2'>
-                            {t('rejectedObservations')} ·{' '}
-                            {
-                              document.document_observations.filter(
-                                (observation) => observation.status === 'rejected',
-                              ).length
-                            }
-                          </summary>
-                          <div className='mt-3 space-y-2'>
-                            {document.document_observations
-                              .filter((observation) => observation.status === 'rejected')
-                              .map((observation) => (
-                                <div
-                                  key={observation.id}
-                                  className='bg-muted/30 flex flex-wrap items-center justify-between gap-2 rounded-lg p-3'>
-                                  <div>
-                                    <p className='text-sm font-medium'>{observation.description}</p>
-                                    <p className='text-muted-foreground text-xs'>
-                                      {observation.occurred_at_text}
-                                    </p>
+                                      )}
+                                    {review?.documentId === document.id &&
+                                      review.observationId === observation.id && (
+                                        <div
+                                          className='border-primary/30 bg-primary/5 mt-3 rounded-lg border p-4'
+                                          role='region'
+                                          aria-label={t('reviewDecision')}>
+                                          <p className='text-sm font-semibold'>
+                                            {t('reviewDecision')}
+                                          </p>
+                                          <p className='text-muted-foreground mt-1 text-sm'>
+                                            {review.action === 'accept'
+                                              ? t('confirmMatchSummary')
+                                              : t('confirmRejectSummary')}
+                                          </p>
+                                          {review.action === 'accept' && (
+                                            <p className='mt-2 text-sm'>
+                                              {review.candidate.description} ·{' '}
+                                              {review.candidate.date} ·{' '}
+                                              {review.candidate.account_name ?? ''} ·{' '}
+                                              {review.candidate.amount.toLocaleString()}
+                                            </p>
+                                          )}
+                                          <div className='mt-3 flex gap-2'>
+                                            <Button
+                                              size='sm'
+                                              disabled={decisionBusy}
+                                              onClick={() => void submitDecision()}>
+                                              {decisionBusy
+                                                ? t('savingDecision')
+                                                : review.action === 'accept'
+                                                  ? t('confirmMatch')
+                                                  : t('confirmReject')}
+                                            </Button>
+                                            <Button
+                                              size='sm'
+                                              variant='outline'
+                                              disabled={decisionBusy}
+                                              onClick={() => setReview(null)}>
+                                              {t('cancelReview')}
+                                            </Button>
+                                          </div>
+                                        </div>
+                                      )}
                                   </div>
-                                  <span className='text-muted-foreground text-sm tabular-nums'>
-                                    {observation.currency ?? ''}{' '}
-                                    {observation.amount?.toLocaleString() ?? t('amountUnknown')}
-                                  </span>
-                                </div>
-                              ))}
+                                ))
+                            )}
                           </div>
                         </details>
-                      )}
-                    </div>
-                  </details>
-                )}
-              </CardContent>
-            </Card>
-          ))}
+                        {document.document_observations.some(
+                          (observation) => observation.status === 'rejected',
+                        ) && (
+                          <details className='border-border border-t pt-3'>
+                            <summary className='text-muted-foreground cursor-pointer text-sm focus-visible:outline-2 focus-visible:outline-offset-2'>
+                              {t('rejectedObservations')} ·{' '}
+                              {
+                                document.document_observations.filter(
+                                  (observation) => observation.status === 'rejected',
+                                ).length
+                              }
+                            </summary>
+                            <div className='mt-3 space-y-2'>
+                              {document.document_observations
+                                .filter((observation) => observation.status === 'rejected')
+                                .map((observation) => (
+                                  <div
+                                    key={observation.id}
+                                    className='bg-muted/30 flex flex-wrap items-center justify-between gap-2 rounded-lg p-3'>
+                                    <div>
+                                      <p className='text-sm font-medium'>
+                                        {observation.description}
+                                      </p>
+                                      <p className='text-muted-foreground text-xs'>
+                                        {observation.occurred_at_text}
+                                      </p>
+                                    </div>
+                                    <span className='text-muted-foreground text-sm tabular-nums'>
+                                      {observation.currency ?? ''}{' '}
+                                      {observation.amount?.toLocaleString() ?? t('amountUnknown')}
+                                    </span>
+                                    <Button
+                                      size='sm'
+                                      variant='outline'
+                                      disabled={busy !== null}
+                                      onClick={() =>
+                                        void restoreObservation(document.id, observation.id)
+                                      }>
+                                      {t('restoreObservation')}
+                                    </Button>
+                                  </div>
+                                ))}
+                            </div>
+                          </details>
+                        )}
+                      </div>
+                    </details>
+                  )}
+                </CardContent>
+              </Card>
+            ))}
         </div>
       )}
     </div>

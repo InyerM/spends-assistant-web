@@ -1,8 +1,12 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import DocumentsPage from '@/app/(dashboard)/documents/page';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
-vi.mock('next-intl', () => ({ useTranslations: () => (key: string) => key }));
+vi.mock('next-intl', () => ({
+  useTranslations: () => (key: string) => key,
+  useLocale: () => 'es',
+}));
 vi.mock('@/lib/api/queries/account.queries', () => ({
   useAccounts: () => ({
     data: [
@@ -15,7 +19,24 @@ vi.mock('@/lib/api/queries/category.queries', () => ({
   useCategories: () => ({ data: [] }),
 }));
 
+function renderDocuments(): void {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  render(
+    <QueryClientProvider client={client}>
+      <DocumentsPage />
+    </QueryClientProvider>,
+  );
+}
+
+function chooseSelect(label: string, option: string): void {
+  fireEvent.click(screen.getByRole('combobox', { name: label }));
+  fireEvent.click(screen.getByRole('option', { name: new RegExp(option) }));
+}
+
 describe('document inbox', () => {
+  beforeEach(() => {
+    Element.prototype.scrollIntoView = vi.fn();
+  });
   afterEach(() => {
     cleanup();
     vi.unstubAllGlobals();
@@ -53,7 +74,7 @@ describe('document inbox', () => {
         }),
       ),
     );
-    render(<DocumentsPage />);
+    renderDocuments();
     await waitFor(() => expect(screen.getAllByText('Coffee')[0]).toBeInTheDocument());
     expect(screen.getByText('observations')).toBeInTheDocument();
     expect(screen.getByText(/observationStatus.pending/)).toBeInTheDocument();
@@ -98,14 +119,12 @@ describe('document inbox', () => {
       );
     });
     vi.stubGlobal('fetch', fetchMock);
-    render(<DocumentsPage />);
+    renderDocuments();
     await screen.findAllByText('Cafe North');
     fireEvent.click(screen.getByRole('button', { name: 'createTransaction' }));
     expect(fetchMock.mock.calls.every(([, options]) => options?.method !== 'POST')).toBe(true);
     fireEvent.change(screen.getByLabelText('transactionTime'), { target: { value: '13:25' } });
-    fireEvent.change(screen.getByLabelText('transactionAccount'), {
-      target: { value: 'account-1' },
-    });
+    chooseSelect('transactionAccount', 'Bancolombia');
     fireEvent.click(screen.getByLabelText('createChecked'));
     fireEvent.click(screen.getByRole('button', { name: 'confirmCreate' }));
     await waitFor(() =>
@@ -166,14 +185,12 @@ describe('document inbox', () => {
       );
     });
     vi.stubGlobal('fetch', fetchMock);
-    render(<DocumentsPage />);
+    renderDocuments();
     await screen.findAllByText('Own account transfer');
     fireEvent.click(screen.getByRole('button', { name: 'createTransaction' }));
     fireEvent.change(screen.getByLabelText('transactionTime'), { target: { value: '13:25' } });
-    fireEvent.change(screen.getByLabelText('transactionType'), { target: { value: 'transfer' } });
-    fireEvent.change(screen.getByLabelText('transactionAccount'), {
-      target: { value: 'account-1' },
-    });
+    chooseSelect('transactionType', 'transfer');
+    chooseSelect('transactionAccount', 'Bancolombia');
     fireEvent.click(screen.getByLabelText('createChecked'));
     fireEvent.click(screen.getByRole('button', { name: 'confirmCreate' }));
     expect(
@@ -181,9 +198,7 @@ describe('document inbox', () => {
         ([url, options]) => url === '/api/transactions' && options?.method === 'POST',
       ),
     ).toHaveLength(0);
-    fireEvent.change(screen.getByLabelText('destinationAccount'), {
-      target: { value: 'account-2' },
-    });
+    chooseSelect('destinationAccount', 'Nequi');
     fireEvent.click(screen.getByLabelText('createChecked'));
     fireEvent.click(screen.getByRole('button', { name: 'confirmCreate' }));
     await waitFor(() =>
@@ -222,7 +237,7 @@ describe('document inbox', () => {
         }),
       ),
     );
-    render(<DocumentsPage />);
+    renderDocuments();
     await waitFor(() => expect(screen.getByText('receipt.png')).toBeInTheDocument());
     expect(screen.getByRole('button', { name: 'extract' })).toBeInTheDocument();
   });
@@ -291,7 +306,7 @@ describe('document inbox', () => {
       ),
     );
     vi.stubGlobal('fetch', fetchMock);
-    render(<DocumentsPage />);
+    renderDocuments();
     await waitFor(() => expect(screen.getAllByText('Coffee')[0]).toBeInTheDocument());
     fireEvent.click(screen.getByRole('button', { name: 'findSuggestions' }));
     await waitFor(() => expect(screen.getByText('Coffee shop')).toBeInTheDocument());

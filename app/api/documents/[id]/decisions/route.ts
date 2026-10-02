@@ -7,7 +7,17 @@ interface DecisionBody {
   action?: unknown;
   transaction_id?: unknown;
   idempotency_key?: unknown;
+  reason?: unknown;
 }
+
+const REJECTION_REASONS = new Set([
+  'already_recorded',
+  'duplicate_capture',
+  'not_a_transaction',
+  'unreadable',
+  'wrong_account',
+  'other',
+]);
 
 export async function POST(
   request: Request,
@@ -28,7 +38,8 @@ export async function POST(
         (typeof body.transaction_id !== 'string' || !UUID.test(body.transaction_id))) ||
       (body.action === 'reject_observation' &&
         body.transaction_id !== null &&
-        body.transaction_id !== undefined)
+        body.transaction_id !== undefined) ||
+      (body.action === 'reject_observation' && !REJECTION_REASONS.has(String(body.reason)))
     )
       return errorResponse('Invalid review decision', 400);
 
@@ -42,12 +53,18 @@ export async function POST(
     const found = observation as { id: string } | null;
     if (observationError || found === null) return errorResponse('Observation not found', 404);
 
-    const { data, error } = await supabase.rpc('decide_document_observation', {
-      p_observation_id: body.observation_id,
-      p_action: body.action,
-      p_transaction_id: body.action === 'accept' ? body.transaction_id : null,
-      p_idempotency_key: body.idempotency_key,
-    });
+    const { data, error } = await supabase.rpc(
+      body.action === 'reject_observation'
+        ? 'decide_document_observation_with_reason'
+        : 'decide_document_observation',
+      {
+        p_observation_id: body.observation_id,
+        p_action: body.action,
+        p_transaction_id: body.action === 'accept' ? body.transaction_id : null,
+        p_idempotency_key: body.idempotency_key,
+        ...(body.action === 'reject_observation' ? { p_reason: body.reason as string } : {}),
+      },
+    );
     if (error) {
       if (error.code === 'P0002') return errorResponse(error.message, 404);
       if (['23505', '23514'].includes(error.code)) return errorResponse(error.message, 409);

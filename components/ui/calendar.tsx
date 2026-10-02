@@ -4,27 +4,16 @@ import { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { format } from 'date-fns';
+import { enUS, es } from 'date-fns/locale';
 
-const DAY_LABELS = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'] as const;
-const MONTH_NAMES = [
-  'January',
-  'February',
-  'March',
-  'April',
-  'May',
-  'June',
-  'July',
-  'August',
-  'September',
-  'October',
-  'November',
-  'December',
-] as const;
+const WEEKDAYS = [0, 1, 2, 3, 4, 5, 6] as const;
 
 interface CalendarProps {
   selected?: Date;
   onSelect?: (date: Date) => void;
   className?: string;
+  locale?: 'en' | 'es';
 }
 
 interface DayCell {
@@ -92,7 +81,12 @@ function buildCalendarGrid(year: number, month: number, selected?: Date): DayCel
   return cells;
 }
 
-export function Calendar({ selected, onSelect, className }: CalendarProps): React.ReactElement {
+export function Calendar({
+  selected,
+  onSelect,
+  className,
+  locale = 'en',
+}: CalendarProps): React.ReactElement {
   const initialDate = selected ?? new Date();
   const [viewYear, setViewYear] = useState(initialDate.getFullYear());
   const [viewMonth, setViewMonth] = useState(initialDate.getMonth());
@@ -136,7 +130,9 @@ export function Calendar({ selected, onSelect, className }: CalendarProps): Reac
           <ChevronLeft className='h-5 w-5' />
         </Button>
         <span className='text-base font-medium'>
-          {MONTH_NAMES[viewMonth]} {viewYear}
+          {format(new Date(viewYear, viewMonth, 1), 'LLLL yyyy', {
+            locale: locale === 'es' ? es : enUS,
+          })}
         </span>
         <Button
           type='button'
@@ -149,11 +145,11 @@ export function Calendar({ selected, onSelect, className }: CalendarProps): Reac
       </div>
 
       <div className='grid grid-cols-7 gap-0'>
-        {DAY_LABELS.map((label) => (
+        {WEEKDAYS.map((day) => (
           <div
-            key={label}
+            key={day}
             className='text-muted-foreground flex h-10 items-center justify-center text-sm font-medium'>
-            {label}
+            {format(new Date(2026, 1, 1 + day), 'EEEEE', { locale: locale === 'es' ? es : enUS })}
           </div>
         ))}
         {cells.map((cell, i) => (

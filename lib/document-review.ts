@@ -16,7 +16,7 @@ export interface ReviewHistoryObservation {
 }
 
 export interface DocumentReviewSuggestion {
-  currency: { value: string; reason: 'source' | 'account' | 'review' } | null;
+  currency: { value: string; reason: 'source' | 'account' | 'review' | 'default' } | null;
   transaction: { type: string; categoryId: string | null; accountId: string } | null;
   previouslyRejected: boolean;
 }
@@ -73,10 +73,12 @@ export function suggestDocumentReview(
   let currency: DocumentReviewSuggestion['currency'] = null;
   if (sourceCurrency && sourceCurrency !== observation.currency)
     currency = { value: sourceCurrency, reason: 'source' };
-  else if (!sourceCurrency && accountCurrency && accountCurrency !== observation.currency)
+  else if (!sourceCurrency && accountCurrency === 'COP' && accountCurrency !== observation.currency)
     currency = { value: accountCurrency, reason: 'account' };
   else if (!sourceCurrency && correctedCurrency && correctedCurrency !== observation.currency)
     currency = { value: correctedCurrency, reason: 'review' };
+  else if (!sourceCurrency && observation.currency !== 'COP')
+    currency = { value: 'COP', reason: 'default' };
 
   const confirmed = similar.filter(
     (item) => item.status === 'confirmed' && item.matched_transaction,
@@ -97,6 +99,88 @@ export function suggestDocumentReview(
       : null,
     previouslyRejected: similar.some((item) => item.status === 'rejected'),
   };
+}
+
+interface EvidenceAccount {
+  id: string;
+  institution: string | null;
+  name: string;
+  last_four: string | null;
+  bank_account_last_four?: string | null;
+  currency: string;
+  is_active: boolean;
+}
+
+export function inferAccountFromEvidence(
+  evidence: string,
+  accounts: EvidenceAccount[],
+): { accountId: string; basis: 'suffix' } | null {
+  const normalized = normalize(evidence);
+  const suffixes = [
+    ...evidence.matchAll(
+      /(?:\*|(?:cuenta|tarjeta|terminad[ao]? en|t\.?d\.?|t\.?c\.?)\s*)(\d{4})\b/gi,
+    ),
+  ].map((match) => match[1]);
+  if (suffixes.length === 0) return null;
+  const candidates = accounts.filter(
+    (account) =>
+      account.is_active &&
+      account.currency === 'COP' &&
+      [account.last_four, account.bank_account_last_four].some(
+        (suffix) => suffix && suffixes.includes(suffix),
+      ) &&
+      (!account.institution ||
+        normalized.includes(normalize(account.institution)) ||
+        normalized.includes(normalize(account.name))),
+  );
+  return candidates.length === 1 ? { accountId: candidates[0].id, basis: 'suffix' } : null;
+}
+
+interface HistoryTransaction {
+  description: string;
+  type: string;
+  category_id: string | null;
+}
+
+function merchantTokens(value: string): Set<string> {
+  const generic = new Set([
+    'compra',
+    'compras',
+    'pago',
+    'pagos',
+    'supermercado',
+    'mercado',
+    'transferencia',
+    'recibo',
+  ]);
+  return new Set(
+    normalize(value)
+      .split(' ')
+      .filter((token) => token.length >= 4 && !generic.has(token))
+      .map((token) => (token.endsWith('s') ? token.slice(0, -1) : token)),
+  );
+}
+
+export function inferCategoryFromHistory(
+  merchant: string,
+  history: HistoryTransaction[],
+): { type: string; categoryId: string; evidenceCount: number } | null {
+  const target = merchantTokens(merchant);
+  if (target.size === 0) return null;
+  const counts = new Map<string, number>();
+  for (const transaction of history) {
+    if (!transaction.category_id) continue;
+    const candidate = merchantTokens(transaction.description);
+    const shared = [...target].filter((token) => candidate.has(token)).length;
+    if (shared < 1 || shared / Math.max(target.size, candidate.size) < 0.8) continue;
+    const key = `${transaction.type}:${transaction.category_id}`;
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+  }
+  const ranked = [...counts].sort((a, b) => b[1] - a[1]);
+  if (!ranked[0] || ranked[0][1] < 2 || (ranked[1] && ranked[0][1] <= ranked[1][1] * 2))
+    return null;
+  const [type, categoryId] = ranked[0][0].split(':');
+  return { type, categoryId, evidenceCount: ranked[0][1] };
 }
 
 export interface ApprovalDraft {

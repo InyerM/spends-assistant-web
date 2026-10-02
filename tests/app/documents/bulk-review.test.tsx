@@ -1,8 +1,12 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import DocumentsPage from '@/app/(dashboard)/documents/page';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
-vi.mock('next-intl', () => ({ useTranslations: () => (key: string) => key }));
+vi.mock('next-intl', () => ({
+  useTranslations: () => (key: string) => key,
+  useLocale: () => 'es',
+}));
 vi.mock('@/lib/api/queries/account.queries', () => ({
   useAccounts: () => ({
     data: [
@@ -54,10 +58,47 @@ const observations = [
 function mockRequests(
   recoveredId: string | null = null,
   failFirstCreate = false,
+  candidate = false,
 ): ReturnType<typeof vi.fn> {
   let rows = observations.map((item) => ({ ...item }));
+  let archived = false;
   let created = 0;
   const mock = vi.fn().mockImplementation(async (url: string, options?: RequestInit) => {
+    if (url.endsWith('/suggestions'))
+      return Response.json({
+        data: candidate
+          ? [
+              {
+                observation_id: 'obs-1',
+                status: 'pending',
+                total_candidates: 1,
+                search_limited: false,
+                candidates: [
+                  {
+                    kind: 'candidate',
+                    transaction_id: 'tx-existing',
+                    amount: 12000,
+                    amount_difference: 0,
+                    date: '2026-09-28',
+                    description: 'Lunch',
+                    account_name: 'Bancolombia',
+                    basis: 'exact_date',
+                    reference_hint: false,
+                    description_hint: true,
+                  },
+                ],
+              },
+            ]
+          : [],
+      });
+    if (url === '/api/documents/doc-1' && options?.method === 'PATCH') {
+      archived = JSON.parse(options.body as string).archived as boolean;
+      return Response.json({ archived });
+    }
+    if (url.endsWith('/restore') && options?.method === 'POST') {
+      rows = rows.map((item) => (item.id === 'obs-3' ? { ...item, status: 'pending' } : item));
+      return Response.json({ restoration_id: 'restore-1' });
+    }
     if (url === '/api/documents' && !options?.method)
       return Response.json({
         data: [
@@ -65,6 +106,7 @@ function mockRequests(
             id: 'doc-1',
             file_name: 'bank.png',
             status: 'extracted',
+            archived_at: archived ? '2026-10-01T00:00:00Z' : null,
             document_type: 'bank_screenshot',
             created_at: '2026-09-28T12:00:00Z',
             updated_at: '2026-09-28T12:00:00Z',
@@ -97,7 +139,24 @@ function mockRequests(
   return mock;
 }
 
+function chooseBulkAccount(): void {
+  fireEvent.click(screen.getByRole('combobox', { name: 'bulkAccount' }));
+  fireEvent.click(screen.getByRole('option', { name: /Bancolombia/ }));
+}
+
+function renderDocuments(): void {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  render(
+    <QueryClientProvider client={client}>
+      <DocumentsPage />
+    </QueryClientProvider>,
+  );
+}
+
 describe('document batch review', () => {
+  beforeEach(() => {
+    Element.prototype.scrollIntoView = vi.fn();
+  });
   afterEach(() => {
     cleanup();
     vi.unstubAllGlobals();
@@ -105,7 +164,7 @@ describe('document batch review', () => {
 
   it('keeps extracted data collapsed and separates rejected rows', async () => {
     mockRequests();
-    render(<DocumentsPage />);
+    renderDocuments();
     await screen.findByText('bank.png');
     fireEvent.click(screen.getAllByText(/^observations/)[0]);
     expect(screen.getByText(/^rejectedObservations/)).toBeInTheDocument();
@@ -116,12 +175,12 @@ describe('document batch review', () => {
 
   it('reviews two ambiguous dollar rows as COP and approves them into transactions', async () => {
     const fetchMock = mockRequests();
-    render(<DocumentsPage />);
+    renderDocuments();
     await screen.findByText('bank.png');
     fireEvent.click(screen.getAllByText(/^observations/)[0]);
     fireEvent.click(screen.getByRole('button', { name: 'selectAllPending' }));
     expect(screen.getByText('selectedCount')).toBeInTheDocument();
-    fireEvent.change(screen.getByLabelText('bulkAccount'), { target: { value: 'account-1' } });
+    chooseBulkAccount();
     fireEvent.click(screen.getByLabelText('confirmSelected'));
     fireEvent.click(screen.getByRole('button', { name: 'approveSelected' }));
     await waitFor(() =>
@@ -154,7 +213,7 @@ describe('document batch review', () => {
 
   it('requires explicit confirmation before rejecting selected observations', async () => {
     const fetchMock = mockRequests();
-    render(<DocumentsPage />);
+    renderDocuments();
     await screen.findByText('bank.png');
     fireEvent.click(screen.getAllByText(/^observations/)[0]);
     fireEvent.click(screen.getByRole('button', { name: 'selectAllPending' }));
@@ -165,15 +224,50 @@ describe('document batch review', () => {
     await waitFor(() =>
       expect(fetchMock.mock.calls.filter(([url]) => url.endsWith('/decisions'))).toHaveLength(2),
     );
+    expect(
+      JSON.parse(
+        fetchMock.mock.calls.find(([url]) => url.endsWith('/decisions'))![1]!.body as string,
+      ),
+    ).toMatchObject({ reason: 'other' });
+  });
+
+  it('shows likely existing transactions before approval', async () => {
+    mockRequests(null, false, true);
+    renderDocuments();
+    await screen.findByText('bank.png');
+    fireEvent.click(screen.getAllByText(/^observations/)[0]);
+    expect(await screen.findByText(/possibleDuplicate/)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'reviewExistingTransaction' })).toHaveAttribute(
+      'href',
+      '/transactions/tx-existing',
+    );
+  });
+
+  it('restores a rejected observation and archives a capture reversibly', async () => {
+    const fetchMock = mockRequests();
+    renderDocuments();
+    await screen.findByText('bank.png');
+    fireEvent.click(screen.getByRole('button', { name: 'archiveCapture' }));
+    await waitFor(() => expect(screen.queryByText('bank.png')).not.toBeInTheDocument());
+    fireEvent.click(screen.getByRole('button', { name: /archivedCaptures/ }));
+    fireEvent.click(await screen.findByRole('button', { name: 'restoreCapture' }));
+    await screen.findByText('bank.png');
+    fireEvent.click(screen.getByRole('button', { name: 'activeCaptures' }));
+    fireEvent.click(screen.getAllByText(/^observations/)[0]);
+    fireEvent.click(screen.getByText(/^rejectedObservations/));
+    fireEvent.click(screen.getByRole('button', { name: 'restoreObservation' }));
+    await waitFor(() =>
+      expect(fetchMock.mock.calls.some(([url]) => url.endsWith('/restore'))).toBe(true),
+    );
   });
 
   it('relinks an existing created transaction without posting another balance change', async () => {
     const fetchMock = mockRequests('tx-already-created');
-    render(<DocumentsPage />);
+    renderDocuments();
     await screen.findByText('bank.png');
     fireEvent.click(screen.getAllByText(/^observations/)[0]);
     fireEvent.click(screen.getAllByRole('checkbox', { name: 'selectObservation' })[0]);
-    fireEvent.change(screen.getByLabelText('bulkAccount'), { target: { value: 'account-1' } });
+    chooseBulkAccount();
     fireEvent.click(screen.getByLabelText('confirmSelected'));
     fireEvent.click(screen.getByRole('button', { name: 'approveSelected' }));
     await waitFor(() =>
@@ -184,11 +278,11 @@ describe('document batch review', () => {
 
   it('does not duplicate a saved OCR correction when transaction creation is retried', async () => {
     const fetchMock = mockRequests(null, true);
-    render(<DocumentsPage />);
+    renderDocuments();
     await screen.findByText('bank.png');
     fireEvent.click(screen.getAllByText(/^observations/)[0]);
     fireEvent.click(screen.getAllByRole('checkbox', { name: 'selectObservation' })[0]);
-    fireEvent.change(screen.getByLabelText('bulkAccount'), { target: { value: 'account-1' } });
+    chooseBulkAccount();
     fireEvent.click(screen.getByLabelText('confirmSelected'));
     fireEvent.click(screen.getByRole('button', { name: 'approveSelected' }));
     await waitFor(() => expect(screen.getByText('Temporary failure')).toBeInTheDocument());

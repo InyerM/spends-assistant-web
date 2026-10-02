@@ -111,13 +111,32 @@ describe('POST document observation decision', () => {
         action: 'reject_observation',
         transaction_id: null,
         idempotency_key: key,
+        reason: 'duplicate_capture',
       }),
       { params: Promise.resolve({ id: 'doc-1' }) },
     );
     expect(response.status).toBe(200);
     expect(rpc).toHaveBeenCalledWith(
-      'decide_document_observation',
-      expect.objectContaining({ p_action: 'reject_observation', p_transaction_id: null }),
+      'decide_document_observation_with_reason',
+      expect.objectContaining({
+        p_action: 'reject_observation',
+        p_transaction_id: null,
+        p_reason: 'duplicate_capture',
+      }),
     );
+  });
+
+  it('requires a preset reason when rejecting', async () => {
+    const response = await POST(
+      request({
+        observation_id: observationId,
+        action: 'reject_observation',
+        idempotency_key: key,
+        reason: 'guessed',
+      }),
+      { params: Promise.resolve({ id: 'doc-1' }) },
+    );
+    expect(response.status).toBe(400);
+    expect(rpc).not.toHaveBeenCalled();
   });
 });

@@ -16,6 +16,7 @@ const {
   transactionGte,
   transactionLte,
   accountEq,
+  historyQuery,
 } = vi.hoisted(() => ({
   getUserClient: vi.fn(),
   documentQuery: vi.fn(),
@@ -31,6 +32,7 @@ const {
   transactionGte: vi.fn(),
   transactionLte: vi.fn(),
   accountEq: vi.fn(),
+  historyQuery: vi.fn(),
 }));
 
 vi.mock('@/lib/api/server', () => ({
@@ -70,6 +72,7 @@ describe('GET document reconciliation suggestions', () => {
       error: null,
     });
     accountQuery.mockResolvedValue({ data: [{ id: 'account-1', name: 'Checking' }], error: null });
+    historyQuery.mockResolvedValue({ data: [], error: null });
 
     const documentBuilder = { select: () => ({ eq: documentEq }) };
     documentEq.mockReturnValue({ eq: documentOwnerEq });
@@ -77,7 +80,13 @@ describe('GET document reconciliation suggestions', () => {
     const observationBuilder = { select: () => ({ eq: observationEq }) };
     observationEq.mockReturnValue({ eq: observationOwnerEq });
     observationOwnerEq.mockReturnValue({ order: observationQuery });
-    const transactionBuilder = { select: () => ({ eq: transactionEq }) };
+    const historyTail = { is: () => ({ not: () => ({ order: () => ({ limit: historyQuery }) }) }) };
+    const transactionBuilder = {
+      select: (columns: string) =>
+        columns === 'description,type,category_id'
+          ? { eq: () => historyTail }
+          : { eq: transactionEq },
+    };
     const transactionTail = {
       in: () => transactionTail,
       gte: transactionGte,
@@ -137,6 +146,49 @@ describe('GET document reconciliation suggestions', () => {
     const body = await response.json();
     expect(body.data[0].candidates).toHaveLength(1);
     expect(transactionAmountEq).toHaveBeenCalledWith('amount', 12000);
+  });
+
+  it('suggests a recurring historical merchant category without returning the account', async () => {
+    observationQuery.mockResolvedValue({
+      data: [{ ...observation, description: 'SUPERMERCADO MERCAMAS' }],
+      error: null,
+    });
+    historyQuery.mockResolvedValue({
+      data: [1, 2, 3].map(() => ({
+        description: 'SUPERMERCADO MERCAMA',
+        type: 'expense',
+        category_id: 'groceries',
+      })),
+      error: null,
+    });
+    const response = await request();
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.data[0].category_suggestion).toEqual({
+      type: 'expense',
+      categoryId: 'groceries',
+      evidenceCount: 3,
+    });
+    expect(body.data[0].category_suggestion.accountId).toBeUndefined();
+  });
+
+  it('uses the description when OCR names the bank as counterparty', async () => {
+    observationQuery.mockResolvedValue({
+      data: [{ ...observation, counterparty: 'Bancolombia', description: 'SUPERMERCADO MERCAMAS' }],
+      error: null,
+    });
+    historyQuery.mockResolvedValue({
+      data: [1, 2].map(() => ({
+        description: 'Compra Mercama',
+        type: 'expense',
+        category_id: 'groceries',
+      })),
+      error: null,
+    });
+    const response = await request();
+    expect((await response.json()).data[0].category_suggestion).toMatchObject({
+      categoryId: 'groceries',
+    });
   });
 
   it('refuses suggestions for another user document', async () => {
