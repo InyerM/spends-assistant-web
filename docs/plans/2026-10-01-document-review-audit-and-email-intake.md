@@ -4,6 +4,12 @@ Status: document review changes are implemented locally and require the normal r
 connection is a design proposal; no mailbox connection, OAuth credential, forwarding rule, or
 automatic import has been created.
 
+Release check on 2026-10-01: the linked Supabase project `zptcolhwonzvaxevyxuj` rejected the
+available database credential with `28P01`, and the local Management API token did not list that
+project. The document lifecycle migration is therefore unapplied remotely. Do not deploy the web
+release until project access is restored, the migration is applied, and the browser checks below
+pass.
+
 ## Evidence and current boundaries
 
 - The web repository's `CLAUDE.md` requires React Query for data access, shared UI controls, and
