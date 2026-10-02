@@ -46,6 +46,7 @@ export async function decideDocumentObservation(input: {
   transactionId?: string;
   key: string;
   reason?: string;
+  reasonDetail?: string;
 }): Promise<void> {
   await check(
     await fetch(`/api/documents/${input.documentId}/decisions`, {
@@ -57,6 +58,7 @@ export async function decideDocumentObservation(input: {
         transaction_id: input.transactionId ?? null,
         idempotency_key: input.key,
         reason: input.reason,
+        reason_detail: input.reasonDetail,
       }),
     }),
   );

@@ -139,4 +139,41 @@ describe('POST document observation decision', () => {
     expect(response.status).toBe(400);
     expect(rpc).not.toHaveBeenCalled();
   });
+
+  it('passes bounded custom detail to the owner-scoped rejection RPC', async () => {
+    const response = await POST(
+      request({
+        observation_id: observationId,
+        action: 'reject_observation',
+        idempotency_key: key,
+        reason: 'other',
+        reason_detail: 'Balance alert',
+      }),
+      { params: Promise.resolve({ id: 'doc-1' }) },
+    );
+    expect(response.status).toBe(200);
+    expect(rpc).toHaveBeenCalledWith('decide_document_observation_with_reason', {
+      p_observation_id: observationId,
+      p_action: 'reject_observation',
+      p_transaction_id: null,
+      p_idempotency_key: key,
+      p_reason: 'other',
+      p_reason_detail: 'Balance alert',
+    });
+  });
+
+  it('rejects custom detail for a preset reason', async () => {
+    const response = await POST(
+      request({
+        observation_id: observationId,
+        action: 'reject_observation',
+        idempotency_key: key,
+        reason: 'unreadable',
+        reason_detail: 'Arbitrary text',
+      }),
+      { params: Promise.resolve({ id: 'doc-1' }) },
+    );
+    expect(response.status).toBe(400);
+    expect(rpc).not.toHaveBeenCalled();
+  });
 });

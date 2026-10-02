@@ -15,6 +15,7 @@ export interface SearchableSelectItem {
 interface SearchableSelectProps {
   value?: string;
   onValueChange: (value: string) => void;
+  ariaLabel?: string;
   placeholder?: string;
   searchPlaceholder?: string;
   emptyText?: string;
@@ -27,6 +28,7 @@ interface SearchableSelectProps {
 export function SearchableSelect({
   value,
   onValueChange,
+  ariaLabel,
   placeholder = 'Select...',
   searchPlaceholder = 'Search...',
   emptyText = 'No results found.',
@@ -75,6 +77,7 @@ export function SearchableSelect({
         <button
           type='button'
           role='combobox'
+          aria-label={ariaLabel}
           aria-expanded={open}
           aria-controls='searchable-select-list'
           className={cn(

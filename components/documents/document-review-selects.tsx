@@ -61,8 +61,8 @@ export function DocumentRejectReasonSelect({
   ] as const;
   return (
     <Select value={value} onValueChange={onChange} disabled={disabled}>
-      <SelectTrigger className='w-full sm:w-64' aria-label={t('rejectReason')}>
-        <SelectValue />
+      <SelectTrigger className='w-full' aria-label={t('rejectReason')}>
+        <SelectValue placeholder={t('selectRejectReason')} />
       </SelectTrigger>
       <SelectContent>
         {reasons.map((reason) => (

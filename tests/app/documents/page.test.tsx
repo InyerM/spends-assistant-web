@@ -75,10 +75,19 @@ describe('document inbox', () => {
       ),
     );
     renderDocuments();
-    await waitFor(() => expect(screen.getAllByText('Coffee')[0]).toBeInTheDocument());
-    expect(screen.getByText('observations')).toBeInTheDocument();
-    expect(screen.getByText(/observationStatus.pending/)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'createTransaction' })).toBeInTheDocument();
+    await screen.findByText('receipt.png');
+    fireEvent.click(screen.getByText(/^observations/));
+    expect(screen.getByText('Coffee')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'editObservation' })).toBeInTheDocument();
+  });
+
+  it('links the document inbox to guided email forwarding setup', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(Response.json({ data: [] })));
+    renderDocuments();
+    expect(await screen.findByRole('link', { name: 'connectEmail' })).toHaveAttribute(
+      'href',
+      '/settings?tab=email-forwarding',
+    );
   });
 
   it('creates and links a signed bank debit only after the user reviews its fields', async () => {
@@ -120,13 +129,13 @@ describe('document inbox', () => {
     });
     vi.stubGlobal('fetch', fetchMock);
     renderDocuments();
-    await screen.findAllByText('Cafe North');
-    fireEvent.click(screen.getByRole('button', { name: 'createTransaction' }));
+    await screen.findByText('bank.png');
+    fireEvent.click(screen.getByText(/^observations/));
+    fireEvent.click(screen.getByRole('button', { name: 'editObservation' }));
     expect(fetchMock.mock.calls.every(([, options]) => options?.method !== 'POST')).toBe(true);
-    fireEvent.change(screen.getByLabelText('transactionTime'), { target: { value: '13:25' } });
-    chooseSelect('transactionAccount', 'Bancolombia');
-    fireEvent.click(screen.getByLabelText('createChecked'));
-    fireEvent.click(screen.getByRole('button', { name: 'confirmCreate' }));
+    chooseSelect('bulkAccount', 'Bancolombia');
+    fireEvent.click(screen.getByLabelText('confirmSelected'));
+    fireEvent.click(screen.getByRole('button', { name: 'approveSelected' }));
     await waitFor(() =>
       expect(fetchMock).toHaveBeenCalledWith(
         '/api/documents/doc-1/decisions',
@@ -186,21 +195,21 @@ describe('document inbox', () => {
     });
     vi.stubGlobal('fetch', fetchMock);
     renderDocuments();
-    await screen.findAllByText('Own account transfer');
-    fireEvent.click(screen.getByRole('button', { name: 'createTransaction' }));
-    fireEvent.change(screen.getByLabelText('transactionTime'), { target: { value: '13:25' } });
+    await screen.findByText('bank.png');
+    fireEvent.click(screen.getByText(/^observations/));
+    fireEvent.click(screen.getByRole('button', { name: 'editObservation' }));
     chooseSelect('transactionType', 'transfer');
-    chooseSelect('transactionAccount', 'Bancolombia');
-    fireEvent.click(screen.getByLabelText('createChecked'));
-    fireEvent.click(screen.getByRole('button', { name: 'confirmCreate' }));
+    chooseSelect('bulkAccount', 'Bancolombia');
+    fireEvent.click(screen.getByLabelText('confirmSelected'));
+    fireEvent.click(screen.getByRole('button', { name: 'approveSelected' }));
     expect(
       fetchMock.mock.calls.filter(
         ([url, options]) => url === '/api/transactions' && options?.method === 'POST',
       ),
     ).toHaveLength(0);
     chooseSelect('destinationAccount', 'Nequi');
-    fireEvent.click(screen.getByLabelText('createChecked'));
-    fireEvent.click(screen.getByRole('button', { name: 'confirmCreate' }));
+    fireEvent.click(screen.getByLabelText('confirmSelected'));
+    fireEvent.click(screen.getByRole('button', { name: 'approveSelected' }));
     await waitFor(() =>
       expect(
         fetchMock.mock.calls.some(
@@ -239,7 +248,7 @@ describe('document inbox', () => {
     );
     renderDocuments();
     await waitFor(() => expect(screen.getByText('receipt.png')).toBeInTheDocument());
-    expect(screen.getByRole('button', { name: 'extract' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'extract' })).toBeInTheDocument();
   });
 
   it('requires a second explicit action before confirming a candidate', async () => {
@@ -307,11 +316,9 @@ describe('document inbox', () => {
     );
     vi.stubGlobal('fetch', fetchMock);
     renderDocuments();
-    await waitFor(() => expect(screen.getAllByText('Coffee')[0]).toBeInTheDocument());
-    fireEvent.click(screen.getByRole('button', { name: 'findSuggestions' }));
-    await waitFor(() => expect(screen.getByText('Coffee shop')).toBeInTheDocument());
-    expect(screen.getByText('candidateOnly')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'reviewMatch' })).toBeInTheDocument();
+    await screen.findByText('receipt.png');
+    fireEvent.click(screen.getByText(/^observations/));
+    expect(await screen.findByRole('button', { name: 'reviewMatch' })).toBeInTheDocument();
     expect(fetchMock.mock.calls.every(([, options]) => options?.method === undefined)).toBe(true);
     fireEvent.click(screen.getByRole('button', { name: 'reviewMatch' }));
     expect(screen.getByText('confirmMatchSummary')).toBeInTheDocument();

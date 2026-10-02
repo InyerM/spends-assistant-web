@@ -64,6 +64,7 @@ function mockRequests(
   failFirstCreate = false,
   candidate = false,
   positiveReceipt = false,
+  duplicateOnCreate = false,
 ): ReturnType<typeof vi.fn> {
   let rows = observations.map((item) => ({
     ...item,
@@ -134,6 +135,14 @@ function mockRequests(
       return Response.json({ transaction_id: recoveredId });
     if (url === '/api/transactions' && options?.method === 'POST') {
       created += 1;
+      if (duplicateOnCreate)
+        return Response.json(
+          {
+            duplicate: true,
+            match: { id: 'tx-existing', description: 'Lunch', date: '2026-09-28', amount: 12000 },
+          },
+          { status: 409 },
+        );
       if (failFirstCreate && created === 1)
         return Response.json({ error: 'Temporary failure' }, { status: 503 });
       return Response.json({ id: `tx-${created}` }, { status: 201 });
@@ -185,6 +194,44 @@ describe('document batch review', () => {
     expect(screen.queryByText('Old rejection')).not.toBeVisible();
     fireEvent.click(screen.getByText(/^rejectedObservations/));
     expect(screen.getByText('Old rejection')).toBeVisible();
+  });
+
+  it('shows each pending movement once and opens its shared edit controls from the row', async () => {
+    mockRequests();
+    renderDocuments();
+    await screen.findByText('bank.png');
+    fireEvent.click(screen.getAllByText(/^observations/)[0]);
+    expect(screen.getAllByText('Lunch')).toHaveLength(1);
+    fireEvent.click(screen.getAllByRole('button', { name: 'editObservation' })[0]);
+    expect(screen.getByRole('textbox', { name: 'Hours' })).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'transactionCategory' })).toBeInTheDocument();
+  });
+
+  it('asks for a rejection reason in a dialog and saves free text for Other', async () => {
+    const fetchMock = mockRequests();
+    renderDocuments();
+    await screen.findByText('bank.png');
+    fireEvent.click(screen.getAllByText(/^observations/)[0]);
+    fireEvent.click(screen.getAllByRole('button', { name: 'reviewReject' })[0]);
+    const dialog = screen.getByRole('dialog', { name: 'rejectReason' });
+    expect(fetchMock.mock.calls.filter(([url]) => url.endsWith('/decisions'))).toHaveLength(0);
+    fireEvent.click(within(dialog).getByRole('combobox', { name: 'rejectReason' }));
+    fireEvent.click(screen.getByRole('option', { name: 'reason.other' }));
+    fireEvent.change(within(dialog).getByRole('textbox', { name: 'otherReasonDetail' }), {
+      target: { value: 'This is a balance alert, not a purchase' },
+    });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'confirmReject' }));
+    await waitFor(() =>
+      expect(fetchMock.mock.calls.filter(([url]) => url.endsWith('/decisions'))).toHaveLength(1),
+    );
+    expect(
+      JSON.parse(
+        fetchMock.mock.calls.find(([url]) => url.endsWith('/decisions'))![1]!.body as string,
+      ),
+    ).toMatchObject({
+      reason: 'other',
+      reason_detail: 'This is a balance alert, not a purchase',
+    });
   });
 
   it('reviews two ambiguous dollar rows as COP and approves them into transactions', async () => {
@@ -251,8 +298,10 @@ describe('document batch review', () => {
     fireEvent.click(screen.getByRole('button', { name: 'selectAllPending' }));
     fireEvent.click(screen.getByRole('button', { name: 'rejectSelected' }));
     expect(fetchMock.mock.calls.filter(([url]) => url.endsWith('/decisions'))).toHaveLength(0);
-    const review = screen.getByRole('region', { name: 'bulkRejectConfirmation' });
-    fireEvent.click(within(review).getByRole('button', { name: 'confirmRejectSelected' }));
+    const review = screen.getByRole('dialog', { name: 'rejectReason' });
+    fireEvent.click(within(review).getByRole('combobox', { name: 'rejectReason' }));
+    fireEvent.click(screen.getByRole('option', { name: 'reason.duplicate_capture' }));
+    fireEvent.click(within(review).getByRole('button', { name: 'confirmReject' }));
     await waitFor(() =>
       expect(fetchMock.mock.calls.filter(([url]) => url.endsWith('/decisions'))).toHaveLength(2),
     );
@@ -260,7 +309,7 @@ describe('document batch review', () => {
       JSON.parse(
         fetchMock.mock.calls.find(([url]) => url.endsWith('/decisions'))![1]!.body as string,
       ),
-    ).toMatchObject({ reason: 'other' });
+    ).toMatchObject({ reason: 'duplicate_capture' });
   });
 
   it('shows likely existing transactions before approval', async () => {
@@ -273,6 +322,44 @@ describe('document batch review', () => {
       'href',
       '/transactions/tx-existing',
     );
+  });
+
+  it('links a suggested existing transaction only after a second confirmation in the same row', async () => {
+    const fetchMock = mockRequests(null, false, true);
+    renderDocuments();
+    await screen.findByText('bank.png');
+    fireEvent.click(screen.getAllByText(/^observations/)[0]);
+    const matchButton = await screen.findByRole('button', { name: 'reviewMatch' });
+    fireEvent.click(matchButton);
+    expect(fetchMock.mock.calls.filter(([url]) => url.endsWith('/decisions'))).toHaveLength(0);
+    fireEvent.click(screen.getByRole('button', { name: 'confirmMatch' }));
+    await waitFor(() =>
+      expect(fetchMock.mock.calls.filter(([url]) => url.endsWith('/decisions'))).toHaveLength(1),
+    );
+    expect(fetchMock.mock.calls.filter(([url]) => url === '/api/transactions')).toHaveLength(0);
+    expect(
+      JSON.parse(
+        fetchMock.mock.calls.find(([url]) => url.endsWith('/decisions'))![1]!.body as string,
+      ),
+    ).toMatchObject({ action: 'accept', transaction_id: 'tx-existing' });
+  });
+
+  it('can link a duplicate found during creation without creating it again', async () => {
+    const fetchMock = mockRequests(null, false, false, false, true);
+    renderDocuments();
+    await screen.findByText('bank.png');
+    fireEvent.click(screen.getAllByText(/^observations/)[0]);
+    fireEvent.click(screen.getAllByRole('checkbox', { name: 'selectObservation' })[0]);
+    chooseBulkAccount();
+    fireEvent.click(screen.getByLabelText('confirmSelected'));
+    fireEvent.click(screen.getByRole('button', { name: 'approveSelected' }));
+    const linkButton = await screen.findByRole('button', { name: 'linkDuplicate' });
+    fireEvent.click(linkButton);
+    fireEvent.click(screen.getByRole('button', { name: 'confirmMatch' }));
+    await waitFor(() =>
+      expect(fetchMock.mock.calls.filter(([url]) => url.endsWith('/decisions'))).toHaveLength(1),
+    );
+    expect(fetchMock.mock.calls.filter(([url]) => url === '/api/transactions')).toHaveLength(1);
   });
 
   it('uses an AI category proposal without changing the reviewed amount or account', async () => {

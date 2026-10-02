@@ -8,6 +8,7 @@ interface DecisionBody {
   transaction_id?: unknown;
   idempotency_key?: unknown;
   reason?: unknown;
+  reason_detail?: unknown;
 }
 
 const REJECTION_REASONS = new Set([
@@ -27,6 +28,7 @@ export async function POST(
     const { supabase, userId } = await getUserClient();
     const { id } = await params;
     const body = (await request.json().catch(() => null)) as DecisionBody | null;
+    const reasonDetail = typeof body?.reason_detail === 'string' ? body.reason_detail.trim() : null;
     if (
       !body ||
       typeof body.observation_id !== 'string' ||
@@ -39,7 +41,13 @@ export async function POST(
       (body.action === 'reject_observation' &&
         body.transaction_id !== null &&
         body.transaction_id !== undefined) ||
-      (body.action === 'reject_observation' && !REJECTION_REASONS.has(String(body.reason)))
+      (body.action === 'reject_observation' && !REJECTION_REASONS.has(String(body.reason))) ||
+      (body.action === 'reject_observation' &&
+        ((body.reason === 'other' && (!reasonDetail || reasonDetail.length > 500)) ||
+          (body.reason !== 'other' &&
+            body.reason_detail !== null &&
+            body.reason_detail !== undefined))) ||
+      (body.action === 'accept' && body.reason_detail !== null && body.reason_detail !== undefined)
     )
       return errorResponse('Invalid review decision', 400);
 
@@ -62,7 +70,9 @@ export async function POST(
         p_action: body.action,
         p_transaction_id: body.action === 'accept' ? body.transaction_id : null,
         p_idempotency_key: body.idempotency_key,
-        ...(body.action === 'reject_observation' ? { p_reason: body.reason as string } : {}),
+        ...(body.action === 'reject_observation'
+          ? { p_reason: body.reason as string, p_reason_detail: reasonDetail }
+          : {}),
       },
     );
     if (error) {

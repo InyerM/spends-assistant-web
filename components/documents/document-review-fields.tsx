@@ -2,7 +2,10 @@
 
 import { useLocale, useTranslations } from 'next-intl';
 import { DatePicker } from '@/components/ui/date-picker';
+import { TimePicker } from '@/components/ui/time-picker';
 import { Input } from '@/components/ui/input';
+import { SearchableSelect } from '@/components/shared/searchable-select';
+import { buildCategoryItems } from '@/lib/utils/select-items';
 import {
   Select,
   SelectContent,
@@ -34,6 +37,8 @@ export function DocumentReviewFields({
   onChange,
 }: Props): React.ReactElement {
   const t = useTranslations('documents');
+  const transactionT = useTranslations('transactions');
+  const commonT = useTranslations('common');
   const locale = useLocale();
   const activeAccounts = accounts.filter(
     (account) => account.is_active && !account.deleted_at && account.currency === draft.currency,
@@ -50,17 +55,11 @@ export function DocumentReviewFields({
           ariaLabel={t('transactionDate')}
         />
       </div>
-      <label className='space-y-1 text-sm'>
-        {t('transactionTime')}
-        <Input
-          type='time'
-          aria-label={t('transactionTime')}
-          value={draft.time}
-          disabled={disabled}
-          onChange={(event) => onChange({ time: event.target.value })}
-        />
+      <fieldset disabled={disabled} className='space-y-1 text-sm'>
+        <legend>{t('transactionTime')}</legend>
+        <TimePicker value={draft.time} onChange={(time) => onChange({ time })} />
         <span className='text-muted-foreground block text-xs'>{t('timeOptional')}</span>
-      </label>
+      </fieldset>
       <label className='space-y-1 text-sm'>
         {t('transactionAmount')}
         <Input
@@ -135,24 +134,23 @@ export function DocumentReviewFields({
       {draft.type !== 'transfer' && (
         <div className='space-y-1 text-sm'>
           <label>{t('transactionCategory')}</label>
-          <Select
-            value={draft.categoryId || '__none__'}
-            onValueChange={(value) => onChange({ categoryId: value === '__none__' ? '' : value })}
-            disabled={disabled}>
-            <SelectTrigger className='w-full' aria-label={t('transactionCategory')}>
-              <SelectValue placeholder={t('selectCategory')} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value='__none__'>{t('selectCategory')}</SelectItem>
-              {categories
-                .filter((category) => category.type === draft.type && category.is_active)
-                .map((category) => (
-                  <SelectItem key={category.id} value={category.id}>
-                    {category.name}
-                  </SelectItem>
-                ))}
-            </SelectContent>
-          </Select>
+          <SearchableSelect
+            value={draft.categoryId}
+            onValueChange={(categoryId) => onChange({ categoryId })}
+            ariaLabel={t('transactionCategory')}
+            placeholder={t('selectCategory')}
+            searchPlaceholder={transactionT('searchCategories')}
+            items={buildCategoryItems(
+              categories.filter((category) => category.is_active),
+              draft.type,
+              {
+                locale: locale as 'en' | 'es' | 'pt',
+                allPrefix: (name) => commonT('allOf', { name }),
+              },
+            )}
+            collapsibleGroups
+            disabled={disabled}
+          />
         </div>
       )}
       <label className='space-y-1 text-sm sm:col-span-2'>
