@@ -59,6 +59,14 @@ describe('EmailForwardingTab', () => {
     expect(fetchMock).toHaveBeenCalledWith('/api/email-forwarding', { method: 'POST' });
   });
 
+  it('does not offer address creation before inbound routing is ready', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(Response.json({ status: 'unavailable' })));
+    renderTab();
+
+    expect(await screen.findByText('setupUnavailable')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'createAddress' })).not.toBeInTheDocument();
+  });
+
   it('shows received verification text without claiming Gmail forwarding is active', async () => {
     vi.stubGlobal(
       'fetch',

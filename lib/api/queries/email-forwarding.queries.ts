@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 
 export type EmailForwardingRoute =
+  | { status: 'unavailable' }
   | { status: 'unconfigured' }
   | {
       status: 'active';

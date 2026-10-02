@@ -4,6 +4,7 @@
   "description": "Recibe avisos nuevos de tus bancos en una dirección privada y revísalos antes de crear movimientos.",
   "loading": "Cargando tu dirección de reenvío…",
   "loadError": "No pudimos consultar tu dirección. Inténtalo de nuevo.",
+  "setupUnavailable": "El reenvío de correos estará disponible cuando terminemos de configurar la recepción. Mientras tanto, puedes revisar y cargar capturas en Documentos.",
   "retry": "Reintentar",
   "intro": "Crea una dirección exclusiva para tus avisos bancarios. Después configurarás en Gmail un filtro para reenviar solo los mensajes que elijas.",
   "createAddress": "Crear dirección privada",

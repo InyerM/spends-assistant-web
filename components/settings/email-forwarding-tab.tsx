@@ -77,6 +77,12 @@ export function EmailForwardingTab(): React.ReactElement {
           </div>
         )}
 
+        {route?.status === 'unavailable' && (
+          <p className='text-muted-foreground text-sm leading-relaxed' role='status'>
+            {t('setupUnavailable')}
+          </p>
+        )}
+
         {route?.status === 'unconfigured' && (
           <div className='space-y-4'>
             <p className='text-foreground text-sm leading-relaxed'>{t('intro')}</p>

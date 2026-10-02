@@ -4,6 +4,7 @@
   "description": "Send new bank notices to a private address and review them before creating transactions.",
   "loading": "Loading your forwarding address…",
   "loadError": "We couldn't load your address. Try again.",
+  "setupUnavailable": "Email forwarding will be available after inbound delivery is configured. You can still review and upload captures in Documents.",
   "retry": "Try again",
   "intro": "Create an address just for bank notices. Then set up a Gmail filter to forward only the messages you choose.",
   "createAddress": "Create private address",
