@@ -1,3 +1,5 @@
+import { inferDocumentTransactionType } from '@/lib/document-review';
+
 export interface ReconciliationObservation {
   id: string;
   amount: number | null;
@@ -5,6 +7,7 @@ export interface ReconciliationObservation {
   description: string;
   counterparty: string | null;
   reference: string | null;
+  source_excerpt?: string | null;
 }
 
 export interface ReconciliationTransaction {
@@ -78,13 +81,18 @@ export function rankCandidates(
   const cents = observation.amount === null ? null : amountCents(Math.abs(observation.amount));
   if (cents === null) return [];
   const observedAt = parseDate(observation.occurred_at_text);
+  const expectedType = inferDocumentTransactionType(
+    observation.amount,
+    observation.description,
+    observation.source_excerpt ?? '',
+  );
   const reference = normalizedText(observation.reference ?? '').replace(/[^a-z0-9]/g, '');
   const words = tokens(`${observation.description} ${observation.counterparty ?? ''}`);
 
   return transactions
     .flatMap((transaction) => {
       if (amountCents(transaction.amount) !== cents) return [];
-      if (observation.amount !== null && observation.amount < 0 && transaction.type === 'income')
+      if (expectedType === 'income' ? transaction.type !== 'income' : transaction.type === 'income')
         return [];
       const transactionAt = parseDate(transaction.date);
       if (transactionAt === null) return [];

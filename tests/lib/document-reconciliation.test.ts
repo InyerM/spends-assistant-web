@@ -50,6 +50,24 @@ describe('document reconciliation candidates', () => {
     ).toEqual(['expense']);
   });
 
+  it('does not suggest an opposite-direction movement with the same amount and date', () => {
+    expect(
+      rankCandidates(
+        {
+          ...observation,
+          description: 'Bancolombia: Recibiste $12.000',
+        },
+        [transaction('expense'), transaction('income', { type: 'income' })],
+      ).map((candidate) => candidate.transaction_id),
+    ).toEqual(['income']);
+    expect(
+      rankCandidates(observation, [
+        transaction('expense'),
+        transaction('income', { type: 'income' }),
+      ]).map((candidate) => candidate.transaction_id),
+    ).toEqual(['expense']);
+  });
+
   it('excludes false positives with a different amount or distant date', () => {
     expect(
       rankCandidates(observation, [

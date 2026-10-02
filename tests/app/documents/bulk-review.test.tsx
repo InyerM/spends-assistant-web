@@ -63,8 +63,12 @@ function mockRequests(
   recoveredId: string | null = null,
   failFirstCreate = false,
   candidate = false,
+  positiveReceipt = false,
 ): ReturnType<typeof vi.fn> {
-  let rows = observations.map((item) => ({ ...item }));
+  let rows = observations.map((item) => ({
+    ...item,
+    amount: positiveReceipt && item.id === 'obs-1' ? 12000 : item.amount,
+  }));
   let archived = false;
   let created = 0;
   const mock = vi.fn().mockImplementation(async (url: string, options?: RequestInit) => {
@@ -117,7 +121,7 @@ function mockRequests(
             file_name: 'bank.png',
             status: 'extracted',
             archived_at: archived ? '2026-10-01T00:00:00Z' : null,
-            document_type: 'bank_screenshot',
+            document_type: positiveReceipt ? 'receipt' : 'bank_screenshot',
             created_at: '2026-09-28T12:00:00Z',
             updated_at: '2026-09-28T12:00:00Z',
             document_observations: rows,
@@ -219,6 +223,24 @@ describe('document batch review', () => {
       source: 'web-document',
       parsed_data: { document_id: 'doc-1', observation_id: 'obs-1', time_source: 'unknown' },
     });
+  });
+
+  it('records a positive OCR receipt total as an expense after review', async () => {
+    const fetchMock = mockRequests(null, false, false, true);
+    renderDocuments();
+    await screen.findByText('bank.png');
+    fireEvent.click(screen.getAllByText(/^observations/)[0]);
+    fireEvent.click(screen.getAllByRole('checkbox', { name: 'selectObservation' })[0]);
+    chooseBulkAccount();
+    fireEvent.click(screen.getByLabelText('confirmSelected'));
+    fireEvent.click(screen.getByRole('button', { name: 'approveSelected' }));
+    await waitFor(() =>
+      expect(fetchMock.mock.calls.filter(([url]) => url === '/api/transactions')).toHaveLength(1),
+    );
+    const createdPayload = JSON.parse(
+      fetchMock.mock.calls.find(([url]) => url === '/api/transactions')![1]!.body as string,
+    );
+    expect(createdPayload.type).toBe('expense');
   });
 
   it('requires explicit confirmation before rejecting selected observations', async () => {

@@ -13,6 +13,7 @@ const {
   observationOwnerEq,
   transactionEq,
   transactionAmountEq,
+  transactionTypeEq,
   transactionGte,
   transactionLte,
   accountEq,
@@ -29,6 +30,7 @@ const {
   observationOwnerEq: vi.fn(),
   transactionEq: vi.fn(),
   transactionAmountEq: vi.fn(),
+  transactionTypeEq: vi.fn(),
   transactionGte: vi.fn(),
   transactionLte: vi.fn(),
   accountEq: vi.fn(),
@@ -88,6 +90,7 @@ describe('GET document reconciliation suggestions', () => {
           : { eq: transactionEq },
     };
     const transactionTail = {
+      eq: transactionTypeEq,
       in: () => transactionTail,
       gte: transactionGte,
       lte: transactionLte,
@@ -95,6 +98,7 @@ describe('GET document reconciliation suggestions', () => {
     };
     transactionEq.mockReturnValue({ is: () => ({ eq: transactionAmountEq }) });
     transactionAmountEq.mockReturnValue(transactionTail);
+    transactionTypeEq.mockReturnValue(transactionTail);
     transactionGte.mockReturnValue(transactionTail);
     transactionLte.mockReturnValue(transactionTail);
     const accountBuilder = { select: () => ({ eq: accountEq }) };
@@ -146,6 +150,54 @@ describe('GET document reconciliation suggestions', () => {
     const body = await response.json();
     expect(body.data[0].candidates).toHaveLength(1);
     expect(transactionAmountEq).toHaveBeenCalledWith('amount', 12000);
+  });
+
+  it('keeps incoming and outgoing searches separate at the same amount and date', async () => {
+    observationQuery.mockResolvedValue({
+      data: [
+        observation,
+        {
+          ...observation,
+          id: 'obs-income',
+          description: 'Bancolombia: Recibiste $12.000',
+        },
+      ],
+      error: null,
+    });
+    transactionQuery.mockResolvedValue({
+      data: [
+        {
+          id: 'expense',
+          amount: 12000,
+          date: '2026-09-28',
+          description: 'Cafe North',
+          account_id: 'account-1',
+          type: 'expense',
+          raw_text: null,
+        },
+        {
+          id: 'income',
+          amount: 12000,
+          date: '2026-09-28',
+          description: 'Received',
+          account_id: 'account-1',
+          type: 'income',
+          raw_text: null,
+        },
+      ],
+      error: null,
+    });
+    const response = await request();
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(
+      body.data.map(
+        (item: { candidates: Array<{ transaction_id: string }> }) =>
+          item.candidates[0]?.transaction_id,
+      ),
+    ).toEqual(['expense', 'income']);
+    expect(transactionQuery).toHaveBeenCalledTimes(2);
+    expect(transactionTypeEq).toHaveBeenCalledWith('type', 'income');
   });
 
   it('suggests a recurring historical merchant category without returning the account', async () => {

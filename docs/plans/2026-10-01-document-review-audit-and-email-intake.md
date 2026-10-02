@@ -45,13 +45,14 @@ pass.
    and the original OCR value; explicit USD still requires a future supported currency flow. A
    category suggestion may use similar, owner-scoped historical ledger merchants, but an account
    suggestion requires a unique visible four-digit card or bank account suffix plus institution
-   evidence. “Bancolombia” alone never selects an account. The reviewer can override all selected
-   rows with one account.
-2. Fetch exact-amount/date candidates when a capture is opened. Show candidates with their source
-   transaction link and evidence before approval. The existing server duplicate guard still stops
-   duplicate creation; equal amount and date alone never cause an automatic rejection. For strong
-   candidates, the reviewer may link the existing transaction in the individual review, or reject an
-   observation with a recorded reason.
+   evidence. “Bancolombia” alone never selects an account. An unsigned receipt total starts as an
+   expense; explicit incoming wording starts as income. The reviewer can override all selected rows
+   with one account.
+2. Fetch exact-amount/date and matching-direction candidates when a capture is opened. Show
+   candidates with their source transaction link and evidence before approval. The existing server
+   duplicate guard still stops duplicate creation; equal amount and date alone never cause an
+   automatic rejection. For strong candidates, the reviewer may link the existing transaction in the
+   individual review, or reject an observation with a recorded reason.
 3. Rejection reasons are `already_recorded`, `duplicate_capture`, `not_a_transaction`, `unreadable`,
    `wrong_account`, and `other`. Restoration returns only an unlinked rejected observation to
    pending; a confirmed or linked observation remains immutable. Archived captures remain stored

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  inferDocumentTransactionType,
   inferAccountFromEvidence,
   inferCategoryFromHistory,
   suggestDocumentReview,
@@ -16,6 +17,19 @@ const current = {
 };
 
 describe('document review suggestions', () => {
+  it('treats a positive receipt purchase as an expense and an explicit incoming credit as income', () => {
+    expect(inferDocumentTransactionType(12000, 'Mercamás', 'Total $12.000')).toBe('expense');
+    expect(
+      inferDocumentTransactionType(12000, 'Mercamás', 'Bancolombia: Compraste $12.000 en Mercamás'),
+    ).toBe('expense');
+    expect(
+      inferDocumentTransactionType(
+        12000,
+        'Transferencia recibida',
+        'Bancolombia: Recibiste $12.000',
+      ),
+    ).toBe('income');
+  });
   it('suggests the account currency for an ambiguous dollar sign but preserves explicit USD', () => {
     expect(suggestDocumentReview(current, [], 'COP').currency).toEqual({
       value: 'COP',

@@ -6,7 +6,7 @@ import {
   type ReconciliationObservation,
   type ReconciliationTransaction,
 } from '@/lib/document-reconciliation';
-import { inferCategoryFromHistory } from '@/lib/document-review';
+import { inferCategoryFromHistory, inferDocumentTransactionType } from '@/lib/document-review';
 
 const SEARCH_LIMIT = 100;
 const DISPLAY_LIMIT = 5;
@@ -36,7 +36,9 @@ export async function GET(
 
     const { data: rawObservations, error: observationError } = await supabase
       .from('document_observations')
-      .select('id, amount, occurred_at_text, description, counterparty, reference, status')
+      .select(
+        'id, amount, occurred_at_text, description, counterparty, reference, source_excerpt, status',
+      )
       .eq('document_id', id)
       .eq('user_id', userId)
       .order('ordinal', { ascending: true });
@@ -68,7 +70,12 @@ export async function GET(
       )
         continue;
       const window = dateWindow(observation.occurred_at_text);
-      const key = `${observation.amount}:${window?.from ?? 'any'}`;
+      const direction = inferDocumentTransactionType(
+        observation.amount,
+        observation.description,
+        observation.source_excerpt ?? '',
+      );
+      const key = `${observation.amount}:${window?.from ?? 'any'}:${direction}`;
       if (transactionCache.has(key)) continue;
 
       let query = supabase
@@ -77,7 +84,10 @@ export async function GET(
         .eq('user_id', userId)
         .is('deleted_at', null)
         .eq('amount', Math.abs(observation.amount));
-      if (observation.amount < 0) query = query.in('type', ['expense', 'transfer']);
+      query =
+        direction === 'income'
+          ? query.eq('type', 'income')
+          : query.in('type', ['expense', 'transfer']);
       if (window) query = query.gte('date', window.from).lte('date', window.to);
       const { data, error } = await query.order('date', { ascending: false }).limit(SEARCH_LIMIT);
       if (error) return errorResponse('Failed to search transactions');
@@ -105,7 +115,12 @@ export async function GET(
 
     const data = observations.map((observation) => {
       const window = dateWindow(observation.occurred_at_text);
-      const key = `${observation.amount}:${window?.from ?? 'any'}`;
+      const direction = inferDocumentTransactionType(
+        observation.amount,
+        observation.description,
+        observation.source_excerpt ?? '',
+      );
+      const key = `${observation.amount}:${window?.from ?? 'any'}:${direction}`;
       const rows = transactionCache.get(key) ?? [];
       const ranked =
         observation.status === 'pending'

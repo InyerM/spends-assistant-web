@@ -22,6 +22,7 @@ import { createTransaction, DuplicateError } from '@/lib/api/mutations/transacti
 import {
   suggestDocumentReview,
   inferAccountFromEvidence,
+  inferDocumentTransactionType,
   validateDocumentDraft,
   type ApprovalDraft,
   type ReviewHistoryObservation,
@@ -111,7 +112,11 @@ export function DocumentBatchReview({
 
   const draftFor = (row: DocumentReviewRow): ReviewDraft => {
     const suggestion = suggestDocumentReview(row, history, sharedCurrency);
-    const inferredType = row.amount !== null && row.amount > 0 ? 'income' : 'expense';
+    const inferredType = inferDocumentTransactionType(
+      row.amount,
+      row.description,
+      row.source_excerpt,
+    );
     const type =
       suggestion.transaction?.type === 'expense' ||
       suggestion.transaction?.type === 'income' ||

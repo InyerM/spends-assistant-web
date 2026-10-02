@@ -30,6 +30,26 @@ function normalize(value: string): string {
     .trim();
 }
 
+export function inferDocumentTransactionType(
+  amount: number | null,
+  description: string,
+  sourceExcerpt: string,
+): 'expense' | 'income' {
+  if (amount !== null && amount < 0) return 'expense';
+  const evidence = normalize(`${description} ${sourceExcerpt}`);
+  if (
+    /\b(recibiste|recibio|recibido|ingreso|deposito|consignacion|refund|refunded)\b/.test(
+      evidence,
+    ) ||
+    /\b(transferencia|abono|pago) recibido\b/.test(evidence) ||
+    /\bte enviaron\b/.test(evidence)
+  )
+    return 'income';
+  // OCR often returns a positive absolute total for purchases, especially receipts.
+  // An unsigned amount alone is not evidence of an incoming transfer.
+  return 'expense';
+}
+
 function explicitCurrency(value: string): string | null {
   if (/\b(?:USD|USDT|dollars?|dolares?)\b|US\$/i.test(normalize(value)) || /US\$/i.test(value))
     return 'USD';
