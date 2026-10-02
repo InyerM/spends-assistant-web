@@ -1,6 +1,6 @@
 # Document review audit and email intake plan
 
-Status: document review changes are implemented locally and require the normal release gates. Gmail
+Status: document review changes are deployed and await authenticated browser review. Gmail
 connection is a design proposal; no mailbox connection, OAuth credential, forwarding rule, or
 automatic import has been created.
 
@@ -9,8 +9,14 @@ Release check on 2026-10-01: the default Supabase CLI credential failed with `28
 `zptcolhwonzvaxevyxuj`. The versioned migration `20261002000000` was applied through that project's
 Management API in one transaction and recorded in `supabase_migrations.schema_migrations`. A
 read-only follow-up found one history row, the `documents.archived_at` column, all three lifecycle
-functions, and all three audit tables. Web deployment and authenticated browser review remain the
-release checks.
+functions, and all three audit tables. Backend commit `1edee24` passed
+[deploy run 36962153122](https://github.com/InyerM/spends-assistant-api/actions/runs/36962153122);
+the Worker health endpoint returned HTTP 200. Web commit `b6a7fa9` reached Vercel READY in
+deployment `dpl_HK6i9Sny7j7s22gnMASLeCFwd4vQ`; the direct alias and custom-domain login pages
+returned HTTP 200 with valid TLS. One synthetic local OpenRouter text request parsed a Mercamas
+purchase as `groceries` with the expected amount. Authenticated browser review of upload,
+suggestion, rejection, restoration, and archive remains unverified; no personal financial entry was
+created by these checks.
 
 ## Evidence and current boundaries
 
