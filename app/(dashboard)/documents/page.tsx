@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { DocumentBatchReview } from '@/components/documents/document-batch-review';
 import { MAX_DOCUMENT_BYTES } from '@/lib/documents';
 import { useAccounts } from '@/lib/api/queries/account.queries';
 import { useCategories } from '@/lib/api/queries/category.queries';
@@ -27,6 +28,9 @@ interface Observation {
   confidence: number;
   status: string;
   match_transaction_id?: string | null;
+  reviewed_at?: string | null;
+  extracted_snapshot?: { currency?: string | null } | null;
+  matched_transaction?: { type: string; category_id: string | null; account_id: string } | null;
 }
 
 interface Document {
@@ -457,371 +461,447 @@ export default function DocumentsPage(): React.ReactElement {
                   </div>
                 </div>
                 {document.status === 'extracted' && (
-                  <div className='border-border space-y-3 border-t pt-4'>
-                    <div className='flex flex-wrap items-center justify-between gap-2'>
-                      <p className='text-muted-foreground text-xs font-medium tracking-wide uppercase'>
-                        {t('observations')}
-                      </p>
-                      <Button
-                        size='sm'
-                        variant='outline'
-                        disabled={suggestionBusy !== null}
-                        onClick={() => void findSuggestions(document.id)}>
-                        {suggestionBusy === document.id
-                          ? t('findingSuggestions')
-                          : t('findSuggestions')}
-                      </Button>
-                    </div>
-                    {suggestions[document.id] && (
-                      <p className='text-muted-foreground text-xs'>{t('candidateOnly')}</p>
-                    )}
-                    {document.document_observations.length === 0 ? (
-                      <p className='text-muted-foreground text-sm'>{t('noObservations')}</p>
-                    ) : (
-                      [...document.document_observations]
-                        .sort((a, b) => a.ordinal - b.ordinal)
-                        .map((observation) => (
-                          <div key={observation.id} className='bg-muted/40 rounded-lg p-4'>
-                            <div className='flex flex-wrap items-start justify-between gap-2'>
-                              <div>
-                                <p className='font-medium'>{observation.description}</p>
-                                <p className='text-muted-foreground mt-1 text-sm'>
-                                  {[observation.counterparty, observation.occurred_at_text]
-                                    .filter(Boolean)
-                                    .join(' · ')}
-                                </p>
-                              </div>
-                              <span className='font-semibold tabular-nums'>
-                                {observation.amount === null
-                                  ? t('amountUnknown')
-                                  : `${observation.currency ?? ''} ${observation.amount.toLocaleString()}`}
-                              </span>
-                            </div>
-                            {observation.source_excerpt && (
-                              <p className='text-muted-foreground mt-3 border-l-2 pl-3 text-xs'>
-                                {observation.source_excerpt}
-                              </p>
-                            )}
-                            <p className='text-muted-foreground mt-2 text-xs'>
-                              {t('confidence', {
-                                percent: Math.round(observation.confidence * 100),
-                              })}{' '}
-                              · {t(`observationStatus.${observation.status}`)}
+                  <details className='border-border border-t pt-4'>
+                    <summary className='text-foreground cursor-pointer text-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-2'>
+                      {t('observations')} · {document.document_observations.length}
+                    </summary>
+                    <div className='mt-4 space-y-4'>
+                      <DocumentBatchReview
+                        documentId={document.id}
+                        rows={document.document_observations.map((observation) => ({
+                          ...observation,
+                          document_type: document.document_type,
+                        }))}
+                        history={documents.flatMap((entry) =>
+                          entry.document_observations.map((observation) => ({
+                            ...observation,
+                            document_type: entry.document_type,
+                          })),
+                        )}
+                        accounts={accounts ?? []}
+                        categories={categories ?? []}
+                        onRefresh={load}
+                      />
+                      <details className='border-border border-t pt-3'>
+                        <summary className='text-muted-foreground cursor-pointer text-sm focus-visible:outline-2 focus-visible:outline-offset-2'>
+                          {t('advancedReview')}
+                        </summary>
+                        <div className='mt-3 space-y-3'>
+                          <div className='flex flex-wrap items-center justify-between gap-2'>
+                            <p className='text-muted-foreground text-xs font-medium tracking-wide uppercase'>
+                              {t('observations')}
                             </p>
-                            {observation.status === 'confirmed' &&
-                              observation.match_transaction_id && (
-                                <Link
-                                  href={`/transactions/${observation.match_transaction_id}`}
-                                  className='text-primary mt-2 inline-block text-sm font-medium underline underline-offset-2'>
-                                  {t('confirmedMatch')} ·{' '}
-                                  {observation.match_transaction_id.slice(0, 8)}
-                                </Link>
-                              )}
-                            <SuggestionPanel
-                              group={suggestions[document.id]?.find(
-                                (group) => group.observation_id === observation.id,
-                              )}
-                              onReview={(candidate) =>
-                                setReview({
-                                  documentId: document.id,
-                                  observationId: observation.id,
-                                  action: 'accept',
-                                  candidate,
-                                  key: crypto.randomUUID(),
-                                })
-                              }
-                            />
-                            {observation.status === 'pending' &&
-                              observation.amount !== null &&
-                              (observation.currency === null || observation.currency === 'COP') && (
-                                <Button
-                                  size='sm'
-                                  variant='outline'
-                                  className='mt-3 mr-2'
-                                  onClick={() => startCreate(document, observation)}>
-                                  {t('createTransaction')}
-                                </Button>
-                              )}
-                            {observation.status === 'pending' &&
-                              observation.amount !== null &&
-                              observation.currency !== null &&
-                              observation.currency !== 'COP' && (
-                                <p className='text-muted-foreground mt-3 text-xs'>
-                                  {t('unsupportedCurrency', { currency: observation.currency })}
-                                </p>
-                              )}
-                            {createDraft?.observationId === observation.id &&
-                              createDraft.documentId === document.id && (
-                                <div className='border-primary/30 bg-background mt-4 space-y-3 rounded-lg border p-4'>
-                                  <h4 className='font-medium'>{t('reviewCreate')}</h4>
-                                  <p className='text-muted-foreground text-xs'>
-                                    {t('reviewCreateHint')}
-                                  </p>
-                                  <div className='grid gap-3 sm:grid-cols-2'>
-                                    <label className='space-y-1 text-sm'>
-                                      {t('transactionDate')}
-                                      <Input
-                                        type='date'
-                                        aria-label={t('transactionDate')}
-                                        value={createDraft.date}
-                                        disabled={createDraft.createdId !== null}
-                                        onChange={(event) =>
-                                          updateCreateDraft({ date: event.target.value })
-                                        }
-                                      />
-                                    </label>
-                                    <label className='space-y-1 text-sm'>
-                                      {t('transactionTime')}
-                                      <Input
-                                        type='time'
-                                        aria-label={t('transactionTime')}
-                                        value={createDraft.time}
-                                        disabled={createDraft.createdId !== null}
-                                        onChange={(event) =>
-                                          updateCreateDraft({ time: event.target.value })
-                                        }
-                                      />
-                                    </label>
-                                    <label className='space-y-1 text-sm'>
-                                      {t('transactionAmount')}
-                                      <Input
-                                        type='number'
-                                        min='0.01'
-                                        step='0.01'
-                                        aria-label={t('transactionAmount')}
-                                        value={createDraft.amount}
-                                        disabled={createDraft.createdId !== null}
-                                        onChange={(event) =>
-                                          updateCreateDraft({ amount: event.target.value })
-                                        }
-                                      />
-                                    </label>
-                                    <label className='space-y-1 text-sm'>
-                                      {t('transactionType')}
-                                      <select
-                                        aria-label={t('transactionType')}
-                                        className='border-input bg-background h-9 w-full rounded-md border px-3'
-                                        value={createDraft.type}
-                                        disabled={createDraft.createdId !== null}
-                                        onChange={(event) =>
-                                          updateCreateDraft({
-                                            type: event.target.value as CreateDraft['type'],
-                                            categoryId: '',
-                                            destinationAccountId: '',
-                                          })
-                                        }>
-                                        <option value='expense'>{t('expense')}</option>
-                                        <option
-                                          value='income'
-                                          disabled={createDraft.signedAmount < 0}>
-                                          {t('income')}
-                                        </option>
-                                        <option value='transfer'>{t('transfer')}</option>
-                                      </select>
-                                    </label>
-                                    <label className='space-y-1 text-sm'>
-                                      {t('transactionAccount')}
-                                      <select
-                                        aria-label={t('transactionAccount')}
-                                        className='border-input bg-background h-9 w-full rounded-md border px-3'
-                                        value={createDraft.accountId}
-                                        disabled={createDraft.createdId !== null}
-                                        onChange={(event) =>
-                                          updateCreateDraft({ accountId: event.target.value })
-                                        }>
-                                        <option value=''>{t('selectAccount')}</option>
-                                        {(accounts ?? [])
-                                          .filter(
-                                            (account) =>
-                                              account.currency === 'COP' && !account.deleted_at,
-                                          )
-                                          .map((account) => (
-                                            <option key={account.id} value={account.id}>
-                                              {account.name}
-                                            </option>
-                                          ))}
-                                      </select>
-                                    </label>
-                                    {createDraft.type === 'transfer' && (
-                                      <label className='space-y-1 text-sm'>
-                                        {t('destinationAccount')}
-                                        <select
-                                          aria-label={t('destinationAccount')}
-                                          className='border-input bg-background h-9 w-full rounded-md border px-3'
-                                          value={createDraft.destinationAccountId}
-                                          disabled={createDraft.createdId !== null}
-                                          onChange={(event) =>
-                                            updateCreateDraft({
-                                              destinationAccountId: event.target.value,
-                                            })
-                                          }>
-                                          <option value=''>{t('selectAccount')}</option>
-                                          {(accounts ?? [])
-                                            .filter(
-                                              (account) =>
-                                                account.currency === 'COP' &&
-                                                !account.deleted_at &&
-                                                account.id !== createDraft.accountId,
-                                            )
-                                            .map((account) => (
-                                              <option key={account.id} value={account.id}>
-                                                {account.name}
-                                              </option>
-                                            ))}
-                                        </select>
-                                      </label>
-                                    )}
-                                    <label className='space-y-1 text-sm'>
-                                      {t('transactionCategory')}
-                                      <select
-                                        aria-label={t('transactionCategory')}
-                                        className='border-input bg-background h-9 w-full rounded-md border px-3'
-                                        value={createDraft.categoryId}
-                                        disabled={
-                                          createDraft.createdId !== null ||
-                                          createDraft.type === 'transfer'
-                                        }
-                                        onChange={(event) =>
-                                          updateCreateDraft({ categoryId: event.target.value })
-                                        }>
-                                        <option value=''>{t('selectCategory')}</option>
-                                        {(categories ?? [])
-                                          .filter(
-                                            (category) =>
-                                              category.type === createDraft.type &&
-                                              category.is_active,
-                                          )
-                                          .map((category) => (
-                                            <option key={category.id} value={category.id}>
-                                              {category.name}
-                                            </option>
-                                          ))}
-                                      </select>
-                                    </label>
+                            <Button
+                              size='sm'
+                              variant='outline'
+                              disabled={suggestionBusy !== null}
+                              onClick={() => void findSuggestions(document.id)}>
+                              {suggestionBusy === document.id
+                                ? t('findingSuggestions')
+                                : t('findSuggestions')}
+                            </Button>
+                          </div>
+                          {suggestions[document.id] && (
+                            <p className='text-muted-foreground text-xs'>{t('candidateOnly')}</p>
+                          )}
+                          {document.document_observations.length === 0 ? (
+                            <p className='text-muted-foreground text-sm'>{t('noObservations')}</p>
+                          ) : (
+                            [...document.document_observations]
+                              .filter((observation) => observation.status !== 'rejected')
+                              .sort((a, b) => a.ordinal - b.ordinal)
+                              .map((observation) => (
+                                <div key={observation.id} className='bg-muted/40 rounded-lg p-4'>
+                                  <div className='flex flex-wrap items-start justify-between gap-2'>
+                                    <div>
+                                      <p className='font-medium'>{observation.description}</p>
+                                      <p className='text-muted-foreground mt-1 text-sm'>
+                                        {[observation.counterparty, observation.occurred_at_text]
+                                          .filter(Boolean)
+                                          .join(' · ')}
+                                      </p>
+                                    </div>
+                                    <span className='font-semibold tabular-nums'>
+                                      {observation.amount === null
+                                        ? t('amountUnknown')
+                                        : `${observation.currency ?? ''} ${observation.amount.toLocaleString()}`}
+                                    </span>
                                   </div>
-                                  <label className='block space-y-1 text-sm'>
-                                    {t('transactionDescription')}
-                                    <Input
-                                      aria-label={t('transactionDescription')}
-                                      value={createDraft.description}
-                                      disabled={createDraft.createdId !== null}
-                                      onChange={(event) =>
-                                        updateCreateDraft({ description: event.target.value })
-                                      }
-                                    />
-                                  </label>
-                                  {duplicateMatch && (
-                                    <Button
-                                      size='sm'
-                                      variant='outline'
-                                      onClick={() => {
-                                        setCreateDraft(
-                                          (current) =>
-                                            current && { ...current, createdId: duplicateMatch.id },
-                                        );
-                                        setDuplicateMatch(null);
-                                        setCreateChecked(false);
-                                      }}>
-                                      {t('linkDuplicate', {
-                                        description: duplicateMatch.description,
-                                      })}
-                                    </Button>
-                                  )}
-                                  {createDraft.createdId && (
-                                    <p className='text-muted-foreground text-xs'>
-                                      {t('createdNeedsLink')}
+                                  {observation.source_excerpt && (
+                                    <p className='text-muted-foreground mt-3 border-l-2 pl-3 text-xs'>
+                                      {observation.source_excerpt}
                                     </p>
                                   )}
-                                  <label className='flex items-start gap-2 text-sm'>
-                                    <input
-                                      type='checkbox'
-                                      aria-label={t('createChecked')}
-                                      checked={createChecked}
-                                      onChange={(event) => setCreateChecked(event.target.checked)}
-                                    />
-                                    {t('createChecked')}
-                                  </label>
-                                  <div className='flex flex-wrap gap-2'>
-                                    <Button
-                                      size='sm'
-                                      disabled={!createChecked || createBusy}
-                                      onClick={() => void confirmCreate()}>
-                                      {createBusy
-                                        ? t('savingDecision')
-                                        : createDraft.createdId
-                                          ? t('confirmLink')
-                                          : t('confirmCreate')}
-                                    </Button>
+                                  <p className='text-muted-foreground mt-2 text-xs'>
+                                    {t('confidence', {
+                                      percent: Math.round(observation.confidence * 100),
+                                    })}{' '}
+                                    · {t(`observationStatus.${observation.status}`)}
+                                  </p>
+                                  {observation.status === 'confirmed' &&
+                                    observation.match_transaction_id && (
+                                      <Link
+                                        href={`/transactions/${observation.match_transaction_id}`}
+                                        className='text-primary mt-2 inline-block text-sm font-medium underline underline-offset-2'>
+                                        {t('confirmedMatch')} ·{' '}
+                                        {observation.match_transaction_id.slice(0, 8)}
+                                      </Link>
+                                    )}
+                                  <SuggestionPanel
+                                    group={suggestions[document.id]?.find(
+                                      (group) => group.observation_id === observation.id,
+                                    )}
+                                    onReview={(candidate) =>
+                                      setReview({
+                                        documentId: document.id,
+                                        observationId: observation.id,
+                                        action: 'accept',
+                                        candidate,
+                                        key: crypto.randomUUID(),
+                                      })
+                                    }
+                                  />
+                                  {observation.status === 'pending' &&
+                                    observation.amount !== null &&
+                                    (observation.currency === null ||
+                                      observation.currency === 'COP') && (
+                                      <Button
+                                        size='sm'
+                                        variant='outline'
+                                        className='mt-3 mr-2'
+                                        onClick={() => startCreate(document, observation)}>
+                                        {t('createTransaction')}
+                                      </Button>
+                                    )}
+                                  {observation.status === 'pending' &&
+                                    observation.amount !== null &&
+                                    observation.currency !== null &&
+                                    observation.currency !== 'COP' && (
+                                      <p className='text-muted-foreground mt-3 text-xs'>
+                                        {t('unsupportedCurrency', {
+                                          currency: observation.currency,
+                                        })}
+                                      </p>
+                                    )}
+                                  {createDraft?.observationId === observation.id &&
+                                    createDraft.documentId === document.id && (
+                                      <div className='border-primary/30 bg-background mt-4 space-y-3 rounded-lg border p-4'>
+                                        <h4 className='font-medium'>{t('reviewCreate')}</h4>
+                                        <p className='text-muted-foreground text-xs'>
+                                          {t('reviewCreateHint')}
+                                        </p>
+                                        <div className='grid gap-3 sm:grid-cols-2'>
+                                          <label className='space-y-1 text-sm'>
+                                            {t('transactionDate')}
+                                            <Input
+                                              type='date'
+                                              aria-label={t('transactionDate')}
+                                              value={createDraft.date}
+                                              disabled={createDraft.createdId !== null}
+                                              onChange={(event) =>
+                                                updateCreateDraft({ date: event.target.value })
+                                              }
+                                            />
+                                          </label>
+                                          <label className='space-y-1 text-sm'>
+                                            {t('transactionTime')}
+                                            <Input
+                                              type='time'
+                                              aria-label={t('transactionTime')}
+                                              value={createDraft.time}
+                                              disabled={createDraft.createdId !== null}
+                                              onChange={(event) =>
+                                                updateCreateDraft({ time: event.target.value })
+                                              }
+                                            />
+                                          </label>
+                                          <label className='space-y-1 text-sm'>
+                                            {t('transactionAmount')}
+                                            <Input
+                                              type='number'
+                                              min='0.01'
+                                              step='0.01'
+                                              aria-label={t('transactionAmount')}
+                                              value={createDraft.amount}
+                                              disabled={createDraft.createdId !== null}
+                                              onChange={(event) =>
+                                                updateCreateDraft({ amount: event.target.value })
+                                              }
+                                            />
+                                          </label>
+                                          <label className='space-y-1 text-sm'>
+                                            {t('transactionType')}
+                                            <select
+                                              aria-label={t('transactionType')}
+                                              className='border-input bg-background h-9 w-full rounded-md border px-3'
+                                              value={createDraft.type}
+                                              disabled={createDraft.createdId !== null}
+                                              onChange={(event) =>
+                                                updateCreateDraft({
+                                                  type: event.target.value as CreateDraft['type'],
+                                                  categoryId: '',
+                                                  destinationAccountId: '',
+                                                })
+                                              }>
+                                              <option value='expense'>{t('expense')}</option>
+                                              <option
+                                                value='income'
+                                                disabled={createDraft.signedAmount < 0}>
+                                                {t('income')}
+                                              </option>
+                                              <option value='transfer'>{t('transfer')}</option>
+                                            </select>
+                                          </label>
+                                          <label className='space-y-1 text-sm'>
+                                            {t('transactionAccount')}
+                                            <select
+                                              aria-label={t('transactionAccount')}
+                                              className='border-input bg-background h-9 w-full rounded-md border px-3'
+                                              value={createDraft.accountId}
+                                              disabled={createDraft.createdId !== null}
+                                              onChange={(event) =>
+                                                updateCreateDraft({ accountId: event.target.value })
+                                              }>
+                                              <option value=''>{t('selectAccount')}</option>
+                                              {(accounts ?? [])
+                                                .filter(
+                                                  (account) =>
+                                                    account.currency === 'COP' &&
+                                                    !account.deleted_at,
+                                                )
+                                                .map((account) => (
+                                                  <option key={account.id} value={account.id}>
+                                                    {account.name}
+                                                  </option>
+                                                ))}
+                                            </select>
+                                          </label>
+                                          {createDraft.type === 'transfer' && (
+                                            <label className='space-y-1 text-sm'>
+                                              {t('destinationAccount')}
+                                              <select
+                                                aria-label={t('destinationAccount')}
+                                                className='border-input bg-background h-9 w-full rounded-md border px-3'
+                                                value={createDraft.destinationAccountId}
+                                                disabled={createDraft.createdId !== null}
+                                                onChange={(event) =>
+                                                  updateCreateDraft({
+                                                    destinationAccountId: event.target.value,
+                                                  })
+                                                }>
+                                                <option value=''>{t('selectAccount')}</option>
+                                                {(accounts ?? [])
+                                                  .filter(
+                                                    (account) =>
+                                                      account.currency === 'COP' &&
+                                                      !account.deleted_at &&
+                                                      account.id !== createDraft.accountId,
+                                                  )
+                                                  .map((account) => (
+                                                    <option key={account.id} value={account.id}>
+                                                      {account.name}
+                                                    </option>
+                                                  ))}
+                                              </select>
+                                            </label>
+                                          )}
+                                          <label className='space-y-1 text-sm'>
+                                            {t('transactionCategory')}
+                                            <select
+                                              aria-label={t('transactionCategory')}
+                                              className='border-input bg-background h-9 w-full rounded-md border px-3'
+                                              value={createDraft.categoryId}
+                                              disabled={
+                                                createDraft.createdId !== null ||
+                                                createDraft.type === 'transfer'
+                                              }
+                                              onChange={(event) =>
+                                                updateCreateDraft({
+                                                  categoryId: event.target.value,
+                                                })
+                                              }>
+                                              <option value=''>{t('selectCategory')}</option>
+                                              {(categories ?? [])
+                                                .filter(
+                                                  (category) =>
+                                                    category.type === createDraft.type &&
+                                                    category.is_active,
+                                                )
+                                                .map((category) => (
+                                                  <option key={category.id} value={category.id}>
+                                                    {category.name}
+                                                  </option>
+                                                ))}
+                                            </select>
+                                          </label>
+                                        </div>
+                                        <label className='block space-y-1 text-sm'>
+                                          {t('transactionDescription')}
+                                          <Input
+                                            aria-label={t('transactionDescription')}
+                                            value={createDraft.description}
+                                            disabled={createDraft.createdId !== null}
+                                            onChange={(event) =>
+                                              updateCreateDraft({ description: event.target.value })
+                                            }
+                                          />
+                                        </label>
+                                        {duplicateMatch && (
+                                          <Button
+                                            size='sm'
+                                            variant='outline'
+                                            onClick={() => {
+                                              setCreateDraft(
+                                                (current) =>
+                                                  current && {
+                                                    ...current,
+                                                    createdId: duplicateMatch.id,
+                                                  },
+                                              );
+                                              setDuplicateMatch(null);
+                                              setCreateChecked(false);
+                                            }}>
+                                            {t('linkDuplicate', {
+                                              description: duplicateMatch.description,
+                                            })}
+                                          </Button>
+                                        )}
+                                        {createDraft.createdId && (
+                                          <p className='text-muted-foreground text-xs'>
+                                            {t('createdNeedsLink')}
+                                          </p>
+                                        )}
+                                        <label className='flex items-start gap-2 text-sm'>
+                                          <input
+                                            type='checkbox'
+                                            aria-label={t('createChecked')}
+                                            checked={createChecked}
+                                            onChange={(event) =>
+                                              setCreateChecked(event.target.checked)
+                                            }
+                                          />
+                                          {t('createChecked')}
+                                        </label>
+                                        <div className='flex flex-wrap gap-2'>
+                                          <Button
+                                            size='sm'
+                                            disabled={!createChecked || createBusy}
+                                            onClick={() => void confirmCreate()}>
+                                            {createBusy
+                                              ? t('savingDecision')
+                                              : createDraft.createdId
+                                                ? t('confirmLink')
+                                                : t('confirmCreate')}
+                                          </Button>
+                                          <Button
+                                            size='sm'
+                                            variant='ghost'
+                                            disabled={createBusy}
+                                            onClick={() => setCreateDraft(null)}>
+                                            {t('cancelReview')}
+                                          </Button>
+                                        </div>
+                                      </div>
+                                    )}
+                                  {observation.status === 'pending' && (
                                     <Button
                                       size='sm'
                                       variant='ghost'
-                                      disabled={createBusy}
-                                      onClick={() => setCreateDraft(null)}>
-                                      {t('cancelReview')}
+                                      className='mt-3'
+                                      onClick={() =>
+                                        setReview({
+                                          documentId: document.id,
+                                          observationId: observation.id,
+                                          action: 'reject_observation',
+                                          key: crypto.randomUUID(),
+                                        })
+                                      }>
+                                      {t('reviewReject')}
                                     </Button>
-                                  </div>
-                                </div>
-                              )}
-                            {observation.status === 'pending' && (
-                              <Button
-                                size='sm'
-                                variant='ghost'
-                                className='mt-3'
-                                onClick={() =>
-                                  setReview({
-                                    documentId: document.id,
-                                    observationId: observation.id,
-                                    action: 'reject_observation',
-                                    key: crypto.randomUUID(),
-                                  })
-                                }>
-                                {t('reviewReject')}
-                              </Button>
-                            )}
-                            {review?.documentId === document.id &&
-                              review.observationId === observation.id && (
-                                <div
-                                  className='border-primary/30 bg-primary/5 mt-3 rounded-lg border p-4'
-                                  role='region'
-                                  aria-label={t('reviewDecision')}>
-                                  <p className='text-sm font-semibold'>{t('reviewDecision')}</p>
-                                  <p className='text-muted-foreground mt-1 text-sm'>
-                                    {review.action === 'accept'
-                                      ? t('confirmMatchSummary')
-                                      : t('confirmRejectSummary')}
-                                  </p>
-                                  {review.action === 'accept' && (
-                                    <p className='mt-2 text-sm'>
-                                      {review.candidate.description} · {review.candidate.date} ·{' '}
-                                      {review.candidate.account_name ?? ''} ·{' '}
-                                      {review.candidate.amount.toLocaleString()}
-                                    </p>
                                   )}
-                                  <div className='mt-3 flex gap-2'>
-                                    <Button
-                                      size='sm'
-                                      disabled={decisionBusy}
-                                      onClick={() => void submitDecision()}>
-                                      {decisionBusy
-                                        ? t('savingDecision')
-                                        : review.action === 'accept'
-                                          ? t('confirmMatch')
-                                          : t('confirmReject')}
-                                    </Button>
-                                    <Button
-                                      size='sm'
-                                      variant='outline'
-                                      disabled={decisionBusy}
-                                      onClick={() => setReview(null)}>
-                                      {t('cancelReview')}
-                                    </Button>
-                                  </div>
+                                  {review?.documentId === document.id &&
+                                    review.observationId === observation.id && (
+                                      <div
+                                        className='border-primary/30 bg-primary/5 mt-3 rounded-lg border p-4'
+                                        role='region'
+                                        aria-label={t('reviewDecision')}>
+                                        <p className='text-sm font-semibold'>
+                                          {t('reviewDecision')}
+                                        </p>
+                                        <p className='text-muted-foreground mt-1 text-sm'>
+                                          {review.action === 'accept'
+                                            ? t('confirmMatchSummary')
+                                            : t('confirmRejectSummary')}
+                                        </p>
+                                        {review.action === 'accept' && (
+                                          <p className='mt-2 text-sm'>
+                                            {review.candidate.description} · {review.candidate.date}{' '}
+                                            · {review.candidate.account_name ?? ''} ·{' '}
+                                            {review.candidate.amount.toLocaleString()}
+                                          </p>
+                                        )}
+                                        <div className='mt-3 flex gap-2'>
+                                          <Button
+                                            size='sm'
+                                            disabled={decisionBusy}
+                                            onClick={() => void submitDecision()}>
+                                            {decisionBusy
+                                              ? t('savingDecision')
+                                              : review.action === 'accept'
+                                                ? t('confirmMatch')
+                                                : t('confirmReject')}
+                                          </Button>
+                                          <Button
+                                            size='sm'
+                                            variant='outline'
+                                            disabled={decisionBusy}
+                                            onClick={() => setReview(null)}>
+                                            {t('cancelReview')}
+                                          </Button>
+                                        </div>
+                                      </div>
+                                    )}
                                 </div>
-                              )}
+                              ))
+                          )}
+                        </div>
+                      </details>
+                      {document.document_observations.some(
+                        (observation) => observation.status === 'rejected',
+                      ) && (
+                        <details className='border-border border-t pt-3'>
+                          <summary className='text-muted-foreground cursor-pointer text-sm focus-visible:outline-2 focus-visible:outline-offset-2'>
+                            {t('rejectedObservations')} ·{' '}
+                            {
+                              document.document_observations.filter(
+                                (observation) => observation.status === 'rejected',
+                              ).length
+                            }
+                          </summary>
+                          <div className='mt-3 space-y-2'>
+                            {document.document_observations
+                              .filter((observation) => observation.status === 'rejected')
+                              .map((observation) => (
+                                <div
+                                  key={observation.id}
+                                  className='bg-muted/30 flex flex-wrap items-center justify-between gap-2 rounded-lg p-3'>
+                                  <div>
+                                    <p className='text-sm font-medium'>{observation.description}</p>
+                                    <p className='text-muted-foreground text-xs'>
+                                      {observation.occurred_at_text}
+                                    </p>
+                                  </div>
+                                  <span className='text-muted-foreground text-sm tabular-nums'>
+                                    {observation.currency ?? ''}{' '}
+                                    {observation.amount?.toLocaleString() ?? t('amountUnknown')}
+                                  </span>
+                                </div>
+                              ))}
                           </div>
-                        ))
-                    )}
-                  </div>
+                        </details>
+                      )}
+                    </div>
+                  </details>
                 )}
               </CardContent>
             </Card>

@@ -9,7 +9,9 @@ export async function GET(): Promise<Response> {
     const { supabase, userId } = await getUserClient();
     const { data, error } = await supabase
       .from('documents')
-      .select('*, document_observations(*)')
+      .select(
+        '*, document_observations(*, matched_transaction:transactions!document_observations_match_owner_fk(id,type,category_id,account_id))',
+      )
       .eq('user_id', userId)
       .order('created_at', { ascending: false });
     if (error) return errorResponse(error.message, 400);

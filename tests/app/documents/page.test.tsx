@@ -6,8 +6,8 @@ vi.mock('next-intl', () => ({ useTranslations: () => (key: string) => key }));
 vi.mock('@/lib/api/queries/account.queries', () => ({
   useAccounts: () => ({
     data: [
-      { id: 'account-1', name: 'Bancolombia', currency: 'COP', deleted_at: null },
-      { id: 'account-2', name: 'Nequi', currency: 'COP', deleted_at: null },
+      { id: 'account-1', name: 'Bancolombia', currency: 'COP', is_active: true, deleted_at: null },
+      { id: 'account-2', name: 'Nequi', currency: 'COP', is_active: true, deleted_at: null },
     ],
   }),
 }));
@@ -54,7 +54,7 @@ describe('document inbox', () => {
       ),
     );
     render(<DocumentsPage />);
-    await waitFor(() => expect(screen.getByText('Coffee')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getAllByText('Coffee')[0]).toBeInTheDocument());
     expect(screen.getByText('observations')).toBeInTheDocument();
     expect(screen.getByText(/observationStatus.pending/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'createTransaction' })).toBeInTheDocument();
@@ -99,7 +99,7 @@ describe('document inbox', () => {
     });
     vi.stubGlobal('fetch', fetchMock);
     render(<DocumentsPage />);
-    await screen.findByText('Cafe North');
+    await screen.findAllByText('Cafe North');
     fireEvent.click(screen.getByRole('button', { name: 'createTransaction' }));
     expect(fetchMock.mock.calls.every(([, options]) => options?.method !== 'POST')).toBe(true);
     fireEvent.change(screen.getByLabelText('transactionTime'), { target: { value: '13:25' } });
@@ -167,7 +167,7 @@ describe('document inbox', () => {
     });
     vi.stubGlobal('fetch', fetchMock);
     render(<DocumentsPage />);
-    await screen.findByText('Own account transfer');
+    await screen.findAllByText('Own account transfer');
     fireEvent.click(screen.getByRole('button', { name: 'createTransaction' }));
     fireEvent.change(screen.getByLabelText('transactionTime'), { target: { value: '13:25' } });
     fireEvent.change(screen.getByLabelText('transactionType'), { target: { value: 'transfer' } });
@@ -292,7 +292,7 @@ describe('document inbox', () => {
     );
     vi.stubGlobal('fetch', fetchMock);
     render(<DocumentsPage />);
-    await waitFor(() => expect(screen.getByText('Coffee')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getAllByText('Coffee')[0]).toBeInTheDocument());
     fireEvent.click(screen.getByRole('button', { name: 'findSuggestions' }));
     await waitFor(() => expect(screen.getByText('Coffee shop')).toBeInTheDocument());
     expect(screen.getByText('candidateOnly')).toBeInTheDocument();
