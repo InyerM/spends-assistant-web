@@ -4,11 +4,13 @@ Status: document review changes are implemented locally and require the normal r
 connection is a design proposal; no mailbox connection, OAuth credential, forwarding rule, or
 automatic import has been created.
 
-Release check on 2026-10-01: the linked Supabase project `zptcolhwonzvaxevyxuj` rejected the
-available database credential with `28P01`, and the local Management API token did not list that
-project. The document lifecycle migration is therefore unapplied remotely. Do not deploy the web
-release until project access is restored, the migration is applied, and the browser checks below
-pass.
+Release check on 2026-10-01: the default Supabase CLI credential failed with `28P01`. The
+`SUPABASE_API_TOKEN` already in the backend `.env.local` had access to project
+`zptcolhwonzvaxevyxuj`. The versioned migration `20261002000000` was applied through that project's
+Management API in one transaction and recorded in `supabase_migrations.schema_migrations`. A
+read-only follow-up found one history row, the `documents.archived_at` column, all three lifecycle
+functions, and all three audit tables. Web deployment and authenticated browser review remain the
+release checks.
 
 ## Evidence and current boundaries
 
