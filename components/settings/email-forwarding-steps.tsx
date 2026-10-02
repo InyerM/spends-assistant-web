@@ -1,7 +1,8 @@
 'use client';
 
+import Link from 'next/link';
 import { useLocale, useTranslations } from 'next-intl';
-import { Check, Copy, ExternalLink, RefreshCw } from 'lucide-react';
+import { Check, Copy, ExternalLink, Inbox, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { EmailForwardingRoute } from '@/lib/api/queries/email-forwarding.queries';
 
@@ -98,6 +99,15 @@ export function EmailForwardingSteps({
           rel='noopener noreferrer'>
           {t('gmailInstructions')} <ExternalLink className='size-3' aria-hidden='true' />
         </a>
+      </SetupStep>
+
+      <SetupStep number={4} title={t('reviewInboxTitle')}>
+        <p className='text-muted-foreground text-sm leading-relaxed'>{t('reviewInboxBody')}</p>
+        <Button variant='outline' size='sm' asChild>
+          <Link href='/transactions/shortcut-inbox'>
+            <Inbox aria-hidden='true' /> {t('reviewInbox')}
+          </Link>
+        </Button>
       </SetupStep>
     </ol>
   );

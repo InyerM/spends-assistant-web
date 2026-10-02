@@ -48,6 +48,10 @@ describe('EmailForwardingTab', () => {
     expect(await screen.findByText('private@example.com')).toBeInTheDocument();
     expect(screen.getByText('addAddressTitle')).toBeInTheDocument();
     expect(screen.getByText('createFilterTitle')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'reviewInbox' })).toHaveAttribute(
+      'href',
+      '/transactions/shortcut-inbox',
+    );
     expect(screen.getByRole('link', { name: 'gmailInstructions' })).toHaveAttribute(
       'href',
       'https://support.google.com/mail/answer/10957?hl=es-419',
