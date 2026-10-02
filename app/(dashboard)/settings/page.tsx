@@ -11,10 +11,18 @@ import { ApiKeysTab } from '@/components/settings/api-keys-tab';
 import { LanguageSelector } from '@/components/settings/language-selector';
 import { HelpSection } from '@/components/settings/help-section';
 import { DangerZoneSection } from '@/components/settings/danger-zone-section';
+import { EmailForwardingTab } from '@/components/settings/email-forwarding-tab';
 import { useUserSettings } from '@/hooks/use-user-settings';
-import { User, Shield, CreditCard, Key, LifeBuoy } from 'lucide-react';
+import { User, Shield, CreditCard, Key, LifeBuoy, Mail } from 'lucide-react';
 
-const VALID_TABS = ['profile', 'security', 'subscription', 'api-keys', 'help'] as const;
+const VALID_TABS = [
+  'profile',
+  'security',
+  'subscription',
+  'email-forwarding',
+  'api-keys',
+  'help',
+] as const;
 type TabValue = (typeof VALID_TABS)[number];
 
 function isValidTab(value: string | null): value is TabValue {
@@ -23,6 +31,7 @@ function isValidTab(value: string | null): value is TabValue {
 
 export default function SettingsPage(): React.ReactElement {
   const t = useTranslations('settings');
+  const emailT = useTranslations('emailForwarding');
   const router = useRouter();
   const searchParams = useSearchParams();
   const { data: userSettings } = useUserSettings();
@@ -54,6 +63,10 @@ export default function SettingsPage(): React.ReactElement {
             <CreditCard className='h-4 w-4' />
             <span className='hidden sm:inline'>{t('subscription')}</span>
           </TabsTrigger>
+          <TabsTrigger value='email-forwarding' aria-label={emailT('tab')}>
+            <Mail className='h-4 w-4' />
+            <span className='hidden sm:inline'>{emailT('tab')}</span>
+          </TabsTrigger>
           {showApiKeys && (
             <TabsTrigger value='api-keys'>
               <Key className='h-4 w-4' />
@@ -80,6 +93,10 @@ export default function SettingsPage(): React.ReactElement {
 
         <TabsContent value='subscription' className='mt-6'>
           <SubscriptionTab />
+        </TabsContent>
+
+        <TabsContent value='email-forwarding' className='mt-6'>
+          <EmailForwardingTab />
         </TabsContent>
 
         {showApiKeys && (

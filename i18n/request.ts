@@ -12,6 +12,9 @@ export default getRequestConfig(async () => {
     messages: {
       ...(await import(`../messages/${locale}.json`)).default,
       wealth: (await import(`../messages/wealth.${locale === 'es' ? 'es' : 'en'}.json`)).default,
+      emailForwarding: (
+        await import(`../messages/email-forwarding.${locale === 'es' ? 'es' : 'en'}.json`)
+      ).default,
     },
   };
 });
