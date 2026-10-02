@@ -14,7 +14,11 @@ vi.mock('@/lib/api/queries/account.queries', () => ({
     ],
   }),
 }));
-vi.mock('@/lib/api/queries/category.queries', () => ({ useCategories: () => ({ data: [] }) }));
+vi.mock('@/lib/api/queries/category.queries', () => ({
+  useCategories: () => ({
+    data: [{ id: 'category-groceries', name: 'Supermercado', type: 'expense', is_active: true }],
+  }),
+}));
 
 const observations = [
   {
@@ -90,6 +94,12 @@ function mockRequests(
               },
             ]
           : [],
+      });
+    if (url === '/api/transactions/parse' && options?.method === 'POST')
+      return Response.json({
+        parsed: { category: 'groceries', confidence: 91 },
+        resolved: { category_id: 'category-groceries', account_id: 'wrong-account' },
+        applied_rules: [],
       });
     if (url === '/api/documents/doc-1' && options?.method === 'PATCH') {
       archived = JSON.parse(options.body as string).archived as boolean;
@@ -241,6 +251,31 @@ describe('document batch review', () => {
       'href',
       '/transactions/tx-existing',
     );
+  });
+
+  it('uses an AI category proposal without changing the reviewed amount or account', async () => {
+    const fetchMock = mockRequests();
+    renderDocuments();
+    await screen.findByText('bank.png');
+    fireEvent.click(screen.getAllByText(/^observations/)[0]);
+    fireEvent.click(screen.getAllByRole('checkbox', { name: 'selectObservation' })[0]);
+    chooseBulkAccount();
+    fireEvent.click(screen.getByRole('button', { name: 'suggestCategoryWithAi' }));
+    expect(await screen.findByText(/aiCategoryHint/)).toBeInTheDocument();
+    expect(fetchMock.mock.calls.filter(([url]) => url === '/api/transactions')).toHaveLength(0);
+    fireEvent.click(screen.getByLabelText('confirmSelected'));
+    fireEvent.click(screen.getByRole('button', { name: 'approveSelected' }));
+    await waitFor(() =>
+      expect(fetchMock.mock.calls.filter(([url]) => url === '/api/transactions')).toHaveLength(1),
+    );
+    const createdPayload = JSON.parse(
+      fetchMock.mock.calls.find(([url]) => url === '/api/transactions')![1]!.body as string,
+    );
+    expect(createdPayload).toMatchObject({
+      amount: 12000,
+      account_id: 'account-1',
+      category_id: 'category-groceries',
+    });
   });
 
   it('restores a rejected observation and archives a capture reversibly', async () => {

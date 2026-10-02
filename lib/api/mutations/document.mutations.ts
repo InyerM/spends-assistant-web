@@ -91,3 +91,18 @@ export async function recoverDocumentTransaction(
   const result = (await response.json()) as { transaction_id: string | null };
   return result.transaction_id;
 }
+
+export async function suggestDocumentCategoryWithAi(text: string): Promise<string | null> {
+  const response = await check(
+    await fetch('/api/transactions/parse', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text }),
+    }),
+  );
+  const result = (await response.json()) as {
+    status?: string;
+    resolved?: { category_id?: string };
+  };
+  return result.status === 'skipped' ? null : (result.resolved?.category_id ?? null);
+}

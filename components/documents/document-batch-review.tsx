@@ -15,6 +15,7 @@ import {
   decideDocumentObservation,
   recoverDocumentTransaction,
   reviseDocumentObservation,
+  suggestDocumentCategoryWithAi,
 } from '@/lib/api/mutations/document.mutations';
 import type { DocumentSuggestionGroup } from '@/lib/api/queries/document.queries';
 import { createTransaction, DuplicateError } from '@/lib/api/mutations/transaction.mutations';
@@ -77,6 +78,8 @@ export function DocumentBatchReview({
   const [progress, setProgress] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [duplicates, setDuplicates] = useState<Record<string, Transaction>>({});
+  const [aiBusy, setAiBusy] = useState<string | null>(null);
+  const [aiHints, setAiHints] = useState<Record<string, string>>({});
   const createdIds = useRef<Record<string, string>>({});
   const decisionKeys = useRef<Record<string, string>>({});
   const correctedFingerprints = useRef<Record<string, string>>({});
@@ -196,6 +199,33 @@ export function DocumentBatchReview({
       ),
     );
     setConfirmed(false);
+  };
+
+  const suggestCategoryWithAi = async (row: DocumentReviewRow): Promise<void> => {
+    const draft = drafts[row.id];
+    if (draft.type !== 'expense' || draft.currency !== 'COP' || aiBusy) return;
+    setAiBusy(row.id);
+    setErrors((current) => ({ ...current, [row.id]: '' }));
+    try {
+      const text = `Expense at ${draft.description} for COP ${draft.amount} on ${draft.date}. Original notification: ${row.source_excerpt.slice(0, 500)}`;
+      const categoryId = await suggestDocumentCategoryWithAi(text);
+      const category = categories.find(
+        (item) => item.id === categoryId && item.type === 'expense' && item.is_active,
+      );
+      if (!category) {
+        setErrors((current) => ({ ...current, [row.id]: t('aiCategoryUnavailable') }));
+        return;
+      }
+      updateDraft(row.id, { categoryId: category.id });
+      setAiHints((current) => ({ ...current, [row.id]: category.name }));
+    } catch (cause) {
+      setErrors((current) => ({
+        ...current,
+        [row.id]: cause instanceof Error ? cause.message : t('aiCategoryFailed'),
+      }));
+    } finally {
+      setAiBusy(null);
+    }
   };
 
   const decide = async (
@@ -449,6 +479,26 @@ export function DocumentBatchReview({
                         )}
                     </div>
                   )}
+                  {selected.includes(row.id) &&
+                    draft.type === 'expense' &&
+                    draft.currency === 'COP' && (
+                      <div className='mt-2 flex flex-wrap items-center gap-2'>
+                        <Button
+                          size='sm'
+                          variant='outline'
+                          disabled={busy || !!aiBusy}
+                          onClick={() => void suggestCategoryWithAi(row)}>
+                          {aiBusy === row.id
+                            ? t('suggestingCategoryWithAi')
+                            : t('suggestCategoryWithAi')}
+                        </Button>
+                        {aiHints[row.id] && (
+                          <p className='text-muted-foreground text-xs'>
+                            {t('aiCategoryHint', { name: aiHints[row.id] })}
+                          </p>
+                        )}
+                      </div>
+                    )}
                   {errors[row.id] && (
                     <p role='alert' className='text-destructive mt-2 text-xs'>
                       {errors[row.id]}

@@ -27,8 +27,11 @@ automatic import has been created.
   document review should follow the tested web contract after release, with local drafts and sync;
   no mobile source was changed here.
 - `docs/usage/token-usage-agent-prompt.md` requires a failing test before behavior changes and the
-  smallest capable model. The historical merchant suggestion is deterministic and bounded; it does
-  not add a model call or silently approve an OCR row.
+  smallest capable model. The historical merchant suggestion is deterministic and bounded. A
+  reviewer may request a separate category proposal through the existing metered OpenRouter text
+  parser; this sends the edited merchant, amount, date, and a bounded source excerpt. Only a valid
+  expense category is copied into the draft. The returned account, amount, and type are ignored, and
+  the reviewer still confirms the transaction explicitly.
 
 ## Review behavior and remaining quality gates
 
@@ -108,7 +111,7 @@ to the same candidate transaction and keep bank event time distinct from email r
 4. **Gmail OAuth decision:** confirm expected distribution and Google verification obligations, then
    estimate implementation and assessment costs before creating credentials or requesting Gmail
    scopes.
-5. **Model-assisted categories:** evaluate a privacy-compatible OpenRouter text model only for
-   ambiguous merchants after historical matching fails. Send minimum redacted merchant/context,
-   measure accuracy against reviewed labels and usage telemetry, and leave every result as a
+5. **Category quality evaluation:** compare history proposals and the opt-in AI proposals against
+   reviewed labels, especially supermarket names such as Mercamas and unfamiliar QR merchants; use
+   usage telemetry to decide whether automatic model calls are justified. Leave every result as a
    proposal until approved.

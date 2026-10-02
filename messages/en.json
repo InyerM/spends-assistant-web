@@ -791,6 +791,11 @@
     "possibleDuplicate": "Possible duplicate: {description} · {date}.",
     "categoryHistoryHint": "Suggested category: {name} · {count} similar movements. Confirm it before approval.",
     "applyCategorySuggestion": "Apply category",
+    "suggestCategoryWithAi": "Suggest category with AI",
+    "suggestingCategoryWithAi": "Asking AI…",
+    "aiCategoryHint": "AI suggests {name}. Review it before approval.",
+    "aiCategoryUnavailable": "AI found no valid category; choose one manually.",
+    "aiCategoryFailed": "Could not ask AI for a category.",
     "accountEvidenceHint": "Account suggested from the visible last four digits: {name}.",
     "reason": {
       "already_recorded": "Already recorded",

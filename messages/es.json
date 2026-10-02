@@ -786,6 +786,11 @@
     "possibleDuplicate": "Posible duplicado: {description} · {date}.",
     "categoryHistoryHint": "Categoría sugerida: {name} · {count} movimientos similares. Confírmala antes de aprobar.",
     "applyCategorySuggestion": "Aplicar categoría",
+    "suggestCategoryWithAi": "Sugerir categoría con IA",
+    "suggestingCategoryWithAi": "Consultando IA…",
+    "aiCategoryHint": "IA sugiere {name}. Revísala antes de aprobar.",
+    "aiCategoryUnavailable": "La IA no encontró una categoría válida; elige una manualmente.",
+    "aiCategoryFailed": "No se pudo consultar la IA.",
     "accountEvidenceHint": "Cuenta sugerida por los últimos cuatro dígitos visibles: {name}.",
     "reason": {
       "already_recorded": "Ya está registrado",
