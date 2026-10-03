@@ -22,6 +22,7 @@
   "waitingForVerification": "Gmail will send a verification message to this address. It will appear here when received. This can take a few minutes.",
   "verificationReceivedBody": "Gmail's message arrived. Use its code or link to verify the address in Gmail. Receiving it here does not start forwarding.",
   "verificationMessage": "Verification message",
+  "openVerification": "Open Gmail verification",
   "copyConfirmation": "Copy message",
   "refreshStatus": "Refresh status",
   "createFilterTitle": "Forward only the notices you choose",

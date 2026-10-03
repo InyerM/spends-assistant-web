@@ -22,6 +22,7 @@
   "waitingForVerification": "Gmail enviará un mensaje de verificación a esta dirección. Cuando llegue, aparecerá aquí. Puede tardar unos minutos.",
   "verificationReceivedBody": "Llegó el mensaje de Gmail. Usa su código o enlace para confirmar la dirección en Gmail. Recibirlo aquí todavía no activa el reenvío.",
   "verificationMessage": "Mensaje de confirmación",
+  "openVerification": "Abrir confirmación en Gmail",
   "copyConfirmation": "Copiar mensaje",
   "refreshStatus": "Actualizar estado",
   "createFilterTitle": "Reenvía solo los avisos que elijas",

@@ -88,6 +88,29 @@ describe('EmailForwardingTab', () => {
     await waitFor(() => expect(screen.queryByText('awaitingConfirmation')).not.toBeInTheDocument());
   });
 
+  it('offers the recovered Gmail verification link without linking arbitrary URLs', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        Response.json({
+          status: 'active',
+          address: 'private@example.com',
+          created_at: '2026-10-01T00:00:00Z',
+          confirmation_received_at: '2026-10-03T16:45:00Z',
+          verification_text:
+            'Confirm: https://mail-settings.google.com/mail/vf-example\nIgnore: https://example.com/steal',
+        }),
+      ),
+    );
+    renderTab();
+
+    expect(await screen.findByRole('link', { name: 'openVerification' })).toHaveAttribute(
+      'href',
+      'https://mail-settings.google.com/mail/vf-example',
+    );
+    expect(screen.queryByRole('link', { name: /steal/i })).not.toBeInTheDocument();
+  });
+
   it('helps find account-linked bank senders without accepting a domain-only filter', async () => {
     vi.stubGlobal(
       'fetch',

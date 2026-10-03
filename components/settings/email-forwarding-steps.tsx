@@ -9,6 +9,27 @@ import { EmailSenderGuide } from '@/components/settings/email-sender-guide';
 
 type ActiveRoute = Extract<EmailForwardingRoute, { status: 'active' }>;
 
+function googleVerificationUrl(message: string | null): string | null {
+  if (!message) return null;
+  for (const match of message.matchAll(/https:\/\/[^\s<>"']+/gi)) {
+    try {
+      const candidate = new URL(match[0].replace(/[.,;!?)]*$/, ''));
+      if (
+        candidate.protocol === 'https:' &&
+        !candidate.username &&
+        !candidate.password &&
+        ['mail-settings.google.com', 'mail.google.com'].includes(candidate.hostname) &&
+        candidate.pathname.startsWith('/mail/')
+      ) {
+        return candidate.toString();
+      }
+    } catch {
+      // Ignore malformed links in the received message.
+    }
+  }
+  return null;
+}
+
 function SetupStep({
   number,
   title,
@@ -46,6 +67,7 @@ export function EmailForwardingSteps({
 }): React.ReactElement {
   const t = useTranslations('emailForwarding');
   const locale = useLocale();
+  const verificationUrl = googleVerificationUrl(route.verification_text);
 
   return (
     <ol className='border-border divide-y border-t pt-6'>
@@ -67,6 +89,13 @@ export function EmailForwardingSteps({
             {route.verification_text && (
               <div className='bg-muted/70 space-y-2 rounded-lg p-3'>
                 <p className='text-xs font-medium'>{t('verificationMessage')}</p>
+                {verificationUrl && (
+                  <Button variant='outline' size='sm' asChild>
+                    <a href={verificationUrl} target='_blank' rel='noopener noreferrer'>
+                      {t('openVerification')} <ExternalLink aria-hidden='true' />
+                    </a>
+                  </Button>
+                )}
                 <p className='text-sm break-words whitespace-pre-wrap select-all'>
                   {route.verification_text}
                 </p>
