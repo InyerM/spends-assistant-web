@@ -143,7 +143,7 @@ describe('EmailForwardingTab', () => {
     expect(screen.queryByRole('link', { name: /steal/i })).not.toBeInTheDocument();
   });
 
-  it('helps find account-linked bank senders without accepting a domain-only filter', async () => {
+  it('helps find account-linked senders and prepare one filter for multiple banks', async () => {
     vi.stubGlobal(
       'fetch',
       vi.fn().mockImplementation((url: string) =>
@@ -172,17 +172,23 @@ describe('EmailForwardingTab', () => {
     );
     renderTab();
 
-    fireEvent.click(await screen.findByText('senderGuideTitle'));
+    expect(await screen.findByRole('textbox', { name: 'senderGuideAddresses' })).toBeVisible();
+    fireEvent.click(screen.getByText('senderGuideCatalogTitle'));
     expect(await screen.findByText('Lulo Bank')).toBeInTheDocument();
     expect(screen.getByText('senderGuideAccountMatch')).toBeInTheDocument();
     expect(screen.getByText('Banco Falabella')).toBeInTheDocument();
 
-    const input = screen.getByRole('textbox', { name: 'senderGuideExactAddress' });
+    const input = screen.getByRole('textbox', { name: 'senderGuideAddresses' });
     fireEvent.change(input, { target: { value: '@lulobank.com' } });
-    expect(screen.getByRole('button', { name: 'senderGuideCopyAddress' })).toBeDisabled();
-    fireEvent.change(input, { target: { value: 'notificaciones@lulobank.com' } });
-    expect(screen.getByRole('button', { name: 'senderGuideCopyAddress' })).toBeEnabled();
-    expect(screen.getByText('senderGuidePasteInFrom')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'senderGuideCopyQuery' })).toBeDisabled();
+    fireEvent.change(input, {
+      target: { value: 'notificaciones@lulobank.com\navisos@bancolombia.example' },
+    });
+    expect(
+      screen.getByText('{from:notificaciones@lulobank.com from:avisos@bancolombia.example}'),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'senderGuideCopyQuery' })).toBeEnabled();
+    expect(screen.getByText('senderGuidePasteInSearch')).toBeInTheDocument();
   });
 
   it('keeps the removal confirmation open when the server rejects deletion', async () => {

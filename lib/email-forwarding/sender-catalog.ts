@@ -94,3 +94,34 @@ export function validatedSenderAddress(value: string): string | null {
   }
   return address;
 }
+
+export function prepareSenderQuery(value: string): {
+  addresses: string[];
+  invalidEntries: string[];
+  query: string | null;
+} {
+  const entries = value
+    .split(/[\n,;]+/)
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+  const addresses: string[] = [];
+  const invalidEntries: string[] = [];
+
+  for (const entry of entries) {
+    const address = validatedSenderAddress(entry);
+    if (!address) {
+      invalidEntries.push(entry);
+    } else if (!addresses.includes(address)) {
+      addresses.push(address);
+    }
+  }
+
+  const query =
+    invalidEntries.length || !addresses.length
+      ? null
+      : addresses.length === 1
+        ? `from:${addresses[0]}`
+        : `{${addresses.map((address) => `from:${address}`).join(' ')}}`;
+
+  return { addresses, invalidEntries, query };
+}

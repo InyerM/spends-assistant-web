@@ -3,8 +3,11 @@
 The Settings → Email forwarding guide ranks bank search clues using the user's active account names
 and institutions. It does not read Gmail or create a filter. The user searches existing mail, opens
 a real transaction notice, copies its full `From` address, checks the message, and creates a Gmail
-filter for that exact address. The optional helper copies the address itself for Gmail's `From`
-field. New forwarded mail enters the review inbox; it does not post a transaction automatically.
+filter for those exact addresses. The helper accepts one address per line, removes duplicates, and
+generates a Gmail OR search such as `{from:alerts@bank.example from:notice@other.example}`. It
+rejects domain-only entries rather than generating a partial search. The user pastes the generated
+search into Gmail's main search box, checks the results, and then creates the forwarding filter in
+Gmail. New forwarded mail enters the review inbox; it does not post a transaction automatically.
 
 The catalogue contains discovery clues for Bancolombia, Lulo Bank, Banco Falabella, Banco de Bogotá,
 BBVA, Nequi, Davivienda, and Nu. A discovery clue is **not** a verified sender or an authentication
@@ -16,11 +19,15 @@ Banco de Bogotá
 including `notificaciones@bancodebogota.net`. Other institutions have no exact sender in the
 catalogue because a reliable transaction address was not established.
 
-Gmail's [search operators](https://support.google.com/mail/answer/7190?hl=en-GB) support `from:`
-searches. Its [filter workflow](https://support.google.com/mail/answer/6579?hl=en-EN) can forward
-matching new mail after the destination is verified. Gmail filters do not expose a general
+Gmail's [search operators](https://support.google.com/mail/answer/7190?hl=en-GB) support `from:` and
+`{ }` OR searches. Its [filter workflow](https://support.google.com/mail/answer/6579?hl=en-EN) can
+forward matching new mail after the destination is verified. Gmail filters do not expose a general
 regular-expression operator. A broad bank name or domain can match promotions or unrelated messages,
-so the guide only accepts a complete email address for Gmail's `From` field.
+so the guide only accepts complete email addresses. An exact address can still send both transaction
+notices and promotions or security codes; in that case the user must add a subject criterion in
+Gmail or leave that address out. The helper does not save the list in Spends; the created Gmail
+filter is the durable configuration. Forwarded email attachments are not processed by the current
+intake path.
 
 The route status in Spends means the private address exists and the confirmation message was
 received. The user can mark the address verified after Gmail confirms it; this is a user
