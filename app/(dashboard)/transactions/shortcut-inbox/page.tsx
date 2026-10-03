@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { ShortcutCreateForm } from '@/components/transactions/shortcut-create-form';
+import { ForwardedEmailEvidence } from '@/components/transactions/forwarded-email-evidence';
 import { previewLuloNotice, type LuloNoticePreview } from '@/lib/shortcut-inbox/lulo-preview';
 
 interface InboxItem {
@@ -305,7 +306,9 @@ export default function ShortcutInboxPage(): React.ReactElement {
                 <CardContent className='space-y-4 py-4'>
                   <div className='flex flex-wrap items-center justify-between gap-2 text-xs'>
                     <div className='flex flex-wrap items-center gap-2'>
-                      <Badge variant='outline'>{item.source}</Badge>
+                      <Badge variant='outline'>
+                        {item.source === 'forwarded_email' ? t('forwardedSource') : item.source}
+                      </Badge>
                       <Badge variant={item.status === 'pending' ? 'secondary' : 'outline'}>
                         {item.status === 'non_transaction' ? t('nonTransaction') : t(item.status)}
                       </Badge>
@@ -314,9 +317,7 @@ export default function ShortcutInboxPage(): React.ReactElement {
                       {formatDate(item.received_at)}
                     </time>
                   </div>
-                  <p className='text-foreground text-sm leading-relaxed wrap-break-word whitespace-pre-wrap'>
-                    {item.raw_text}
-                  </p>
+                  <ForwardedEmailEvidence source={item.source} rawText={item.raw_text} />
                   {luloPreview && <LuloPreview preview={luloPreview} />}
                   {(item.status === 'matched' || item.status === 'created') && item.match && (
                     <p className='text-muted-foreground text-xs'>

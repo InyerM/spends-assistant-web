@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  prepareBroadForwardingQuery,
   prepareSenderQuery,
   providersForAccounts,
   validatedSenderAddress,
@@ -39,5 +40,20 @@ describe('sender catalogue', () => {
       query: null,
     });
     expect(prepareSenderQuery('avisos@banco.example').query).toBe('from:avisos@banco.example');
+  });
+
+  it('captures bank keywords across message content and optional exact senders', () => {
+    expect(
+      prepareBroadForwardingQuery('Bancolombia\nLuloBank\nBancolombia', 'avisos@otro.example'),
+    ).toMatchObject({
+      query: '{bancolombia lulobank from:avisos@otro.example}',
+      invalidEntries: [],
+    });
+    expect(prepareBroadForwardingQuery('Banco de Bogotá', '').query).toBe('"banco de bogotá"');
+  });
+
+  it('rejects operator-like keyword input rather than broadening the Gmail search', () => {
+    expect(prepareBroadForwardingQuery('@bancolombia.com', '').query).toBeNull();
+    expect(prepareBroadForwardingQuery('bancolombia', '@lulobank.com').query).toBeNull();
   });
 });

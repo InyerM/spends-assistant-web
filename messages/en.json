@@ -126,6 +126,9 @@
     "cancel": "Cancel"
   },
   "shortcutInbox": {
+    "senderUnverified": "Unverified sender",
+    "forwardedSource": "Forwarded email",
+    "securityNoticeOmitted": "Security notice: content omitted to protect the code.",
     "luloCardPurchase": "Possible card purchase",
     "luloZeroAmount": "Zero-amount card notice",
     "luloNeedsReview": "Unrecognized Lulo notice",

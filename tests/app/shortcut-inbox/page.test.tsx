@@ -6,6 +6,8 @@ const { useTranslations } = vi.hoisted(() => {
   const translate = (key: string): string =>
     ({
       title: 'Shortcut inbox',
+      senderUnverified: 'Unverified sender',
+      forwardedSource: 'Forwarded email',
       markNonTransaction: 'Mark non-transaction',
       dismiss: 'Dismiss',
       exportJson: 'Export JSON',
@@ -170,6 +172,34 @@ describe('Shortcut inbox review page', () => {
       'href',
       '/api/shortcut-inbox/export',
     );
+  });
+
+  it('shows a newly forwarded sender separately from the notice text', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        Response.json({
+          data: [
+            {
+              id: 'forwarded-1',
+              source: 'forwarded_email',
+              external_id: 'message-1',
+              received_at: '2026-10-03T10:00:00Z',
+              raw_text:
+                'From (unverified): new-alert@bancolombia.example\n\nCompra realizada\n\nCompraste $50.000',
+              status: 'pending',
+              created_at: '2026-10-03T10:00:00Z',
+            },
+          ],
+          count: 1,
+        }),
+      ),
+    );
+    render(<ShortcutInboxPage />);
+    expect(await screen.findByText('Unverified sender')).toBeInTheDocument();
+    expect(screen.getByText('Forwarded email')).toBeInTheDocument();
+    expect(screen.getByText('new-alert@bancolombia.example')).toBeInTheDocument();
+    expect(screen.getByText(/Compraste \$50.000/)).toBeInTheDocument();
   });
 
   it('shows bounded candidate evidence on request without offering confirmation', async () => {

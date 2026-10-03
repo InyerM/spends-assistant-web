@@ -100,6 +100,9 @@
     "viewAllCategories": "Ver todas as categorias"
   },
   "shortcutInbox": {
+    "senderUnverified": "Remetente não verificado",
+    "forwardedSource": "Email encaminhado",
+    "securityNoticeOmitted": "Aviso de segurança: conteúdo omitido para proteger o código.",
     "luloCardPurchase": "Possível compra com cartão",
     "luloZeroAmount": "Aviso de cartão com valor zero",
     "luloNeedsReview": "Aviso Lulo não identificado",

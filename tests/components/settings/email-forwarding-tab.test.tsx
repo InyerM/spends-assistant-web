@@ -143,7 +143,7 @@ describe('EmailForwardingTab', () => {
     expect(screen.queryByRole('link', { name: /steal/i })).not.toBeInTheDocument();
   });
 
-  it('helps find account-linked senders and prepare one filter for multiple banks', async () => {
+  it('prepares a broad bank keyword filter that can catch new senders', async () => {
     vi.stubGlobal(
       'fetch',
       vi.fn().mockImplementation((url: string) =>
@@ -172,21 +172,20 @@ describe('EmailForwardingTab', () => {
     );
     renderTab();
 
-    expect(await screen.findByRole('textbox', { name: 'senderGuideAddresses' })).toBeVisible();
+    const keywords = await screen.findByRole('textbox', { name: 'senderGuideKeywords' });
+    expect(keywords).toBeVisible();
+    expect(keywords).toHaveValue('bancolombia');
     fireEvent.click(screen.getByText('senderGuideCatalogTitle'));
     expect(await screen.findByText('Lulo Bank')).toBeInTheDocument();
     expect(screen.getByText('senderGuideAccountMatch')).toBeInTheDocument();
     expect(screen.getByText('Banco Falabella')).toBeInTheDocument();
 
-    const input = screen.getByRole('textbox', { name: 'senderGuideAddresses' });
-    fireEvent.change(input, { target: { value: '@lulobank.com' } });
+    fireEvent.change(keywords, { target: { value: '@lulobank.com' } });
     expect(screen.getByRole('button', { name: 'senderGuideCopyQuery' })).toBeDisabled();
-    fireEvent.change(input, {
-      target: { value: 'notificaciones@lulobank.com\navisos@bancolombia.example' },
+    fireEvent.change(keywords, {
+      target: { value: 'bancolombia\nlulobank' },
     });
-    expect(
-      screen.getByText('{from:notificaciones@lulobank.com from:avisos@bancolombia.example}'),
-    ).toBeInTheDocument();
+    expect(screen.getByText('{bancolombia lulobank}')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'senderGuideCopyQuery' })).toBeEnabled();
     expect(screen.getByText('senderGuidePasteInSearch')).toBeInTheDocument();
   });

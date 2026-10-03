@@ -8,14 +8,18 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useAccounts } from '@/lib/api/queries/account.queries';
-import { prepareSenderQuery, providersForAccounts } from '@/lib/email-forwarding/sender-catalog';
+import {
+  prepareBroadForwardingQuery,
+  providersForAccounts,
+} from '@/lib/email-forwarding/sender-catalog';
 
 export function EmailSenderGuide(): React.ReactElement {
   const t = useTranslations('emailForwarding');
   const { data: accounts = [] } = useAccounts();
+  const [keywordsInput, setKeywordsInput] = useState('bancolombia');
   const [addressesInput, setAddressesInput] = useState('');
   const [copied, setCopied] = useState(false);
-  const prepared = prepareSenderQuery(addressesInput);
+  const prepared = prepareBroadForwardingQuery(keywordsInput, addressesInput);
 
   async function copyQuery(): Promise<void> {
     if (!prepared.query) return;
@@ -80,18 +84,45 @@ export function EmailSenderGuide(): React.ReactElement {
       </details>
 
       <div className='space-y-2'>
-        <Label htmlFor='sender-guide-addresses'>{t('senderGuideAddresses')}</Label>
+        <Label htmlFor='sender-guide-keywords'>{t('senderGuideKeywords')}</Label>
         <Textarea
-          id='sender-guide-addresses'
+          id='sender-guide-keywords'
           autoComplete='off'
-          rows={4}
-          value={addressesInput}
+          rows={3}
+          value={keywordsInput}
           onChange={(event) => {
-            setAddressesInput(event.target.value);
+            setKeywordsInput(event.target.value);
             setCopied(false);
           }}
-          placeholder={'avisos@banco.example\nnotificaciones@lulobank.com'}
+          placeholder={'bancolombia\nlulobank'}
         />
+        <p className='text-muted-foreground text-xs leading-relaxed'>
+          {t('senderGuideKeywordsHint')}
+        </p>
+      </div>
+
+      <details className='border-border rounded-md border p-3'>
+        <summary className='cursor-pointer text-sm font-medium'>
+          {t('senderGuideExactAddressesTitle')}
+        </summary>
+        <div className='space-y-2 pt-3'>
+          <Label htmlFor='sender-guide-addresses'>{t('senderGuideAddresses')}</Label>
+          <Textarea
+            id='sender-guide-addresses'
+            autoComplete='off'
+            rows={3}
+            value={addressesInput}
+            onChange={(event) => {
+              setAddressesInput(event.target.value);
+              setCopied(false);
+            }}
+            placeholder={'avisos@banco.example\nnotificaciones@lulobank.com'}
+          />
+          <p className='text-muted-foreground text-xs'>{t('senderGuideAddressesHint')}</p>
+        </div>
+      </details>
+
+      <div className='space-y-2'>
         <p className='text-muted-foreground text-xs' aria-live='polite'>
           {prepared.invalidEntries.length
             ? t('senderGuideInvalidEntries')

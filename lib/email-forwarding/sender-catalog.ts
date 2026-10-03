@@ -125,3 +125,36 @@ export function prepareSenderQuery(value: string): {
 
   return { addresses, invalidEntries, query };
 }
+
+export function prepareBroadForwardingQuery(
+  keywordInput: string,
+  addressInput: string,
+): { query: string | null; invalidEntries: string[] } {
+  const senderQuery = prepareSenderQuery(addressInput);
+  const keywords: string[] = [];
+  const invalidEntries = [...senderQuery.invalidEntries];
+
+  for (const entry of keywordInput
+    .split(/[\n,;]+/)
+    .map((value) => value.trim())
+    .filter(Boolean)) {
+    const keyword = entry.normalize('NFKC').toLowerCase();
+    if (keyword.length > 64 || !/^[\p{L}\p{N}][\p{L}\p{N} ._-]*$/u.test(keyword)) {
+      invalidEntries.push(entry);
+    } else if (!keywords.includes(keyword)) {
+      keywords.push(keyword);
+    }
+  }
+
+  const terms = [
+    ...keywords.map((keyword) => (keyword.includes(' ') ? `"${keyword}"` : keyword)),
+    ...senderQuery.addresses.map((address) => `from:${address}`),
+  ];
+  const query =
+    invalidEntries.length || terms.length === 0
+      ? null
+      : terms.length === 1
+        ? terms[0]
+        : `{${terms.join(' ')}}`;
+  return { query, invalidEntries };
+}

@@ -1,13 +1,14 @@
 # Bank sender discovery for guided forwarding
 
 The Settings → Email forwarding guide ranks bank search clues using the user's active account names
-and institutions. It does not read Gmail or create a filter. The user searches existing mail, opens
-a real transaction notice, copies its full `From` address, checks the message, and creates a Gmail
-filter for those exact addresses. The helper accepts one address per line, removes duplicates, and
-generates a Gmail OR search such as `{from:alerts@bank.example from:notice@other.example}`. It
-rejects domain-only entries rather than generating a partial search. The user pastes the generated
-search into Gmail's main search box, checks the results, and then creates the forwarding filter in
-Gmail. New forwarded mail enters the review inbox; it does not post a transaction automatically.
+and institutions. It does not read Gmail or create a filter. The helper starts with `bancolombia` as
+a distinctive word and accepts more bank words, one per line. It generates a Gmail OR search such as
+`{bancolombia lulobank}` across sender, subject, and message content. An optional section accepts
+exact sender addresses for notices that omit the bank word, producing terms such as
+`from:alerts@bank.example`. Invalid operators, incomplete addresses, and domain-only sender entries
+disable copying rather than broadening the search unexpectedly. The user pastes the generated search
+into Gmail's main search box, checks the results, and then creates the forwarding filter in Gmail.
+New forwarded mail enters the review inbox; it does not post a transaction automatically.
 
 The catalogue contains discovery clues for Bancolombia, Lulo Bank, Banco Falabella, Banco de Bogotá,
 BBVA, Nequi, Davivienda, and Nu. A discovery clue is **not** a verified sender or an authentication
@@ -20,14 +21,15 @@ including `notificaciones@bancodebogota.net`. Other institutions have no exact s
 catalogue because a reliable transaction address was not established.
 
 Gmail's [search operators](https://support.google.com/mail/answer/7190?hl=en-GB) support `from:` and
-`{ }` OR searches. Its [filter workflow](https://support.google.com/mail/answer/6579?hl=en-EN) can
-forward matching new mail after the destination is verified. Gmail filters do not expose a general
-regular-expression operator. A broad bank name or domain can match promotions or unrelated messages,
-so the guide only accepts complete email addresses. An exact address can still send both transaction
-notices and promotions or security codes; in that case the user must add a subject criterion in
-Gmail or leave that address out. The helper does not save the list in Spends; the created Gmail
-filter is the durable configuration. Forwarded email attachments are not processed by the current
-intake path.
+`{ }` OR searches. Its [advanced search](https://support.google.com/mail/answer/6593?hl=en) includes
+"Has the words" and can create a filter from the search. Its
+[filter workflow](https://support.google.com/mail/answer/6579?hl=en-EN) forwards matching new mail
+after the destination is verified. Gmail filters do not expose a general regular-expression
+operator. A broad bank word can also match promotions, codes, unrelated messages, or impersonation.
+The Worker shows the unverified sender, separates obvious non-financial mail, and leaves uncertain
+mail pending. It omits detected security-code content before storage or AI triage. The helper does
+not save the Gmail search in Spends; the created Gmail filter is the durable configuration.
+Forwarded email attachments are not processed by the current intake path.
 
 The route status in Spends means the private address exists and the confirmation message was
 received. The user can mark the address verified after Gmail confirms it; this is a user
