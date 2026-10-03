@@ -5,6 +5,7 @@ import { useLocale, useTranslations } from 'next-intl';
 import { Check, Copy, ExternalLink, Inbox, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { EmailForwardingRoute } from '@/lib/api/queries/email-forwarding.queries';
+import { EmailSenderGuide } from '@/components/settings/email-sender-guide';
 
 type ActiveRoute = Extract<EmailForwardingRoute, { status: 'active' }>;
 
@@ -99,6 +100,7 @@ export function EmailForwardingSteps({
           rel='noopener noreferrer'>
           {t('gmailInstructions')} <ExternalLink className='size-3' aria-hidden='true' />
         </a>
+        <EmailSenderGuide />
       </SetupStep>
 
       <SetupStep number={4} title={t('reviewInboxTitle')}>

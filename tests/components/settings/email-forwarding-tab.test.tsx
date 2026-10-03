@@ -88,6 +88,47 @@ describe('EmailForwardingTab', () => {
     await waitFor(() => expect(screen.queryByText('awaitingConfirmation')).not.toBeInTheDocument());
   });
 
+  it('helps find account-linked bank senders without accepting a domain-only filter', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockImplementation((url: string) =>
+        Promise.resolve(
+          Response.json(
+            url === '/api/accounts'
+              ? [
+                  {
+                    id: 'account-1',
+                    name: 'Lulo credit card',
+                    institution: 'Lulobank',
+                    is_active: true,
+                  },
+                ]
+              : {
+                  status: 'active',
+                  address: 'private@example.com',
+                  created_at: '2026-10-01T00:00:00Z',
+                  confirmation_received_at: null,
+                  verification_text: null,
+                },
+          ),
+        ),
+      ),
+    );
+    renderTab();
+
+    fireEvent.click(await screen.findByText('senderGuideTitle'));
+    expect(await screen.findByText('Lulo Bank')).toBeInTheDocument();
+    expect(screen.getByText('senderGuideAccountMatch')).toBeInTheDocument();
+    expect(screen.getByText('Banco Falabella')).toBeInTheDocument();
+
+    const input = screen.getByRole('textbox', { name: 'senderGuideExactAddress' });
+    fireEvent.change(input, { target: { value: '@lulobank.com' } });
+    expect(screen.getByRole('button', { name: 'senderGuideCopyFilter' })).toBeDisabled();
+    fireEvent.change(input, { target: { value: 'notificaciones@lulobank.com' } });
+    expect(screen.getByText('from:notificaciones@lulobank.com')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'senderGuideCopyFilter' })).toBeEnabled();
+  });
+
   it('keeps the removal confirmation open when the server rejects deletion', async () => {
     vi.stubGlobal(
       'fetch',
