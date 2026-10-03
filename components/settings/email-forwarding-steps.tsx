@@ -6,29 +6,9 @@ import { Check, Copy, ExternalLink, Inbox, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { EmailForwardingRoute } from '@/lib/api/queries/email-forwarding.queries';
 import { EmailSenderGuide } from '@/components/settings/email-sender-guide';
+import { googleVerificationUrl } from '@/lib/email-forwarding/google-verification';
 
 type ActiveRoute = Extract<EmailForwardingRoute, { status: 'active' }>;
-
-function googleVerificationUrl(message: string | null): string | null {
-  if (!message) return null;
-  for (const match of message.matchAll(/https:\/\/[^\s<>"']+/gi)) {
-    try {
-      const candidate = new URL(match[0].replace(/[.,;!?)]*$/, ''));
-      if (
-        candidate.protocol === 'https:' &&
-        !candidate.username &&
-        !candidate.password &&
-        ['mail-settings.google.com', 'mail.google.com'].includes(candidate.hostname) &&
-        candidate.pathname.startsWith('/mail/')
-      ) {
-        return candidate.toString();
-      }
-    } catch {
-      // Ignore malformed links in the received message.
-    }
-  }
-  return null;
-}
 
 function SetupStep({
   number,
@@ -56,14 +36,20 @@ export function EmailForwardingSteps({
   route,
   confirmationCopied,
   isFetching,
+  isConfirming,
+  confirmationError,
   onCopy,
   onRefresh,
+  onMarkVerified,
 }: {
   route: ActiveRoute;
   confirmationCopied: boolean;
   isFetching: boolean;
+  isConfirming: boolean;
+  confirmationError: boolean;
   onCopy: (value: string) => void;
   onRefresh: () => void;
+  onMarkVerified: () => void;
 }): React.ReactElement {
   const t = useTranslations('emailForwarding');
   const locale = useLocale();
@@ -84,29 +70,53 @@ export function EmailForwardingSteps({
         {route.confirmation_received_at ? (
           <div className='space-y-3'>
             <p className='text-muted-foreground text-sm leading-relaxed'>
-              {t('verificationReceivedBody')}
+              {route.user_confirmed_at ? t('verifiedBody') : t('verificationReceivedBody')}
             </p>
-            {route.verification_text && (
-              <div className='bg-muted/70 space-y-2 rounded-lg p-3'>
-                <p className='text-xs font-medium'>{t('verificationMessage')}</p>
+            {!route.user_confirmed_at && (
+              <div className='flex flex-wrap items-center gap-2'>
                 {verificationUrl && (
-                  <Button variant='outline' size='sm' asChild>
+                  <Button size='sm' asChild>
                     <a href={verificationUrl} target='_blank' rel='noopener noreferrer'>
                       {t('openVerification')} <ExternalLink aria-hidden='true' />
                     </a>
                   </Button>
                 )}
-                <p className='text-sm break-words whitespace-pre-wrap select-all'>
-                  {route.verification_text}
-                </p>
                 <Button
                   variant='outline'
                   size='sm'
-                  onClick={() => onCopy(route.verification_text!)}>
-                  {confirmationCopied ? <Check aria-hidden='true' /> : <Copy aria-hidden='true' />}
-                  {confirmationCopied ? t('copied') : t('copyConfirmation')}
+                  disabled={isConfirming}
+                  onClick={onMarkVerified}>
+                  <Check aria-hidden='true' /> {t('markVerified')}
                 </Button>
               </div>
+            )}
+            {confirmationError && (
+              <p className='text-destructive text-sm' role='alert'>
+                {t('markVerifiedError')}
+              </p>
+            )}
+            {route.verification_text && (
+              <details className='border-border rounded-lg border p-3'>
+                <summary className='cursor-pointer text-sm font-medium'>
+                  {t('showOriginalMessage')}
+                </summary>
+                <div className='space-y-3 pt-3'>
+                  <p className='bg-muted/60 max-h-48 overflow-y-auto rounded-md p-3 text-xs leading-relaxed break-all whitespace-pre-wrap select-all'>
+                    {route.verification_text}
+                  </p>
+                  <Button
+                    variant='outline'
+                    size='sm'
+                    onClick={() => onCopy(route.verification_text!)}>
+                    {confirmationCopied ? (
+                      <Check aria-hidden='true' />
+                    ) : (
+                      <Copy aria-hidden='true' />
+                    )}
+                    {confirmationCopied ? t('copied') : t('copyConfirmation')}
+                  </Button>
+                </div>
+              </details>
             )}
           </div>
         ) : (
@@ -120,8 +130,21 @@ export function EmailForwardingSteps({
       </SetupStep>
 
       <SetupStep number={3} title={t('createFilterTitle')}>
-        <p className='text-muted-foreground text-sm leading-relaxed'>{t('createFilterBody')}</p>
-        <p className='text-foreground text-sm font-medium'>{t('filteredOnly')}</p>
+        {route.user_confirmed_at ? (
+          <div className='space-y-4'>
+            <p className='text-foreground text-sm font-medium'>{t('filterCreatedInGmail')}</p>
+            <ol className='text-muted-foreground list-inside list-decimal space-y-2 text-sm leading-relaxed'>
+              <li>{t('filterStepFindSender')}</li>
+              <li>{t('filterStepOpenOptions')}</li>
+              <li>{t('filterStepChooseForwarding')}</li>
+              <li>{t('filterStepFinish')}</li>
+            </ol>
+            <p className='text-muted-foreground text-sm leading-relaxed'>{t('filteredOnly')}</p>
+            <EmailSenderGuide />
+          </div>
+        ) : (
+          <p className='text-muted-foreground text-sm leading-relaxed'>{t('filterLocked')}</p>
+        )}
         <a
           className='text-primary inline-flex items-center gap-1 text-sm underline-offset-4 hover:underline'
           href={`https://support.google.com/mail/answer/10957?hl=${locale === 'es' ? 'es-419' : 'en'}`}
@@ -129,7 +152,6 @@ export function EmailForwardingSteps({
           rel='noopener noreferrer'>
           {t('gmailInstructions')} <ExternalLink className='size-3' aria-hidden='true' />
         </a>
-        <EmailSenderGuide />
       </SetupStep>
 
       <SetupStep number={4} title={t('reviewInboxTitle')}>

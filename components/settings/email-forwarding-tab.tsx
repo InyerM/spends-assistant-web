@@ -19,6 +19,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { useEmailForwardingRoute } from '@/lib/api/queries/email-forwarding.queries';
 import {
+  useAcknowledgeEmailForwardingVerification,
   useCreateEmailForwardingRoute,
   useDeleteEmailForwardingRoute,
 } from '@/lib/api/mutations/email-forwarding.mutations';
@@ -28,6 +29,7 @@ export function EmailForwardingTab(): React.ReactElement {
   const t = useTranslations('emailForwarding');
   const { data: route, isLoading, isError, refetch, isFetching } = useEmailForwardingRoute();
   const createRoute = useCreateEmailForwardingRoute();
+  const acknowledgeVerification = useAcknowledgeEmailForwardingVerification();
   const deleteRoute = useDeleteEmailForwardingRoute();
   const [copied, setCopied] = useState<'address' | 'confirmation' | null>(null);
   const [removeOpen, setRemoveOpen] = useState(false);
@@ -50,10 +52,13 @@ export function EmailForwardingTab(): React.ReactElement {
             {t('title')}
           </CardTitle>
           {route?.status === 'active' && (
-            <Badge variant='secondary'>
-              {route.confirmation_received_at
-                ? t('confirmationReceived')
-                : t('awaitingConfirmation')}
+            <Badge variant={route.user_confirmed_at ? 'default' : 'secondary'}>
+              {route.user_confirmed_at && <Check aria-hidden='true' />}
+              {route.user_confirmed_at
+                ? t('verifiedByUser')
+                : route.confirmation_received_at
+                  ? t('verifyInGmail')
+                  : t('awaitingConfirmation')}
             </Badge>
           )}
         </div>
@@ -123,8 +128,11 @@ export function EmailForwardingTab(): React.ReactElement {
               route={route}
               confirmationCopied={copied === 'confirmation'}
               isFetching={isFetching}
+              isConfirming={acknowledgeVerification.isPending}
+              confirmationError={acknowledgeVerification.isError}
               onCopy={(value) => void copy(value, 'confirmation')}
               onRefresh={() => void refetch()}
+              onMarkVerified={() => acknowledgeVerification.mutate()}
             />
 
             <div className='border-border flex flex-wrap items-center justify-between gap-3 border-t pt-5'>

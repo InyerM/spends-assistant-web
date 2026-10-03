@@ -67,7 +67,7 @@ describe('EmailForwardingTab', () => {
     expect(screen.queryByRole('button', { name: 'createAddress' })).not.toBeInTheDocument();
   });
 
-  it('shows received verification text without claiming Gmail forwarding is active', async () => {
+  it('shows a received confirmation as pending Gmail verification', async () => {
     vi.stubGlobal(
       'fetch',
       vi.fn().mockResolvedValue(
@@ -83,9 +83,41 @@ describe('EmailForwardingTab', () => {
     renderTab();
 
     expect(await screen.findByText('Gmail confirmation code 123456')).toBeInTheDocument();
-    expect(screen.getByText('confirmationReceived')).toBeInTheDocument();
-    expect(screen.getByText('createFilterTitle')).toBeInTheDocument();
+    expect(screen.getByText('verifyInGmail')).toBeInTheDocument();
+    expect(screen.getByText('filterLocked')).toBeInTheDocument();
+    expect(screen.getByText('Gmail confirmation code 123456')).not.toBeVisible();
     await waitFor(() => expect(screen.queryByText('awaitingConfirmation')).not.toBeInTheDocument());
+  });
+
+  it('records the user confirmation and then gives exact Gmail filter steps', async () => {
+    const route = {
+      status: 'active',
+      address: 'private@example.com',
+      created_at: '2026-10-01T00:00:00Z',
+      confirmation_received_at: '2026-10-03T16:45:00Z',
+      verification_text: 'Confirm: https://mail-settings.google.com/mail/vf-example',
+      user_confirmed_at: null,
+    };
+    const fetchMock = vi
+      .fn()
+      .mockImplementation((_url: string, options?: RequestInit) =>
+        Promise.resolve(
+          Response.json(
+            options?.method === 'PATCH'
+              ? { ...route, user_confirmed_at: '2026-10-03T17:00:00Z' }
+              : route,
+          ),
+        ),
+      );
+    vi.stubGlobal('fetch', fetchMock);
+    renderTab();
+
+    fireEvent.click(await screen.findByRole('button', { name: 'markVerified' }));
+
+    expect(await screen.findByText('verifiedByUser')).toBeInTheDocument();
+    expect(screen.getByText('filterStepOpenOptions')).toBeInTheDocument();
+    expect(screen.getByText('filterStepChooseForwarding')).toBeInTheDocument();
+    expect(fetchMock).toHaveBeenCalledWith('/api/email-forwarding', { method: 'PATCH' });
   });
 
   it('offers the recovered Gmail verification link without linking arbitrary URLs', async () => {
@@ -130,8 +162,9 @@ describe('EmailForwardingTab', () => {
                   status: 'active',
                   address: 'private@example.com',
                   created_at: '2026-10-01T00:00:00Z',
-                  confirmation_received_at: null,
+                  confirmation_received_at: '2026-10-03T16:45:00Z',
                   verification_text: null,
+                  user_confirmed_at: '2026-10-03T17:00:00Z',
                 },
           ),
         ),
@@ -146,10 +179,10 @@ describe('EmailForwardingTab', () => {
 
     const input = screen.getByRole('textbox', { name: 'senderGuideExactAddress' });
     fireEvent.change(input, { target: { value: '@lulobank.com' } });
-    expect(screen.getByRole('button', { name: 'senderGuideCopyFilter' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'senderGuideCopyAddress' })).toBeDisabled();
     fireEvent.change(input, { target: { value: 'notificaciones@lulobank.com' } });
-    expect(screen.getByText('from:notificaciones@lulobank.com')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'senderGuideCopyFilter' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'senderGuideCopyAddress' })).toBeEnabled();
+    expect(screen.getByText('senderGuidePasteInFrom')).toBeInTheDocument();
   });
 
   it('keeps the removal confirmation open when the server rejects deletion', async () => {

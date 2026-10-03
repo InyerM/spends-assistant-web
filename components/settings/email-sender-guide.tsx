@@ -8,19 +8,22 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAccounts } from '@/lib/api/queries/account.queries';
-import { exactSenderFilter, providersForAccounts } from '@/lib/email-forwarding/sender-catalog';
+import {
+  providersForAccounts,
+  validatedSenderAddress,
+} from '@/lib/email-forwarding/sender-catalog';
 
 export function EmailSenderGuide(): React.ReactElement {
   const t = useTranslations('emailForwarding');
   const { data: accounts = [] } = useAccounts();
   const [address, setAddress] = useState('');
   const [copied, setCopied] = useState(false);
-  const filter = exactSenderFilter(address);
+  const senderAddress = validatedSenderAddress(address);
 
-  async function copyFilter(): Promise<void> {
-    if (!filter) return;
+  async function copyAddress(): Promise<void> {
+    if (!senderAddress) return;
     try {
-      await navigator.clipboard.writeText(filter);
+      await navigator.clipboard.writeText(senderAddress);
       setCopied(true);
     } catch {
       setCopied(false);
@@ -76,14 +79,18 @@ export function EmailSenderGuide(): React.ReactElement {
             }}
             placeholder='avisos@banco.example'
           />
-          {filter ? (
-            <code className='block text-xs break-all select-all'>{filter}</code>
+          {senderAddress ? (
+            <p className='text-muted-foreground text-xs'>{t('senderGuidePasteInFrom')}</p>
           ) : (
             <p className='text-muted-foreground text-xs'>{t('senderGuideInvalidAddress')}</p>
           )}
-          <Button variant='outline' size='sm' onClick={() => void copyFilter()} disabled={!filter}>
+          <Button
+            variant='outline'
+            size='sm'
+            onClick={() => void copyAddress()}
+            disabled={!senderAddress}>
             {copied ? <Check aria-hidden='true' /> : <Copy aria-hidden='true' />}
-            {copied ? t('copied') : t('senderGuideCopyFilter')}
+            {copied ? t('copied') : t('senderGuideCopyAddress')}
           </Button>
         </div>
       </div>

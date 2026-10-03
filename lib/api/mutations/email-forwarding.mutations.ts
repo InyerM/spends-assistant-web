@@ -20,6 +20,22 @@ export async function deleteEmailForwardingRoute(): Promise<void> {
   await check(await fetch('/api/email-forwarding', { method: 'DELETE' }));
 }
 
+export async function acknowledgeEmailForwardingVerification(): Promise<EmailForwardingRoute> {
+  return (
+    await check(await fetch('/api/email-forwarding', { method: 'PATCH' }))
+  ).json() as Promise<EmailForwardingRoute>;
+}
+
+export function useAcknowledgeEmailForwardingVerification(): ReturnType<
+  typeof useMutation<EmailForwardingRoute, Error, void>
+> {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: acknowledgeEmailForwardingVerification,
+    onSuccess: (route) => queryClient.setQueryData(emailForwardingKeys.route(), route),
+  });
+}
+
 export function useCreateEmailForwardingRoute(): ReturnType<
   typeof useMutation<EmailForwardingRoute, Error, void>
 > {

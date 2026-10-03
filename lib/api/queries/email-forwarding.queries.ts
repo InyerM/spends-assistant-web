@@ -9,6 +9,7 @@ export type EmailForwardingRoute =
       created_at: string;
       confirmation_received_at: string | null;
       verification_text: string | null;
+      user_confirmed_at: string | null;
     };
 
 export const emailForwardingKeys = {

@@ -87,10 +87,10 @@ export function providersForAccounts(
   })).sort((left, right) => Number(right.hasAccount) - Number(left.hasAccount));
 }
 
-export function exactSenderFilter(value: string): string | null {
+export function validatedSenderAddress(value: string): string | null {
   const address = value.trim().toLowerCase();
   if (address.length > 254 || !/^[a-z0-9._%+-]{1,64}@[a-z0-9.-]+\.[a-z]{2,}$/i.test(address)) {
     return null;
   }
-  return `from:${address}`;
+  return address;
 }

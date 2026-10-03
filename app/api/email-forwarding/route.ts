@@ -3,7 +3,7 @@ import { workerConfig } from '@/lib/config';
 
 const privateHeaders = { 'Cache-Control': 'private, no-store' };
 
-async function forwardToWorker(method: 'GET' | 'POST' | 'DELETE'): Promise<Response> {
+async function forwardToWorker(method: 'GET' | 'POST' | 'PATCH' | 'DELETE'): Promise<Response> {
   try {
     const { supabase } = await getUserClient();
     const {
@@ -46,6 +46,10 @@ export function GET(): Promise<Response> {
 
 export function POST(): Promise<Response> {
   return forwardToWorker('POST');
+}
+
+export function PATCH(): Promise<Response> {
+  return forwardToWorker('PATCH');
 }
 
 export function DELETE(): Promise<Response> {

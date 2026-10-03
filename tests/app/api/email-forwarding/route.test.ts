@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { DELETE, GET, POST } from '@/app/api/email-forwarding/route';
+import { DELETE, GET, PATCH, POST } from '@/app/api/email-forwarding/route';
 import { getUserClient } from '@/lib/api/server';
 
 vi.mock('@/lib/config', () => ({ workerConfig: { url: 'https://worker.example', apiKey: '' } }));
@@ -65,6 +65,22 @@ describe('/api/email-forwarding', () => {
     const response = await DELETE();
 
     expect(response.status).toBe(204);
+  });
+
+  it('forwards the owner confirmation acknowledgement without user supplied data', async () => {
+    const confirmed = { ...activeRoute, user_confirmed_at: '2026-10-03T17:00:00Z' };
+    const fetchMock = vi.fn().mockResolvedValue(Response.json(confirmed));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const response = await PATCH();
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual(confirmed);
+    expect(fetchMock).toHaveBeenCalledWith('https://worker.example/email-forwarding-route', {
+      method: 'PATCH',
+      headers: { Authorization: 'Bearer session-token' },
+      cache: 'no-store',
+    });
   });
 
   it('rejects requests without an authenticated session', async () => {
