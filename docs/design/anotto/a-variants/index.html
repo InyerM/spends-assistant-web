@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <title>Anotto · neutral dark explorations</title>
+    <style>
+      :root {
+        font-family: Manrope, ui-sans-serif, system-ui, sans-serif;
+        background: #0a0b0d;
+        color: #f4f6f4;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0 auto;
+        padding: clamp(24px, 4vw, 64px);
+        max-width: 1700px;
+      }
+      header {
+        display: flex;
+        justify-content: space-between;
+        align-items: start;
+        gap: 28px;
+        margin-bottom: 36px;
+      }
+      h1 {
+        font-size: clamp(33px, 4vw, 58px);
+        line-height: 1.05;
+        letter-spacing: -0.05em;
+        margin: 0 0 10px;
+      }
+      p {
+        color: #b9bec0;
+        max-width: 62ch;
+        font-size: 15px;
+        line-height: 1.55;
+        margin: 0;
+      }
+      header a {
+        color: #b6dfc1;
+        white-space: nowrap;
+        font-size: 13px;
+        padding-top: 11px;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 26px;
+      }
+      article {
+        border: 1px solid #3a3f44;
+        border-radius: 18px;
+        overflow: hidden;
+        background: #15181b;
+      }
+      article img {
+        width: 100%;
+        display: block;
+        aspect-ratio: 1.5;
+        object-fit: cover;
+        object-position: top left;
+      }
+      .info {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 20px;
+        padding: 21px 23px 23px;
+      }
+      .info h2 {
+        font-size: 18px;
+        margin: 0 0 6px;
+        letter-spacing: -0.025em;
+      }
+      .info p {
+        font-size: 12px;
+      }
+      .links {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        justify-content: end;
+      }
+      .links a {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 42px;
+        border: 1px solid #77827c;
+        border-radius: 999px;
+        padding: 0 15px;
+        color: #f4f6f4;
+        font-size: 12px;
+        text-decoration: none;
+        white-space: nowrap;
+      }
+      .links a:hover,
+      .links a:focus-visible {
+        color: #092016;
+        background: #a5e2bf;
+        border-color: #a5e2bf;
+      }
+      footer {
+        color: #afb7b2;
+        font-size: 12px;
+        margin-top: 30px;
+        line-height: 1.5;
+      }
+      @media (max-width: 1000px) {
+        .grid {
+          grid-template-columns: 1fr;
+        }
+      }
+      @media (max-width: 600px) {
+        header {
+          display: block;
+        }
+        header a {
+          display: inline-block;
+          margin-top: 17px;
+        }
+        .info {
+          display: block;
+        }
+        .links {
+          justify-content: start;
+          margin-top: 17px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div>
+        <h1>Anotto, on neutral ground.</h1>
+        <p>
+          The same layout, typography, and wordmark from direction A. Four treatments of charcoal
+          surfaces and measured green accents. All account figures are illustrative.
+        </p>
+      </div>
+      <a href="../index.html">← Earlier directions</a>
+    </header>
+    <main class="grid">
+      <article>
+        <img src="previews/1-desktop.png" alt="Option 1: carbon surfaces with mint accents" />
+        <div class="info">
+          <div>
+            <h2>1 · Carbon Mint</h2>
+            <p>Near-black canvas, visible silver edges, mint action.</p>
+          </div>
+          <div class="links">
+            <a href="preview.html?v=1">Open</a><a href="previews/1-mobile.png">Phone</a>
+          </div>
+        </div>
+      </article>
+      <article>
+        <img src="previews/2-desktop.png" alt="Option 2: graphite surfaces with sage accents" />
+        <div class="info">
+          <div>
+            <h2>2 · Graphite Sage</h2>
+            <p>Soft charcoal, gentle leaf green, pill details.</p>
+          </div>
+          <div class="links">
+            <a href="preview.html?v=2">Open</a><a href="previews/2-mobile.png">Phone</a>
+          </div>
+        </div>
+      </article>
+      <article>
+        <img src="previews/3-desktop.png" alt="Option 3: black surfaces with emerald signals" />
+        <div class="info">
+          <div>
+            <h2>3 · Void Emerald</h2>
+            <p>Strict black, white primary action, green as a signal.</p>
+          </div>
+          <div class="links">
+            <a href="preview.html?v=3">Open</a><a href="previews/3-mobile.png">Phone</a>
+          </div>
+        </div>
+      </article>
+      <article>
+        <img
+          src="previews/4-desktop.png"
+          alt="Option 4: charcoal surfaces with one mint review panel" />
+        <div class="info">
+          <div>
+            <h2>4 · Phosphor Review</h2>
+            <p>Neutral shell, one illuminated review panel.</p>
+          </div>
+          <div class="links">
+            <a href="preview.html?v=4">Open</a><a href="previews/4-mobile.png">Phone</a
+            ><a href="previews/4-mobile-review.png">Review detail</a>
+          </div>
+        </div>
+      </article>
+    </main>
+    <footer>
+      Review artifacts only. The production app, authentication, financial data, and public domain
+      remain unchanged.
+      <a href="secondary/index.html">Compare four secondary accents on option 3 →</a>
+    </footer>
+  </body>
+</html>

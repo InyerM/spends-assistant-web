@@ -1,0 +1,42 @@
+/* Secondary-color studies on the selected Void Emerald concept. */
+.forest.palette-3.secondary-cobalt {
+  --secondary: #94b9ff;
+}
+
+.forest.palette-3.secondary-iris {
+  --secondary: #c0b0f2;
+}
+
+.forest.palette-3.secondary-amber {
+  --secondary: #e8be78;
+}
+
+.forest.palette-3.secondary-coral {
+  --secondary: #f2afae;
+}
+
+.forest.palette-3[class*='secondary-'] .review-panel {
+  border-color: color-mix(in srgb, var(--secondary) 44%, #30363a);
+}
+
+.forest.palette-3[class*='secondary-'] .review-count {
+  background: var(--secondary);
+  color: #101114;
+}
+
+.forest.palette-3[class*='secondary-'] .review-icon,
+.forest.palette-3[class*='secondary-'] .review-link {
+  color: var(--secondary) !important;
+}
+
+.forest.palette-3[class*='secondary-'] .bars i::after {
+  background: color-mix(in srgb, var(--secondary) 72%, #111316);
+}
+
+.forest.palette-3[class*='secondary-'] .legend-expense {
+  background: var(--secondary);
+}
+
+.forest.palette-3[class*='secondary-'] .period {
+  background: color-mix(in srgb, var(--secondary) 13%, #22272a);
+}

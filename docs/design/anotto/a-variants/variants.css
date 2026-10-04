@@ -1,0 +1,279 @@
+/* Four neutral-ground explorations of the Forest layout and wordmark. */
+.forest.palette-1 {
+  --canvas: #08090b;
+  --sidebar: #0d0f12;
+  --surface: #12151a;
+  --featured: #191d22;
+  --chip: #282d32;
+  --border: #5b6169;
+  --divider: #343940;
+  --text: #f8faf8;
+  --muted: #c4cbd0;
+  --subtle: #a7b0b6;
+  --accent: #91dfbe;
+  --accent-strong: #74cda5;
+  --accent-dark: #12291e;
+  --bar-secondary: #527f70;
+  --positive: #a0e9bd;
+}
+
+.forest.palette-2 {
+  --canvas: #0e0f11;
+  --sidebar: #151619;
+  --surface: #1c1e21;
+  --featured: #242629;
+  --chip: #33363a;
+  --border: #43474b;
+  --divider: #393d41;
+  --text: #fafaf4;
+  --muted: #c7c9c3;
+  --subtle: #abb1a9;
+  --accent: #c4dea1;
+  --accent-strong: #a9cb83;
+  --accent-dark: #28321d;
+  --bar-secondary: #667760;
+  --positive: #b6df92;
+}
+
+.forest.palette-3 {
+  --canvas: #060708;
+  --sidebar: #0b0c0e;
+  --surface: #111316;
+  --featured: #161a1d;
+  --chip: #22272a;
+  --border: #30363a;
+  --divider: #2a3033;
+  --text: #ffffff;
+  --muted: #c3c9ca;
+  --subtle: #a6b0af;
+  --accent: #64d59f;
+  --accent-strong: #44b985;
+  --accent-dark: #092116;
+  --bar-secondary: #3c705a;
+  --positive: #7be3ab;
+}
+
+.forest.palette-4 {
+  --canvas: #0b0d11;
+  --sidebar: #111419;
+  --surface: #181c21;
+  --featured: #1f2429;
+  --chip: #2b3136;
+  --border: #444c52;
+  --divider: #343b41;
+  --text: #f7f9f9;
+  --muted: #c3cdd0;
+  --subtle: #aebbbe;
+  --accent: #a3dfc5;
+  --accent-strong: #83cbaa;
+  --accent-dark: #103125;
+  --bar-secondary: #5a8171;
+  --positive: #a3e7c2;
+}
+
+.forest[class*='palette-'] {
+  color: var(--text);
+  background: var(--canvas);
+}
+.forest[class*='palette-'] button:focus-visible,
+.forest[class*='palette-'] a:focus-visible {
+  outline-color: var(--accent);
+}
+.forest[class*='palette-'] .forest-sidebar {
+  background: var(--sidebar);
+  border-color: var(--divider);
+}
+.forest[class*='palette-'] .wordmark {
+  color: var(--text);
+}
+.forest[class*='palette-'] .wordmark-dot,
+.forest[class*='palette-'] .eyebrow,
+.forest[class*='palette-'] .review-icon,
+.forest[class*='palette-'] .review-link,
+.forest[class*='palette-'] .forest-activity .section-head a {
+  color: var(--accent) !important;
+}
+.forest[class*='palette-'] .mark i {
+  background: var(--accent);
+}
+.forest[class*='palette-'] .nav-caption,
+.forest[class*='palette-'] .forest-sidebar a,
+.forest[class*='palette-'] .profile small,
+.forest[class*='palette-'] .topbar,
+.forest[class*='palette-'] .privacy,
+.forest[class*='palette-'] .top-actions button,
+.forest[class*='palette-'] .forest-intro p,
+.forest[class*='palette-'] .balance-block > span,
+.forest[class*='palette-'] .summary-side span,
+.forest[class*='palette-'] .balance-block strong small,
+.forest[class*='palette-'] .balance-block p,
+.forest[class*='palette-'] .summary-side small,
+.forest[class*='palette-'] .section-head p,
+.forest[class*='palette-'] .review-panel p,
+.forest[class*='palette-'] .period,
+.forest[class*='palette-'] .legend,
+.forest[class*='palette-'] .review-row small,
+.forest[class*='palette-'] .activity-row small {
+  color: var(--muted);
+}
+.forest[class*='palette-'] .chart-scale,
+.forest[class*='palette-'] .bars > div {
+  color: var(--subtle);
+}
+.forest[class*='palette-'] .topbar,
+.forest[class*='palette-'] .profile,
+.forest[class*='palette-'] .forest-activity .activity-row,
+.forest[class*='palette-'] .review-row {
+  border-color: var(--divider);
+}
+.forest[class*='palette-'] .forest-sidebar a:hover,
+.forest[class*='palette-'] .period,
+.forest[class*='palette-'] .merchant-symbol,
+.forest[class*='palette-'] .account-lines span,
+.forest[class*='palette-'] .avatar {
+  background: var(--chip);
+  color: var(--text);
+}
+.forest[class*='palette-'] .forest-sidebar .nav-active {
+  color: var(--accent-dark);
+  background: var(--accent);
+}
+.forest[class*='palette-'] .primary-action,
+.forest[class*='palette-'] .review-count {
+  color: var(--accent-dark);
+  background: var(--accent);
+}
+.forest[class*='palette-'] .primary-action:hover {
+  background: var(--accent-strong);
+}
+.forest[class*='palette-'] .forest-summary {
+  background: var(--featured);
+  border-color: var(--border);
+}
+.forest[class*='palette-'] .account-lines span {
+  background: var(--chip);
+  color: var(--muted);
+}
+.forest[class*='palette-'] .balance-block p b {
+  color: var(--positive);
+}
+.forest[class*='palette-'] .summary-side {
+  border-color: var(--divider);
+}
+.forest[class*='palette-'] .track {
+  background: var(--divider);
+}
+.forest[class*='palette-'] .track i {
+  background: var(--accent);
+}
+.forest[class*='palette-'] .flow-panel,
+.forest[class*='palette-'] .review-panel,
+.forest[class*='palette-'] .forest-activity {
+  background: var(--surface);
+  border-color: var(--border);
+}
+.forest[class*='palette-'] .bars {
+  background: repeating-linear-gradient(
+    to top,
+    transparent 0,
+    transparent calc(25% - 1px),
+    var(--divider) calc(25% - 1px),
+    var(--divider) 25%
+  );
+}
+.forest[class*='palette-'] .bars i,
+.forest[class*='palette-'] .legend-income {
+  background: var(--accent-strong);
+}
+.forest[class*='palette-'] .bars i::after,
+.forest[class*='palette-'] .legend-expense {
+  background: var(--bar-secondary);
+}
+.forest[class*='palette-'] .review-row {
+  color: var(--text);
+}
+.forest[class*='palette-'] .mobile-nav {
+  background: var(--sidebar);
+  border-color: var(--divider);
+}
+.forest[class*='palette-'] .mobile-nav a {
+  color: var(--text);
+}
+
+/* 1: bright card edges and a mint action, inspired by instrument-panel contrast. */
+.forest.palette-1 .forest-summary,
+.forest.palette-1 .flow-panel,
+.forest.palette-1 .review-panel,
+.forest.palette-1 .forest-activity {
+  box-shadow: inset 0 1px 0 #899098;
+}
+.forest.palette-1 .primary-action {
+  border-radius: 999px;
+  padding-inline: 23px;
+}
+
+/* 2: softened charcoal, sage controls, and pill-shaped account labels. */
+.forest.palette-2 .forest-sidebar .nav-active {
+  color: var(--accent);
+  background: #2c3229;
+  box-shadow: inset 0 0 0 1px #73935e;
+}
+.forest.palette-2 .account-lines span,
+.forest.palette-2 .period,
+.forest.palette-2 .primary-action {
+  border-radius: 999px;
+}
+.forest.palette-2 .forest-summary {
+  border-color: #666d65;
+}
+
+/* 3: the most restrained canvas, with green for signal and white for action. */
+.forest.palette-3 .forest-summary,
+.forest.palette-3 .flow-panel,
+.forest.palette-3 .review-panel,
+.forest.palette-3 .forest-activity {
+  border-color: #30363a;
+  box-shadow: none;
+}
+.forest.palette-3 .forest-sidebar .nav-active {
+  color: var(--accent);
+  background: #19221d;
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+.forest.palette-3 .primary-action {
+  background: #f7faf7;
+  color: #090b0a;
+}
+.forest.palette-3 .primary-action:hover {
+  background: #dfe8df;
+}
+.forest.palette-3 .balance-block > strong {
+  color: #ffffff;
+}
+
+/* 4: one mint review panel against otherwise neutral surfaces. */
+.forest.palette-4 .review-panel {
+  background: #a3dfc5;
+  border-color: #bcebd7;
+  color: #102820;
+}
+.forest.palette-4 .review-panel h2,
+.forest.palette-4 .review-panel .review-row,
+.forest.palette-4 .review-panel .review-link,
+.forest.palette-4 .review-panel .review-icon {
+  color: #102820 !important;
+}
+.forest.palette-4 .review-panel p,
+.forest.palette-4 .review-panel .review-row small {
+  color: #244539;
+}
+.forest.palette-4 .review-panel .review-row {
+  border-color: #78b49d;
+}
+.forest.palette-4 .review-count {
+  background: #173d2e;
+  color: #effcf4;
+}
+.forest.palette-4 .primary-action {
+  border-radius: 999px;
+}

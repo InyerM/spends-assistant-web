@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <title>Anotto · secondary color studies</title>
+    <style>
+      :root {
+        font-family: Manrope, ui-sans-serif, system-ui, sans-serif;
+        color: #f7f9f7;
+        background: #060708;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        max-width: 1740px;
+        margin: 0 auto;
+        padding: clamp(24px, 4vw, 64px);
+      }
+      header {
+        display: flex;
+        justify-content: space-between;
+        align-items: start;
+        gap: 30px;
+        margin-bottom: 38px;
+      }
+      .eyebrow {
+        color: #64d59f;
+        font-size: 12px;
+        font-weight: 800;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        margin-bottom: 12px;
+      }
+      h1 {
+        margin: 0 0 12px;
+        font-size: clamp(36px, 4vw, 62px);
+        line-height: 1.05;
+        letter-spacing: -0.055em;
+      }
+      p {
+        color: #c3c9ca;
+        max-width: 66ch;
+        font-size: 15px;
+        line-height: 1.55;
+        margin: 0;
+      }
+      a {
+        color: inherit;
+      }
+      .back {
+        border: 1px solid #41474b;
+        border-radius: 999px;
+        padding: 12px 17px;
+        white-space: nowrap;
+        font-size: 13px;
+        text-decoration: none;
+      }
+      .back:hover,
+      .back:focus-visible,
+      .actions a:hover,
+      .actions a:focus-visible {
+        border-color: #64d59f;
+        outline-color: #64d59f;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 26px;
+      }
+      article {
+        overflow: hidden;
+        border: 1px solid #30363a;
+        border-radius: 18px;
+        background: #111316;
+      }
+      article img {
+        width: 100%;
+        aspect-ratio: 1.5;
+        display: block;
+        object-fit: cover;
+        object-position: top left;
+      }
+      .info {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 20px;
+        padding: 22px;
+      }
+      h2 {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 19px;
+        margin: 0 0 6px;
+        letter-spacing: -0.03em;
+      }
+      .swatch {
+        width: 13px;
+        height: 13px;
+        border-radius: 50%;
+        background: var(--swatch);
+        flex: none;
+      }
+      .info p {
+        font-size: 12px;
+      }
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: end;
+        gap: 9px;
+      }
+      .actions a {
+        display: inline-flex;
+        min-height: 42px;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid #626a6e;
+        border-radius: 999px;
+        padding: 0 15px;
+        font-size: 12px;
+        text-decoration: none;
+        white-space: nowrap;
+      }
+      footer {
+        margin-top: 28px;
+        color: #a6b0af;
+        font-size: 12px;
+        line-height: 1.55;
+      }
+      @media (max-width: 1100px) {
+        .grid {
+          grid-template-columns: 1fr;
+        }
+      }
+      @media (max-width: 640px) {
+        header,
+        .info {
+          display: block;
+        }
+        .back {
+          display: inline-block;
+          margin-top: 18px;
+        }
+        .actions {
+          justify-content: start;
+          margin-top: 18px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div>
+        <div class="eyebrow">Anotto · color study</div>
+        <h1>Emerald, with a second voice.</h1>
+        <p>
+          Four accents on the preferred Void Emerald concept. The logo, layout, typography, primary
+          action, and positive green signals stay identical. Only supporting data and review details
+          change color.
+        </p>
+      </div>
+      <a class="back" href="../index.html">← Neutral variants</a>
+    </header>
+    <main class="grid">
+      <article>
+        <img
+          src="../previews/secondary/cobalt-desktop.png"
+          alt="Void Emerald dashboard with a cobalt blue secondary accent" />
+        <div class="info">
+          <div>
+            <h2><span class="swatch" style="--swatch: #94b9ff"></span>1 · Cobalt</h2>
+            <p>Clear and familiar; blue gives supporting information a calm, functional tone.</p>
+          </div>
+          <div class="actions">
+            <a href="../preview.html?v=3&amp;s=cobalt">Open</a>
+            <a href="../previews/secondary/cobalt-mobile.png">Phone</a>
+          </div>
+        </div>
+      </article>
+      <article>
+        <img
+          src="../previews/secondary/iris-desktop.png"
+          alt="Void Emerald dashboard with an iris violet secondary accent" />
+        <div class="info">
+          <div>
+            <h2><span class="swatch" style="--swatch: #c0b0f2"></span>2 · Iris</h2>
+            <p>Distinct from money-green; suitable for review and assistant features.</p>
+          </div>
+          <div class="actions">
+            <a href="../preview.html?v=3&amp;s=iris">Open</a>
+            <a href="../previews/secondary/iris-mobile.png">Phone</a>
+          </div>
+        </div>
+      </article>
+      <article>
+        <img
+          src="../previews/secondary/amber-desktop.png"
+          alt="Void Emerald dashboard with a warm amber secondary accent" />
+        <div class="info">
+          <div>
+            <h2><span class="swatch" style="--swatch: #e8be78"></span>3 · Amber</h2>
+            <p>Warm and premium; needs a distinct warning color in the final system.</p>
+          </div>
+          <div class="actions">
+            <a href="../preview.html?v=3&amp;s=amber">Open</a>
+            <a href="../previews/secondary/amber-mobile.png">Phone</a>
+          </div>
+        </div>
+      </article>
+      <article>
+        <img
+          src="../previews/secondary/coral-desktop.png"
+          alt="Void Emerald dashboard with a soft coral secondary accent" />
+        <div class="info">
+          <div>
+            <h2><span class="swatch" style="--swatch: #f2afae"></span>4 · Coral</h2>
+            <p>More human and expressive; needs clear separation from error red.</p>
+          </div>
+          <div class="actions">
+            <a href="../preview.html?v=3&amp;s=coral">Open</a>
+            <a href="../previews/secondary/coral-mobile.png">Phone</a>
+          </div>
+        </div>
+      </article>
+    </main>
+    <footer>
+      Concept previews use fictional data. They do not change the production product or imply a
+      financial state. Accent use and accessible states will be defined after a color is selected.
+    </footer>
+  </body>
+</html>

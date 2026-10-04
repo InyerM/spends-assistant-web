@@ -5,17 +5,52 @@ changed.
 
 ## Decision to make
 
-Select one visual direction from the local [Anotto concept gallery](../design/anotto/index.html), or
-request a revision. Confirm the exact customer-facing hostname before the web release. The working
-recommendation is **B · Ledger**: its warmer green is clearly associated with money while the light
-canvas gives long transaction lists strong readability. This is a recommendation, not a locked
-design.
+The owner prefers direction A's typography, layout, and three-bar wordmark, rejects its green page
+and card backgrounds, and favors **3 · Void Emerald** from the
+[neutral-dark A variants](../design/anotto/a-variants/index.html). Treat that variant as the working
+base. Compare [four secondary-color studies](../design/anotto/a-variants/secondary/index.html)
+before locking its supporting accent. This is a working preference, not a production design
+approval. Confirm the exact customer-facing hostname before the web release.
 
 | Direction                                    | Visual logic                                               | Working colors                                           | Primary trade-off                                                             |
 | -------------------------------------------- | ---------------------------------------------------------- | -------------------------------------------------------- | ----------------------------------------------------------------------------- |
 | [A · Forest](../design/anotto/a-forest.html) | Spacious dark workspace and calm money overview            | Forest `#0C1714`, surface `#193127`, mint `#B2E5B6`      | Most continuous with today's dark app; needs careful secondary-text contrast. |
 | [B · Ledger](../design/anotto/b-ledger.html) | Warm paper, ink green, clear transaction records           | Paper `#F4F4ED`, pine `#175C42`, sage `#DCEACB`          | Strong daylight readability; dark-mode counterpart must be designed.          |
 | [C · Signal](../design/anotto/c-signal.html) | Compact operations view with transaction and review status | Graphite `#0D1718`, deep green `#194536`, mint `#A5DCBC` | Higher information density; narrower layouts need deliberate priority rules.  |
+
+The follow-up variants all retain A's Manrope typography, spatial organization, and wordmark
+geometry. They adapt ideas from the owner-supplied Harness and Tinybird style references to a
+financial application; they do not reproduce either site's page layout or assets.
+
+| Variant                                                             | Neutral canvas | Accent role                                  | Distinguishing treatment                                          |
+| ------------------------------------------------------------------- | -------------- | -------------------------------------------- | ----------------------------------------------------------------- |
+| [1 · Carbon Mint](../design/anotto/a-variants/preview.html?v=1)     | `#08090B`      | Mint `#91DFBE` for actions and positive data | Luminous card edges on a nearly black canvas.                     |
+| [2 · Graphite Sage](../design/anotto/a-variants/preview.html?v=2)   | `#0E0F11`      | Soft green `#C4DEA1` for controls and chart  | More subdued panels and pill details.                             |
+| [3 · Void Emerald](../design/anotto/a-variants/preview.html?v=3)    | `#060708`      | Emerald `#64D59F` for status and chart       | White primary action and minimal panel borders.                   |
+| [4 · Phosphor Review](../design/anotto/a-variants/preview.html?v=4) | `#0B0D11`      | Mint `#A3DFC5` for one review panel          | One illuminated task panel within an otherwise neutral workspace. |
+
+The secondary-color studies keep option 3's shell, white primary action, emerald navigation and
+positive signals, wordmark, and layout fixed. They apply one alternative hue to the review panel's
+supporting details and the spending data series, so their visual effect can be compared in the same
+places. Those uses are exploratory; a final semantic role map is still required. The working
+recommendation is **Iris** because it is visibly separate from emerald and less likely than amber or
+coral to be mistaken for warning or error.
+
+| Study                                                               | Secondary color | Intended direction                    | Main caution                                                |
+| ------------------------------------------------------------------- | --------------- | ------------------------------------- | ----------------------------------------------------------- |
+| [1 · Cobalt](../design/anotto/a-variants/preview.html?v=3&s=cobalt) | `#94B9FF`       | Familiar information and account data | May make the product look like a generic banking dashboard. |
+| [2 · Iris](../design/anotto/a-variants/preview.html?v=3&s=iris)     | `#C0B0F2`       | Review and assistant context          | Keep the hue limited so it does not compete with the green. |
+| [3 · Amber](../design/anotto/a-variants/preview.html?v=3&s=amber)   | `#E8BE78`       | Wealth and planning warmth            | Reserve a distinct warning treatment.                       |
+| [4 · Coral](../design/anotto/a-variants/preview.html?v=3&s=coral)   | `#F2AFAE`       | Human warmth and outgoing data        | Reserve a distinct error/destructive treatment.             |
+
+The palette should be assigned by interface role rather than scattering hues across features. Wise's
+public rebrand describes green alongside punchy secondary colors; Mercury describes semantic color
+tokens for its dark mode; and Stripe documents its contrast system for dashboard text and icons.
+These examples support a restrained second hue with explicit usage rules, not copying those brands'
+assets. Sources:
+[Wise brand](https://wise.com/gb/blog/a-brand-for-everywhere-wise-unveils-bold-new-look),
+[Mercury dark mode](https://mercury.com/blog/december-2022-product-updates),
+[Stripe accessible color systems](https://stripe.com/blog/accessible-color-systems).
 
 The concepts use fabricated figures and activity. They are isolated HTML previews, not product
 routes or functional transaction screens. The proposals borrow **principles** from public product
@@ -90,8 +125,8 @@ untouched.
 
 ## Open decisions
 
-1. Which direction should become the product baseline? Recommend **B · Ledger** initially, with an
-   equally designed dark mode.
+1. Which secondary accent should complement the preferred **3 · Void Emerald** base? Recommend **2 ·
+   Iris** provisionally; preserve A's typography, layout, and three-bar logo.
 2. What is the exact new public hostname? Recommend a short `anotto` subdomain on a domain the owner
    controls. Do not infer it from Cloudflare configuration.
 3. Should the public address change in the first web release or a later release? Recommend later,

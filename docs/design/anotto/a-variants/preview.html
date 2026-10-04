@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <title>Anotto · neutral dark direction</title>
+    <link rel="stylesheet" href="../concepts.css" />
+    <link rel="stylesheet" href="variants.css" />
+    <link rel="stylesheet" href="secondary.css" />
+  </head>
+  <body class="forest">
+    <script>
+      const variant = new URLSearchParams(location.search).get('v');
+      document.body.classList.add(
+        `palette-${['1', '2', '3', '4'].includes(variant) ? variant : '1'}`,
+      );
+      const secondary = new URLSearchParams(location.search).get('s');
+      if (variant === '3' && ['cobalt', 'iris', 'amber', 'coral'].includes(secondary)) {
+        document.body.classList.add(`secondary-${secondary}`);
+      }
+    </script>
+    <div class="app-shell forest-shell">
+      <aside class="forest-sidebar">
+        <div class="wordmark">
+          <span class="mark" aria-hidden="true"><i></i><i></i><i></i></span>anotto<span
+            class="wordmark-dot"
+            >.</span
+          >
+        </div>
+        <div class="nav-group">
+          <span class="nav-caption">WORKSPACE</span
+          ><a class="nav-active" href="#overview">Overview</a><a href="#activity">Transactions</a
+          ><a href="#accounts">Accounts</a><a href="#investments">Investments</a
+          ><a href="#loans">Loans</a><a href="#documents">Documents</a>
+        </div>
+        <div class="nav-bottom">
+          <span class="nav-caption">YOUR SPACE</span><a href="#settings">Settings</a>
+          <div class="profile">
+            <span class="avatar">AM</span><span>Alex Moreno<small>Personal account</small></span>
+          </div>
+        </div>
+      </aside>
+      <main id="overview" class="forest-main">
+        <header class="topbar">
+          <span>Saturday, October 3, 2026</span
+          ><span class="top-actions"
+            ><span class="privacy">Private view</span
+            ><button type="button" aria-label="Notifications">●</button
+            ><span class="avatar">AM</span></span
+          >
+        </header>
+        <section class="forest-intro">
+          <div>
+            <p class="eyebrow">YOUR MONEY, IN CONTEXT</p>
+            <h1>Good morning, Alex.</h1>
+            <p>Everything in one place, ready when you are.</p>
+          </div>
+          <button class="primary-action" type="button">+ Add transaction</button>
+        </section>
+        <section class="forest-summary" aria-label="Financial summary">
+          <div class="balance-block">
+            <span>Available across accounts</span><strong>$12,480,000 <small>COP</small></strong>
+            <p><b>↑ 5.2%</b> from last month</p>
+            <div class="account-lines">
+              <span>Bancolombia <b>$8.4m</b></span
+              ><span>Lulo Bank <b>$4.1m</b></span>
+            </div>
+          </div>
+          <div class="summary-side">
+            <div>
+              <span>Spent this month</span><strong>$2,840,000</strong
+              ><small>of $4,200,000 planned</small>
+              <div class="track"><i></i></div>
+            </div>
+            <div>
+              <span>Invested</span><strong>$7,360,000</strong><small>Across 2 positions</small>
+            </div>
+          </div>
+        </section>
+        <section class="forest-content">
+          <div class="flow-panel">
+            <div class="section-head">
+              <div>
+                <h2>Money flow</h2>
+                <p>A clear view of income and spending</p>
+              </div>
+              <span class="period">Last 6 months⌄</span>
+            </div>
+            <div class="chart" aria-label="Illustrative monthly cash flow chart">
+              <div class="chart-scale">
+                <span>$8m</span><span>$6m</span><span>$4m</span><span>$2m</span>
+              </div>
+              <div class="bars">
+                <div><i style="--income: 62%; --expense: 43%"></i><span>May</span></div>
+                <div><i style="--income: 77%; --expense: 53%"></i><span>Jun</span></div>
+                <div><i style="--income: 69%; --expense: 38%"></i><span>Jul</span></div>
+                <div><i style="--income: 87%; --expense: 57%"></i><span>Aug</span></div>
+                <div><i style="--income: 72%; --expense: 49%"></i><span>Sep</span></div>
+                <div><i style="--income: 81%; --expense: 42%"></i><span>Oct</span></div>
+              </div>
+            </div>
+            <div class="legend">
+              <span><i class="legend-income"></i>Income</span
+              ><span><i class="legend-expense"></i>Spending</span>
+            </div>
+          </div>
+          <div id="review" class="review-panel">
+            <span class="review-count">3</span>
+            <h2>Needs a look</h2>
+            <p>New financial evidence is waiting for your review.</p>
+            <div class="review-row">
+              <span class="review-icon">↗</span
+              ><span>Bank notice<small>Possible new transaction</small></span>
+            </div>
+            <div class="review-row">
+              <span class="review-icon">▧</span
+              ><span>Receipt image<small>2 entries extracted</small></span>
+            </div>
+            <button class="review-link" type="button">Open review inbox →</button>
+          </div>
+        </section>
+        <section id="activity" class="forest-activity">
+          <div class="section-head">
+            <div>
+              <h2>Recent activity</h2>
+              <p>Your latest reviewed movements</p>
+            </div>
+            <a href="#activity">See all →</a>
+          </div>
+          <div class="activity-row">
+            <span class="merchant-symbol">M</span
+            ><span>Mercado Central<small>Groceries · Today</small></span
+            ><b>−$84,500</b>
+          </div>
+          <div class="activity-row">
+            <span class="merchant-symbol">L</span
+            ><span>Lulo Bank<small>Transfer · Yesterday</small></span
+            ><b class="positive">+$250,000</b>
+          </div>
+          <div class="activity-row">
+            <span class="merchant-symbol">C</span
+            ><span>Café Nativo<small>Food & drink · Yesterday</small></span
+            ><b>−$18,900</b>
+          </div>
+        </section>
+      </main>
+    </div>
+    <nav class="mobile-nav" aria-label="Primary">
+      <a href="#overview">Home</a><a href="#activity">Activity</a><a href="#review">Review</a>
+    </nav>
+  </body>
+</html>
