@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <title>Anotto · Signal concept</title>
+    <link rel="stylesheet" href="concepts.css" />
+  </head>
+  <body class="signal">
+    <div class="signal-shell">
+      <aside class="signal-rail">
+        <div class="signal-monogram">a<span>.</span></div>
+        <a class="rail-selected" href="#overview" aria-label="Overview"
+          ><svg viewBox="0 0 24 24" aria-hidden="true">
+            <rect x="3" y="3" width="7" height="7" rx="1" />
+            <rect x="14" y="3" width="7" height="7" rx="1" />
+            <rect x="3" y="14" width="7" height="7" rx="1" />
+            <rect x="14" y="14" width="7" height="7" rx="1" /></svg
+        ></a>
+        <a href="#activity" aria-label="Transactions"
+          ><svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M4 7h16m0 0-3-3m3 3-3 3M20 17H4m0 0 3-3m-3 3 3 3" /></svg
+        ></a>
+        <a href="#accounts" aria-label="Accounts"
+          ><svg viewBox="0 0 24 24" aria-hidden="true">
+            <rect x="3" y="6" width="18" height="14" rx="2" />
+            <path d="M3 10h18M6 6V4h12v2" /></svg
+        ></a>
+        <a href="#documents" aria-label="Documents"
+          ><svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M6 2h9l4 4v16H6zM15 2v5h4M9 12h7M9 16h7" /></svg
+        ></a>
+        <span class="rail-spacer"></span>
+        <a href="#settings" aria-label="Settings"
+          ><svg viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="12" cy="12" r="3" />
+            <path
+              d="M12 2v3m0 14v3M2 12h3m14 0h3M4.9 4.9 7 7m10 10 2.1 2.1M19.1 4.9 17 7M7 17l-2.1 2.1" /></svg
+        ></a>
+        <span class="signal-avatar">AM</span>
+      </aside>
+      <main id="overview" class="signal-main">
+        <header class="signal-top">
+          <div class="signal-brand">anotto <span>/ overview</span></div>
+          <div>
+            <span class="signal-sync"><i></i> All synced</span
+            ><button type="button">+ New entry</button>
+          </div>
+        </header>
+        <section class="signal-lead">
+          <div>
+            <span class="signal-overline">YOUR FINANCIAL PICTURE</span>
+            <h1>Every move<br />in view<span>.</span></h1>
+            <p>A complete picture across spending, accounts and what comes next.</p>
+          </div>
+          <div class="signal-net">
+            <span>Available now</span><strong>$12.48<small>m COP</small></strong>
+            <div><span>Across 2 accounts</span><b>↑ 5.2% this month</b></div>
+          </div>
+        </section>
+        <section class="signal-stats">
+          <div><span>Money in</span><strong>$4.20m</strong><small>October 2026</small></div>
+          <div><span>Money out</span><strong>$2.84m</strong><small>October 2026</small></div>
+          <div><span>Investments</span><strong>$7.36m</strong><small>2 open positions</small></div>
+          <div class="signal-alert">
+            <span>To review</span><strong>03</strong><small>New evidence</small>
+          </div>
+        </section>
+        <section class="signal-bottom">
+          <div id="activity" class="signal-table">
+            <div class="signal-section-head">
+              <h2>Activity stream</h2>
+              <a href="#all">All transactions →</a>
+            </div>
+            <div class="signal-table-header">
+              <span>DATE</span><span>DETAIL</span><span>ACCOUNT</span><span>AMOUNT</span>
+            </div>
+            <div class="signal-table-row">
+              <span>Oct 03</span><span><b>Mercado Central</b><small>Groceries</small></span
+              ><span>Bancolombia</span><strong>−$84,500</strong>
+            </div>
+            <div class="signal-table-row">
+              <span>Oct 02</span><span><b>Lulo Bank</b><small>Transfer</small></span
+              ><span>Lulo Bank</span><strong class="positive">+$250,000</strong>
+            </div>
+            <div class="signal-table-row">
+              <span>Oct 02</span><span><b>Café Nativo</b><small>Food & drink</small></span
+              ><span>Bancolombia</span><strong>−$18,900</strong>
+            </div>
+            <div class="signal-table-row">
+              <span>Oct 01</span><span><b>Monthly rent</b><small>Housing</small></span
+              ><span>Bancolombia</span><strong>−$1,200,000</strong>
+            </div>
+          </div>
+          <div id="review" class="signal-review">
+            <div>
+              <span class="signal-overline">REVIEW QUEUE</span>
+              <h2>Decide what<br />belongs.</h2>
+              <p>Receipts and bank notices stay separate until you confirm them.</p>
+            </div>
+            <div class="queue-line">
+              <span>01</span><b>Bank notice<small>Possible transaction</small></b
+              ><span>→</span>
+            </div>
+            <div class="queue-line">
+              <span>02</span><b>Receipt image<small>2 entries found</small></b
+              ><span>→</span>
+            </div>
+            <a href="#review">Review 3 items →</a>
+          </div>
+        </section>
+      </main>
+    </div>
+    <nav class="mobile-nav" aria-label="Primary">
+      <a href="#overview">Home</a><a href="#activity">Activity</a><a href="#review">Review</a>
+    </nav>
+  </body>
+</html>

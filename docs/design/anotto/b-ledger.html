@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <title>Anotto · Ledger concept</title>
+    <link rel="stylesheet" href="concepts.css" />
+  </head>
+  <body class="ledger">
+    <div class="ledger-app">
+      <header class="ledger-header">
+        <div class="ledger-wordmark">anotto<span>●</span></div>
+        <nav>
+          <a class="selected" href="#home">Home</a><a href="#transactions">Transactions</a
+          ><a href="#accounts">Accounts</a><a href="#wealth">Wealth</a
+          ><a href="#documents">Documents</a>
+        </nav>
+        <button class="ledger-avatar" type="button" aria-label="Account menu">AM</button>
+      </header>
+      <main id="home" class="ledger-main">
+        <section class="ledger-heading">
+          <div>
+            <span>October 2026</span>
+            <h1>Your money,<br /><em>well understood.</em></h1>
+          </div>
+          <button class="ledger-create" type="button">Add a transaction <b>↗</b></button>
+        </section>
+        <section class="ledger-body">
+          <div class="ledger-left">
+            <div class="ledger-total">
+              <span>Across your accounts</span><strong>$12,480,000</strong
+              ><small>COP available</small>
+            </div>
+            <div class="ledger-account">
+              <span class="account-letter">B</span
+              ><span>Bancolombia<small>Everyday account</small></span
+              ><b>$8,380,000</b>
+            </div>
+            <div class="ledger-account">
+              <span class="account-letter">L</span
+              ><span>Lulo Bank<small>Savings account</small></span
+              ><b>$4,100,000</b>
+            </div>
+            <div id="review" class="ledger-note">
+              <span>Three things to review</span>
+              <h2>Some money moves need your context.</h2>
+              <p>Three new items are waiting. Check them before they become transactions.</p>
+              <a href="#review">Go to review inbox ↗</a>
+            </div>
+          </div>
+          <div id="transactions" class="ledger-right">
+            <div class="ledger-section-heading">
+              <div>
+                <h2>This month at a glance</h2>
+                <p>A balance of movement, not just numbers.</p>
+              </div>
+              <span>October 1–3</span>
+            </div>
+            <div class="ledger-metrics">
+              <div><span>In</span><strong>$4.2m</strong><small>Income & transfers</small></div>
+              <div><span>Out</span><strong>$2.8m</strong><small>Spending & payments</small></div>
+              <div>
+                <span>Set aside</span><strong>$1.1m</strong><small>Savings & investments</small>
+              </div>
+            </div>
+            <div class="ledger-section-heading ledger-recent-heading">
+              <div>
+                <h2>Recent movements</h2>
+                <p>Reviewed and ready to search.</p>
+              </div>
+              <a href="#all">View all ↗</a>
+            </div>
+            <div class="ledger-list">
+              <div>
+                <span>Oct 03</span><b>Mercado Central<small>Groceries · Bancolombia</small></b
+                ><strong>−$84,500</strong>
+              </div>
+              <div>
+                <span>Oct 02</span><b>Lulo Bank<small>Transfer between accounts</small></b
+                ><strong class="positive">+$250,000</strong>
+              </div>
+              <div>
+                <span>Oct 02</span><b>Café Nativo<small>Food & drink · Bancolombia</small></b
+                ><strong>−$18,900</strong>
+              </div>
+              <div>
+                <span>Oct 01</span><b>Monthly rent<small>Housing · Bancolombia</small></b
+                ><strong>−$1,200,000</strong>
+              </div>
+            </div>
+            <div class="ledger-bottom">
+              <span>Clear records make better decisions.</span
+              ><a href="#insights">Explore your patterns ↗</a>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+    <nav class="mobile-nav" aria-label="Primary">
+      <a href="#home">Home</a><a href="#transactions">Activity</a><a href="#review">Review</a>
+    </nav>
+  </body>
+</html>

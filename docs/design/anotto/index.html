@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <title>Anotto · visual directions</title>
+    <style>
+      :root {
+        font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+        color: #edf6f0;
+        background: #101715;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        padding: clamp(24px, 5vw, 72px);
+      }
+      h1 {
+        font-size: clamp(36px, 5vw, 72px);
+        letter-spacing: -0.05em;
+        margin: 0 0 12px;
+      }
+      p {
+        color: #a9bab0;
+        font-size: 17px;
+        max-width: 65ch;
+        line-height: 1.55;
+      }
+      .gallery {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(min(100%, 350px), 1fr));
+        gap: 24px;
+        margin-top: 42px;
+      }
+      .gallery > a {
+        display: block;
+        text-decoration: none;
+        color: inherit;
+        border: 1px solid #3a4a41;
+        border-radius: 20px;
+        overflow: hidden;
+        background: #1a2420;
+        transition:
+          transform 0.18s ease,
+          border-color 0.18s ease;
+      }
+      .gallery > a:hover,
+      .gallery > a:focus-visible {
+        transform: translateY(-4px);
+        border-color: #9cdfac;
+        outline: none;
+      }
+      img {
+        width: 100%;
+        aspect-ratio: 16/10;
+        object-fit: cover;
+        object-position: top left;
+        display: block;
+      }
+      .caption {
+        padding: 22px;
+      }
+      .caption b {
+        display: block;
+        font-size: 22px;
+        margin-bottom: 8px;
+      }
+      .caption span {
+        color: #afc0b4;
+        line-height: 1.5;
+      }
+      small {
+        color: #a9bab0;
+      }
+      .mobile-links {
+        margin-top: 30px;
+        font-size: 14px;
+      }
+      .mobile-links a {
+        color: #b4e6bd;
+        margin-left: 15px;
+        text-underline-offset: 4px;
+      }
+      .mobile-links a:hover,
+      .mobile-links a:focus-visible {
+        text-decoration: underline;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Anotto</h1>
+    <p>
+      Three independent visual directions for the customer-facing finance app. All figures and
+      activity are illustrative, not account data. Open a direction to inspect the responsive
+      browser prototype.
+    </p>
+    <div class="gallery">
+      <a href="a-forest.html"
+        ><img src="previews/a-desktop.png" alt="Forest direction dashboard preview" />
+        <div class="caption">
+          <b>A · Forest</b><span>Quiet dark surfaces, measured mint, generous overview.</span>
+        </div></a
+      >
+      <a href="b-ledger.html"
+        ><img src="previews/b-desktop.png" alt="Ledger direction dashboard preview" />
+        <div class="caption">
+          <b>B · Ledger</b
+          ><span>Warm paper, ink green, editorial clarity and legible records.</span>
+        </div></a
+      >
+      <a href="c-signal.html"
+        ><img src="previews/c-desktop.png" alt="Signal direction dashboard preview" />
+        <div class="caption">
+          <b>C · Signal</b
+          ><span>Compact dark workspace, clear system status and transaction focus.</span>
+        </div></a
+      >
+    </div>
+    <p class="mobile-links">
+      Phone captures: <a href="previews/a-mobile.png">A</a><a href="previews/b-mobile.png">B</a
+      ><a href="previews/c-mobile.png">C</a>
+    </p>
+    <p>
+      <small
+        >Review prototypes only. No production UI, data, authentication, or routes are
+        changed.</small
+      >
+    </p>
+  </body>
+</html>
