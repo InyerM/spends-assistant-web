@@ -1,7 +1,7 @@
 # Anotto web migration and release plan
 
-Status: implementation in progress. The owner selected Void Emerald with Amber and approved the
-customer-facing migration. Web is the first release; mobile follows its verification.
+Status: web released on 2026-10-04. The owner selected Void Emerald with Amber and approved the
+customer-facing migration. Mobile follows web verification.
 
 ## Definition of done
 
@@ -48,15 +48,37 @@ are established before route-specific polish.
 8. Apply the approved identity to mobile after the web release is confirmed; preserve mobile
    application identifiers and existing offline data.
 
-## Domain evidence and gate
+## Release evidence
+
+- Web commit `d4782fe` passed 853 tests in 111 suites, typecheck, lint (one existing React Hook Form
+  compiler warning), formatting, and a production build on 2026-10-04. The Vercel production
+  deployment is `dpl_7shWmWJjFQN7aQwqVq13fmkDCY5p`.
+- Browser checks used fictional fixture data at 1440×900 and 390×844. The dashboard had no
+  horizontal overflow; the mobile navigation sheet was also inspected at 667×375. Login and
+  registration were checked at desktop and phone widths. The temporary fixture route was removed.
+- `https://anotto.app/login` and `https://www.anotto.app/login` returned HTTP 200 over HTTPS with
+  the Anotto title; the new icon returned HTTP 200; unauthenticated `/dashboard` redirected to
+  `/login`. Vercel issued certificates for both hostnames. The former web hostname also serves the
+  new release and remains available.
+- Supabase Auth Site URL is `https://anotto.app`; the new apex and www callback/settings URLs and
+  former hostname callback/settings URLs are in its redirect allow list. Existing entries remain.
+- The Worker was deployed as version `e6334dcd-cc7d-4665-8bc2-ac3f0d3fefd6` with its existing
+  internal name and forwarding domain. Its public `APP_URL` now points to `https://anotto.app`.
+
+Authenticated end-to-end actions were not exercised against production because no test user session
+was available. The owner should verify sign-in, financial review, and forwarding on the live site
+before the old web hostname is redirected or mobile styling is released.
+
+## Domain history and gate
 
 On 2026-10-03, public NS records for `anotto.app` pointed to Cloudflare, while the root URL still
 served a Hostinger parked-domain page. The backend `.env.local` contains a Cloudflare API token; its
 verification endpoint returned `active`, and the `anotto.app` zone is active. The current apex
 record points to the parked site and `www` aliases the apex. The Vercel project
 `spends-assistant-web` is accessible; its current production URL is `spends-assistant.inyerm.com`.
-DNS is ready to change after the tested web build is deployed; use the domain configuration returned
-by Vercel rather than guessing the target record.
+After the tested build was deployed, Vercel recommended `76.76.21.21`. The Cloudflare apex A record
+was changed to that address and set to DNS-only. The www CNAME still points to the apex and was also
+set to DNS-only. Neither the receipt hostname nor mail records were changed.
 
 Do not point receipts or existing bank-email forwarding at `anotto.app` as part of the website
 cutover. Keep the current receipt address operational and test Gmail forwarding separately.

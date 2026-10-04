@@ -1,7 +1,8 @@
 # Anotto customer-facing brand plan
 
-Status: approved customer-facing web migration in progress. The owner selected Void Emerald with
-Amber and `anotto.app`. Internal identifiers and financial data remain unchanged.
+Status: customer-facing web release completed on 2026-10-04; mobile adaptation follows live web
+verification. The owner selected Void Emerald with Amber and `anotto.app`. Internal identifiers and
+financial data remain unchanged.
 
 ## Decision to make
 
@@ -99,8 +100,8 @@ untouched.
    Add focused tests for title and localized copy; run typecheck, lint, tests, and production build.
 3. **Release customer communications and domain.** Update Telegram welcome/help and any other
    verified customer-facing message. Add the approved hostname, check auth redirects, TLS, and email
-   forwarding/verification against the new domain. Keep the old web hostname redirecting, and keep
-   the existing receipt address valid during transition. Run a real forwarding smoke test after DNS
+   forwarding/verification against the new domain. Keep the old web hostname available, and keep the
+   existing receipt address valid during transition. Run a real forwarding smoke test after DNS
    propagation.
 4. **Release mobile after web review.** Apply the locked visual system to NativeWind tokens and
    assets, update display name and all locale copy, and test existing deep links, offline data, and
@@ -121,10 +122,9 @@ untouched.
 - Existing users keep their accounts, transactions, documents, forwarding address, and mobile
   offline data across the rollout.
 
-## Open decisions
+## Remaining verification
 
-1. Verify the production web build and financial review flows before pointing `anotto.app` to
-   Vercel. Keep `spends-assistant.inyerm.com` available during the transition.
-2. Decide when the old website hostname should redirect to `anotto.app` after the new address and
-   existing receipt forwarding have passed live tests. Recommend a later redirect, not part of the
-   first DNS change.
+The tested build is live at `anotto.app`; see the release evidence in the
+[web migration plan](2026-10-03-anotto-web-rollout.md). Verify authenticated financial review and a
+real forwarded email on the new hostname. Keep `spends-assistant.inyerm.com` available until those
+checks pass; redirect it later, before the mobile customer-facing release.
