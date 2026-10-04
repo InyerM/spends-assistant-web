@@ -17,6 +17,7 @@ interface UsePeriodSelectorOptions {
   dateFrom: string;
   dateTo: string;
   onChange: (dateFrom: string, dateTo: string) => void;
+  locale?: string;
 }
 
 interface UsePeriodSelectorReturn {
@@ -55,20 +56,8 @@ export function usePeriodSelector({
   dateFrom,
   dateTo,
   onChange,
+  locale = 'en',
 }: UsePeriodSelectorOptions): UsePeriodSelectorReturn {
-  // Use 'en' as default locale for the hook; the component can use its own locale
-  // by passing monthNames/monthShort. But to keep this simple, we compute with 'en'.
-  // Actually, we need locale. Let's accept it or default. For now, compute with 'en'
-  // and the component can override the label.
-  // After reviewing the component, it uses `useLocale()` from next-intl. The hook
-  // doesn't have access to that, so we'll compute locale-dependent data internally
-  // and the component will pass locale. Let me restructure.
-
-  // Actually, let me keep locale-dependent formatting in useMemo at component level,
-  // and have the hook accept a locale parameter OR just use 'en' as default.
-  // Looking at the component, it passes locale for month names. Let's keep it simple.
-
-  const locale = 'en'; // Default; component can use its own locale for display
   const monthNames = useMemo(() => getMonthNames(locale), [locale]);
   const monthShort = useMemo(() => getMonthShort(locale), [locale]);
   const dayHeaders = useMemo(() => getDayHeaders(locale), [locale]);

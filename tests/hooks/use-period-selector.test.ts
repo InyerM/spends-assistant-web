@@ -164,6 +164,19 @@ describe('usePeriodSelector', () => {
       expect(result.current.label).toBeTruthy();
       expect(typeof result.current.label).toBe('string');
     });
+
+    it('uses the requested locale for the selected month', () => {
+      const { result } = renderHook(() =>
+        usePeriodSelector({
+          dateFrom: '2024-09-01',
+          dateTo: '2024-09-30',
+          onChange: vi.fn(),
+          locale: 'es',
+        }),
+      );
+
+      expect(result.current.label).toBe('Septiembre 2024');
+    });
   });
 
   describe('popover state', () => {

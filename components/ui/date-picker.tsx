@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useLocale } from 'next-intl';
 import { format, parseISO } from 'date-fns';
 import { enUS, es } from 'date-fns/locale';
 import { CalendarIcon } from 'lucide-react';
@@ -29,18 +30,20 @@ export function DatePicker({
   value,
   onChange,
   className,
-  locale = 'en',
+  locale,
   placeholder,
   ariaLabel,
   disabled,
 }: DatePickerProps): React.ReactElement {
   const [open, setOpen] = useState(false);
+  const appLocale = useLocale();
+  const resolvedLocale = locale ?? (appLocale === 'es' ? 'es' : 'en');
 
   const selectedDate = value ? parseISO(value) : undefined;
 
   const displayText = selectedDate
-    ? format(selectedDate, 'PP', { locale: locale === 'es' ? es : enUS })
-    : (placeholder ?? (locale === 'es' ? 'Elige una fecha' : 'Pick a date'));
+    ? format(selectedDate, 'PP', { locale: resolvedLocale === 'es' ? es : enUS })
+    : (placeholder ?? (resolvedLocale === 'es' ? 'Elige una fecha' : 'Pick a date'));
 
   function handleSelect(date: Date): void {
     onChange(formatYYYYMMDD(date));
@@ -65,7 +68,7 @@ export function DatePicker({
         </button>
       </PopoverTrigger>
       <PopoverContent className='w-[320px] p-3' align='start'>
-        <Calendar selected={selectedDate} onSelect={handleSelect} locale={locale} />
+        <Calendar selected={selectedDate} onSelect={handleSelect} locale={resolvedLocale} />
       </PopoverContent>
     </Popover>
   );

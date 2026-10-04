@@ -39,7 +39,7 @@ export function PeriodSelector({
   const localeMonthShort = useMemo(() => getMonthShortUtil(locale), [locale]);
   const localeDayHeaders = useMemo(() => getDayHeadersUtil(locale), [locale]);
 
-  const period = usePeriodSelector({ dateFrom, dateTo, onChange });
+  const period = usePeriodSelector({ dateFrom, dateTo, onChange, locale });
 
   // Override label with localized "this month/week/year" when applicable
   const label = useMemo((): string => {
