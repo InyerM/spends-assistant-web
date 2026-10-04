@@ -8,7 +8,9 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { toast } from 'sonner';
 import { Eye, EyeOff } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 
+import { AnottoWordmark } from '@/components/layout/anotto-wordmark';
 import { Button } from '@/components/ui/button';
 import {
   Form,
@@ -21,14 +23,18 @@ import {
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/hooks/use-auth';
 
-const formSchema = z.object({
-  email: z.email({ message: 'Please enter a valid email address' }),
-  password: z.string().min(6, { message: 'Password must be at least 6 characters' }),
-});
-
-type FormValues = z.infer<typeof formSchema>;
+interface FormValues {
+  email: string;
+  password: string;
+}
 
 export default function LoginPage(): React.ReactElement {
+  const a = useTranslations('auth');
+  const formSchema = z.object({
+    email: z.email({ message: a('invalidEmail') }),
+    password: z.string().min(6, { message: a('shortPassword') }),
+  });
+
   const router = useRouter();
   const { signInWithPassword, signInWithGoogle, isLoading, isAuthenticated } = useAuth();
   const [error, setError] = useState<string | null>(null);
@@ -53,7 +59,7 @@ export default function LoginPage(): React.ReactElement {
     try {
       await signInWithGoogle();
     } catch {
-      toast.error('Google sign-in failed');
+      toast.error(a('googleSignInFailed'));
     }
   }
 
@@ -63,8 +69,8 @@ export default function LoginPage(): React.ReactElement {
       await signInWithPassword(values.email, values.password);
       router.refresh();
     } catch {
-      setError('Invalid email or password');
-      toast.error('Login failed');
+      setError(a('invalidCredentials'));
+      toast.error(a('loginFailed'));
     }
   }
 
@@ -72,14 +78,12 @@ export default function LoginPage(): React.ReactElement {
     <div className='bg-login-bg flex min-h-screen w-full items-center justify-center p-4'>
       <div className='w-full max-w-md'>
         <div className='mb-8 text-center'>
-          <div className='bg-primary mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-3xl shadow-lg'>
-            <span className='text-primary-foreground text-3xl font-bold'>$</span>
-          </div>
-          <h1 className='mb-2 text-4xl font-bold text-white'>Spends Assistant</h1>
-          <p className='text-muted-foreground text-sm'>Sign in to manage your finances</p>
+          <AnottoWordmark className='mb-6 justify-center' />
+          <h1 className='sr-only'>{a('productName')}</h1>
+          <p className='text-muted-foreground text-sm'>{a('signInDescription')}</p>
         </div>
 
-        <div className='border-border bg-card/80 rounded-2xl border p-8 shadow-2xl backdrop-blur-sm'>
+        <div className='border-border bg-card rounded-2xl border p-8'>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className='space-y-6'>
               {error && (
@@ -93,9 +97,11 @@ export default function LoginPage(): React.ReactElement {
                 name='email'
                 render={({ field }): React.ReactElement => (
                   <FormItem>
-                    <FormLabel className='text-foreground'>Email</FormLabel>
+                    <FormLabel className='text-foreground'>{a('email')}</FormLabel>
                     <FormControl>
                       <Input
+                        type='email'
+                        autoComplete='email'
                         placeholder='you@example.com'
                         {...field}
                         disabled={isLoading}
@@ -112,31 +118,33 @@ export default function LoginPage(): React.ReactElement {
                 name='password'
                 render={({ field }): React.ReactElement => (
                   <FormItem>
-                    <FormLabel className='text-foreground'>Password</FormLabel>
-                    <FormControl>
-                      <div className='relative'>
+                    <FormLabel className='text-foreground'>{a('password')}</FormLabel>
+                    <div className='relative'>
+                      <FormControl>
                         <Input
                           type={showPassword ? 'text' : 'password'}
-                          placeholder='Enter your password'
+                          autoComplete='current-password'
+                          placeholder={a('passwordPlaceholder')}
                           {...field}
                           disabled={isLoading}
-                          className='border-border bg-background text-foreground placeholder:text-muted-foreground h-12 pr-10'
+                          className='border-border bg-background text-foreground placeholder:text-muted-foreground h-12 pr-14'
                         />
-                        <Button
-                          type='button'
-                          variant='ghost'
-                          size='sm'
-                          className='absolute top-1/2 right-3 h-auto -translate-y-1/2 p-0'
-                          onClick={(): void => setShowPassword((prev) => !prev)}
-                          tabIndex={-1}>
-                          {showPassword ? (
-                            <EyeOff className='text-muted-foreground h-4 w-4' />
-                          ) : (
-                            <Eye className='text-muted-foreground h-4 w-4' />
-                          )}
-                        </Button>
-                      </div>
-                    </FormControl>
+                      </FormControl>
+                      <Button
+                        type='button'
+                        variant='ghost'
+                        size='sm'
+                        className='absolute top-1/2 right-1 h-11 w-11 -translate-y-1/2 p-0'
+                        onClick={(): void => setShowPassword((prev) => !prev)}
+                        aria-label={a(showPassword ? 'hidePassword' : 'showPassword')}
+                        aria-pressed={showPassword}>
+                        {showPassword ? (
+                          <EyeOff className='text-muted-foreground h-4 w-4' />
+                        ) : (
+                          <Eye className='text-muted-foreground h-4 w-4' />
+                        )}
+                      </Button>
+                    </div>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -146,7 +154,7 @@ export default function LoginPage(): React.ReactElement {
                 type='submit'
                 className='h-12 w-full cursor-pointer text-base'
                 disabled={isLoading}>
-                {isLoading ? 'Signing in...' : 'Sign In'}
+                {isLoading ? a('signingIn') : a('signIn')}
               </Button>
 
               <div className='relative'>
@@ -154,7 +162,7 @@ export default function LoginPage(): React.ReactElement {
                   <span className='border-border w-full border-t' />
                 </div>
                 <div className='relative flex justify-center text-xs uppercase'>
-                  <span className='bg-card/80 text-muted-foreground px-2'>Or continue with</span>
+                  <span className='bg-card text-muted-foreground px-2'>{a('continueWith')}</span>
                 </div>
               </div>
 
@@ -186,9 +194,9 @@ export default function LoginPage(): React.ReactElement {
               </Button>
 
               <p className='text-muted-foreground text-center text-sm'>
-                Don&apos;t have an account?{' '}
-                <Link href='/register' className='text-primary hover:underline'>
-                  Sign up
+                {a('noAccount')}{' '}
+                <Link href='/register' className='text-brand hover:underline'>
+                  {a('signUp')}
                 </Link>
               </p>
             </form>

@@ -11,19 +11,19 @@ import { cn } from '@/lib/utils';
 function getBarColor(percentage: number): string {
   if (percentage >= 80) return 'bg-destructive';
   if (percentage >= 50) return 'bg-warning';
-  return 'bg-emerald-500';
+  return 'bg-success';
 }
 
 function getTextColor(percentage: number): string {
   if (percentage >= 80) return 'text-destructive';
   if (percentage >= 50) return 'text-warning';
-  return 'text-emerald-500';
+  return 'text-success';
 }
 
 function getTrackColor(percentage: number): string {
   if (percentage >= 80) return 'bg-destructive/20';
   if (percentage >= 50) return 'bg-warning/20';
-  return 'bg-emerald-500/20';
+  return 'bg-success/20';
 }
 
 interface UsageBarProps {
@@ -46,7 +46,13 @@ function UsageBar({ label, used, limit, suffix }: UsageBarProps): React.ReactEle
           {suffix ? ` ${suffix}` : ''}
         </span>
       </div>
-      <div className={cn('h-2 w-full overflow-hidden rounded-full', getTrackColor(percentage))}>
+      <div
+        role='progressbar'
+        aria-label={label}
+        aria-valuemin={0}
+        aria-valuemax={limit}
+        aria-valuenow={used}
+        className={cn('h-1 w-full overflow-hidden rounded-full', getTrackColor(percentage))}>
         <div
           className={cn('h-full rounded-full transition-all', getBarColor(percentage))}
           style={{ width: `${percentage}%` }}
@@ -78,18 +84,18 @@ export function UsageCard(): React.ReactElement | null {
         <div className='flex items-center justify-between'>
           <div className='flex items-center gap-2'>
             <div className='bg-card-overlay flex h-9 w-9 shrink-0 items-center justify-center rounded-lg sm:h-10 sm:w-10'>
-              <Sparkles className='h-4 w-4 text-purple-400 sm:h-5 sm:w-5' />
+              <Sparkles className='text-brand-secondary h-4 w-4 sm:h-5 sm:w-5' />
             </div>
             <p className='text-sm font-semibold'>{t('usage')}</p>
           </div>
           <a
             href='/settings?tab=subscription'
-            className='text-primary text-xs font-medium hover:underline'>
+            className='text-brand text-xs font-medium hover:underline'>
             {t('upgradeLink')} &rarr;
           </a>
         </div>
 
-        <div className='space-y-2'>
+        <div className='grid gap-4 sm:grid-cols-2 xl:grid-cols-5'>
           <UsageBar
             label={t('aiParses')}
             used={usage.ai_parses_used}

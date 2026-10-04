@@ -290,7 +290,7 @@ export function AccountEditDialog({
                   <div>
                     <p className='text-sm font-medium'>{t('balance')}</p>
                     <p
-                      className={`text-lg font-bold ${account.balance >= 0 ? 'text-success' : 'text-destructive'}`}>
+                      className={`text-lg font-semibold tabular-nums ${account.balance >= 0 ? 'text-success' : 'text-destructive'}`}>
                       {formatCurrency(account.balance, account.currency, locale)}
                     </p>
                   </div>

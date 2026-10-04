@@ -88,7 +88,7 @@ export function MonthSelector({ year, month, onChange }: MonthSelectorProps): Re
                 onClick={(): void => handleMonthPick(i)}
                 className={`cursor-pointer ${
                   i === month && pickerYear === year
-                    ? 'bg-primary text-primary-foreground hover:bg-primary/90'
+                    ? 'bg-brand/15 text-brand hover:bg-brand/25'
                     : 'text-foreground hover:bg-card-overlay'
                 }`}>
                 {name}

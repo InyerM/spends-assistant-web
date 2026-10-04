@@ -526,7 +526,7 @@ export function AutomationForm({
                   href={appSettings.automation_faq_url}
                   target='_blank'
                   rel='noopener noreferrer'
-                  className='text-primary text-xs hover:underline'>
+                  className='text-brand text-xs hover:underline'>
                   {t('automationFaqLink')}
                 </a>
               )}

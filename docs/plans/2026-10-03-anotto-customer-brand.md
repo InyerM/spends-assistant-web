@@ -1,16 +1,15 @@
 # Anotto customer-facing brand plan
 
-Status: design exploration. No production brand, domain, data, API, or repository identity has
-changed.
+Status: approved customer-facing web migration in progress. The owner selected Void Emerald with
+Amber and `anotto.app`. Internal identifiers and financial data remain unchanged.
 
 ## Decision to make
 
-The owner prefers direction A's typography, layout, and three-bar wordmark, rejects its green page
-and card backgrounds, and favors **3 · Void Emerald** from the
-[neutral-dark A variants](../design/anotto/a-variants/index.html). Treat that variant as the working
-base. Compare [four secondary-color studies](../design/anotto/a-variants/secondary/index.html)
-before locking its supporting accent. This is a working preference, not a production design
-approval. Confirm the exact customer-facing hostname before the web release.
+The owner approved direction A's typography, layout, and three-bar wordmark, the near-black **3 ·
+Void Emerald** base, and **3 · Amber** from the
+[secondary-color studies](../design/anotto/a-variants/secondary/index.html). The public hostname is
+`anotto.app`. The production token contract is in [`DESIGN.md`](../../DESIGN.md), and the
+[web migration plan](2026-10-03-anotto-web-rollout.md) tracks implementation and release checks.
 
 | Direction                                    | Visual logic                                               | Working colors                                           | Primary trade-off                                                             |
 | -------------------------------------------- | ---------------------------------------------------------- | -------------------------------------------------------- | ----------------------------------------------------------------------------- |
@@ -33,8 +32,7 @@ The secondary-color studies keep option 3's shell, white primary action, emerald
 positive signals, wordmark, and layout fixed. They apply one alternative hue to the review panel's
 supporting details and the spending data series, so their visual effect can be compared in the same
 places. Those uses are exploratory; a final semantic role map is still required. The working
-recommendation is **Iris** because it is visibly separate from emerald and less likely than amber or
-coral to be mistaken for warning or error.
+selection is **Amber**. Keep warning separate with a stronger orange, icon, and explicit label.
 
 | Study                                                               | Secondary color | Intended direction                    | Main caution                                                |
 | ------------------------------------------------------------------- | --------------- | ------------------------------------- | ----------------------------------------------------------- |
@@ -84,7 +82,7 @@ becomes a transaction.
 | Guided email forwarding                  | `messages/email-forwarding.en.json`, `.es.json`, `.pt.json`              | Replace customer-visible “Spends” copy in all three locales; preserve the private forwarding address until the hostname migration is ready. |
 | Backend Telegram welcome/help            | backend `src/handlers/telegram.ts`                                       | Replace visible “Expense Assistant” name only; keep bot/API identifiers and commands stable.                                                |
 | Mobile app display and subscription copy | mobile `app.json`, `src/i18n/{en,es,pt}.json`, mobile icon/splash assets | After the web release, change display name, user-facing copy, and approved assets; retain Expo slug, URL scheme, and app identifiers.       |
-| Customer domain                          | current `spends-assistant.inyerm.com`; new hostname not yet supplied     | Decide a launch and redirect path once the exact hostname is known; keep legacy deep links and forwarding operational.                      |
+| Customer domain                          | current `spends-assistant.inyerm.com`; approved `anotto.app`             | Set up the new website hostname after deployment checks; keep legacy deep links and forwarding operational.                                 |
 
 Documentation and operational logs are internal and do not need a wholesale string replacement.
 Historical records, stored source text, audit events, and third-party bank names must remain
@@ -125,9 +123,8 @@ untouched.
 
 ## Open decisions
 
-1. Which secondary accent should complement the preferred **3 · Void Emerald** base? Recommend **2 ·
-   Iris** provisionally; preserve A's typography, layout, and three-bar logo.
-2. What is the exact new public hostname? Recommend a short `anotto` subdomain on a domain the owner
-   controls. Do not infer it from Cloudflare configuration.
-3. Should the public address change in the first web release or a later release? Recommend later,
-   after the brand UI is reviewed, to isolate DNS and forwarding risk.
+1. Verify the production web build and financial review flows before pointing `anotto.app` to
+   Vercel. Keep `spends-assistant.inyerm.com` available during the transition.
+2. Decide when the old website hostname should redirect to `anotto.app` after the new address and
+   existing receipt forwarding have passed live tests. Recommend a later redirect, not part of the
+   first DNS change.

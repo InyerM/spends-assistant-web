@@ -213,7 +213,7 @@ export default function LoansPage(): React.ReactElement {
   );
   const visibleLoans = historyView ? historicalLoans : currentLoans;
   const field = (label: string, key: keyof Draft, placeholder = ''): React.ReactElement => (
-    <label className='block space-y-1 text-sm font-medium' key={key}>
+    <label className='block space-y-2 text-sm font-medium' key={key}>
       {label}
       <Input
         value={draft[key]}
@@ -223,11 +223,11 @@ export default function LoansPage(): React.ReactElement {
     </label>
   );
   return (
-    <main className='mx-auto max-w-6xl space-y-6 p-4 sm:p-6'>
-      <header className='space-y-2'>
+    <main className='mx-auto max-w-[1480px] space-y-8 p-4 sm:p-8 lg:p-10'>
+      <header className='space-y-4'>
         <div className='flex items-center gap-3'>
-          <Landmark className='text-primary h-6 w-6' />
-          <h1 className='text-2xl font-semibold'>{t('title')}</h1>
+          <Landmark className='text-success h-6 w-6' />
+          <h1 className='text-2xl font-semibold tracking-tight sm:text-3xl'>{t('title')}</h1>
         </div>
         <p className='text-muted-foreground text-sm'>{t('subtitle')}</p>
         <p className='text-muted-foreground text-sm'>
@@ -237,7 +237,7 @@ export default function LoansPage(): React.ReactElement {
           </Link>
           .
         </p>
-        <p className='border-border bg-muted/40 text-muted-foreground rounded-lg border px-4 py-3 text-sm'>
+        <p className='border-border text-muted-foreground max-w-4xl border-t pt-4 text-sm leading-relaxed'>
           {t('journalNote')}
         </p>
       </header>
@@ -246,20 +246,22 @@ export default function LoansPage(): React.ReactElement {
           {error}
         </p>
       )}
-      <div className='grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(340px,420px)]'>
-        <section className='space-y-3' aria-label={t('section')}>
+      <div className='grid min-w-0 items-start gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(340px,420px)] xl:gap-8'>
+        <section className='min-w-0 space-y-4' aria-label={t('section')}>
           <div className='flex flex-wrap items-center justify-between gap-3'>
-            <h2 className='text-lg font-semibold'>{t('section')}</h2>
-            <div className='bg-muted flex rounded-lg p-1 text-sm'>
+            <h2 className='text-lg font-semibold tracking-tight'>{t('section')}</h2>
+            <div className='bg-muted flex max-w-full flex-wrap rounded-lg p-1 text-sm'>
               <Button
                 size='sm'
                 variant={!historyView ? 'secondary' : 'ghost'}
+                aria-pressed={!historyView}
                 onClick={() => setHistoryView(false)}>
                 {t('current')} ({currentLoans.length})
               </Button>
               <Button
                 size='sm'
                 variant={historyView ? 'secondary' : 'ghost'}
+                aria-pressed={historyView}
                 onClick={() => setHistoryView(true)}>
                 {t('history')} ({historicalLoans.length})
               </Button>
@@ -280,9 +282,11 @@ export default function LoansPage(): React.ReactElement {
             </Card>
           ) : (
             visibleLoans.map((loan) => (
-              <Card key={loan.id} className='gap-2'>
+              <Card key={loan.id} className='min-w-0 gap-4 overflow-hidden'>
                 <CardHeader>
-                  <CardTitle className='text-base'>{loan.label}</CardTitle>
+                  <CardTitle className='min-w-0 text-lg leading-snug break-words'>
+                    {loan.label}
+                  </CardTitle>
                   <p className='text-muted-foreground text-sm'>
                     {loan.lender === 'lulo_bank' ? 'Lulo Bank' : 'Bancolombia'} · {loan.currency}
                   </p>
@@ -293,10 +297,10 @@ export default function LoansPage(): React.ReactElement {
                     </span>
                   )}
                 </CardHeader>
-                <CardContent className='space-y-2 text-sm'>
+                <CardContent className='space-y-4 text-sm'>
                   <p>
                     {t('outstanding')}{' '}
-                    <strong>
+                    <strong className='text-brand-secondary mt-1 block text-2xl font-semibold tracking-tight tabular-nums'>
                       {loan.opening_recorded
                         ? money(loan.outstanding_minor, loan)
                         : t('notRecorded')}
@@ -304,15 +308,15 @@ export default function LoansPage(): React.ReactElement {
                   </p>
                   <p className='text-muted-foreground'>{t('rateHint')}</p>
                   {(loan.manual_loan_events?.length ?? 0) > 0 && (
-                    <details className='border-border border-t pt-2'>
-                      <summary className='cursor-pointer font-medium'>
+                    <details className='border-border border-t pt-4'>
+                      <summary className='focus-visible:ring-ring cursor-pointer rounded-md py-1 font-medium focus-visible:ring-2 focus-visible:outline-none'>
                         {t('recordedEvents', { count: loan.manual_loan_events?.length ?? 0 })}
                       </summary>
                       <div className='mt-2 space-y-2'>
                         {[...(loan.manual_loan_events ?? [])]
                           .sort((a, b) => b.occurred_on.localeCompare(a.occurred_on))
                           .map((event) => (
-                            <div key={event.id} className='border-border space-y-1 border-t pt-2'>
+                            <div key={event.id} className='border-border space-y-2 border-t pt-4'>
                               <p>
                                 {event.occurred_on} ·{' '}
                                 {event.kind === 'opening'
@@ -355,14 +359,14 @@ export default function LoansPage(): React.ReactElement {
         </section>
         <Card>
           <CardHeader>
-            <CardTitle>{t('newEntry')}</CardTitle>
+            <CardTitle className='text-lg leading-snug break-words'>{t('newEntry')}</CardTitle>
             <p className='text-muted-foreground text-sm'>{t('entryHint')}</p>
           </CardHeader>
           <CardContent className='space-y-4'>
-            <label className='block space-y-1 text-sm font-medium'>
+            <label className='block space-y-2 text-sm font-medium'>
               {t('entryType')}
               <select
-                className='border-input bg-background h-9 w-full rounded-md border px-3'
+                className='border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 h-10 w-full min-w-0 rounded-lg border px-3 focus-visible:ring-2 focus-visible:outline-none'
                 value={draft.action}
                 onChange={(event) => change('action', event.target.value as Action)}>
                 <option value='create_loan'>{t('createLoan')}</option>
@@ -372,10 +376,10 @@ export default function LoansPage(): React.ReactElement {
             </label>
             {draft.action === 'create_loan' ? (
               <>
-                <label className='block space-y-1 text-sm font-medium'>
+                <label className='block space-y-2 text-sm font-medium'>
                   {t('lender')}
                   <select
-                    className='border-input bg-background h-9 w-full rounded-md border px-3'
+                    className='border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 h-10 w-full min-w-0 rounded-lg border px-3 focus-visible:ring-2 focus-visible:outline-none'
                     value={draft.lender}
                     onChange={(event) => change('lender', event.target.value as Draft['lender'])}>
                     <option value='lulo_bank'>Lulo Bank</option>
@@ -388,10 +392,10 @@ export default function LoansPage(): React.ReactElement {
               </>
             ) : (
               <>
-                <label className='block space-y-1 text-sm font-medium'>
+                <label className='block space-y-2 text-sm font-medium'>
                   {t('loan')}
                   <select
-                    className='border-input bg-background h-9 w-full rounded-md border px-3'
+                    className='border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 h-10 w-full min-w-0 rounded-lg border px-3 focus-visible:ring-2 focus-visible:outline-none'
                     value={draft.loanId}
                     onChange={(event) => change('loanId', event.target.value)}>
                     <option value=''>{t('selectLoan')}</option>
@@ -418,11 +422,11 @@ export default function LoansPage(): React.ReactElement {
             )}
             {field(t('evidenceReference'), 'evidenceReference', t('evidenceHint'))}
             {field(t('evidenceDate'), 'evidenceDate', 'YYYY-MM-DD')}
-            <Button type='button' onClick={review}>
+            <Button className='w-full sm:w-auto' type='button' onClick={review}>
               {t('reviewEntry')}
             </Button>
             {preview && (
-              <div className='border-border bg-muted/30 space-y-3 rounded-lg border p-4'>
+              <div className='border-brand-secondary/25 bg-brand-secondary/5 space-y-4 rounded-xl border p-4'>
                 <h3 className='font-medium'>{t('reviewBeforeSaving')}</h3>
                 <p className='text-muted-foreground text-sm'>
                   {preview.action === 'create_loan'
@@ -455,6 +459,7 @@ export default function LoansPage(): React.ReactElement {
                 <label className='flex items-center gap-2 text-sm'>
                   <input
                     type='checkbox'
+                    className='accent-success h-4 w-4 shrink-0'
                     checked={checked}
                     onChange={(event) => setChecked(event.target.checked)}
                   />

@@ -179,7 +179,7 @@ export default function AutomationPage(): React.ReactElement {
   };
 
   return (
-    <div className='space-y-4 p-4 sm:space-y-6 sm:p-6'>
+    <div className='mx-auto w-full max-w-7xl space-y-6 p-4 sm:p-6 lg:p-8'>
       <div className='space-y-3 sm:space-y-0'>
         {/* Mobile: search full-width */}
         <SearchInput
@@ -233,7 +233,8 @@ export default function AutomationPage(): React.ReactElement {
             <Button
               variant='outline'
               size='sm'
-              className='ai-gradient-btn cursor-pointer'
+              className='border-brand-secondary/25 text-brand-secondary hover:bg-brand-secondary/10 cursor-pointer'
+              aria-label={t('createWithAi')}
               onClick={(): void => setAiDialogOpen(true)}>
               <Sparkles className='h-4 w-4 sm:mr-1.5' />
               <span className='hidden sm:inline'>{t('createWithAi')}</span>
@@ -243,12 +244,13 @@ export default function AutomationPage(): React.ReactElement {
                 variant='outline'
                 size='sm'
                 className='cursor-pointer'
+                aria-label={t('autoGenerate')}
                 onClick={(): void => setGenerateConfirmOpen(true)}>
                 <Wand2 className='h-4 w-4 sm:mr-1.5' />
                 <span className='hidden sm:inline'>{t('autoGenerate')}</span>
               </Button>
             )}
-            <Button className='cursor-pointer' onClick={handleCreate}>
+            <Button className='cursor-pointer' aria-label={t('newRule')} onClick={handleCreate}>
               <Plus className='h-4 w-4 sm:mr-2' />
               <span className='hidden sm:inline'>{t('newRule')}</span>
             </Button>
@@ -267,7 +269,7 @@ export default function AutomationPage(): React.ReactElement {
           <CardContent className='flex flex-col items-center justify-center py-12'>
             <Zap className='text-muted-foreground mb-4 h-12 w-12' />
             <p className='text-muted-foreground mb-4'>{t('noRules')}</p>
-            <Button className='cursor-pointer' onClick={handleCreate}>
+            <Button className='cursor-pointer' aria-label={t('newRule')} onClick={handleCreate}>
               <Plus className='mr-2 h-4 w-4' />
               {t('addFirst')}
             </Button>

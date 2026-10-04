@@ -47,8 +47,11 @@ export function TransactionToolbar({
   const common = useTranslations('common');
 
   return (
-    <div className='flex min-w-0 flex-col gap-3 lg:flex-row lg:items-center lg:justify-between'>
-      <div className='min-w-0 self-start'>
+    <div className='flex min-w-0 flex-col gap-5 lg:flex-row lg:items-end lg:justify-between'>
+      <div className='min-w-0 space-y-3 self-start'>
+        <h1 className='text-foreground text-3xl font-semibold tracking-tight sm:text-4xl'>
+          {t('title')}
+        </h1>
         <PeriodSelector dateFrom={dateFrom} dateTo={dateTo} onChange={onPeriodChange} />
       </div>
       <div className='flex min-w-0 flex-wrap items-center gap-2'>
@@ -58,7 +61,7 @@ export function TransactionToolbar({
         </Button>
         <Button variant='outline' size='sm' asChild>
           <Link href='/documents?from=transactions'>
-            <FileImage aria-hidden='true' className='mr-1.5 h-4 w-4' />
+            <FileImage aria-hidden='true' className='text-brand-secondary mr-1.5 h-4 w-4' />
             {t('uploadDocument')}
           </Link>
         </Button>

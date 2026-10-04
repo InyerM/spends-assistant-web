@@ -87,7 +87,7 @@ export function BulkEditDialog({
             />
           </div>
 
-          <div className='flex justify-end gap-3 pt-4'>
+          <div className='border-border flex justify-end gap-3 border-t pt-5'>
             <Button type='button' variant='outline' onClick={(): void => handleOpenChange(false)}>
               {tCommon('cancel')}
             </Button>

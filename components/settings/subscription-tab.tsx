@@ -168,7 +168,7 @@ export function SubscriptionTab(): React.ReactElement {
                 <ul className='space-y-1.5'>
                   {proFeatures.map((feature) => (
                     <li key={feature} className='flex items-center gap-2 text-sm'>
-                      <Check className='text-primary h-3.5 w-3.5 shrink-0' />
+                      <Check className='text-brand h-3.5 w-3.5 shrink-0' />
                       <span>{feature}</span>
                     </li>
                   ))}
@@ -183,7 +183,7 @@ export function SubscriptionTab(): React.ReactElement {
         <Card>
           <CardHeader>
             <div className='flex items-center gap-2'>
-              <Sparkles className='text-primary h-5 w-5' />
+              <Sparkles className='text-brand h-5 w-5' />
               <CardTitle>{t('proPlan')}</CardTitle>
             </div>
             <CardDescription>{t('unlockDescription')}</CardDescription>
@@ -192,7 +192,7 @@ export function SubscriptionTab(): React.ReactElement {
             <ul className='space-y-2'>
               {proFeatures.map((feature) => (
                 <li key={feature} className='flex items-center gap-2 text-sm'>
-                  <Check className='text-primary h-4 w-4 shrink-0' />
+                  <Check className='text-brand h-4 w-4 shrink-0' />
                   <span>{feature}</span>
                 </li>
               ))}

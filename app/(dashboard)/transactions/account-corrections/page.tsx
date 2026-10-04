@@ -142,7 +142,7 @@ export default function AccountCorrectionsPage(): React.ReactElement {
     new Intl.NumberFormat(locale, { style: 'currency', currency: 'COP' }).format(amount);
 
   return (
-    <div className='mx-auto max-w-4xl space-y-6 pb-12'>
+    <div className='mx-auto max-w-4xl space-y-6 p-4 pb-12 sm:p-6 lg:p-8'>
       <div className='space-y-3'>
         <Button asChild variant='ghost' size='sm' className='-ml-2'>
           <Link href='/transactions'>
@@ -151,18 +151,18 @@ export default function AccountCorrectionsPage(): React.ReactElement {
           </Link>
         </Button>
         <div className='flex items-start gap-3'>
-          <span className='bg-primary/10 text-primary rounded-lg p-2.5'>
+          <span className='bg-brand-secondary/10 text-brand-secondary rounded-lg p-2.5'>
             <FileSearch className='h-5 w-5' />
           </span>
           <div>
-            <h1 className='text-2xl font-semibold tracking-tight'>{t('title')}</h1>
+            <h1 className='text-3xl font-semibold tracking-tight'>{t('title')}</h1>
             <p className='text-muted-foreground mt-1 text-sm'>{t('subtitle')}</p>
           </div>
         </div>
       </div>
 
       <div className='bg-muted/40 border-border flex gap-3 rounded-lg border p-4 text-sm'>
-        <ShieldCheck className='text-primary mt-0.5 h-4 w-4 shrink-0' />
+        <ShieldCheck className='text-brand-secondary mt-0.5 h-4 w-4 shrink-0' />
         <p>{t('evidenceCaution')}</p>
       </div>
       {success && (

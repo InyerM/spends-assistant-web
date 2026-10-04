@@ -165,7 +165,7 @@ export default function CategoriesPage(): React.ReactElement {
 
   return (
     <TooltipProvider>
-      <div className='space-y-4 p-4 sm:space-y-6 sm:p-6'>
+      <div className='mx-auto w-full max-w-7xl space-y-6 p-4 sm:p-6 lg:p-8'>
         <div className='space-y-3 sm:space-y-0'>
           {/* Mobile: search full-width */}
           <SearchInput
@@ -192,7 +192,10 @@ export default function CategoriesPage(): React.ReactElement {
                 {t('showHidden')}
               </label>
             </div>
-            <Button className='cursor-pointer' onClick={(): void => handleCreate()}>
+            <Button
+              className='cursor-pointer'
+              aria-label={t('newCategory')}
+              onClick={(): void => handleCreate()}>
               <Plus className='h-4 w-4 sm:mr-2' />
               <span className='hidden sm:inline'>{t('newCategory')}</span>
             </Button>

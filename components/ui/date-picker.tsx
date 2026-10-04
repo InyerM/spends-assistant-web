@@ -55,7 +55,7 @@ export function DatePicker({
           aria-label={ariaLabel}
           disabled={disabled}
           className={cn(
-            'border-border flex h-11 w-full cursor-pointer items-center gap-2 rounded-md border bg-transparent px-3 py-2 text-sm shadow-xs transition-[color,box-shadow] outline-none sm:h-9',
+            'border-border bg-card flex h-11 w-full cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm transition-[color,box-shadow] outline-none sm:h-9',
             'focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]',
             !value && 'text-muted-foreground',
             className,

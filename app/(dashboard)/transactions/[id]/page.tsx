@@ -29,7 +29,7 @@ export default function TransactionDetailPage(): React.ReactElement {
         : ArrowUpRight;
 
   return (
-    <main className='mx-auto max-w-3xl space-y-6 p-4 sm:p-6'>
+    <main className='mx-auto max-w-3xl space-y-6 p-4 sm:p-6 lg:p-8'>
       <Link
         href='/transactions'
         className='text-muted-foreground hover:text-foreground inline-flex items-center gap-2 text-sm'>
@@ -51,19 +51,21 @@ export default function TransactionDetailPage(): React.ReactElement {
                   <Icon aria-hidden='true' className='h-5 w-5' />
                 </span>
                 <div>
-                  <CardTitle className='text-xl'>{transaction.description}</CardTitle>
+                  <CardTitle className='text-2xl tracking-tight'>
+                    {transaction.description}
+                  </CardTitle>
                   <p className='text-muted-foreground mt-1 text-sm'>
                     {transaction.date} · {transaction.time}
                   </p>
                 </div>
               </div>
-              <strong className='shrink-0 tabular-nums'>
+              <strong className='shrink-0 text-lg tabular-nums'>
                 {formatCurrency(transaction.amount, 'COP', locale)}
               </strong>
             </div>
           </CardHeader>
           <CardContent>
-            <dl className='grid gap-4 border-t pt-4 text-sm sm:grid-cols-2'>
+            <dl className='border-border grid gap-4 border-t pt-4 text-sm sm:grid-cols-2'>
               <div>
                 <dt className='text-muted-foreground'>{t('type')}</dt>
                 <dd>{t(transaction.type)}</dd>

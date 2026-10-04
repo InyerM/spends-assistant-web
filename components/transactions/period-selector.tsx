@@ -166,7 +166,7 @@ export function PeriodSelector({
                       onClick={(): void => handleMonthPick(i)}
                       className={`cursor-pointer py-2.5 sm:py-1.5 ${
                         isActive
-                          ? 'bg-primary text-primary-foreground hover:bg-primary/90'
+                          ? 'bg-brand/15 text-brand hover:bg-brand/25'
                           : 'text-foreground hover:bg-card-overlay'
                       }`}>
                       {name}
@@ -215,7 +215,7 @@ export function PeriodSelector({
                           onClick={(): void => handleWeekPick(day)}
                           className={`h-auto cursor-pointer rounded-none py-2.5 text-sm sm:py-1.5 sm:text-xs ${
                             isSelected
-                              ? 'bg-primary text-primary-foreground hover:bg-primary/90'
+                              ? 'bg-brand/15 text-brand hover:bg-brand/25'
                               : 'hover:bg-card-overlay'
                           } ${!isSameMonth(day, period.calendarMonth) ? 'opacity-40' : ''} ${
                             di === 0 ? 'rounded-l-md' : ''
@@ -261,7 +261,7 @@ export function PeriodSelector({
                       onClick={(): void => handleYearPick(y)}
                       className={`cursor-pointer py-2.5 sm:py-1.5 ${
                         isActive
-                          ? 'bg-primary text-primary-foreground hover:bg-primary/90'
+                          ? 'bg-brand/15 text-brand hover:bg-brand/25'
                           : isOutside
                             ? 'text-muted-foreground hover:bg-card-overlay'
                             : 'text-foreground hover:bg-card-overlay'

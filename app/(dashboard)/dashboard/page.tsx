@@ -45,22 +45,27 @@ export default function DashboardPage(): React.ReactElement {
   };
 
   return (
-    <div className='space-y-4 p-4 sm:space-y-6 sm:p-6'>
-      <BalanceOverview
-        onEditAccount={(account): void => setEditingAccount(account)}
-        onAddAccount={(): void => setCreateAccountOpen(true)}
-      />
-
-      <div className='flex items-center justify-between'>
-        <h2 className='text-foreground text-base font-semibold sm:text-lg'>{t('overview')}</h2>
+    <div className='mx-auto max-w-[1480px] space-y-6 p-4 sm:space-y-8 sm:p-8 lg:p-10'>
+      <div className='flex flex-wrap items-center justify-between gap-3'>
+        <h1 className='text-foreground text-2xl font-semibold tracking-tight sm:text-3xl'>
+          {t('overview')}
+        </h1>
         <PeriodSelector dateFrom={dateFrom} dateTo={dateTo} onChange={handlePeriodChange} />
       </div>
 
       <SummaryCards transactions={transactions} isLoading={txLoading} />
 
-      <div className='grid gap-4 sm:gap-6 lg:grid-cols-3'>
+      <section aria-label={t('accounts')} className='space-y-3'>
+        <h2 className='text-muted-foreground text-sm font-medium'>{t('accounts')}</h2>
+        <BalanceOverview
+          onEditAccount={(account): void => setEditingAccount(account)}
+          onAddAccount={(): void => setCreateAccountOpen(true)}
+        />
+      </section>
+
+      <div className='grid gap-4 sm:gap-6 xl:grid-cols-3'>
         <BalanceTrendChart
-          className='lg:col-span-2'
+          className='xl:col-span-2'
           transactions={transactions}
           dateFrom={dateFrom}
           dateTo={dateTo}

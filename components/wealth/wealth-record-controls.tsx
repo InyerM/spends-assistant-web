@@ -62,7 +62,7 @@ export function WealthRecordControls({
   };
 
   return (
-    <div className='space-y-2'>
+    <div className='border-border space-y-3 border-t pt-4'>
       {editing ? (
         <div className='flex flex-wrap items-end gap-2'>
           <label className='min-w-0 flex-1 space-y-1 text-sm'>
@@ -122,7 +122,7 @@ export function WealthRecordControls({
         </div>
       )}
       {confirmDelete && (
-        <div className='border-destructive/30 rounded-lg border p-3 text-sm'>
+        <div className='border-destructive/30 bg-destructive/5 space-y-2 rounded-xl border p-4 text-sm'>
           <p>{t('deleteWarning')}</p>
           <div className='mt-2 flex gap-2'>
             <Button

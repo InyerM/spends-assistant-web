@@ -86,7 +86,7 @@ export default function AccountsPage(): React.ReactElement {
   };
 
   return (
-    <div className='space-y-4 p-4 sm:space-y-6 sm:p-6'>
+    <div className='mx-auto w-full max-w-7xl space-y-6 p-4 sm:p-6 lg:p-8'>
       <div className='flex items-center gap-3'>
         <SearchInput
           value={search}
@@ -140,7 +140,7 @@ export default function AccountsPage(): React.ReactElement {
                 </CardHeader>
                 <CardContent>
                   <div
-                    className={`text-2xl font-bold ${account.balance >= 0 ? 'text-success' : 'text-destructive'}`}>
+                    className={`text-2xl font-semibold tracking-tight tabular-nums ${account.balance >= 0 ? 'text-success' : 'text-destructive'}`}>
                     {formatCurrency(account.balance, account.currency, locale)}
                   </div>
                   <div className='text-muted-foreground mt-2 flex items-center gap-2 text-sm'>

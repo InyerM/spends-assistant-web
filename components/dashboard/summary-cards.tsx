@@ -34,10 +34,10 @@ export function SummaryCards({ transactions, isLoading }: SummaryCardsProps): Re
     {
       label: t('expenses'),
       value: stats.expenses,
-      colorClass: 'text-destructive',
+      colorClass: 'text-brand-secondary',
       icon: TrendingDown,
-      iconBg: 'bg-destructive/15',
-      iconColor: 'text-destructive',
+      iconBg: 'bg-brand-secondary/10',
+      iconColor: 'text-brand-secondary',
       prefix: '-',
     },
     {
@@ -45,8 +45,8 @@ export function SummaryCards({ transactions, isLoading }: SummaryCardsProps): Re
       value: stats.cashFlow,
       colorClass: stats.cashFlow >= 0 ? 'text-success' : 'text-destructive',
       icon: Scale,
-      iconBg: 'bg-transfer/15',
-      iconColor: 'text-transfer',
+      iconBg: 'bg-muted',
+      iconColor: 'text-muted-foreground',
     },
   ];
 
@@ -93,17 +93,18 @@ export function SummaryCards({ transactions, isLoading }: SummaryCardsProps): Re
           const Icon = card.icon;
           return (
             <Card key={card.label} className='border-border bg-card'>
-              <CardContent className='flex items-center gap-3 p-4'>
+              <CardContent className='flex flex-row-reverse items-start justify-between gap-3 p-5 sm:p-6'>
                 <div
-                  className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full ${card.iconBg}`}>
-                  <Icon className={`h-6 w-6 ${card.iconColor}`} />
+                  className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${card.iconBg}`}>
+                  <Icon className={`h-4 w-4 ${card.iconColor}`} />
                 </div>
                 <div className='min-w-0'>
-                  <p className={`truncate text-xl font-bold ${card.colorClass}`}>
+                  <p className='text-muted-foreground mb-3 text-sm'>{card.label}</p>
+                  <p
+                    className={`text-2xl font-semibold tracking-tight tabular-nums lg:text-3xl ${card.colorClass}`}>
                     {card.prefix ?? ''}
                     {formatCurrency(Math.abs(card.value), 'COP', locale)}
                   </p>
-                  <p className='text-muted-foreground truncate text-xs'>{card.label}</p>
                 </div>
               </CardContent>
             </Card>

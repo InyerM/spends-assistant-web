@@ -70,7 +70,7 @@ export function EmailSenderGuide(): React.ReactElement {
                 )}
                 {provider.sourceUrl && (
                   <a
-                    className='text-primary inline-flex items-center gap-1 text-xs underline-offset-4 hover:underline'
+                    className='text-brand inline-flex items-center gap-1 text-xs underline-offset-4 hover:underline'
                     href={provider.sourceUrl}
                     target='_blank'
                     rel='noopener noreferrer'>

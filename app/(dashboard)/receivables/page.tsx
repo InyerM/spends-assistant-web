@@ -210,7 +210,7 @@ export default function ReceivablesPage(): React.ReactElement {
   }
 
   const field = (label: string, key: keyof Draft, placeholder = ''): React.ReactElement => (
-    <label className='block space-y-1 text-sm font-medium' key={key}>
+    <label className='block space-y-2 text-sm font-medium' key={key}>
       {label}
       <Input
         value={draft[key]}
@@ -221,14 +221,14 @@ export default function ReceivablesPage(): React.ReactElement {
   );
 
   return (
-    <main className='mx-auto max-w-6xl space-y-6 p-4 sm:p-6'>
-      <header className='space-y-2'>
+    <main className='mx-auto max-w-[1480px] space-y-8 p-4 sm:p-8 lg:p-10'>
+      <header className='space-y-4'>
         <div className='flex items-center gap-3'>
-          <HandCoins className='text-primary h-6 w-6' />
-          <h1 className='text-2xl font-semibold'>{t('title')}</h1>
+          <HandCoins className='text-success h-6 w-6' />
+          <h1 className='text-2xl font-semibold tracking-tight sm:text-3xl'>{t('title')}</h1>
         </div>
         <p className='text-muted-foreground text-sm'>{t('subtitle')}</p>
-        <p className='border-border bg-muted/40 text-muted-foreground rounded-lg border px-4 py-3 text-sm'>
+        <p className='border-border text-muted-foreground max-w-4xl border-t pt-4 text-sm leading-relaxed'>
           {t('journalNote')}{' '}
           <Link href='/loans' className='underline'>
             {t('loansLink')}
@@ -241,9 +241,9 @@ export default function ReceivablesPage(): React.ReactElement {
           {error}
         </p>
       )}
-      <div className='grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(340px,420px)]'>
-        <section className='space-y-3' aria-label={t('section')}>
-          <h2 className='text-lg font-semibold'>{t('section')}</h2>
+      <div className='grid min-w-0 items-start gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(340px,420px)] xl:gap-8'>
+        <section className='min-w-0 space-y-4' aria-label={t('section')}>
+          <h2 className='text-lg font-semibold tracking-tight'>{t('section')}</h2>
           {loading ? (
             <p>{t('loading')}</p>
           ) : receivables.length === 0 ? (
@@ -252,26 +252,30 @@ export default function ReceivablesPage(): React.ReactElement {
             </Card>
           ) : (
             receivables.map((item) => (
-              <Card key={item.id} className='gap-2'>
+              <Card key={item.id} className='min-w-0 gap-4 overflow-hidden'>
                 <CardHeader>
-                  <CardTitle className='text-base'>{item.label}</CardTitle>
+                  <CardTitle className='min-w-0 text-lg leading-snug break-words'>
+                    {item.label}
+                  </CardTitle>
                   <p className='text-muted-foreground text-sm'>
                     {item.borrower} · {item.currency}
                   </p>
                 </CardHeader>
-                <CardContent className='space-y-2 text-sm'>
+                <CardContent className='space-y-4 text-sm'>
                   <p>
                     {t('outstanding')}{' '}
-                    <strong>{displayMoney(item.outstanding_minor, item, locale)}</strong>
+                    <strong className='text-foreground mt-1 block text-2xl font-semibold tracking-tight tabular-nums'>
+                      {displayMoney(item.outstanding_minor, item, locale)}
+                    </strong>
                   </p>
                   {(item.personal_receivable_events ?? []).map((event) => (
-                    <p key={event.id} className='border-border border-t pt-2'>
+                    <p key={event.id} className='border-border border-t pt-4'>
                       {event.occurred_on} ·{' '}
                       {event.kind === 'disbursement' ? t('lent') : t('repaid')}{' '}
                       {displayMoney(event.amount_minor, item, locale)} ·{' '}
                       <Link
                         href={`/transactions/${event.source_transaction_id}`}
-                        className='text-primary underline underline-offset-2'
+                        className='text-success hover:text-success/80 focus-visible:ring-ring rounded-sm underline underline-offset-4 focus-visible:ring-2 focus-visible:outline-none'
                         aria-label={`${t('viewTransaction')} ${event.source_transaction_id.slice(0, 8)}`}>
                         {t('transaction')} {event.source_transaction_id.slice(0, 8)}
                       </Link>
@@ -284,13 +288,13 @@ export default function ReceivablesPage(): React.ReactElement {
         </section>
         <Card>
           <CardHeader>
-            <CardTitle>{t('newEntry')}</CardTitle>
+            <CardTitle className='text-lg leading-snug break-words'>{t('newEntry')}</CardTitle>
           </CardHeader>
           <CardContent className='space-y-4'>
-            <label className='block space-y-1 text-sm font-medium'>
+            <label className='block space-y-2 text-sm font-medium'>
               {t('entryType')}
               <select
-                className='border-input bg-background h-9 w-full rounded-md border px-3'
+                className='border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 h-10 w-full min-w-0 rounded-lg border px-3 focus-visible:ring-2 focus-visible:outline-none'
                 value={draft.action}
                 onChange={(event) => change('action', event.target.value as Action)}>
                 <option value='create_receivable'>{t('createBorrower')}</option>
@@ -307,10 +311,10 @@ export default function ReceivablesPage(): React.ReactElement {
               </>
             ) : (
               <>
-                <label className='block space-y-1 text-sm font-medium'>
+                <label className='block space-y-2 text-sm font-medium'>
                   {t('receivable')}
                   <select
-                    className='border-input bg-background h-9 w-full rounded-md border px-3'
+                    className='border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 h-10 w-full min-w-0 rounded-lg border px-3 focus-visible:ring-2 focus-visible:outline-none'
                     value={draft.receivableId}
                     onChange={(event) => change('receivableId', event.target.value)}>
                     <option value=''>{t('selectReceivable')}</option>
@@ -329,10 +333,10 @@ export default function ReceivablesPage(): React.ReactElement {
                   onClick={() => void findTransactions()}>
                   {searching ? t('searching') : t('findTransaction')}
                 </Button>
-                <label className='block space-y-1 text-sm font-medium'>
+                <label className='block space-y-2 text-sm font-medium'>
                   {t('sourceTransaction')}
                   <select
-                    className='border-input bg-background h-9 w-full rounded-md border px-3'
+                    className='border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 h-10 w-full min-w-0 rounded-lg border px-3 focus-visible:ring-2 focus-visible:outline-none'
                     value={draft.sourceTransactionId}
                     onChange={(event) => change('sourceTransactionId', event.target.value)}>
                     <option value=''>{t('selectTransaction')}</option>
@@ -350,11 +354,11 @@ export default function ReceivablesPage(): React.ReactElement {
                 {field(t('evidenceReference'), 'evidenceReference', t('evidenceHint'))}
               </>
             )}
-            <Button type='button' onClick={review}>
+            <Button className='w-full sm:w-auto' type='button' onClick={review}>
               {t('reviewEntry')}
             </Button>
             {preview && (
-              <div className='border-border bg-muted/30 space-y-3 rounded-lg border p-4'>
+              <div className='border-brand-secondary/25 bg-brand-secondary/5 space-y-4 rounded-xl border p-4'>
                 <h3 className='font-medium'>{t('reviewBeforeSaving')}</h3>
                 {preview.action === 'create_receivable' ? (
                   <p className='text-sm'>
@@ -385,6 +389,7 @@ export default function ReceivablesPage(): React.ReactElement {
                 <label className='flex items-center gap-2 text-sm'>
                   <input
                     type='checkbox'
+                    className='accent-success h-4 w-4 shrink-0'
                     checked={checked}
                     onChange={(event) => setChecked(event.target.checked)}
                   />

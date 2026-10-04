@@ -149,14 +149,14 @@ export function TimePicker({ value, onChange, className }: TimePickerProps): Rea
   }
 
   const inputClassName = cn(
-    'h-full w-10 shrink-0 border-0 bg-transparent text-center font-mono text-sm outline-none',
+    'h-full w-10 shrink-0 border-0 bg-card text-center font-mono text-sm outline-none',
   );
 
   return (
     <div
       className={cn(
-        'border-border flex h-11 w-full items-center rounded-md border bg-transparent',
-        'shadow-xs transition-[color,box-shadow] outline-none sm:h-9',
+        'border-border bg-card flex h-11 w-full items-center rounded-md border',
+        'transition-[color,box-shadow] outline-none sm:h-9',
         'focus-within:border-ring focus-within:ring-ring/50 focus-within:ring-[3px]',
         className,
       )}>

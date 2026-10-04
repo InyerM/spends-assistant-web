@@ -182,7 +182,7 @@ function TransactionRow({
 
   const rowContent = (
     <div
-      className={`hover:bg-card-overlay flex items-center gap-3 rounded-lg p-3 transition-colors ${isSelected ? 'bg-card-overlay' : ''}`}
+      className={`hover:bg-card-overlay flex items-center gap-3 px-3 py-4 transition-colors sm:px-5 ${isSelected ? 'bg-brand/10' : ''}`}
       {...(onLongPress ? longPressHandlers : EMPTY_HANDLERS)}>
       {selectMode && onToggleSelect && (
         <Checkbox
@@ -206,9 +206,9 @@ function TransactionRow({
             onEdit(tx);
           }
         }}
-        className='flex min-w-0 flex-1 cursor-pointer items-center gap-3 text-left'>
+        className='focus-visible:ring-ring flex min-w-0 flex-1 cursor-pointer items-center gap-3 rounded-md text-left outline-none focus-visible:ring-2'>
         <div
-          className={`bg-card-overlay flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${config.colorClass}`}>
+          className={`bg-secondary flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${config.colorClass}`}>
           <Icon className='h-4 w-4' />
         </div>
 
@@ -248,7 +248,7 @@ function TransactionRow({
         </div>
 
         <div className='shrink-0 text-right'>
-          <p className={`text-sm font-semibold ${config.colorClass}`}>
+          <p className={`text-sm font-semibold tabular-nums ${config.colorClass}`}>
             {tx.type === 'expense' ? '-' : tx.type === 'income' ? '+' : ''}
             {formatCurrency(tx.amount, 'COP', locale)}
           </p>
@@ -371,7 +371,9 @@ export function TransactionList({
 
   if (dateGroups.length === 0) {
     return (
-      <div className='text-muted-foreground py-16 text-center text-sm'>{t('noTransactions')}</div>
+      <div className='border-border bg-card text-muted-foreground rounded-xl border px-5 py-16 text-center text-sm'>
+        {t('noTransactions')}
+      </div>
     );
   }
 
@@ -380,18 +382,18 @@ export function TransactionList({
       {dateGroups.map((group, groupIndex) => (
         <div
           key={group.date}
-          className='mb-4'
+          className='border-border bg-card overflow-hidden rounded-xl border'
           style={{ contentVisibility: 'auto', containIntrinsicSize: '0 200px' }}>
-          <div className='border-border mb-2 flex items-center justify-between border-b pb-2'>
+          <div className='border-border bg-card-overlay/50 flex items-center justify-between gap-3 border-b px-3 py-3 sm:px-5'>
             <span className='text-muted-foreground text-sm font-medium'>{group.displayDate}</span>
             <span
-              className={`text-sm font-semibold ${group.total >= 0 ? 'text-success' : 'text-destructive'}`}>
+              className={`text-sm font-semibold tabular-nums ${group.total >= 0 ? 'text-success' : 'text-destructive'}`}>
               {group.total >= 0 ? '+' : ''}
               {formatCurrency(group.total, 'COP', locale)}
             </span>
           </div>
 
-          <div className='space-y-0.5'>
+          <div className='divide-border divide-y'>
             {group.transactions.map((tx, txIndex) => (
               <TransactionRow
                 key={tx.id}

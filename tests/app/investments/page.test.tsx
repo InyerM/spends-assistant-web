@@ -82,8 +82,16 @@ describe('manual investment tracker', () => {
     render(<InvestmentsPage />);
     await screen.findByText(/No current positions/);
     expect(screen.queryByText('Past fund')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Current \(0\)/ })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
     await user.click(screen.getByRole('button', { name: /History \(1\)/ }));
     expect(screen.getByText('Past fund')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /History \(1\)/ })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
     expect(screen.getByText('Recorded events (1)')).toBeInTheDocument();
   });
 

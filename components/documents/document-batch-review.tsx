@@ -99,8 +99,10 @@ export function DocumentBatchReview({
         ))}
       </div>
       {chosen.length > 0 && (
-        <div className='border-primary/30 bg-primary/5 space-y-3 rounded-lg border p-4'>
-          <p className='font-semibold'>{t('selectedCount', { count: chosen.length })}</p>
+        <div className='border-brand-secondary/25 bg-card space-y-3 rounded-lg border p-4'>
+          <p className='text-brand-secondary font-semibold'>
+            {t('selectedCount', { count: chosen.length })}
+          </p>
           <div className='space-y-1 text-sm'>
             <label>{t('bulkAccount')}</label>
             <DocumentAccountSelect
@@ -151,8 +153,8 @@ export function DocumentBatchReview({
         <div
           role='region'
           aria-label={t('reviewDecision')}
-          className='border-primary/30 bg-primary/5 space-y-2 rounded-lg border p-4'>
-          <p className='font-semibold'>{t('reviewDecision')}</p>
+          className='border-brand-secondary/25 bg-card space-y-2 rounded-lg border p-4'>
+          <p className='text-brand-secondary font-semibold'>{t('reviewDecision')}</p>
           <p className='text-muted-foreground text-sm'>{t('confirmMatchSummary')}</p>
           <p className='text-sm'>
             {matchReview.candidate.description} · {matchReview.candidate.date} ·{' '}

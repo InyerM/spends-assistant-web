@@ -414,7 +414,7 @@ export function TransactionForm({
                   <p className='text-destructive text-sm font-medium'>{t('aiParseLimitBanner')}</p>
                   <a
                     href='/settings?tab=subscription'
-                    className='text-primary text-xs font-medium whitespace-nowrap hover:underline'>
+                    className='text-brand text-xs font-medium whitespace-nowrap hover:underline'>
                     {tCommon('upgrade')} &rarr;
                   </a>
                 </div>
@@ -488,7 +488,7 @@ export function TransactionForm({
                             <Button
                               onClick={ai.handleParse}
                               disabled={ai.isParsing || !ai.aiText.trim()}
-                              className='ai-gradient-btn w-full cursor-pointer'>
+                              className='w-full cursor-pointer'>
                               {ai.isParsing ? (
                                 <>
                                   <InlineLoader className='mr-2' />
@@ -722,7 +722,7 @@ export function TransactionForm({
                   </p>
                   <a
                     href='/settings?tab=subscription'
-                    className='text-primary text-xs font-medium whitespace-nowrap hover:underline'>
+                    className='text-brand text-xs font-medium whitespace-nowrap hover:underline'>
                     {tCommon('upgrade')} &rarr;
                   </a>
                 </div>
@@ -970,7 +970,8 @@ export function TransactionForm({
                   )}
                 />
 
-                <div className={`flex ${isEditing ? 'justify-between' : 'justify-end'} gap-3 pt-4`}>
+                <div
+                  className={`flex ${isEditing ? 'justify-between' : 'justify-end'} border-border gap-3 border-t pt-5`}>
                   {isEditing && (
                     <Button
                       type='button'

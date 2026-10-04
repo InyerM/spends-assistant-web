@@ -102,7 +102,7 @@ export default function AccountDetailPage({
 
   if (isLoading) {
     return (
-      <div className='space-y-4 p-4 sm:space-y-6 sm:p-6'>
+      <div className='mx-auto w-full max-w-7xl space-y-6 p-4 sm:p-6 lg:p-8'>
         <Skeleton className='h-8 w-48' />
         <Skeleton className='h-24 w-full' />
         <Skeleton className='h-64 w-full' />
@@ -121,7 +121,7 @@ export default function AccountDetailPage({
   const transactions = txResult?.data ?? [];
 
   return (
-    <div className='space-y-4 p-4 sm:space-y-6 sm:p-6'>
+    <div className='mx-auto w-full max-w-7xl space-y-6 p-4 sm:p-6 lg:p-8'>
       <div className='flex items-center justify-between'>
         <div className='flex items-center gap-3'>
           <Button
@@ -131,7 +131,9 @@ export default function AccountDetailPage({
             onClick={(): void => router.back()}>
             <ArrowLeft className='h-5 w-5' />
           </Button>
-          <h2 className='text-foreground text-xl font-bold sm:text-2xl'>{t('accountDetail')}</h2>
+          <h2 className='text-foreground text-xl font-semibold tracking-tight sm:text-2xl'>
+            {t('accountDetail')}
+          </h2>
         </div>
         <div className='flex gap-2'>
           <Button
@@ -180,7 +182,7 @@ export default function AccountDetailPage({
             <CardContent className='p-6'>
               <p className='text-muted-foreground text-sm'>{t('currentBalance')}</p>
               <p
-                className={`text-3xl font-bold ${account.balance >= 0 ? 'text-success' : 'text-destructive'}`}>
+                className={`text-3xl font-semibold tracking-tight tabular-nums ${account.balance >= 0 ? 'text-success' : 'text-destructive'}`}>
                 {formatCurrency(account.balance, account.currency, locale)}
               </p>
             </CardContent>

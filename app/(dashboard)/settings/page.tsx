@@ -48,18 +48,18 @@ export default function SettingsPage(): React.ReactElement {
   );
 
   return (
-    <div className='mx-auto max-w-2xl space-y-4 p-4 sm:space-y-6 sm:p-6'>
+    <div className='mx-auto w-full max-w-3xl space-y-6 p-4 sm:p-6 lg:p-8'>
       <Tabs value={tab} onValueChange={handleTabChange}>
         <TabsList variant='line' className='scrollbar-none w-full overflow-x-auto'>
-          <TabsTrigger value='profile'>
+          <TabsTrigger value='profile' aria-label={t('profile')}>
             <User className='h-4 w-4' />
             <span className='hidden sm:inline'>{t('profile')}</span>
           </TabsTrigger>
-          <TabsTrigger value='security'>
+          <TabsTrigger value='security' aria-label={t('security')}>
             <Shield className='h-4 w-4' />
             <span className='hidden sm:inline'>{t('security')}</span>
           </TabsTrigger>
-          <TabsTrigger value='subscription'>
+          <TabsTrigger value='subscription' aria-label={t('subscription')}>
             <CreditCard className='h-4 w-4' />
             <span className='hidden sm:inline'>{t('subscription')}</span>
           </TabsTrigger>
@@ -68,12 +68,12 @@ export default function SettingsPage(): React.ReactElement {
             <span className='hidden sm:inline'>{emailT('tab')}</span>
           </TabsTrigger>
           {showApiKeys && (
-            <TabsTrigger value='api-keys'>
+            <TabsTrigger value='api-keys' aria-label={t('apiKeys')}>
               <Key className='h-4 w-4' />
               <span className='hidden sm:inline'>{t('apiKeys')}</span>
             </TabsTrigger>
           )}
-          <TabsTrigger value='help'>
+          <TabsTrigger value='help' aria-label={t('help')}>
             <LifeBuoy className='h-4 w-4' />
             <span className='hidden sm:inline'>{t('help')}</span>
           </TabsTrigger>

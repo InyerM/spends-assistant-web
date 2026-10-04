@@ -90,7 +90,7 @@ export function DocumentBatchReviewHints({
           </p>
           <div className='flex items-center gap-2'>
             <Link
-              className='text-primary font-medium underline underline-offset-2'
+              className='text-brand font-medium underline underline-offset-2'
               href={`/transactions/${candidate.transaction_id}`}>
               {t('reviewExistingTransaction')}
             </Link>

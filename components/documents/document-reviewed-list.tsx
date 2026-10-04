@@ -44,7 +44,7 @@ export function DocumentReviewedList({
             {status === 'confirmed' && observation.match_transaction_id && (
               <Link
                 href={`/transactions/${observation.match_transaction_id}`}
-                className='text-primary text-sm font-medium underline underline-offset-2'>
+                className='text-brand text-sm font-medium underline underline-offset-2'>
                 {t('reviewExistingTransaction')}
               </Link>
             )}

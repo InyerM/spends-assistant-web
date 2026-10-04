@@ -3,36 +3,40 @@
 :root {
   color-scheme: dark;
 
-  /* Dark Finance Theme (HSL components) */
-  --background: 220 20% 7%;
-  --foreground: 210 40% 98%;
-  --card: 213 17% 10%;
-  --card-foreground: 210 40% 98%;
-  --popover: 213 17% 10%;
-  --popover-foreground: 210 40% 98%;
-  --primary: 142 70% 45%;
-  --primary-foreground: 210 40% 98%;
-  --secondary: 220 12% 18%;
-  --secondary-foreground: 210 40% 98%;
-  --muted: 220 12% 18%;
-  --muted-foreground: 220 10% 55%;
-  --accent: 220 12% 18%;
-  --accent-foreground: 210 40% 98%;
+  /* Anotto Void Emerald: neutral surfaces, white actions, green identity. */
+  --background: 210 14.28571% 2.7451%;
+  --foreground: 0 0% 100%;
+  --card: 216 12.82051% 7.64706%;
+  --card-foreground: 0 0% 100%;
+  --popover: 216 12.82051% 7.64706%;
+  --popover-foreground: 0 0% 100%;
+  --primary: 120 23.07692% 97.45098%;
+  --primary-foreground: 150 10% 3.92157%;
+  --secondary: 202.5 10.52632% 14.90196%;
+  --secondary-foreground: 0 0% 100%;
+  --muted: 202.5 10.52632% 14.90196%;
+  --muted-foreground: 174 5.95238% 67.05882%;
+  --accent: 202.5 10.52632% 14.90196%;
+  --accent-foreground: 0 0% 100%;
   --destructive: 0 84.2% 60.2%;
   --destructive-foreground: 210 40% 98%;
-  --border: 220 10% 18%;
-  --input: 220 14.2% 16.6%;
-  --ring: 142 70% 45%;
+  --border: 204 9.43396% 20.78431%;
+  --input: 204 9.43396% 20.78431%;
+  --ring: 151.32743 57.36041% 61.37255%;
   --radius: 0.75rem;
+  --brand: 151.32743 57.36041% 61.37255%;
+  --brand-foreground: 152.5 57.14286% 8.23529%;
+  --brand-secondary: 37.5 70.88608% 69.01961%;
+  --brand-secondary-foreground: 225 11.11111% 7.05882%;
 
   /* Custom application colors */
-  --sidebar-bg: 220 20% 9%;
-  --login-bg: 220 20% 7%;
-  --card-overlay: 220 5% 16%;
-  --success: 142 70% 45%;
-  --success-foreground: 210 40% 98%;
-  --warning: 38 92% 50%;
-  --warning-foreground: 0 0% 0%;
+  --sidebar-bg: 220 12% 4.90196%;
+  --login-bg: 210 14.28571% 2.7451%;
+  --card-overlay: 205.71429 13.72549% 10%;
+  --success: 151.32743 57.36041% 61.37255%;
+  --success-foreground: 152.5 57.14286% 8.23529%;
+  --warning: 37.69231 92.12598% 50.19608%;
+  --warning-foreground: 150 10% 3.92157%;
   --transfer: 215 70% 55%;
   --transfer-foreground: 210 40% 98%;
 }
@@ -59,6 +63,11 @@
   --color-input: hsl(var(--input));
   --color-ring: hsl(var(--ring));
 
+  --color-brand: hsl(var(--brand));
+  --color-brand-foreground: hsl(var(--brand-foreground));
+  --color-brand-secondary: hsl(var(--brand-secondary));
+  --color-brand-secondary-foreground: hsl(var(--brand-secondary-foreground));
+
   /* Custom application colors */
   --color-sidebar-bg: hsl(var(--sidebar-bg));
   --color-login-bg: hsl(var(--login-bg));
@@ -71,7 +80,7 @@
   --color-transfer-foreground: hsl(var(--transfer-foreground));
 
   /* Fonts (from next/font in layout) */
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-manrope);
   --font-mono: var(--font-geist-mono);
 
   /* Border radius scale used by utilities (rounded-*) */
@@ -112,7 +121,12 @@
   inset: -1px;
   border-radius: inherit;
   padding: 1px;
-  background: linear-gradient(135deg, #06b6d4, #22c55e, #eab308, #06b6d4);
+  background: linear-gradient(
+    135deg,
+    var(--color-brand),
+    var(--color-brand-secondary),
+    var(--color-brand)
+  );
   background-size: 300% 300%;
   animation: ai-gradient-shift 4s ease infinite;
   mask:
@@ -144,7 +158,12 @@
 
 /* Animated border for AI buttons */
 .animated-border {
-  background-image: linear-gradient(90deg, #06b6d4, #22c55e, #eab308, #06b6d4);
+  background-image: linear-gradient(
+    90deg,
+    var(--color-brand),
+    var(--color-brand-secondary),
+    var(--color-brand)
+  );
   background-size: 200% 200%;
   animation: borderRotate 3s linear infinite;
 }
@@ -185,7 +204,7 @@ body {
   background: hsl(var(--background));
   color: hsl(var(--foreground));
   font-family:
-    var(--font-geist-sans),
+    var(--font-manrope),
     ui-sans-serif,
     system-ui,
     -apple-system,
@@ -195,4 +214,11 @@ body {
     Arial,
     'Apple Color Emoji',
     'Segoe UI Emoji';
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ai-gradient-btn::before,
+  .animated-border {
+    animation: none;
+  }
 }

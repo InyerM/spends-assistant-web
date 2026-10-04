@@ -101,7 +101,7 @@ export function WealthEventLink({
         {transactionId && (
           <Link
             href={`/transactions/${transactionId}`}
-            className='text-primary underline underline-offset-2'>
+            className='text-success hover:text-success/80 focus-visible:ring-ring rounded-sm underline underline-offset-4 focus-visible:ring-2 focus-visible:outline-none'>
             {t('viewTransaction')}
           </Link>
         )}
@@ -110,13 +110,13 @@ export function WealthEventLink({
         </Button>
       </div>
       {editing && (
-        <div className='border-border space-y-3 rounded-lg border p-3'>
+        <div className='border-brand-secondary/25 bg-brand-secondary/5 space-y-4 rounded-xl border p-4'>
           <p className='text-muted-foreground'>{t('reviewHint')}</p>
           <label className='block space-y-1'>
             {t('selectTransaction')}
             <select
               aria-label={t('selectTransaction')}
-              className='border-input bg-background h-9 w-full rounded-md border px-3 text-sm'
+              className='border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 h-10 w-full min-w-0 rounded-lg border px-3 text-sm focus-visible:ring-2 focus-visible:outline-none'
               value={selected}
               onChange={(event) => {
                 setSelected(event.target.value);
@@ -136,6 +136,7 @@ export function WealthEventLink({
           <label className='flex items-start gap-2'>
             <input
               type='checkbox'
+              className='accent-success h-4 w-4 shrink-0'
               aria-label={t('checked')}
               checked={checked}
               onChange={(event) => setChecked(event.target.checked)}

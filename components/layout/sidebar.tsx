@@ -21,6 +21,7 @@ import {
   HandCoins,
   HeartHandshake,
 } from 'lucide-react';
+import { AnottoWordmark } from '@/components/layout/anotto-wordmark';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -100,6 +101,8 @@ export function Sidebar({ className, onClose }: SidebarProps): React.ReactElemen
           variant='outline'
           size='icon-sm'
           onClick={toggleCollapsed}
+          aria-label={t(isCollapsed ? 'expandSidebar' : 'collapseSidebar')}
+          aria-expanded={!isCollapsed}
           className='bg-sidebar-bg hover:bg-card-overlay absolute top-11 -right-4 z-50 cursor-pointer rounded-lg shadow-lg'>
           <Menu className='text-muted-foreground h-4 w-4' />
         </Button>
@@ -107,19 +110,13 @@ export function Sidebar({ className, onClose }: SidebarProps): React.ReactElemen
 
       <div className='border-border flex h-16 items-center border-b px-4'>
         <div className={cn('flex items-center gap-3', isCollapsed && 'w-full justify-center')}>
-          <div className='bg-primary flex h-9 w-9 shrink-0 items-center justify-center rounded-xl'>
-            <span className='text-primary-foreground text-sm font-bold'>$</span>
-          </div>
-          {!isCollapsed && (
-            <div className='flex flex-col'>
-              <span className='text-foreground text-lg font-semibold'>Spends</span>
-              <span className='text-muted-foreground text-xs'>Assistant</span>
-            </div>
-          )}
+          <AnottoWordmark compact={isCollapsed} />
         </div>
       </div>
 
-      <nav className='flex-1 space-y-1 overflow-y-auto px-3 pt-4'>
+      <nav
+        aria-label={t('primaryNavigation')}
+        className='flex-1 space-y-1 overflow-y-auto px-3 pt-4'>
         {navItems.map((item) => {
           const title = t(item.titleKey);
           return (
@@ -131,9 +128,11 @@ export function Sidebar({ className, onClose }: SidebarProps): React.ReactElemen
                 'h-auto w-full cursor-pointer justify-start gap-3 rounded-lg px-3 py-2.5 text-sm font-medium',
                 isCollapsed && 'justify-center',
                 isActivePath(item.href)
-                  ? 'bg-primary text-primary-foreground hover:bg-primary/90'
+                  ? 'bg-brand/10 text-brand hover:bg-brand/15'
                   : 'text-muted-foreground hover:bg-card-overlay hover:text-foreground',
               )}
+              aria-label={title}
+              aria-current={isActivePath(item.href) ? 'page' : undefined}
               title={isCollapsed ? title : undefined}>
               <item.icon className='h-5 w-5 shrink-0' />
               {!isCollapsed && <span>{title}</span>}
@@ -151,7 +150,7 @@ export function Sidebar({ className, onClose }: SidebarProps): React.ReactElemen
                 'h-auto w-full cursor-pointer justify-start gap-3 rounded-lg p-2',
                 isCollapsed && 'justify-center',
               )}
-              title={isCollapsed ? (displayName ?? 'User menu') : undefined}>
+              title={isCollapsed ? (displayName ?? t('userMenu')) : undefined}>
               <Avatar size='sm'>
                 {avatarUrl && <AvatarImage src={avatarUrl} alt={displayName ?? ''} />}
                 <AvatarFallback>{getUserInitials(user?.email ?? undefined)}</AvatarFallback>

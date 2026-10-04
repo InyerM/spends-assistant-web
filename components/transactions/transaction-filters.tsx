@@ -79,7 +79,7 @@ export function TransactionFiltersBar({
   };
 
   return (
-    <div className='flex flex-wrap items-center gap-2'>
+    <div className='border-border flex flex-wrap items-center gap-2 border-b pb-5'>
       <SearchInput
         value={filters.search ?? ''}
         onChange={(value): void => onFiltersChange({ ...filters, search: value || undefined })}
@@ -258,9 +258,7 @@ export function TransactionFiltersBar({
                 key={opt.value}
                 onClick={(): void => handleSort(opt.value)}
                 className={`w-full cursor-pointer rounded-md px-2 py-1.5 text-left text-sm transition-colors ${
-                  currentSort === opt.value
-                    ? 'bg-primary text-primary-foreground'
-                    : 'hover:bg-card-overlay'
+                  currentSort === opt.value ? 'bg-brand/15 text-brand' : 'hover:bg-card-overlay'
                 }`}>
                 {t(opt.labelKey)}
               </button>
@@ -270,7 +268,7 @@ export function TransactionFiltersBar({
       </Popover>
 
       {activeFilterCount > 0 && (
-        <Badge variant='secondary' className='hidden text-xs sm:flex'>
+        <Badge variant='secondary' className='bg-brand/10 text-brand hidden text-xs sm:flex'>
           <SlidersHorizontal className='mr-1 h-3 w-3' />
           {t('filtersApplied', { count: activeFilterCount })}
         </Badge>

@@ -262,18 +262,18 @@ export default function InvestmentsPage(): React.ReactElement {
   const visiblePositions = historyView ? historicalPositions : currentPositions;
 
   return (
-    <main className='mx-auto max-w-6xl space-y-6 p-4 sm:p-6'>
-      <header className='space-y-2'>
+    <main className='mx-auto max-w-[1480px] space-y-8 p-4 sm:p-8 lg:p-10'>
+      <header className='space-y-4'>
         <div className='flex items-center gap-3'>
-          <div className='bg-primary/10 text-primary rounded-xl p-2.5'>
+          <div className='bg-success/10 text-success rounded-xl p-3'>
             <TrendingUp className='h-5 w-5' />
           </div>
           <div>
-            <h1 className='text-2xl font-semibold tracking-tight'>{t('title')}</h1>
+            <h1 className='text-2xl font-semibold tracking-tight sm:text-3xl'>{t('title')}</h1>
             <p className='text-muted-foreground text-sm'>{t('subtitle')}</p>
           </div>
         </div>
-        <p className='border-border bg-muted/40 text-muted-foreground rounded-lg border px-4 py-3 text-sm'>
+        <p className='border-border text-muted-foreground max-w-4xl border-t pt-4 text-sm leading-relaxed'>
           {t('journalNote')}
         </p>
       </header>
@@ -287,23 +287,25 @@ export default function InvestmentsPage(): React.ReactElement {
         </div>
       )}
 
-      <div className='grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(340px,420px)]'>
-        <section className='space-y-3' aria-label={t('section')}>
+      <div className='grid min-w-0 items-start gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(340px,420px)] xl:gap-8'>
+        <section className='min-w-0 space-y-4' aria-label={t('section')}>
           <div className='flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between'>
             <div>
-              <h2 className='text-lg font-semibold'>{t('section')}</h2>
+              <h2 className='text-lg font-semibold tracking-tight'>{t('section')}</h2>
               <p className='text-muted-foreground text-sm'>{t('sectionHint')}</p>
             </div>
-            <div className='bg-muted flex self-start rounded-lg p-1 text-sm'>
+            <div className='bg-muted flex max-w-full flex-wrap self-start rounded-lg p-1 text-sm'>
               <Button
                 size='sm'
                 variant={!historyView ? 'secondary' : 'ghost'}
+                aria-pressed={!historyView}
                 onClick={() => setHistoryView(false)}>
                 {t('current')} ({currentPositions.length})
               </Button>
               <Button
                 size='sm'
                 variant={historyView ? 'secondary' : 'ghost'}
+                aria-pressed={historyView}
                 onClick={() => setHistoryView(true)}>
                 {t('history')} ({historicalPositions.length})
               </Button>
@@ -343,10 +345,12 @@ export default function InvestmentsPage(): React.ReactElement {
                     )
                   : null;
               return (
-                <Card key={position.id} className='gap-3'>
+                <Card key={position.id} className='min-w-0 gap-4 overflow-hidden'>
                   <CardHeader className='gap-1'>
                     <div className='flex items-center justify-between gap-3'>
-                      <CardTitle className='text-base'>{position.symbol}</CardTitle>
+                      <CardTitle className='min-w-0 text-lg leading-snug break-words'>
+                        {position.symbol}
+                      </CardTitle>
                       <span className='bg-muted rounded px-2 py-1 text-xs uppercase'>
                         {position.provider}
                       </span>
@@ -364,10 +368,10 @@ export default function InvestmentsPage(): React.ReactElement {
                       })}
                     </CardDescription>
                   </CardHeader>
-                  <CardContent className='grid gap-3 text-sm sm:grid-cols-2'>
+                  <CardContent className='grid gap-5 text-sm sm:grid-cols-2'>
                     <p>
                       <span className='text-muted-foreground block text-xs'>{t('quantity')}</span>
-                      <span className='font-mono tabular-nums'>
+                      <span className='font-semibold tabular-nums'>
                         {formatLocalizedDecimalUnits(
                           position.quantity_atoms,
                           position.quantity_scale,
@@ -377,7 +381,7 @@ export default function InvestmentsPage(): React.ReactElement {
                     </p>
                     <p>
                       <span className='text-muted-foreground block text-xs'>{t('costBasis')}</span>
-                      <span className='font-mono tabular-nums'>
+                      <span className='font-semibold tabular-nums'>
                         {hasTrade
                           ? `${formatLocalizedDecimalUnits(position.cost_basis_minor, position.money_scale, locale)} ${position.quote_currency}`
                           : t('notRecorded')}
@@ -387,7 +391,7 @@ export default function InvestmentsPage(): React.ReactElement {
                       <span className='text-muted-foreground block text-xs'>
                         {t('realizedReturn')}
                       </span>
-                      <span className='font-mono tabular-nums'>
+                      <span className='font-semibold tabular-nums'>
                         {signedAmount(position.realized_return_minor, position.money_scale, locale)}{' '}
                         {position.quote_currency}
                       </span>
@@ -396,7 +400,7 @@ export default function InvestmentsPage(): React.ReactElement {
                       <span className='text-muted-foreground block text-xs'>
                         {t('manualValue')} {valuation ? t('asOf', { date: valuation.as_of }) : ''}
                       </span>
-                      <span className='font-mono tabular-nums'>
+                      <span className='font-semibold tabular-nums'>
                         {valuation
                           ? `${formatLocalizedDecimalUnits(valuation.market_value_minor, position.money_scale, locale)} ${position.quote_currency}`
                           : t('noValuation')}
@@ -407,7 +411,7 @@ export default function InvestmentsPage(): React.ReactElement {
                         <span className='text-muted-foreground block text-xs'>
                           {t('unrealizedReturn')}
                         </span>
-                        <span className='font-mono tabular-nums'>
+                        <span className='font-semibold tabular-nums'>
                           {signedAmount(valued.unrealizedReturnMinor, position.money_scale, locale)}{' '}
                           {position.quote_currency}
                         </span>
@@ -417,14 +421,14 @@ export default function InvestmentsPage(): React.ReactElement {
                       (position.investment_valuations?.length ?? 0) >
                       0 && (
                       <details className='border-border border-t pt-3 sm:col-span-2'>
-                        <summary className='cursor-pointer font-medium'>
+                        <summary className='focus-visible:ring-ring cursor-pointer rounded-md py-1 font-medium focus-visible:ring-2 focus-visible:outline-none'>
                           {t('recordedEvents', {
                             count:
                               (position.investment_trades?.length ?? 0) +
                               (position.investment_valuations?.length ?? 0),
                           })}
                         </summary>
-                        <ul className='mt-2 divide-y'>
+                        <ul className='divide-border mt-3 divide-y'>
                           {[
                             ...(position.investment_trades ?? []).map((event) => ({
                               id: event.id,
@@ -507,17 +511,17 @@ export default function InvestmentsPage(): React.ReactElement {
 
         <Card className='gap-4'>
           <CardHeader>
-            <CardTitle>{t('newEntry')}</CardTitle>
+            <CardTitle className='text-lg leading-snug break-words'>{t('newEntry')}</CardTitle>
             <CardDescription>{t('entryHint')}</CardDescription>
           </CardHeader>
           <CardContent className='space-y-4'>
-            <label className='block space-y-1 text-sm font-medium' htmlFor='investment-action'>
+            <label className='block space-y-2 text-sm font-medium' htmlFor='investment-action'>
               {t('entryType')}
               <select
                 id='investment-action'
                 value={draft.action}
                 onChange={(e) => change('action', e.target.value as Action)}
-                className='border-input bg-background h-9 w-full rounded-md border px-3'>
+                className='border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 h-10 w-full min-w-0 rounded-lg border px-3 focus-visible:ring-2 focus-visible:outline-none'>
                 <option value='create_position'>{t('createPosition')}</option>
                 <option value='opening'>{t('openingLot')}</option>
                 <option value='buy'>{t('buy')}</option>
@@ -528,19 +532,19 @@ export default function InvestmentsPage(): React.ReactElement {
             {draft.action === 'create_position' ? (
               <>
                 <label
-                  className='block space-y-1 text-sm font-medium'
+                  className='block space-y-2 text-sm font-medium'
                   htmlFor='investment-provider'>
                   {t('provider')}
                   <select
                     id='investment-provider'
                     value={draft.provider}
                     onChange={(e) => change('provider', e.target.value as Draft['provider'])}
-                    className='border-input bg-background h-9 w-full rounded-md border px-3'>
+                    className='border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 h-10 w-full min-w-0 rounded-lg border px-3 focus-visible:ring-2 focus-visible:outline-none'>
                     <option value='tyba'>Tyba</option>
                     <option value='binance'>Binance</option>
                   </select>
                 </label>
-                <label className='block space-y-1 text-sm font-medium' htmlFor='investment-symbol'>
+                <label className='block space-y-2 text-sm font-medium' htmlFor='investment-symbol'>
                   {t('symbol')}
                   <Input
                     id='investment-symbol'
@@ -549,7 +553,7 @@ export default function InvestmentsPage(): React.ReactElement {
                     placeholder={t('symbolHint')}
                   />
                 </label>
-                <label className='block space-y-1 text-sm font-medium' htmlFor='investment-quote'>
+                <label className='block space-y-2 text-sm font-medium' htmlFor='investment-quote'>
                   {t('quoteUnit')}
                   <Input
                     id='investment-quote'
@@ -560,7 +564,7 @@ export default function InvestmentsPage(): React.ReactElement {
                 </label>
                 <div className='grid grid-cols-2 gap-3'>
                   <label
-                    className='block space-y-1 text-sm font-medium'
+                    className='block space-y-2 text-sm font-medium'
                     htmlFor='investment-quantity-scale'>
                     {t('quantityPlaces')}
                     <Input
@@ -571,7 +575,7 @@ export default function InvestmentsPage(): React.ReactElement {
                     />
                   </label>
                   <label
-                    className='block space-y-1 text-sm font-medium'
+                    className='block space-y-2 text-sm font-medium'
                     htmlFor='investment-money-scale'>
                     {t('moneyPlaces')}
                     <Input
@@ -586,14 +590,14 @@ export default function InvestmentsPage(): React.ReactElement {
             ) : (
               <>
                 <label
-                  className='block space-y-1 text-sm font-medium'
+                  className='block space-y-2 text-sm font-medium'
                   htmlFor='investment-position'>
                   {t('position')}
                   <select
                     id='investment-position'
                     value={draft.positionId}
                     onChange={(e) => change('positionId', e.target.value)}
-                    className='border-input bg-background h-9 w-full rounded-md border px-3'>
+                    className='border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 h-10 w-full min-w-0 rounded-lg border px-3 focus-visible:ring-2 focus-visible:outline-none'>
                     <option value=''>{t('selectPosition')}</option>
                     {positions.map((position) => (
                       <option key={position.id} value={position.id}>
@@ -602,7 +606,7 @@ export default function InvestmentsPage(): React.ReactElement {
                     ))}
                   </select>
                 </label>
-                <label className='block space-y-1 text-sm font-medium' htmlFor='investment-date'>
+                <label className='block space-y-2 text-sm font-medium' htmlFor='investment-date'>
                   {draft.action === 'valuation' ? t('valuationDate') : t('tradeDate')}
                   <Input
                     id='investment-date'
@@ -614,7 +618,7 @@ export default function InvestmentsPage(): React.ReactElement {
                 {isTrade && <p className='text-muted-foreground text-xs'>{t('dateOrderHint')}</p>}
                 {isTrade && (
                   <label
-                    className='block space-y-1 text-sm font-medium'
+                    className='block space-y-2 text-sm font-medium'
                     htmlFor='investment-quantity'>
                     {t('quantity')}{' '}
                     {selected ? t('quantityLimit', { count: selected.quantity_scale }) : ''}
@@ -626,7 +630,7 @@ export default function InvestmentsPage(): React.ReactElement {
                     />
                   </label>
                 )}
-                <label className='block space-y-1 text-sm font-medium' htmlFor='investment-gross'>
+                <label className='block space-y-2 text-sm font-medium' htmlFor='investment-gross'>
                   {draft.action === 'opening'
                     ? t('knownBasis')
                     : draft.action === 'valuation'
@@ -644,7 +648,7 @@ export default function InvestmentsPage(): React.ReactElement {
                   <label className='flex items-start gap-2 text-sm'>
                     <input
                       type='checkbox'
-                      className='mt-1'
+                      className='accent-success mt-1 h-4 w-4 shrink-0'
                       checked={draft.knownZeroBasis}
                       onChange={(e) => change('knownZeroBasis', e.target.checked)}
                     />
@@ -652,7 +656,7 @@ export default function InvestmentsPage(): React.ReactElement {
                   </label>
                 )}
                 {(draft.action === 'buy' || draft.action === 'sell') && (
-                  <label className='block space-y-1 text-sm font-medium' htmlFor='investment-fee'>
+                  <label className='block space-y-2 text-sm font-medium' htmlFor='investment-fee'>
                     {t('fee')} {selected ? `(${selected.quote_currency})` : ''}
                     <Input
                       id='investment-fee'
@@ -667,9 +671,9 @@ export default function InvestmentsPage(): React.ReactElement {
             )}
             <div className='border-border border-t pt-4'>
               <p className='mb-3 text-sm font-semibold'>{t('evidence')}</p>
-              <div className='space-y-3'>
+              <div className='min-w-0 space-y-4'>
                 <label
-                  className='block space-y-1 text-sm font-medium'
+                  className='block space-y-2 text-sm font-medium'
                   htmlFor='investment-reference'>
                   {t('evidenceReference')}
                   <Input
@@ -680,7 +684,7 @@ export default function InvestmentsPage(): React.ReactElement {
                   />
                 </label>
                 <label
-                  className='block space-y-1 text-sm font-medium'
+                  className='block space-y-2 text-sm font-medium'
                   htmlFor='investment-evidence-date'>
                   {t('evidenceDate')}
                   <Input
@@ -697,7 +701,7 @@ export default function InvestmentsPage(): React.ReactElement {
                 {t('reviewEntry')} <ArrowRight className='ml-2 h-4 w-4' />
               </Button>
             ) : (
-              <div className='border-primary/30 bg-primary/5 space-y-3 rounded-lg border p-4'>
+              <div className='border-brand-secondary/25 bg-brand-secondary/5 space-y-4 rounded-xl border p-4'>
                 <h3 className='font-semibold'>{t('reviewBeforeSaving')}</h3>
                 <p className='text-sm'>
                   {t('reviewPreview', {
@@ -717,9 +721,9 @@ export default function InvestmentsPage(): React.ReactElement {
                 <label className='flex items-start gap-2 text-sm'>
                   <input
                     type='checkbox'
+                    className='accent-success h-4 w-4 shrink-0'
                     checked={checked}
                     onChange={(e) => setChecked(e.target.checked)}
-                    className='mt-1'
                   />
                   {t('checked')}
                 </label>

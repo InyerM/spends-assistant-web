@@ -63,7 +63,7 @@ export function DocumentCaptureCard({
       <CardContent className='space-y-4 p-4 sm:p-5'>
         <div className='flex flex-wrap items-start justify-between gap-3'>
           <div className='flex min-w-0 items-start gap-3'>
-            <span className='bg-primary/10 text-primary rounded-lg p-2'>
+            <span className='bg-card-overlay text-muted-foreground rounded-lg p-2'>
               <FileImage className='h-5 w-5' aria-hidden='true' />
             </span>
             <div className='min-w-0'>
@@ -75,7 +75,15 @@ export function DocumentCaptureCard({
             </div>
           </div>
           <div className='flex flex-wrap items-center gap-2'>
-            <Badge variant='outline'>{t(`status.${document.status}`)}</Badge>
+            <Badge
+              variant='outline'
+              className={
+                document.status === 'extracted'
+                  ? 'border-brand-secondary/25 bg-brand-secondary/10 text-brand-secondary'
+                  : undefined
+              }>
+              {t(`status.${document.status}`)}
+            </Badge>
             <Button
               size='sm'
               variant='ghost'

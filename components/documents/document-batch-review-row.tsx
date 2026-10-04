@@ -89,7 +89,7 @@ export function DocumentBatchReviewRow({
           {Object.hasOwn(duplicates, row.id) && (
             <div className='mt-2 flex flex-wrap items-center gap-2'>
               <Link
-                className='text-primary text-xs underline'
+                className='text-brand text-xs underline'
                 href={`/transactions/${duplicates[row.id].id}`}>
                 {t('reviewExistingTransaction')}
               </Link>

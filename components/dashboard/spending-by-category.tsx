@@ -13,17 +13,7 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 
 import type { Locale } from '@/i18n/config';
 import type { Transaction } from '@/types';
 import { isPersonalExpense } from '@/lib/transactions/dashboard-summary';
-
-const CHART_COLORS = [
-  '#10b981',
-  '#3b82f6',
-  '#ef4444',
-  '#f59e0b',
-  '#8b5cf6',
-  '#06b6d4',
-  '#ec4899',
-  '#f97316',
-];
+import { CATEGORY_CHART_COLORS } from '@/lib/constants/chart';
 
 const MAX_VISIBLE = 5;
 
@@ -80,16 +70,14 @@ export function SpendingByCategory({
       byCategory.set(catId, (byCategory.get(catId) ?? 0) + tx.amount);
     }
 
-    let colorIndex = 0;
     for (const [catId, amount] of byCategory) {
       const cat = categories.find((c) => c.id === catId);
       spending.push({
         id: catId,
-        name: cat ? getCategoryName(cat, locale as Locale) : 'Uncategorized',
+        name: cat ? getCategoryName(cat, locale as Locale) : t('uncategorized'),
         amount,
-        color: CHART_COLORS[colorIndex % CHART_COLORS.length],
+        color: cat?.color ?? CATEGORY_CHART_COLORS[spending.length % CATEGORY_CHART_COLORS.length],
       });
-      colorIndex++;
     }
 
     spending.sort((a, b) => b.amount - a.amount);
@@ -125,7 +113,7 @@ export function SpendingByCategory({
     <Card className='border-border bg-card flex flex-col overflow-hidden'>
       <CardHeader className='pb-3'>
         <CardTitle className='text-base font-medium'>{t('spendingByCategory')}</CardTitle>
-        <p className='text-destructive text-2xl font-bold'>
+        <p className='text-brand-secondary text-2xl font-semibold tracking-tight tabular-nums'>
           -{formatCurrency(totalSpending, 'COP', locale)}
         </p>
       </CardHeader>
@@ -136,9 +124,14 @@ export function SpendingByCategory({
           </p>
         ) : (
           <>
-            <div className='w-full' style={{ height: visibleSpending.length * 40 + 10 }}>
+            <div
+              className='w-full'
+              role='img'
+              aria-label={`${t('spendingByCategory')}: ${visibleSpending.map((category) => `${category.name} ${formatCurrency(category.amount, 'COP', locale)}`).join(', ')}`}
+              style={{ height: visibleSpending.length * 40 + 10 }}>
               <ResponsiveContainer width='100%' height='100%'>
                 <BarChart
+                  accessibilityLayer
                   layout='vertical'
                   data={visibleSpending}
                   margin={{ left: 0, right: 10, top: 0, bottom: 0 }}>

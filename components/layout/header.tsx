@@ -10,6 +10,8 @@ const routeToKey: Record<string, string> = {
   '/accounts': 'accounts',
   '/investments': 'investments',
   '/loans': 'loans',
+  '/receivables': 'receivables',
+  '/relief-funds': 'reliefFunds',
   '/categories': 'categories',
   '/automation': 'automation',
   '/settings': 'settings',

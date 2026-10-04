@@ -19,9 +19,9 @@ import { ArrowDownLeft, ArrowUpRight, ArrowRightLeft, ArrowRight } from 'lucide-
 import type { TransactionType, Category, Account } from '@/types';
 
 const typeConfig: Record<TransactionType, { icon: typeof ArrowDownLeft; colorClass: string }> = {
-  expense: { icon: ArrowUpRight, colorClass: 'text-destructive' },
+  expense: { icon: ArrowUpRight, colorClass: 'text-brand-secondary' },
   income: { icon: ArrowDownLeft, colorClass: 'text-success' },
-  transfer: { icon: ArrowRightLeft, colorClass: 'text-transfer' },
+  transfer: { icon: ArrowRightLeft, colorClass: 'text-muted-foreground' },
 };
 
 export function RecentTransactions(): React.ReactElement {
@@ -89,7 +89,7 @@ export function RecentTransactions(): React.ReactElement {
           <p className='text-muted-foreground py-8 text-center text-sm'>{t('noTransactions')}</p>
         ) : (
           <>
-            <div className='space-y-1'>
+            <div className='divide-border divide-y'>
               {transactions.map((tx) => {
                 const config = typeConfig[tx.type];
                 const Icon = config.icon;
@@ -110,7 +110,7 @@ export function RecentTransactions(): React.ReactElement {
                       <p className='text-foreground truncate text-sm font-medium'>
                         {tx.description}
                       </p>
-                      <div className='flex items-center gap-1'>
+                      <div className='flex flex-wrap items-center gap-1'>
                         <p className='text-muted-foreground truncate text-xs'>{accountName}</p>
                         {category && (
                           <>
@@ -119,15 +119,7 @@ export function RecentTransactions(): React.ReactElement {
                             </span>
                             <Badge
                               variant='secondary'
-                              className='h-5 max-w-full truncate px-1.5 text-[10px] max-sm:mt-0.5 max-sm:basis-full'
-                              style={
-                                category.color
-                                  ? {
-                                      backgroundColor: `${category.color}20`,
-                                      color: category.color,
-                                    }
-                                  : undefined
-                              }>
+                              className='h-5 max-w-full truncate px-1.5 text-[10px] max-sm:mt-0.5 max-sm:basis-full'>
                               {category.name}
                             </Badge>
                           </>
@@ -135,7 +127,8 @@ export function RecentTransactions(): React.ReactElement {
                       </div>
                     </div>
                     <div className='shrink-0 text-right'>
-                      <p className={`text-sm font-semibold whitespace-nowrap ${config.colorClass}`}>
+                      <p
+                        className={`text-sm font-semibold whitespace-nowrap tabular-nums ${config.colorClass}`}>
                         {tx.type === 'expense' ? '-' : tx.type === 'income' ? '+' : ''}
                         {formatCurrency(tx.amount, 'COP', locale)}
                       </p>

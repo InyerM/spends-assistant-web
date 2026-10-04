@@ -144,7 +144,7 @@ export function ShortcutCreateForm({
 
   return (
     <form
-      className='space-y-3 rounded-md border p-4 text-sm'
+      className='border-border bg-card-overlay space-y-4 rounded-xl border p-4 text-sm'
       onSubmit={(event): void => {
         event.preventDefault();
         void submit();
@@ -160,7 +160,7 @@ export function ShortcutCreateForm({
         <label className='space-y-1'>
           {t('createAccount')}
           <select
-            className='border-input bg-background block w-full rounded-md border p-2'
+            className='border-input bg-card block w-full rounded-md border p-2'
             value={accountId}
             required
             onChange={(event): void => {
@@ -178,7 +178,7 @@ export function ShortcutCreateForm({
         <label className='space-y-1'>
           {t('createType')}
           <select
-            className='border-input bg-background block w-full rounded-md border p-2'
+            className='border-input bg-card block w-full rounded-md border p-2'
             value={type}
             onChange={(event): void => {
               setType(event.target.value as 'expense' | 'income');
@@ -192,7 +192,7 @@ export function ShortcutCreateForm({
         <label className='space-y-1'>
           {t('createCategory')}
           <select
-            className='border-input bg-background block w-full rounded-md border p-2'
+            className='border-input bg-card block w-full rounded-md border p-2'
             value={categoryId}
             required
             onChange={(event): void => {
@@ -212,7 +212,7 @@ export function ShortcutCreateForm({
         <label className='space-y-1'>
           {t('createAmount')}
           <input
-            className='border-input bg-background block w-full rounded-md border p-2'
+            className='border-input bg-card block w-full rounded-md border p-2'
             type='text'
             inputMode='decimal'
             pattern='(0|[1-9][0-9]{0,12})(\.[0-9]{1,2})?'
@@ -227,7 +227,7 @@ export function ShortcutCreateForm({
         <label className='space-y-1'>
           {t('createDate')}
           <input
-            className='border-input bg-background block w-full rounded-md border p-2'
+            className='border-input bg-card block w-full rounded-md border p-2'
             type='date'
             value={date}
             required
@@ -241,7 +241,7 @@ export function ShortcutCreateForm({
         <label className='space-y-1'>
           {t('createEventTime')}
           <input
-            className='border-input bg-background block w-full rounded-md border p-2'
+            className='border-input bg-card block w-full rounded-md border p-2'
             type='time'
             step={60}
             value={eventTime}
@@ -268,7 +268,7 @@ export function ShortcutCreateForm({
         <label className='space-y-1 sm:col-span-2'>
           {t('createDescription')}
           <input
-            className='border-input bg-background block w-full rounded-md border p-2'
+            className='border-input bg-card block w-full rounded-md border p-2'
             type='text'
             maxLength={500}
             value={description}
@@ -286,7 +286,7 @@ export function ShortcutCreateForm({
         </p>
       )}
       {review && (
-        <div className='bg-muted space-y-2 rounded-md p-3'>
+        <div className='border-brand-secondary/30 bg-brand-secondary/5 space-y-2 rounded-lg border p-3'>
           <p>
             {review.status === 'review_overflow'
               ? t('overflowCaution')

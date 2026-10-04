@@ -136,17 +136,20 @@ export function BalanceTrendChart({
         <p className='text-muted-foreground mt-0.5 text-xs'>{t('balanceTrendSubtitle')}</p>
 
         <p
-          className={`mt-3 text-xl font-bold sm:text-2xl ${isPositive ? 'text-success' : 'text-destructive'}`}>
+          className={`mt-3 text-2xl font-semibold tracking-tight tabular-nums sm:text-3xl ${isPositive ? 'text-success' : 'text-destructive'}`}>
           {formatCurrency(endBalance, 'COP', locale)}
         </p>
 
-        <div className='mt-3 min-h-[200px] w-full flex-1'>
+        <div
+          className='mt-6 h-[240px] w-full sm:h-[280px]'
+          role='img'
+          aria-label={`${t('balanceTrend')}: ${formatCurrency(endBalance, 'COP', locale)}`}>
           <ResponsiveContainer width='100%' height='100%'>
-            <AreaChart data={chartData}>
+            <AreaChart data={chartData} accessibilityLayer>
               <defs>
                 <linearGradient id='balanceGradient' x1='0' y1='0' x2='0' y2='1'>
-                  <stop offset='5%' stopColor='#3b82f6' stopOpacity={0.3} />
-                  <stop offset='95%' stopColor='#3b82f6' stopOpacity={0} />
+                  <stop offset='5%' stopColor='hsl(var(--success))' stopOpacity={0.3} />
+                  <stop offset='95%' stopColor='hsl(var(--success))' stopOpacity={0} />
                 </linearGradient>
               </defs>
               <XAxis
@@ -180,7 +183,7 @@ export function BalanceTrendChart({
               <Area
                 type='monotone'
                 dataKey='balance'
-                stroke='#3b82f6'
+                stroke='hsl(var(--success))'
                 strokeWidth={2}
                 fill='url(#balanceGradient)'
               />

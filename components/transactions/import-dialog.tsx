@@ -266,7 +266,7 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps): React.R
         }}
         className={cn(
           'flex w-full cursor-pointer flex-col items-center gap-2 rounded-lg border-2 border-dashed p-8 transition-colors',
-          isDragging ? 'border-primary bg-primary/5' : 'border-border hover:bg-card-overlay',
+          isDragging ? 'border-brand bg-brand/5' : 'border-border hover:bg-card-overlay',
         )}>
         <Upload className='text-muted-foreground h-8 w-8' />
         <span className='text-muted-foreground text-sm'>{t('dragDropCsv')}</span>
@@ -353,7 +353,7 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps): React.R
         })}
       </p>
 
-      <div className='border-border max-h-64 overflow-auto rounded border'>
+      <div className='border-border max-h-64 overflow-auto rounded-xl border'>
         <Table>
           <TableHeader>
             <TableRow>

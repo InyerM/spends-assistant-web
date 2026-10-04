@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { usePathname } from 'next/navigation';
 import { AuthGuard } from '@/components/guards/auth-guard';
 import { Sidebar } from '@/components/layout/sidebar';
@@ -15,6 +16,7 @@ const FAB_PAGES = ['/dashboard', '/transactions'];
 export default function DashboardLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>): React.ReactNode {
+  const t = useTranslations('nav');
   const pathname = usePathname();
   const { open, transaction, setOpen, openNew } = useTransactionFormStore();
 
@@ -26,7 +28,7 @@ export default function DashboardLayout({
         <div className='hidden md:flex'>
           <Sidebar />
         </div>
-        <div className='flex flex-1 flex-col overflow-hidden'>
+        <div className='flex min-w-0 flex-1 flex-col overflow-hidden'>
           <Header />
           <main className='flex-1 overflow-auto pb-20 md:pb-0'>{children}</main>
         </div>
@@ -38,6 +40,7 @@ export default function DashboardLayout({
         <div className='fixed right-6 bottom-22 z-50 md:bottom-6 md:hidden'>
           <Button
             onClick={openNew}
+            aria-label={t('addTransaction')}
             size='icon'
             className='h-14 w-14 cursor-pointer rounded-full shadow-lg'>
             <Plus className='h-6 w-6' />

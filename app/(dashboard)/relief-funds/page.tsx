@@ -185,18 +185,18 @@ export default function ReliefFundsPage(): React.ReactElement {
   }
 
   return (
-    <main className='mx-auto max-w-6xl space-y-6 p-4 sm:p-6'>
-      <header className='space-y-2'>
+    <main className='mx-auto max-w-[1480px] space-y-8 p-4 sm:p-8 lg:p-10'>
+      <header className='space-y-4'>
         <div className='flex items-center gap-3'>
-          <div className='bg-primary/10 text-primary rounded-xl p-2.5'>
+          <div className='bg-success/10 text-success rounded-xl p-3'>
             <HeartHandshake className='h-5 w-5' />
           </div>
           <div>
-            <h1 className='text-2xl font-semibold tracking-tight'>{t('title')}</h1>
+            <h1 className='text-2xl font-semibold tracking-tight sm:text-3xl'>{t('title')}</h1>
             <p className='text-muted-foreground text-sm'>{t('subtitle')}</p>
           </div>
         </div>
-        <p className='border-border bg-muted/40 text-muted-foreground rounded-lg border px-4 py-3 text-sm'>
+        <p className='border-border text-muted-foreground max-w-4xl border-t pt-4 text-sm leading-relaxed'>
           {t('journalNote')}
         </p>
       </header>
@@ -209,9 +209,9 @@ export default function ReliefFundsPage(): React.ReactElement {
         </p>
       )}
 
-      <div className='grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(340px,420px)]'>
-        <section aria-label={t('savedFunds')} className='space-y-3'>
-          <h2 className='text-lg font-semibold'>{t('savedFunds')}</h2>
+      <div className='grid min-w-0 items-start gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(340px,420px)] xl:gap-8'>
+        <section aria-label={t('savedFunds')} className='min-w-0 space-y-4'>
+          <h2 className='text-lg font-semibold tracking-tight'>{t('savedFunds')}</h2>
           {loading ? (
             <p className='text-muted-foreground text-sm'>{t('loading')}</p>
           ) : funds.length === 0 ? (
@@ -232,11 +232,11 @@ export default function ReliefFundsPage(): React.ReactElement {
               return (
                 <Card key={fund.id}>
                   <CardHeader>
-                    <CardTitle>{fund.title}</CardTitle>
+                    <CardTitle className='text-lg leading-snug break-words'>{fund.title}</CardTitle>
                     <CardDescription>{fund.purpose}</CardDescription>
                   </CardHeader>
                   <CardContent className='space-y-4'>
-                    <div className='grid gap-2 text-sm sm:grid-cols-3'>
+                    <div className='grid gap-5 text-sm sm:grid-cols-3'>
                       <p>
                         <span className='text-muted-foreground block text-xs'>{t('received')}</span>
                         {amountLabel(summary.receiptsMinor, locale)}
@@ -255,13 +255,15 @@ export default function ReliefFundsPage(): React.ReactElement {
                       </p>
                     </div>
                     {!summary.actualRemainderKnown && (
-                      <p className='rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-sm'>
+                      <p className='border-warning/30 bg-warning/10 text-warning rounded-lg border p-3 text-sm'>
                         {t('unknownRemainder', { count: summary.unknownSpendCount })}
                       </p>
                     )}
                     <ul className='divide-border divide-y text-sm'>
                       {entries.map((entry) => (
-                        <li key={entry.id} className='flex flex-wrap justify-between gap-x-3 py-2'>
+                        <li
+                          key={entry.id}
+                          className='flex flex-wrap justify-between gap-x-4 gap-y-1 py-3'>
                           <span>
                             <span className='text-muted-foreground mr-2'>
                               {entry.occurred_on ?? t('dateUnknown')}
@@ -279,12 +281,12 @@ export default function ReliefFundsPage(): React.ReactElement {
                             {entry.transaction_id && (
                               <Link
                                 href={`/transactions/${entry.transaction_id}`}
-                                className='text-primary mt-1 block text-xs underline underline-offset-2'>
+                                className='text-success hover:text-success/80 mt-1 block text-xs underline underline-offset-4'>
                                 {t('viewTransaction')}
                               </Link>
                             )}
                           </span>
-                          <span className='font-mono tabular-nums'>
+                          <span className='font-semibold tabular-nums'>
                             {entry.amount_minor === null
                               ? t('amountUnknown')
                               : `${entry.kind === 'outlay' ? '-' : '+'}${amountLabel(entry.amount_minor, locale)}`}
@@ -302,15 +304,15 @@ export default function ReliefFundsPage(): React.ReactElement {
         <section aria-label={t('newEntry')}>
           <Card>
             <CardHeader>
-              <CardTitle>{t('newEntry')}</CardTitle>
+              <CardTitle className='text-lg leading-snug break-words'>{t('newEntry')}</CardTitle>
               <CardDescription>{t('entryHint')}</CardDescription>
             </CardHeader>
             <CardContent className='space-y-4'>
-              <label className='block space-y-1 text-sm'>
+              <label className='block space-y-2 text-sm'>
                 {t('entryType')}
                 <select
                   aria-label={t('entryType')}
-                  className='border-input bg-background w-full rounded-md border p-2'
+                  className='border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 h-10 w-full min-w-0 rounded-lg border px-3 focus-visible:ring-2 focus-visible:outline-none'
                   value={draft.entryType}
                   onChange={(event) => changeType(event.target.value as EntryType)}>
                   <option value='create_fund'>{t('createFund')}</option>
@@ -321,7 +323,7 @@ export default function ReliefFundsPage(): React.ReactElement {
               </label>
               {draft.entryType === 'create_fund' ? (
                 <>
-                  <label className='block space-y-1 text-sm'>
+                  <label className='block space-y-2 text-sm'>
                     {t('fundTitle')}
                     <Input
                       aria-label={t('fundTitle')}
@@ -329,7 +331,7 @@ export default function ReliefFundsPage(): React.ReactElement {
                       onChange={(event) => change('title', event.target.value)}
                     />
                   </label>
-                  <label className='block space-y-1 text-sm'>
+                  <label className='block space-y-2 text-sm'>
                     {t('purpose')}
                     <Input
                       aria-label={t('purpose')}
@@ -340,11 +342,11 @@ export default function ReliefFundsPage(): React.ReactElement {
                 </>
               ) : (
                 <>
-                  <label className='block space-y-1 text-sm'>
+                  <label className='block space-y-2 text-sm'>
                     {t('fund')}
                     <select
                       aria-label={t('fund')}
-                      className='border-input bg-background w-full rounded-md border p-2'
+                      className='border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 h-10 w-full min-w-0 rounded-lg border px-3 focus-visible:ring-2 focus-visible:outline-none'
                       value={draft.fundId}
                       onChange={(event) => change('fundId', event.target.value)}>
                       <option value=''>{t('selectFund')}</option>
@@ -355,7 +357,7 @@ export default function ReliefFundsPage(): React.ReactElement {
                       ))}
                     </select>
                   </label>
-                  <label className='block space-y-1 text-sm'>
+                  <label className='block space-y-2 text-sm'>
                     {draft.entryType === 'unknown_spend' ? t('optionalDate') : t('date')}
                     <Input
                       aria-label={
@@ -367,7 +369,7 @@ export default function ReliefFundsPage(): React.ReactElement {
                     />
                   </label>
                   {draft.entryType !== 'unknown_spend' && (
-                    <label className='block space-y-1 text-sm'>
+                    <label className='block space-y-2 text-sm'>
                       {t('exactAmount')}
                       <Input
                         aria-label={t('exactAmount')}
@@ -377,7 +379,7 @@ export default function ReliefFundsPage(): React.ReactElement {
                       />
                     </label>
                   )}
-                  <label className='block space-y-1 text-sm'>
+                  <label className='block space-y-2 text-sm'>
                     {t('description')}
                     <Input
                       aria-label={t('description')}
@@ -385,11 +387,11 @@ export default function ReliefFundsPage(): React.ReactElement {
                       onChange={(event) => change('description', event.target.value)}
                     />
                   </label>
-                  <label className='block space-y-1 text-sm'>
+                  <label className='block space-y-2 text-sm'>
                     {t('sourceType')}
                     <select
                       aria-label={t('sourceType')}
-                      className='border-input bg-background w-full rounded-md border p-2'
+                      className='border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 h-10 w-full min-w-0 rounded-lg border px-3 focus-visible:ring-2 focus-visible:outline-none'
                       value={draft.sourceKind}
                       onChange={(event) => {
                         change('sourceKind', event.target.value as SourceKind);
@@ -404,7 +406,7 @@ export default function ReliefFundsPage(): React.ReactElement {
                       )}
                     </select>
                   </label>
-                  <label className='block space-y-1 text-sm'>
+                  <label className='block space-y-2 text-sm'>
                     {t('sourceReference')}
                     <Input
                       aria-label={t('sourceReference')}
@@ -413,7 +415,7 @@ export default function ReliefFundsPage(): React.ReactElement {
                     />
                   </label>
                   {draft.sourceKind === 'ledger_transaction' && (
-                    <label className='block space-y-1 text-sm'>
+                    <label className='block space-y-2 text-sm'>
                       {t('transactionId')}
                       <Input
                         aria-label={t('transactionId')}
@@ -424,11 +426,11 @@ export default function ReliefFundsPage(): React.ReactElement {
                   )}
                 </>
               )}
-              <Button onClick={review} disabled={saving}>
+              <Button className='w-full sm:w-auto' onClick={review} disabled={saving}>
                 {t('reviewEntry')}
               </Button>
               {reviewEvent && (
-                <div className='border-border space-y-3 rounded-lg border p-3 text-sm'>
+                <div className='border-brand-secondary/25 bg-brand-secondary/5 space-y-4 rounded-xl border p-4 text-sm'>
                   <p className='font-medium'>{t('reviewBeforeSaving')}</p>
                   <p>
                     {reviewEvent.action === 'create_fund'
@@ -438,6 +440,7 @@ export default function ReliefFundsPage(): React.ReactElement {
                   <label className='flex items-center gap-2'>
                     <input
                       type='checkbox'
+                      className='accent-success h-4 w-4 shrink-0'
                       checked={checked}
                       onChange={(event) => setChecked(event.target.checked)}
                       aria-label={t('checked')}

@@ -43,7 +43,7 @@ export function UsageIndicator({
         )}
       </span>
       {aiPercentage >= 80 && (
-        <a href='/settings?tab=subscription' className='text-primary font-medium hover:underline'>
+        <a href='/settings?tab=subscription' className='text-brand font-medium hover:underline'>
           Upgrade
         </a>
       )}

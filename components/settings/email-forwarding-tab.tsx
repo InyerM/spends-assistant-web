@@ -48,11 +48,17 @@ export function EmailForwardingTab(): React.ReactElement {
       <CardHeader className='space-y-2'>
         <div className='flex flex-wrap items-start justify-between gap-3'>
           <CardTitle className='flex items-center gap-2 text-lg'>
-            <Mail className='text-primary size-5' aria-hidden='true' />
+            <Mail className='text-brand size-5' aria-hidden='true' />
             {t('title')}
           </CardTitle>
           {route?.status === 'active' && (
-            <Badge variant={route.user_confirmed_at ? 'default' : 'secondary'}>
+            <Badge
+              variant='outline'
+              className={
+                route.user_confirmed_at
+                  ? 'border-brand/25 bg-brand/10 text-brand'
+                  : 'border-brand-secondary/25 bg-brand-secondary/10 text-brand-secondary'
+              }>
               {route.user_confirmed_at && <Check aria-hidden='true' />}
               {route.user_confirmed_at
                 ? t('verifiedByUser')

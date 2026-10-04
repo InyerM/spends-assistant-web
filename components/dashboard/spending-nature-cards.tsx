@@ -12,9 +12,9 @@ import type { SpendingNature } from '@/types/category';
 import { isPersonalExpense } from '@/lib/transactions/dashboard-summary';
 
 const NATURE_COLORS: Record<Exclude<SpendingNature, 'none'>, string> = {
-  must: '#ef4444',
-  need: '#f59e0b',
-  want: '#22c55e',
+  must: 'hsl(var(--brand-secondary))',
+  need: 'hsl(var(--success))',
+  want: 'hsl(var(--muted-foreground))',
 };
 
 const NATURES: Exclude<SpendingNature, 'none'>[] = ['must', 'need', 'want'];
@@ -166,10 +166,11 @@ export function SpendingNatureCards({
             <button
               key={tab.key}
               type='button'
+              aria-pressed={activeTab === tab.key}
               onClick={(): void => setActiveTab(tab.key)}
               className={`flex-1 cursor-pointer rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
                 activeTab === tab.key
-                  ? 'bg-primary text-primary-foreground shadow-sm'
+                  ? 'bg-card-overlay text-foreground'
                   : 'text-muted-foreground hover:text-foreground'
               }`}>
               {tab.label}
@@ -183,7 +184,7 @@ export function SpendingNatureCards({
 
         <div className='mt-3 h-[200px] w-full'>
           <ResponsiveContainer width='100%' height='100%'>
-            <BarChart data={chartData} barGap={1} barCategoryGap='20%'>
+            <BarChart accessibilityLayer data={chartData} barGap={1} barCategoryGap='20%'>
               <XAxis
                 dataKey='label'
                 tick={{ fontSize: 10 }}

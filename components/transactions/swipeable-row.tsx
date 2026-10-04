@@ -1,6 +1,7 @@
 'use client';
 
 import { useRef, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { motion, useMotionValue, useTransform, useAnimation, type PanInfo } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Pencil, Trash2, ChevronLeft } from 'lucide-react';
@@ -22,6 +23,7 @@ export function SwipeableRow({
   onDelete,
   showHint = false,
 }: SwipeableRowProps): React.ReactElement {
+  const t = useTranslations('transactions');
   const controls = useAnimation();
   const x = useMotionValue(0);
   const actionsOpacity = useTransform(x, [-ACTION_WIDTH, -SWIPE_THRESHOLD / 2, 0], [1, 0.5, 0]);
@@ -84,13 +86,15 @@ export function SwipeableRow({
         <Button
           variant='ghost'
           onClick={handleEdit}
-          className='bg-transfer hover:bg-transfer/80 h-full w-20 cursor-pointer rounded-none text-white'>
+          aria-label={t('editTransaction')}
+          className='bg-secondary hover:bg-accent h-full w-20 cursor-pointer rounded-none text-white'>
           <Pencil className='h-5 w-5' />
         </Button>
         {onDelete && (
           <Button
             variant='ghost'
             onClick={handleDelete}
+            aria-label={t('deleteTransaction')}
             className='bg-destructive hover:bg-destructive/80 h-full w-20 cursor-pointer rounded-none text-white'>
             <Trash2 className='h-5 w-5' />
           </Button>
@@ -105,7 +109,7 @@ export function SwipeableRow({
         onDragEnd={handleDragEnd}
         animate={controls}
         style={{ x }}
-        className='relative z-10 bg-transparent'
+        className='bg-card relative z-10'
         onClick={(): void => {
           if (swiped) close();
         }}>

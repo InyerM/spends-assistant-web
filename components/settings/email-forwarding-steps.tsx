@@ -146,7 +146,7 @@ export function EmailForwardingSteps({
           <p className='text-muted-foreground text-sm leading-relaxed'>{t('filterLocked')}</p>
         )}
         <a
-          className='text-primary inline-flex items-center gap-1 text-sm underline-offset-4 hover:underline'
+          className='text-brand inline-flex items-center gap-1 text-sm underline-offset-4 hover:underline'
           href={`https://support.google.com/mail/answer/10957?hl=${locale === 'es' ? 'es-419' : 'en'}`}
           target='_blank'
           rel='noopener noreferrer'>

@@ -156,7 +156,7 @@ export function ProfileTab(): React.ReactElement {
             {!hasGoogle && (
               <Button
                 variant='outline'
-                className='cursor-pointer border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
+                className='border-border bg-card text-foreground hover:bg-card-overlay cursor-pointer'
                 onClick={(): void => void handleLinkGoogle()}>
                 <GoogleIcon />
                 {t('linkGoogle')}

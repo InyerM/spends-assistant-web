@@ -144,9 +144,9 @@ export default function TransactionsPage(): React.ReactElement {
   };
 
   return (
-    <div className='space-y-4 p-4 sm:space-y-6 sm:p-6'>
+    <div className='mx-auto max-w-7xl space-y-6 p-4 sm:space-y-8 sm:p-6 lg:p-8'>
       {selectMode ? (
-        <div className='bg-card border-border sticky top-0 z-10 flex items-center justify-between gap-2 rounded-lg border p-2 sm:p-3'>
+        <div className='bg-card border-brand/30 sticky top-0 z-10 flex items-center justify-between gap-2 rounded-lg border p-2 sm:p-3'>
           <div className='flex min-w-0 items-center gap-2 sm:gap-3'>
             <Button
               variant='ghost'
@@ -199,7 +199,7 @@ export default function TransactionsPage(): React.ReactElement {
 
       {/* Import filter banner */}
       {effectiveFilters.import_id && (
-        <div className='bg-muted/50 border-border flex items-center justify-between rounded-lg border px-3 py-2'>
+        <div className='bg-brand-secondary/5 border-brand-secondary/30 flex items-center justify-between rounded-lg border px-3 py-2'>
           <div className='flex items-center gap-2 text-sm'>
             <FileText className='text-muted-foreground h-4 w-4' />
             <span>{t('fromImport', { name: effectiveFilters.import_id.slice(0, 8) })}</span>

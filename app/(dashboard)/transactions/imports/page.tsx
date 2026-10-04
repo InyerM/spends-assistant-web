@@ -71,7 +71,7 @@ export default function ImportsPage(): React.ReactElement {
   };
 
   return (
-    <div className='space-y-4 p-4 sm:space-y-6 sm:p-6'>
+    <div className='mx-auto max-w-7xl space-y-6 p-4 sm:space-y-8 sm:p-6 lg:p-8'>
       <div className='flex items-center gap-3'>
         <Button
           variant='ghost'
@@ -80,7 +80,9 @@ export default function ImportsPage(): React.ReactElement {
           onClick={(): void => router.back()}>
           <ArrowLeft className='h-5 w-5' />
         </Button>
-        <h2 className='text-foreground text-xl font-bold sm:text-2xl'>{t('importHistory')}</h2>
+        <h2 className='text-foreground text-2xl font-semibold tracking-tight sm:text-3xl'>
+          {t('importHistory')}
+        </h2>
       </div>
 
       {isLoading ? (
@@ -97,7 +99,7 @@ export default function ImportsPage(): React.ReactElement {
       ) : (
         <>
           {/* Desktop table */}
-          <div className='border-border hidden overflow-auto rounded-lg border md:block'>
+          <div className='border-border bg-card hidden overflow-auto rounded-xl border md:block'>
             <Table>
               <TableHeader>
                 <TableRow>
@@ -150,7 +152,7 @@ export default function ImportsPage(): React.ReactElement {
           {/* Mobile card view */}
           <div className='space-y-3 md:hidden'>
             {imports.map((row) => (
-              <div key={row.id} className='border-border bg-card rounded-lg border p-4'>
+              <div key={row.id} className='border-border bg-card rounded-xl border p-4'>
                 <div className='flex items-start justify-between gap-2'>
                   <div className='flex min-w-0 items-center gap-2'>
                     <FileText className='text-muted-foreground h-4 w-4 shrink-0' />

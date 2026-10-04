@@ -243,7 +243,7 @@ export default function ShortcutInboxPage(): React.ReactElement {
   const totalPages = Math.max(1, Math.ceil(count / PAGE_SIZE));
 
   return (
-    <div className='mx-auto max-w-5xl space-y-6 p-4 sm:p-6'>
+    <div className='mx-auto max-w-5xl space-y-6 p-4 sm:space-y-8 sm:p-6 lg:p-8'>
       <div className='flex flex-wrap items-start justify-between gap-4'>
         <div className='space-y-2'>
           <Button asChild variant='ghost' size='sm' className='-ml-2'>
@@ -251,7 +251,7 @@ export default function ShortcutInboxPage(): React.ReactElement {
               <ArrowLeft /> {t('backToTransactions')}
             </Link>
           </Button>
-          <h1 className='text-foreground text-2xl font-semibold'>{t('title')}</h1>
+          <h1 className='text-foreground text-3xl font-semibold tracking-tight'>{t('title')}</h1>
           <p className='text-muted-foreground max-w-2xl text-sm'>{t('subtitle')}</p>
         </div>
         <Button asChild variant='outline'>
@@ -261,13 +261,13 @@ export default function ShortcutInboxPage(): React.ReactElement {
         </Button>
       </div>
 
-      <div className='flex flex-wrap items-center justify-between gap-3 border-b pb-4'>
+      <div className='border-border flex flex-wrap items-center justify-between gap-3 border-b pb-5'>
         <label className='text-sm font-medium' htmlFor='inbox-status'>
           {t('statusFilter')}
         </label>
         <select
           id='inbox-status'
-          className='border-input bg-background rounded-md border px-3 py-2 text-sm'
+          className='border-input bg-card rounded-md border px-3 py-2 text-sm'
           value={filter}
           onChange={(event): void => {
             setFilter(event.target.value);
@@ -309,7 +309,13 @@ export default function ShortcutInboxPage(): React.ReactElement {
                       <Badge variant='outline'>
                         {item.source === 'forwarded_email' ? t('forwardedSource') : item.source}
                       </Badge>
-                      <Badge variant={item.status === 'pending' ? 'secondary' : 'outline'}>
+                      <Badge
+                        variant={item.status === 'pending' ? 'secondary' : 'outline'}
+                        className={
+                          item.status === 'pending'
+                            ? 'bg-brand-secondary/15 text-brand-secondary'
+                            : undefined
+                        }>
                         {item.status === 'non_transaction' ? t('nonTransaction') : t(item.status)}
                       </Badge>
                     </div>

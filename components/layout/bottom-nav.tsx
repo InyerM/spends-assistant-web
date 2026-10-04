@@ -15,6 +15,8 @@ import {
   Files,
   TrendingUp,
   Landmark,
+  HandCoins,
+  HeartHandshake,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -40,6 +42,8 @@ const moreItems: NavItem[] = [
   { titleKey: 'documents', href: '/documents', icon: Files },
   { titleKey: 'investments', href: '/investments', icon: TrendingUp },
   { titleKey: 'loans', href: '/loans', icon: Landmark },
+  { titleKey: 'receivables', href: '/receivables', icon: HandCoins },
+  { titleKey: 'reliefFunds', href: '/relief-funds', icon: HeartHandshake },
   { titleKey: 'automation', href: '/automation', icon: Zap },
   { titleKey: 'settings', href: '/settings', icon: Settings },
 ];
@@ -74,18 +78,21 @@ export function BottomNav(): React.ReactElement {
 
   return (
     <>
-      <nav className='border-border bg-card fixed right-0 bottom-0 left-0 z-50 border-t pb-[env(safe-area-inset-bottom)] md:hidden'>
+      <nav
+        aria-label={t('primaryNavigation')}
+        className='border-border bg-card fixed right-0 bottom-0 left-0 z-50 border-t pb-[env(safe-area-inset-bottom)] md:hidden'>
         <div className='flex h-16 items-center justify-around'>
           {mainItems.map((item) => {
             const active = isActivePath(pathname, item.href);
             return (
               <Button
                 key={item.href}
+                aria-current={active ? 'page' : undefined}
                 variant='ghost'
                 onClick={(): void => handleNav(item.href)}
                 className={cn(
                   'h-auto flex-1 cursor-pointer flex-col gap-1 rounded-none py-2 text-xs font-medium',
-                  active ? 'text-primary' : 'text-muted-foreground',
+                  active ? 'text-brand' : 'text-muted-foreground',
                 )}>
                 <item.icon className='h-5 w-5' />
                 <span>{t(item.titleKey)}</span>
@@ -97,7 +104,7 @@ export function BottomNav(): React.ReactElement {
             onClick={(): void => setMoreOpen(true)}
             className={cn(
               'h-auto flex-1 cursor-pointer flex-col gap-1 rounded-none py-2 text-xs font-medium',
-              moreActive ? 'text-primary' : 'text-muted-foreground',
+              moreActive ? 'text-brand' : 'text-muted-foreground',
             )}>
             <MoreHorizontal className='h-5 w-5' />
             <span>{t('more')}</span>
@@ -106,11 +113,14 @@ export function BottomNav(): React.ReactElement {
       </nav>
 
       <Sheet open={moreOpen} onOpenChange={setMoreOpen}>
-        <SheetContent side='bottom' className='border-border bg-card'>
-          <SheetHeader>
+        <SheetContent
+          side='bottom'
+          aria-describedby={undefined}
+          className='border-border bg-card max-h-[calc(100dvh-1rem)] gap-0 overflow-hidden'>
+          <SheetHeader className='shrink-0 pr-12'>
             <SheetTitle>{t('more')}</SheetTitle>
           </SheetHeader>
-          <div className='space-y-1 py-4'>
+          <div className='min-h-0 space-y-1 overflow-y-auto overscroll-contain px-2 pt-2 pb-[max(1rem,env(safe-area-inset-bottom))]'>
             <div className='mb-3 flex items-center gap-3 px-3'>
               <Avatar size='sm'>
                 {avatarUrl && <AvatarImage src={avatarUrl} alt={displayName ?? ''} />}
@@ -124,12 +134,13 @@ export function BottomNav(): React.ReactElement {
               return (
                 <Button
                   key={item.href}
+                  aria-current={active ? 'page' : undefined}
                   variant='ghost'
                   onClick={(): void => handleNav(item.href)}
                   className={cn(
                     'h-auto w-full cursor-pointer justify-start gap-3 rounded-lg px-3 py-3 text-sm font-medium',
                     active
-                      ? 'bg-primary hover:bg-primary/90 text-white'
+                      ? 'bg-brand/10 text-brand hover:bg-brand/15'
                       : 'text-foreground hover:bg-card-overlay',
                   )}>
                   <item.icon className='h-5 w-5' />

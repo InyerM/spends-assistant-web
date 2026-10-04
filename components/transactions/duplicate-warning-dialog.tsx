@@ -200,11 +200,11 @@ function ComparisonCard({
   return (
     <div
       className={`max-h-[180px] overflow-hidden rounded-lg border p-2.5 ${
-        highlight ? 'border-primary/40 bg-primary/5' : 'border-border bg-secondary/50'
+        highlight
+          ? 'border-brand-secondary/40 bg-brand-secondary/5'
+          : 'border-border bg-card-overlay'
       }`}>
-      <span className='text-muted-foreground mb-1 block text-[10px] font-medium tracking-wide uppercase'>
-        {label}
-      </span>
+      <span className='text-muted-foreground mb-1 block text-xs font-medium'>{label}</span>
       <p className='text-base leading-tight font-semibold'>
         {formatCurrency(amount, 'COP', locale)}
       </p>
