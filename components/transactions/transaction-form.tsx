@@ -486,6 +486,7 @@ export function TransactionForm({
                         <TooltipTrigger asChild>
                           <span className='w-full'>
                             <Button
+                              variant='ai'
                               onClick={ai.handleParse}
                               disabled={ai.isParsing || !ai.aiText.trim()}
                               className='w-full cursor-pointer'>

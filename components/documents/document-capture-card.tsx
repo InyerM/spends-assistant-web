@@ -97,7 +97,7 @@ export function DocumentCaptureCard({
               {document.archived_at ? t('restoreCapture') : t('archiveCapture')}
             </Button>
             {canExtract && (
-              <Button size='sm' variant='outline' disabled={busy !== null} onClick={onExtract}>
+              <Button size='sm' variant='ai' disabled={busy !== null} onClick={onExtract}>
                 {busy === document.id ? (
                   <LoaderCircle className='size-4 animate-spin' aria-hidden='true' />
                 ) : (

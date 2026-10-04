@@ -231,9 +231,9 @@ export default function AutomationPage(): React.ReactElement {
 
           <div className='flex shrink-0 gap-2'>
             <Button
-              variant='outline'
+              variant='ai'
               size='sm'
-              className='border-brand-secondary/25 text-brand-secondary hover:bg-brand-secondary/10 cursor-pointer'
+              className='cursor-pointer'
               aria-label={t('createWithAi')}
               onClick={(): void => setAiDialogOpen(true)}>
               <Sparkles className='h-4 w-4 sm:mr-1.5' />

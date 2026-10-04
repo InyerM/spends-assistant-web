@@ -141,7 +141,7 @@ export default function DocumentsPage(): React.ReactElement {
             if (file) void upload(file);
           }}
         />
-        <Button disabled={busy !== null} onClick={() => inputRef.current?.click()}>
+        <Button variant='ai' disabled={busy !== null} onClick={() => inputRef.current?.click()}>
           {busy === 'upload' ? (
             <LoaderCircle className='mr-2 h-4 w-4 animate-spin' />
           ) : (

@@ -84,6 +84,7 @@ describe('document inbox', () => {
   it('links the document inbox to guided email forwarding setup', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(Response.json({ data: [] })));
     renderDocuments();
+    expect(screen.getByRole('button', { name: 'upload' })).toHaveAttribute('data-variant', 'ai');
     expect(await screen.findByRole('link', { name: 'connectEmail' })).toHaveAttribute(
       'href',
       '/settings?tab=email-forwarding',

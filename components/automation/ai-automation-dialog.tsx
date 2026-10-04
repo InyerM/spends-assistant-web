@@ -96,6 +96,7 @@ export function AiAutomationDialog({
 
           {!result && (
             <Button
+              variant='ai'
               onClick={handleGenerate}
               disabled={generating || !prompt.trim()}
               className='w-full cursor-pointer'>

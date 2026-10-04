@@ -59,6 +59,10 @@ orange with an icon and explicit wording. Destructive actions remain red.
   text/tint treatment rather than a saturated fill.
 - Primary actions are white with dark text. Secondary actions are neutral outline or ghost; amber is
   reserved for contextual emphasis, not a competing filled action.
+- Model-assisted actions use a distinct, static violet-to-blue-to-teal gradient with white text. The
+  treatment includes receipt upload and extraction, AI parsing, AI rule generation, and AI category
+  suggestions. Keep ordinary confirmation, posting, and destructive actions in their semantic
+  styles; the gradient signals an AI-assisted workflow rather than a financial state.
 
 ## Component behavior
 

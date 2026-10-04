@@ -59,9 +59,9 @@ export function TransactionToolbar({
           <Upload aria-hidden='true' className='mr-1.5 h-4 w-4' />
           {common('import')}
         </Button>
-        <Button variant='outline' size='sm' asChild>
+        <Button variant='ai' size='sm' asChild>
           <Link href='/documents?from=transactions'>
-            <FileImage aria-hidden='true' className='text-brand-secondary mr-1.5 h-4 w-4' />
+            <FileImage aria-hidden='true' className='mr-1.5 h-4 w-4' />
             {t('uploadDocument')}
           </Link>
         </Button>

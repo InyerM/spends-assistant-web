@@ -41,10 +41,9 @@ describe('transaction toolbar', () => {
       />,
     );
 
-    expect(screen.getByRole('link', { name: /upload receipt/i })).toHaveAttribute(
-      'href',
-      '/documents?from=transactions',
-    );
+    const receiptLink = screen.getByRole('link', { name: /upload receipt/i });
+    expect(receiptLink).toHaveAttribute('data-variant', 'ai');
+    expect(receiptLink).toHaveAttribute('href', '/documents?from=transactions');
     expect(screen.getByRole('button', { name: 'More actions' })).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Review debit account' })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'New transaction' }));

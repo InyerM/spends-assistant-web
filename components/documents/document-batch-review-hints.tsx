@@ -134,7 +134,7 @@ export function DocumentBatchReviewHints({
         <div className='mt-2 flex flex-wrap items-center gap-2'>
           <Button
             size='sm'
-            variant='outline'
+            variant='ai'
             disabled={busy || !!aiBusy}
             onClick={() => void suggestCategoryWithAi(row)}>
             {aiBusy === row.id ? t('suggestingCategoryWithAi') : t('suggestCategoryWithAi')}

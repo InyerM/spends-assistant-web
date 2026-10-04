@@ -28,6 +28,9 @@
   --brand-foreground: 152.5 57.14286% 8.23529%;
   --brand-secondary: 37.5 70.88608% 69.01961%;
   --brand-secondary-foreground: 225 11.11111% 7.05882%;
+  --ai-gradient-start: #5b3fa8;
+  --ai-gradient-middle: #3e57a5;
+  --ai-gradient-end: #1f7473;
 
   /* Custom application colors */
   --sidebar-bg: 220 12% 4.90196%;
@@ -110,49 +113,28 @@
   }
 }
 
-/* AI gradient button */
+/* Distinct action surface for model-assisted tasks. */
 .ai-gradient-btn {
-  position: relative;
-}
-
-.ai-gradient-btn::before {
-  content: '';
-  position: absolute;
-  inset: -1px;
-  border-radius: inherit;
-  padding: 1px;
-  background: linear-gradient(
-    135deg,
-    var(--color-brand),
-    var(--color-brand-secondary),
-    var(--color-brand)
+  background-color: var(--ai-gradient-start);
+  background-image: linear-gradient(
+    110deg,
+    var(--ai-gradient-start),
+    var(--ai-gradient-middle) 53%,
+    var(--ai-gradient-end)
   );
-  background-size: 300% 300%;
-  animation: ai-gradient-shift 4s ease infinite;
-  mask:
-    linear-gradient(#fff 0 0) content-box,
-    linear-gradient(#fff 0 0);
-  mask-composite: exclude;
-  opacity: 1;
-  transition: opacity 0.2s ease;
+  color: #fff;
+  transition: filter 160ms ease;
 }
 
-@media (min-width: 640px) {
-  .ai-gradient-btn::before {
-    opacity: 0.5;
-  }
-  .ai-gradient-btn:hover::before {
-    opacity: 1;
-  }
+.ai-gradient-btn:hover:not(:disabled) {
+  filter: brightness(1.13);
 }
 
-@keyframes ai-gradient-shift {
-  0%,
-  100% {
-    background-position: 0% 50%;
-  }
-  50% {
-    background-position: 100% 50%;
+@media (forced-colors: active) {
+  .ai-gradient-btn {
+    border: 1px solid ButtonText;
+    background: ButtonFace;
+    color: ButtonText;
   }
 }
 
@@ -217,8 +199,11 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .ai-gradient-btn::before,
   .animated-border {
     animation: none;
+  }
+
+  .ai-gradient-btn {
+    transition: none;
   }
 }
