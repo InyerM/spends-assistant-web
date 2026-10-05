@@ -58,6 +58,7 @@
     "home": "Home",
     "more": "More",
     "documents": "Documents",
+    "emailInbox": "Email",
     "investments": "Investments",
     "loans": "Loans",
     "receivables": "Personal loans made",
@@ -132,6 +133,14 @@
     "cancel": "Cancel"
   },
   "shortcutInbox": {
+    "subject": "Subject",
+    "showFullMessage": "Show full message",
+    "hideFullMessage": "Hide full message",
+    "backToDashboard": "Dashboard",
+    "emailTitle": "Email inbox",
+    "emailSubtitle": "Bank emails collected for transaction review.",
+    "verificationRequired": "Verify your Gmail forwarding address before opening the email inbox.",
+    "openForwardingSettings": "Set up email forwarding",
     "senderUnverified": "Unverified sender",
     "forwardedSource": "Forwarded email",
     "securityNoticeOmitted": "Security notice: content omitted to protect the code.",

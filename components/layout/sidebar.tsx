@@ -4,6 +4,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/use-auth';
+import { useEmailForwardingRoute } from '@/lib/api/queries/email-forwarding.queries';
 import { useUiStore } from '@/store/ui-store';
 import type { LucideIcon } from 'lucide-react';
 import {
@@ -16,6 +17,7 @@ import {
   LogOut,
   Settings,
   Files,
+  Mail,
   TrendingUp,
   Landmark,
   HandCoins,
@@ -42,6 +44,7 @@ const navItems: NavItem[] = [
   { titleKey: 'dashboard', href: '/dashboard', icon: LayoutDashboard },
   { titleKey: 'transactions', href: '/transactions', icon: ArrowRightLeft },
   { titleKey: 'documents', href: '/documents', icon: Files },
+  { titleKey: 'emailInbox', href: '/inbox', icon: Mail },
   { titleKey: 'accounts', href: '/accounts', icon: Wallet },
   { titleKey: 'investments', href: '/investments', icon: TrendingUp },
   { titleKey: 'loans', href: '/loans', icon: Landmark },
@@ -67,6 +70,9 @@ export function Sidebar({ className, onClose }: SidebarProps): React.ReactElemen
   const t = useTranslations('nav');
   const tCommon = useTranslations('common');
   const { user, signOut } = useAuth();
+  const { data: forwardingRoute } = useEmailForwardingRoute();
+  const emailInboxReady =
+    forwardingRoute?.status === 'active' && Boolean(forwardingRoute.user_confirmed_at);
   const sidebarCollapsed = useUiStore((state) => state.sidebarCollapsed);
   const toggleCollapsed = useUiStore((state) => state.toggleSidebarCollapsed);
   const isCollapsed = !onClose && sidebarCollapsed;
@@ -117,28 +123,30 @@ export function Sidebar({ className, onClose }: SidebarProps): React.ReactElemen
       <nav
         aria-label={t('primaryNavigation')}
         className='flex-1 space-y-1 overflow-y-auto px-3 pt-4'>
-        {navItems.map((item) => {
-          const title = t(item.titleKey);
-          return (
-            <Button
-              key={item.href}
-              variant='ghost'
-              onClick={(): void => handleNavigation(item.href)}
-              className={cn(
-                'h-auto w-full cursor-pointer justify-start gap-3 rounded-lg px-3 py-2.5 text-sm font-medium',
-                isCollapsed && 'justify-center',
-                isActivePath(item.href)
-                  ? 'bg-brand/10 text-brand hover:bg-brand/15'
-                  : 'text-muted-foreground hover:bg-card-overlay hover:text-foreground',
-              )}
-              aria-label={title}
-              aria-current={isActivePath(item.href) ? 'page' : undefined}
-              title={isCollapsed ? title : undefined}>
-              <item.icon className='h-5 w-5 shrink-0' />
-              {!isCollapsed && <span>{title}</span>}
-            </Button>
-          );
-        })}
+        {navItems
+          .filter((item) => item.href !== '/inbox' || emailInboxReady)
+          .map((item) => {
+            const title = t(item.titleKey);
+            return (
+              <Button
+                key={item.href}
+                variant='ghost'
+                onClick={(): void => handleNavigation(item.href)}
+                className={cn(
+                  'h-auto w-full cursor-pointer justify-start gap-3 rounded-lg px-3 py-2.5 text-sm font-medium',
+                  isCollapsed && 'justify-center',
+                  isActivePath(item.href)
+                    ? 'bg-brand/10 text-brand hover:bg-brand/15'
+                    : 'text-muted-foreground hover:bg-card-overlay hover:text-foreground',
+                )}
+                aria-label={title}
+                aria-current={isActivePath(item.href) ? 'page' : undefined}
+                title={isCollapsed ? title : undefined}>
+                <item.icon className='h-5 w-5 shrink-0' />
+                {!isCollapsed && <span>{title}</span>}
+              </Button>
+            );
+          })}
       </nav>
 
       <div className='border-border border-t p-3'>

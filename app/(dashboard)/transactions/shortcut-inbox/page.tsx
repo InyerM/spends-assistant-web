@@ -112,7 +112,11 @@ function LuloPreview({ preview }: { preview: LuloNoticePreview }): React.ReactEl
   );
 }
 
-export default function ShortcutInboxPage(): React.ReactElement {
+export default function ShortcutInboxPage({
+  source,
+}: {
+  source?: 'forwarded_email';
+}): React.ReactElement {
   const t = useTranslations('shortcutInbox');
   const [items, setItems] = useState<InboxItem[]>([]);
   const [count, setCount] = useState(0);
@@ -142,7 +146,7 @@ export default function ShortcutInboxPage(): React.ReactElement {
     setLoading(true);
     try {
       const response = await fetch(
-        `/api/shortcut-inbox?page=${page}&limit=${PAGE_SIZE}&status=${filter}`,
+        `/api/shortcut-inbox?page=${page}&limit=${PAGE_SIZE}&status=${filter}${source ? `&source=${source}` : ''}`,
         { cache: 'no-store' },
       );
       if (!response.ok) throw new Error('Could not load inbox');
@@ -155,7 +159,7 @@ export default function ShortcutInboxPage(): React.ReactElement {
     } finally {
       setLoading(false);
     }
-  }, [filter, page, t]);
+  }, [filter, page, source, t]);
 
   useEffect(() => {
     void load();
@@ -247,18 +251,24 @@ export default function ShortcutInboxPage(): React.ReactElement {
       <div className='flex flex-wrap items-start justify-between gap-4'>
         <div className='space-y-2'>
           <Button asChild variant='ghost' size='sm' className='-ml-2'>
-            <Link href='/transactions'>
-              <ArrowLeft /> {t('backToTransactions')}
+            <Link href={source ? '/dashboard' : '/transactions'}>
+              <ArrowLeft /> {t(source ? 'backToDashboard' : 'backToTransactions')}
             </Link>
           </Button>
-          <h1 className='text-foreground text-3xl font-semibold tracking-tight'>{t('title')}</h1>
-          <p className='text-muted-foreground max-w-2xl text-sm'>{t('subtitle')}</p>
+          <h1 className='text-foreground text-3xl font-semibold tracking-tight'>
+            {t(source ? 'emailTitle' : 'title')}
+          </h1>
+          <p className='text-muted-foreground max-w-2xl text-sm'>
+            {t(source ? 'emailSubtitle' : 'subtitle')}
+          </p>
         </div>
-        <Button asChild variant='outline'>
-          <a href='/api/shortcut-inbox/export' download>
-            <Download /> {t('exportJson')}
-          </a>
-        </Button>
+        {!source && (
+          <Button asChild variant='outline'>
+            <a href='/api/shortcut-inbox/export' download>
+              <Download /> {t('exportJson')}
+            </a>
+          </Button>
+        )}
       </div>
 
       <div className='border-border flex flex-wrap items-center justify-between gap-3 border-b pb-5'>
@@ -301,6 +311,7 @@ export default function ShortcutInboxPage(): React.ReactElement {
           {items.map((item) => {
             const candidateResult = candidateById[item.id];
             const luloPreview = previewLuloNotice(item.source, item.raw_text, item.received_at);
+            const historicalLulo = item.source === 'lulo-email-backfill';
             return (
               <Card key={item.id}>
                 <CardContent className='space-y-4 py-4'>
@@ -353,7 +364,7 @@ export default function ShortcutInboxPage(): React.ReactElement {
                         {openCandidateId === item.id ? t('hideCandidates') : t('showCandidates')}
                       </Button>
                     )}
-                    {item.status === 'pending' && !luloPreview && (
+                    {item.status === 'pending' && !historicalLulo && (
                       <Button
                         size='sm'
                         variant='outline'
@@ -418,7 +429,7 @@ export default function ShortcutInboxPage(): React.ReactElement {
                       </div>
                     </div>
                   )}
-                  {createInboxId === item.id && item.status === 'pending' && !luloPreview && (
+                  {createInboxId === item.id && item.status === 'pending' && !historicalLulo && (
                     <ShortcutCreateForm
                       inboxId={item.id}
                       receivedAt={item.received_at}

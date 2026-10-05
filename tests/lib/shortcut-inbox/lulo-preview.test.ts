@@ -51,6 +51,25 @@ describe('Lulo Gmail notice preview', () => {
     });
   });
 
+  it('previews a newly forwarded Lulo email without treating it as historical backfill', () => {
+    const rawText = [
+      'From (unverified): notificaciones@lulobank.com',
+      '',
+      'Compra realizada',
+      '',
+      'Realizaste una compra en Demo Store por $121,000',
+      'Origen tarjeta de cr&eacute;dito &#8226;8456',
+      'Fecha 25 de septiembre de 2026',
+      'Hora 7:18 p.m.',
+    ].join('\n');
+    expect(previewLuloNotice('forwarded_email', rawText, receivedAt)).toMatchObject({
+      kind: 'card_purchase',
+      merchant: 'Demo Store',
+      cardLastFour: '8456',
+      amountDecimal: '121000.00',
+    });
+  });
+
   it('parses a Gmail plain body with CRLF line endings', () => {
     const rawText = notice('Realizaste una compra en Demo Store por $100').replaceAll('\n', '\r\n');
     expect(previewLuloNotice('lulo-email-backfill', rawText, receivedAt)?.kind).toBe(

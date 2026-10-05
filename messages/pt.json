@@ -58,6 +58,7 @@
     "home": "Início",
     "more": "Mais",
     "documents": "Documentos",
+    "emailInbox": "Email",
     "investments": "Investimentos",
     "loans": "Empréstimos",
     "receivables": "Empréstimos concedidos",
@@ -106,6 +107,14 @@
     "viewAllCategories": "Ver todas as categorias"
   },
   "shortcutInbox": {
+    "subject": "Assunto",
+    "showFullMessage": "Ver mensagem completa",
+    "hideFullMessage": "Ocultar mensagem completa",
+    "backToDashboard": "Painel",
+    "emailTitle": "Caixa de email",
+    "emailSubtitle": "Avisos bancários recebidos para revisar movimentações.",
+    "verificationRequired": "Verifique o endereço de encaminhamento do Gmail antes de abrir esta caixa.",
+    "openForwardingSettings": "Configurar encaminhamento de email",
     "senderUnverified": "Remetente não verificado",
     "forwardedSource": "Email encaminhado",
     "securityNoticeOmitted": "Aviso de segurança: conteúdo omitido para proteger o código.",

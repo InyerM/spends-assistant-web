@@ -58,6 +58,7 @@
     "home": "Inicio",
     "more": "Más",
     "documents": "Documentos",
+    "emailInbox": "Correo",
     "investments": "Inversiones",
     "loans": "Créditos",
     "receivables": "Préstamos hechos",
@@ -132,6 +133,14 @@
     "cancel": "Cancelar"
   },
   "shortcutInbox": {
+    "subject": "Asunto",
+    "showFullMessage": "Ver mensaje completo",
+    "hideFullMessage": "Ocultar mensaje completo",
+    "backToDashboard": "Panel",
+    "emailTitle": "Bandeja de correo",
+    "emailSubtitle": "Avisos bancarios recibidos para revisar tus movimientos.",
+    "verificationRequired": "Verifica la dirección de reenvío de Gmail para abrir esta bandeja.",
+    "openForwardingSettings": "Configurar reenvío de correo",
     "senderUnverified": "Remitente sin verificar",
     "forwardedSource": "Correo reenviado",
     "securityNoticeOmitted": "Aviso de seguridad: se omitió el contenido para proteger el código.",

@@ -92,7 +92,12 @@ export function previewLuloNotice(
   rawText: string,
   receivedAt: string,
 ): LuloNoticePreview | null {
-  if (source !== 'lulo-email-backfill') return null;
+  if (source !== 'lulo-email-backfill' && source !== 'forwarded_email') return null;
+  const forwarded = /^From \(unverified\): ([^\n]+)\n\n([^\n]+)\n\n([\s\S]*)$/u.exec(rawText);
+  if (source === 'forwarded_email') {
+    if (!forwarded) return null;
+    rawText = `From: ${forwarded[1]}\nSubject: ${forwarded[2]}\n\n${decodeEmailEntities(forwarded[3])}`;
+  }
   const sender = oneLine(rawText, /^From:[ \t]*(.+)$/gimu);
   const subject = oneLine(rawText, /^Subject:[ \t]*(.+)$/gimu);
   const purchase = oneLine(
@@ -141,3 +146,4 @@ export function previewLuloNotice(
     },
   };
 }
+import { decodeEmailEntities } from './email-text';

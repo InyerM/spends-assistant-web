@@ -26,8 +26,21 @@ function fakeDatabase() {
   const rows: Record<string, unknown>[] = [];
   const decisions: Record<string, unknown>[] = [];
   const filters: [string, unknown][] = [];
+  const forwardingRoutes: Record<string, unknown>[] = [];
   const supabase = {
     from(table: string) {
+      if (table === 'email_forwarding_routes') {
+        return {
+          select: () => ({
+            eq: (_column: string, userId: string) => ({
+              maybeSingle: async () => ({
+                data: forwardingRoutes.find((row) => row.user_id === userId) ?? null,
+                error: null,
+              }),
+            }),
+          }),
+        };
+      }
       if (table === 'shortcut_inbox_match_decisions') {
         let owner: unknown;
         return {
@@ -103,7 +116,7 @@ function fakeDatabase() {
       };
     },
   };
-  return { supabase, rows, decisions, filters };
+  return { supabase, rows, decisions, filters, forwardingRoutes };
 }
 
 describe('/api/shortcut-inbox', () => {
@@ -186,6 +199,34 @@ describe('/api/shortcut-inbox', () => {
     expect(response.status).toBe(200);
     expect(db.filters).toContainEqual(['user_id', 'owner-a']);
     expect(getShortcutPostClient).not.toHaveBeenCalled();
+  });
+
+  it('keeps the forwarded email inbox unavailable until the owner confirms verification', async () => {
+    const db = fakeDatabase();
+    getUserClient.mockResolvedValue({ supabase: db.supabase, userId: 'owner-a' });
+    const response = await GET(
+      new Request('https://example.test/api/shortcut-inbox?source=forwarded_email') as never,
+    );
+    expect(response.status).toBe(403);
+    expect(db.filters).not.toContainEqual(['source', 'forwarded_email']);
+  });
+
+  it('lists forwarded email only after the owner confirms verification', async () => {
+    const db = fakeDatabase();
+    db.forwardingRoutes.push({ user_id: 'owner-a', user_confirmed_at: '2026-10-03T17:00:00Z' });
+    db.rows.push({
+      id: 'email-1',
+      user_id: 'owner-a',
+      source: 'forwarded_email',
+      status: 'pending',
+    });
+    db.rows.push({ id: 'sms-1', user_id: 'owner-a', source: 'sms-shortcut', status: 'pending' });
+    getUserClient.mockResolvedValue({ supabase: db.supabase, userId: 'owner-a' });
+    const response = await GET(
+      new Request('https://example.test/api/shortcut-inbox?source=forwarded_email') as never,
+    );
+    expect(response.status).toBe(200);
+    expect((await response.json()).data).toEqual([db.rows[0]]);
   });
 
   it('can filter acknowledged inbox items by matched status', async () => {

@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { useAuthStore } from '@/store/auth-store';
 
 export type EmailForwardingRoute =
   | { status: 'unavailable' }
@@ -14,7 +15,7 @@ export type EmailForwardingRoute =
 
 export const emailForwardingKeys = {
   all: ['email-forwarding'] as const,
-  route: () => ['email-forwarding', 'route'] as const,
+  route: (userId?: string | null) => ['email-forwarding', 'route', userId ?? null] as const,
 };
 
 export async function fetchEmailForwardingRoute(): Promise<EmailForwardingRoute> {
@@ -24,8 +25,9 @@ export async function fetchEmailForwardingRoute(): Promise<EmailForwardingRoute>
 }
 
 export function useEmailForwardingRoute(): ReturnType<typeof useQuery<EmailForwardingRoute>> {
+  const userId = useAuthStore((state) => state.supabaseUser?.id);
   return useQuery({
-    queryKey: emailForwardingKeys.route(),
+    queryKey: emailForwardingKeys.route(userId),
     queryFn: fetchEmailForwardingRoute,
     refetchInterval: (query) =>
       query.state.data?.status === 'active' && !query.state.data.confirmation_received_at

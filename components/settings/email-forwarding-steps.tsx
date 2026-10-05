@@ -156,11 +156,13 @@ export function EmailForwardingSteps({
 
       <SetupStep number={4} title={t('reviewInboxTitle')}>
         <p className='text-muted-foreground text-sm leading-relaxed'>{t('reviewInboxBody')}</p>
-        <Button variant='outline' size='sm' asChild>
-          <Link href='/transactions/shortcut-inbox'>
-            <Inbox aria-hidden='true' /> {t('reviewInbox')}
-          </Link>
-        </Button>
+        {route.user_confirmed_at && (
+          <Button variant='outline' size='sm' asChild>
+            <Link href='/inbox'>
+              <Inbox aria-hidden='true' /> {t('reviewInbox')}
+            </Link>
+          </Button>
+        )}
       </SetupStep>
     </ol>
   );

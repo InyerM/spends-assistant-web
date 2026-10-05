@@ -13,6 +13,7 @@ import {
   Settings,
   LogOut,
   Files,
+  Mail,
   TrendingUp,
   Landmark,
   HandCoins,
@@ -23,6 +24,7 @@ import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/hooks/use-auth';
+import { useEmailForwardingRoute } from '@/lib/api/queries/email-forwarding.queries';
 import type { LucideIcon } from 'lucide-react';
 
 interface NavItem {
@@ -40,6 +42,7 @@ const mainItems: NavItem[] = [
 
 const moreItems: NavItem[] = [
   { titleKey: 'documents', href: '/documents', icon: Files },
+  { titleKey: 'emailInbox', href: '/inbox', icon: Mail },
   { titleKey: 'investments', href: '/investments', icon: TrendingUp },
   { titleKey: 'loans', href: '/loans', icon: Landmark },
   { titleKey: 'receivables', href: '/receivables', icon: HandCoins },
@@ -58,6 +61,9 @@ export function BottomNav(): React.ReactElement {
   const t = useTranslations('nav');
   const tCommon = useTranslations('common');
   const { user, signOut } = useAuth();
+  const { data: forwardingRoute } = useEmailForwardingRoute();
+  const emailInboxReady =
+    forwardingRoute?.status === 'active' && Boolean(forwardingRoute.user_confirmed_at);
   const [moreOpen, setMoreOpen] = useState(false);
 
   const avatarUrl = user?.user_metadata.avatar_url as string | undefined;
@@ -129,25 +135,27 @@ export function BottomNav(): React.ReactElement {
               <span className='text-muted-foreground min-w-0 truncate text-sm'>{displayName}</span>
             </div>
             <div className='border-border mb-2 border-t' />
-            {moreItems.map((item) => {
-              const active = isActivePath(pathname, item.href);
-              return (
-                <Button
-                  key={item.href}
-                  aria-current={active ? 'page' : undefined}
-                  variant='ghost'
-                  onClick={(): void => handleNav(item.href)}
-                  className={cn(
-                    'h-auto w-full cursor-pointer justify-start gap-3 rounded-lg px-3 py-3 text-sm font-medium',
-                    active
-                      ? 'bg-brand/10 text-brand hover:bg-brand/15'
-                      : 'text-foreground hover:bg-card-overlay',
-                  )}>
-                  <item.icon className='h-5 w-5' />
-                  <span>{t(item.titleKey)}</span>
-                </Button>
-              );
-            })}
+            {moreItems
+              .filter((item) => item.href !== '/inbox' || emailInboxReady)
+              .map((item) => {
+                const active = isActivePath(pathname, item.href);
+                return (
+                  <Button
+                    key={item.href}
+                    aria-current={active ? 'page' : undefined}
+                    variant='ghost'
+                    onClick={(): void => handleNav(item.href)}
+                    className={cn(
+                      'h-auto w-full cursor-pointer justify-start gap-3 rounded-lg px-3 py-3 text-sm font-medium',
+                      active
+                        ? 'bg-brand/10 text-brand hover:bg-brand/15'
+                        : 'text-foreground hover:bg-card-overlay',
+                    )}>
+                    <item.icon className='h-5 w-5' />
+                    <span>{t(item.titleKey)}</span>
+                  </Button>
+                );
+              })}
             <div className='border-border my-2 border-t' />
             <Button
               variant='ghost'

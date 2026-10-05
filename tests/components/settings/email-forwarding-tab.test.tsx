@@ -48,10 +48,7 @@ describe('EmailForwardingTab', () => {
     expect(await screen.findByText('private@example.com')).toBeInTheDocument();
     expect(screen.getByText('addAddressTitle')).toBeInTheDocument();
     expect(screen.getByText('createFilterTitle')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'reviewInbox' })).toHaveAttribute(
-      'href',
-      '/transactions/shortcut-inbox',
-    );
+    expect(screen.queryByRole('link', { name: 'reviewInbox' })).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'gmailInstructions' })).toHaveAttribute(
       'href',
       'https://support.google.com/mail/answer/10957?hl=es-419',
@@ -117,6 +114,7 @@ describe('EmailForwardingTab', () => {
     expect(await screen.findByText('verifiedByUser')).toBeInTheDocument();
     expect(screen.getByText('filterStepOpenOptions')).toBeInTheDocument();
     expect(screen.getByText('filterStepChooseForwarding')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'reviewInbox' })).toHaveAttribute('href', '/inbox');
     expect(fetchMock).toHaveBeenCalledWith('/api/email-forwarding', { method: 'PATCH' });
   });
 

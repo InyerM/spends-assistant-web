@@ -142,6 +142,41 @@ describe('Shortcut inbox review page', () => {
     ).not.toBeInTheDocument();
   });
 
+  it('shows a forwarded Lulo purchase preview while retaining reviewed creation', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        Response.json({
+          data: [
+            {
+              id: 'forwarded-1',
+              source: 'forwarded_email',
+              external_id: 'synthetic-message-3',
+              received_at: '2026-09-26T01:20:00.000Z',
+              raw_text: [
+                'From (unverified): notificaciones@lulobank.com',
+                '',
+                'Compra realizada',
+                '',
+                'Realizaste una compra en Demo Store por $121,000',
+                'Origen tarjeta de crédito •8456',
+                'Fecha 25 de septiembre de 2026',
+                'Hora 7:18 p.m.',
+              ].join('\n'),
+              status: 'pending',
+              created_at: '2026-09-26T01:21:00.000Z',
+            },
+          ],
+          count: 1,
+        }),
+      ),
+    );
+    render(<ShortcutInboxPage source='forwarded_email' />);
+    expect(await screen.findByText('Possible card purchase')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Create new transaction' })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Export JSON' })).not.toBeInTheDocument();
+  });
+
   it('shows private intake text with reversible review actions and no confirmation action', async () => {
     vi.stubGlobal(
       'fetch',
