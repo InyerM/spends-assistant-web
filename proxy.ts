@@ -45,6 +45,15 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
     return NextResponse.next({ request });
   }
 
+  // The owner-scoped transaction writer verifies mobile bearer tokens itself.
+  if (
+    pathname === '/api/transactions' &&
+    request.method === 'POST' &&
+    request.headers.has('authorization')
+  ) {
+    return NextResponse.next({ request });
+  }
+
   let supabaseResponse = NextResponse.next({ request });
 
   const supabase = createServerClient(

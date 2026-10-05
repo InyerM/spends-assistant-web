@@ -159,7 +159,7 @@ export async function GET(request: NextRequest): Promise<Response> {
 
 export async function POST(request: NextRequest): Promise<Response> {
   try {
-    const { supabase } = await getUserClient();
+    const { supabase } = await getUserClient(request);
     const { searchParams } = request.nextUrl;
     const force = searchParams.get('force') === 'true';
     const replaceId = searchParams.get('replace');

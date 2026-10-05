@@ -58,4 +58,10 @@ describe('authentication proxy', () => {
     const response = await proxy(request('/api/documents'));
     expect(response.status).toBe(307);
   });
+
+  it('allows the transaction creation route to verify a mobile bearer token', async () => {
+    const response = await proxy(request('/api/transactions', 'POST', 'Bearer mobile-jwt'));
+    expect(response.status).toBe(200);
+    expect(getUser).not.toHaveBeenCalled();
+  });
 });

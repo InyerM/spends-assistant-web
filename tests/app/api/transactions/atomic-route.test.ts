@@ -63,6 +63,22 @@ describe('atomic manual transaction route', () => {
     expect(applyTransactionBalance).not.toHaveBeenCalled();
   });
 
+  it('passes the bearer request to owner authentication', async () => {
+    const { getUserClient } = await import('@/lib/api/server');
+    vi.mocked(getUserClient).mockResolvedValue({
+      supabase: {
+        rpc: vi
+          .fn()
+          .mockResolvedValue({ data: { status: 'created', transaction: tx }, error: null }),
+      } as never,
+      userId: 'user-id',
+    });
+    const mobileRequest = request('/api/transactions', { Authorization: 'Bearer mobile-jwt' });
+    const response = await POST(mobileRequest);
+    expect(response.status).toBe(201);
+    expect(getUserClient).toHaveBeenCalledWith(mobileRequest);
+  });
+
   it('passes force and replacement to the RPC without client-side balance changes', async () => {
     const { getUserClient } = await import('@/lib/api/server');
     const rpc = vi
