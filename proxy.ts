@@ -37,6 +37,14 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
     return NextResponse.next({ request });
   }
 
+  // Document API handlers verify mobile bearer tokens and enforce user-scoped access.
+  if (
+    (pathname === '/api/documents' || pathname.startsWith('/api/documents/')) &&
+    request.headers.has('authorization')
+  ) {
+    return NextResponse.next({ request });
+  }
+
   let supabaseResponse = NextResponse.next({ request });
 
   const supabase = createServerClient(

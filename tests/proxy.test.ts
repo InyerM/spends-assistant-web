@@ -42,4 +42,20 @@ describe('authentication proxy', () => {
     expect(inboxPostWithoutKey.status).toBe(307);
     expect(unrelatedPost.status).toBe(307);
   });
+
+  it('lets document routes verify mobile bearer tokens without a browser cookie', async () => {
+    const list = await proxy(request('/api/documents', 'GET', 'Bearer mobile-jwt'));
+    const upload = await proxy(request('/api/documents', 'POST', 'Bearer mobile-jwt'));
+    const extract = await proxy(
+      request('/api/documents/document-1/extract', 'POST', 'Bearer mobile-jwt'),
+    );
+
+    expect([list.status, upload.status, extract.status]).toEqual([200, 200, 200]);
+    expect(getUser).not.toHaveBeenCalled();
+  });
+
+  it('keeps document routes protected without a bearer token', async () => {
+    const response = await proxy(request('/api/documents'));
+    expect(response.status).toBe(307);
+  });
 });
