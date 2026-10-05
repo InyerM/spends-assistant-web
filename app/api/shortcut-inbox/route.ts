@@ -75,11 +75,13 @@ export async function GET(request: NextRequest): Promise<Response> {
     if (source === 'forwarded_email') {
       const { data: route, error: routeError } = await supabase
         .from('email_forwarding_routes')
-        .select('user_confirmed_at')
+        .select('status,user_confirmed_at')
         .eq('user_id', userId)
         .maybeSingle();
       if (routeError) return errorResponse('Email forwarding status unavailable');
-      if (!route?.user_confirmed_at) return errorResponse('Email forwarding is not verified', 403);
+      if (route?.status !== 'active' || !route.user_confirmed_at) {
+        return errorResponse('Email forwarding is not verified', 403);
+      }
     }
     const requestedPage = Number(params.get('page') ?? '1');
     const page = Number.isSafeInteger(requestedPage) && requestedPage > 0 ? requestedPage : 1;
@@ -95,6 +97,7 @@ export async function GET(request: NextRequest): Promise<Response> {
       .eq('user_id', userId);
     const status = params.get('status');
     if (source === 'forwarded_email') query = query.eq('source', source);
+    else query = query.neq('source', 'forwarded_email');
     if (
       status &&
       ['pending', 'non_transaction', 'dismissed', 'matched', 'created'].includes(status)

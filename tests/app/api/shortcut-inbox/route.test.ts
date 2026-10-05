@@ -90,6 +90,10 @@ function fakeDatabase() {
               filters.push([column, value]);
               return query;
             },
+            neq(column: string, value: unknown) {
+              filters.push([`not:${column}`, value]);
+              return query;
+            },
             async maybeSingle() {
               return {
                 data:
@@ -104,7 +108,11 @@ function fakeDatabase() {
             range() {
               return Promise.resolve({
                 data: rows.filter((row) =>
-                  filters.every(([column, value]) => row[column] === value),
+                  filters.every(([column, value]) =>
+                    column.startsWith('not:')
+                      ? row[column.slice(4)] !== value
+                      : row[column] === value,
+                  ),
                 ),
                 count: rows.length,
                 error: null,
@@ -201,6 +209,21 @@ describe('/api/shortcut-inbox', () => {
     expect(getShortcutPostClient).not.toHaveBeenCalled();
   });
 
+  it('does not expose forwarded email through the general shortcut inbox', async () => {
+    const db = fakeDatabase();
+    db.rows.push({
+      id: 'email-1',
+      user_id: 'owner-a',
+      source: 'forwarded_email',
+      status: 'pending',
+    });
+    db.rows.push({ id: 'sms-1', user_id: 'owner-a', source: 'sms-shortcut', status: 'pending' });
+    getUserClient.mockResolvedValue({ supabase: db.supabase, userId: 'owner-a' });
+    const response = await GET(new Request('https://example.test/api/shortcut-inbox') as never);
+    expect(response.status).toBe(200);
+    expect((await response.json()).data).toEqual([db.rows[1]]);
+  });
+
   it('keeps the forwarded email inbox unavailable until the owner confirms verification', async () => {
     const db = fakeDatabase();
     getUserClient.mockResolvedValue({ supabase: db.supabase, userId: 'owner-a' });
@@ -213,7 +236,11 @@ describe('/api/shortcut-inbox', () => {
 
   it('lists forwarded email only after the owner confirms verification', async () => {
     const db = fakeDatabase();
-    db.forwardingRoutes.push({ user_id: 'owner-a', user_confirmed_at: '2026-10-03T17:00:00Z' });
+    db.forwardingRoutes.push({
+      user_id: 'owner-a',
+      status: 'active',
+      user_confirmed_at: '2026-10-03T17:00:00Z',
+    });
     db.rows.push({
       id: 'email-1',
       user_id: 'owner-a',
@@ -227,6 +254,20 @@ describe('/api/shortcut-inbox', () => {
     );
     expect(response.status).toBe(200);
     expect((await response.json()).data).toEqual([db.rows[0]]);
+  });
+
+  it('rejects forwarded email when a previously confirmed route is inactive', async () => {
+    const db = fakeDatabase();
+    db.forwardingRoutes.push({
+      user_id: 'owner-a',
+      status: 'paused',
+      user_confirmed_at: '2026-10-03T17:00:00Z',
+    });
+    getUserClient.mockResolvedValue({ supabase: db.supabase, userId: 'owner-a' });
+    const response = await GET(
+      new Request('https://example.test/api/shortcut-inbox?source=forwarded_email') as never,
+    );
+    expect(response.status).toBe(403);
   });
 
   it('can filter acknowledged inbox items by matched status', async () => {
@@ -316,6 +357,7 @@ describe('/api/shortcut-inbox', () => {
     decisionEq.mockReturnValue({ in: decisionIn });
     const listQuery = {
       eq: vi.fn().mockReturnThis(),
+      neq: vi.fn().mockReturnThis(),
       order: vi.fn().mockReturnThis(),
       range: vi.fn().mockResolvedValue({
         data: [{ id: 'matched-1', status: 'matched' }],
