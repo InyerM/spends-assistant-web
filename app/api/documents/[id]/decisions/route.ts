@@ -25,7 +25,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> },
 ): Promise<Response> {
   try {
-    const { supabase, userId } = await getUserClient();
+    const { supabase, userId } = await getUserClient(request);
     const { id } = await params;
     const body = (await request.json().catch(() => null)) as DecisionBody | null;
     const reasonDetail = typeof body?.reason_detail === 'string' ? body.reason_detail.trim() : null;

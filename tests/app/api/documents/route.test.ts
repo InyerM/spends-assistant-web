@@ -66,10 +66,12 @@ describe('/api/documents', () => {
   });
 
   it('lists only the signed-in user documents', async () => {
-    const response = await GET();
+    const request = new Request('https://anotto.app/api/documents');
+    const response = await GET(request);
     expect(response.status).toBe(200);
     expect(response.headers.get('Cache-Control')).toBe('private, no-store');
     expect(select).toHaveBeenCalled();
     expect(eq).toHaveBeenCalledWith('user_id', 'user-1');
+    expect(getUserClient).toHaveBeenCalledWith(request);
   });
 });

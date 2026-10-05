@@ -18,11 +18,11 @@ interface StoredObservation extends ReconciliationObservation {
 type StoredTransaction = Omit<ReconciliationTransaction, 'account_name'>;
 
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ): Promise<Response> {
   try {
-    const { supabase, userId } = await getUserClient();
+    const { supabase, userId } = await getUserClient(request);
     const { id } = await params;
     const { data: rawDocument, error: documentError } = await supabase
       .from('documents')

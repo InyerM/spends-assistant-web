@@ -6,11 +6,11 @@ import { parseExtraction } from '@/lib/documents';
 const privateHeaders = { 'Cache-Control': 'private, no-store' };
 
 export async function POST(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ): Promise<Response> {
   try {
-    const { supabase, userId } = await getUserClient();
+    const { supabase, userId, accessToken } = await getUserClient(request);
     if (!workerConfig.url) return errorResponse('Worker not configured', 503);
     const { id } = await params;
     const { data: rawDocument } = await supabase
@@ -27,10 +27,9 @@ export async function POST(
     if (!document.file_path.startsWith(`${userId}/`))
       return errorResponse('Invalid document path', 400);
 
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-    if (!session?.access_token) return errorResponse('No authentication token available', 401);
+    const sessionToken =
+      accessToken ?? (await supabase.auth.getSession()).data.session?.access_token;
+    if (!sessionToken) return errorResponse('No authentication token available', 401);
 
     const { data: claimToken, error: claimError } = await supabase.rpc(
       'claim_document_extraction',
@@ -65,7 +64,7 @@ export async function POST(
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${session.access_token}`,
+          Authorization: `Bearer ${sessionToken}`,
         },
         signal: AbortSignal.timeout(90_000),
         body: JSON.stringify({

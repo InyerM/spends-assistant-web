@@ -18,12 +18,12 @@ interface RouteContext {
   params: Promise<{ id: string; observationId: string }>;
 }
 
-export async function GET(_request: Request, { params }: RouteContext): Promise<Response> {
+export async function GET(request: Request, { params }: RouteContext): Promise<Response> {
   try {
     const { id, observationId } = await params;
     if (!z.uuid().safeParse(id).success || !z.uuid().safeParse(observationId).success)
       return errorResponse('Invalid document or observation ID', 400);
-    const { supabase, userId } = await getUserClient();
+    const { supabase, userId } = await getUserClient(request);
     const { data: observation, error: observationError } = await supabase
       .from('document_observations')
       .select('id')
@@ -64,7 +64,7 @@ export async function PATCH(request: Request, { params }: RouteContext): Promise
     const { id, observationId } = await params;
     if (!z.uuid().safeParse(id).success || !z.uuid().safeParse(observationId).success)
       return errorResponse('Invalid document or observation ID', 400);
-    const { supabase, userId } = await getUserClient();
+    const { supabase, userId } = await getUserClient(request);
     const { data: observation, error: lookupError } = await supabase
       .from('document_observations')
       .select('id')

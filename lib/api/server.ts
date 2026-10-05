@@ -1,6 +1,8 @@
 import { createClient, createAdminClient } from '@/lib/supabase/server';
+import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { AutomationRule, AutomationRuleConditions, AutomationRuleActions } from '@/types';
+import { env } from '@/lib/env';
 
 export class AuthError extends Error {
   public constructor(message = 'Unauthorized') {
@@ -9,7 +11,29 @@ export class AuthError extends Error {
   }
 }
 
-export async function getUserClient(): Promise<{ supabase: SupabaseClient; userId: string }> {
+export async function getUserClient(
+  request?: Request,
+): Promise<{ supabase: SupabaseClient; userId: string; accessToken?: string }> {
+  const authorization = request?.headers.get('Authorization');
+  if (authorization !== null && authorization !== undefined) {
+    const match = /^Bearer ([^\s]+)$/i.exec(authorization);
+    if (!match) throw new AuthError();
+    const accessToken = match[1];
+    const supabase = createSupabaseClient(
+      env.NEXT_PUBLIC_SUPABASE_URL,
+      env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+      {
+        global: { headers: { Authorization: `Bearer ${accessToken}` } },
+        auth: { autoRefreshToken: false, persistSession: false },
+      },
+    );
+    const {
+      data: { user },
+      error,
+    } = await supabase.auth.getUser(accessToken);
+    if (error || !user) throw new AuthError();
+    return { supabase, userId: user.id, accessToken };
+  }
   const supabase = await createClient();
   const {
     data: { user },

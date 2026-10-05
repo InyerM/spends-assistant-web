@@ -4,9 +4,9 @@ import { validateDocumentImage } from '@/lib/documents';
 
 const privateHeaders = { 'Cache-Control': 'private, no-store' };
 
-export async function GET(): Promise<Response> {
+export async function GET(request: Request): Promise<Response> {
   try {
-    const { supabase, userId } = await getUserClient();
+    const { supabase, userId } = await getUserClient(request);
     const { data, error } = await supabase
       .from('documents')
       .select(
@@ -25,7 +25,7 @@ export async function GET(): Promise<Response> {
 
 export async function POST(request: NextRequest): Promise<Response> {
   try {
-    const { supabase, userId } = await getUserClient();
+    const { supabase, userId } = await getUserClient(request);
     const formData = await request.formData();
     const file = formData.get('file');
     if (!file || typeof file === 'string') return errorResponse('Image is required', 400);

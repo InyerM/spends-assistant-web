@@ -11,7 +11,7 @@ export async function PATCH(
     const body = (await request.json().catch(() => null)) as { archived?: unknown } | null;
     if (!UUID.test(id) || typeof body?.archived !== 'boolean')
       return errorResponse('Invalid archive request', 400);
-    const { supabase } = await getUserClient();
+    const { supabase } = await getUserClient(request);
     const { data, error } = await supabase.rpc('set_document_archived', {
       p_document_id: id,
       p_archived: body.archived,

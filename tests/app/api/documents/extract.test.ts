@@ -101,6 +101,36 @@ describe('POST /api/documents/[id]/extract', () => {
     expect(JSON.stringify(adminRpc.mock.calls[0][1])).not.toContain('usage');
   });
 
+  it('passes the verified mobile Bearer token to the Worker without a browser session', async () => {
+    fetchMock.mockResolvedValue(
+      Response.json({ draft: { document_type: 'receipt', observations: [] }, model: 'qwen' }),
+    );
+    getUserClient.mockResolvedValueOnce({
+      userId: 'user-1',
+      accessToken: 'mobile-jwt',
+      supabase: {
+        auth: { getSession: async () => ({ data: { session: null } }) },
+        storage: { from: () => ({ download }) },
+        rpc,
+        from: () => ({
+          select: () => ({ eq: () => ({ eq: () => ({ single: documentQuery }) }) }),
+        }),
+      },
+    });
+    const request = new Request('https://anotto.app/api/documents/doc-1/extract', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer mobile-jwt' },
+    });
+
+    const response = await POST(request as never, {
+      params: Promise.resolve({ id: 'doc-1' }),
+    });
+
+    expect(response.status).toBe(200);
+    expect(getUserClient).toHaveBeenCalledWith(request);
+    expect(fetchMock.mock.calls[0][1].headers.Authorization).toBe('Bearer mobile-jwt');
+  });
+
   it('rejects extraction of another user document', async () => {
     documentQuery.mockResolvedValue({ data: null, error: { message: 'not found' } });
     const response = await POST(new Request('http://localhost') as never, {

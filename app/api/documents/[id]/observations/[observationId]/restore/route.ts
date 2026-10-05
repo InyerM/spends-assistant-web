@@ -3,14 +3,14 @@ import { AuthError, errorResponse, getUserClient } from '@/lib/api/server';
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export async function POST(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string; observationId: string }> },
 ): Promise<Response> {
   try {
     const { id, observationId } = await params;
     if (!UUID.test(id) || !UUID.test(observationId))
       return errorResponse('Invalid observation', 400);
-    const { supabase, userId } = await getUserClient();
+    const { supabase, userId } = await getUserClient(request);
     const { error: findError } = await supabase
       .from('document_observations')
       .select('id')
