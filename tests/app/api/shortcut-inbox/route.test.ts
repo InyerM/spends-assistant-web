@@ -238,7 +238,7 @@ describe('/api/shortcut-inbox', () => {
     const db = fakeDatabase();
     db.forwardingRoutes.push({
       user_id: 'owner-a',
-      status: 'active',
+      confirmation_received_at: '2026-10-03T16:00:00Z',
       user_confirmed_at: '2026-10-03T17:00:00Z',
     });
     db.rows.push({
@@ -256,12 +256,12 @@ describe('/api/shortcut-inbox', () => {
     expect((await response.json()).data).toEqual([db.rows[0]]);
   });
 
-  it('rejects forwarded email when a previously confirmed route is inactive', async () => {
+  it('rejects forwarded email when the confirmation message arrived but the owner has not verified it', async () => {
     const db = fakeDatabase();
     db.forwardingRoutes.push({
       user_id: 'owner-a',
-      status: 'paused',
-      user_confirmed_at: '2026-10-03T17:00:00Z',
+      confirmation_received_at: '2026-10-03T16:00:00Z',
+      user_confirmed_at: null,
     });
     getUserClient.mockResolvedValue({ supabase: db.supabase, userId: 'owner-a' });
     const response = await GET(

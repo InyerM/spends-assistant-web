@@ -75,11 +75,11 @@ export async function GET(request: NextRequest): Promise<Response> {
     if (source === 'forwarded_email') {
       const { data: route, error: routeError } = await supabase
         .from('email_forwarding_routes')
-        .select('status,user_confirmed_at')
+        .select('confirmation_received_at,user_confirmed_at')
         .eq('user_id', userId)
         .maybeSingle();
       if (routeError) return errorResponse('Email forwarding status unavailable');
-      if (route?.status !== 'active' || !route.user_confirmed_at) {
+      if (!route?.confirmation_received_at || !route.user_confirmed_at) {
         return errorResponse('Email forwarding is not verified', 403);
       }
     }
