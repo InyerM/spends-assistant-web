@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState, type Dispatch, type SetStateAction } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import {
   decideDocumentObservation,
@@ -18,6 +19,7 @@ import {
 } from '@/lib/document-review';
 import type { Account, Category, Transaction } from '@/types';
 import type { ReconciliationCandidate } from '@/lib/document-reconciliation';
+import { merchantSuggestionQuery } from '@/lib/api/queries/merchant-suggestion.queries';
 
 export interface DocumentReviewRow extends ReviewHistoryObservation {
   ordinal: number;
@@ -96,6 +98,7 @@ export function useDocumentBatchReview({
   suggestions = [],
 }: UseDocumentBatchReviewProps): UseDocumentBatchReviewResult {
   const t = useTranslations('documents');
+  const queryClient = useQueryClient();
   const [selected, setSelected] = useState<string[]>([]);
   const [drafts, setDrafts] = useState<Record<string, ReviewDraft>>({});
   const [bulkAccount, setBulkAccount] = useState('');
@@ -203,12 +206,49 @@ export function useDocumentBatchReview({
   };
 
   const editRow = (row: DocumentReviewRow): void => {
+    const draft = drafts[row.id] ?? draftFor(row);
     setSelected((current) => (current.includes(row.id) ? current : [...current, row.id]));
     setDrafts((current) =>
-      Object.hasOwn(current, row.id) ? current : { ...current, [row.id]: draftFor(row) },
+      Object.hasOwn(current, row.id) ? current : { ...current, [row.id]: draft },
     );
     setExpandedRowId((current) => (current === row.id ? null : row.id));
     setConfirmed(false);
+
+    const merchant = (row.counterparty || row.description).trim();
+    const categoryScope = categories
+      .filter((category) => category.type === 'expense' && category.is_active)
+      .map((category) => category.id)
+      .sort()
+      .join(',');
+    if (
+      expandedRowId === row.id ||
+      draft.type !== 'expense' ||
+      draft.currency !== 'COP' ||
+      draft.categoryId ||
+      aiBusy ||
+      merchant.length < 2 ||
+      merchant.length > 120 ||
+      !categoryScope
+    )
+      return;
+
+    setAiBusy(row.id);
+    void queryClient
+      .fetchQuery(merchantSuggestionQuery(merchant, categoryScope))
+      .then(({ category_id }) => {
+        const category = categories.find(
+          (candidate) =>
+            candidate.id === category_id && candidate.type === 'expense' && candidate.is_active,
+        );
+        if (!category) return;
+        setDrafts((current) => {
+          if (!Object.hasOwn(current, row.id) || current[row.id].categoryId) return current;
+          return { ...current, [row.id]: { ...current[row.id], categoryId: category.id } };
+        });
+        setAiHints((current) => ({ ...current, [row.id]: category.name }));
+      })
+      .catch(() => undefined)
+      .finally(() => setAiBusy((current) => (current === row.id ? null : current)));
   };
 
   const selectAll = (): void => {

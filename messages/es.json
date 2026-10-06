@@ -860,7 +860,7 @@
     "applyCategorySuggestion": "Aplicar categoría",
     "suggestCategoryWithAi": "Sugerir categoría con IA",
     "suggestingCategoryWithAi": "Consultando IA…",
-    "aiCategoryHint": "IA sugiere {name}. Revísala antes de aprobar.",
+    "aiCategoryHint": "Categoría sugerida: {name}. Revísala antes de aprobar.",
     "aiCategoryUnavailable": "La IA no encontró una categoría válida; elige una manualmente.",
     "aiCategoryFailed": "No se pudo consultar la IA.",
     "accountEvidenceHint": "Cuenta sugerida por los últimos cuatro dígitos visibles: {name}.",
