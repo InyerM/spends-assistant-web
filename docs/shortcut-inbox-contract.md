@@ -167,6 +167,21 @@ migration validation were completed before deployment on 2026-09-30.
 
 ## Reviewed new-transaction creation
 
+For a structured forwarded Lulo purchase, the web form suggests the parsed merchant, amount, event
+date and time, and a unique active COP Lulo credit card with the exact visible suffix. HTML entities
+are decoded for both forwarded and historical previews. Exact Tiendas Ara and Mercamas merchant
+aliases suggest the owner's active `groceries` expense category; other merchants still require
+recurring category history or manual choice. A suggestion never confirms the event time or posts a
+transaction by itself. Historical `lulo-email-backfill` items remain blocked from new transaction
+creation.
+
+For a Bancolombia forwarded notice, the form may suggest an account only when the sender domain
+matches the observed bank notification domain and the body contains exactly one explicit
+`T.Cred *1234` or `T.Deb *1234` reference. Credit evidence matches a unique owned active COP credit
+card; debit evidence matches a unique owned active COP savings or checking account. Missing,
+redacted, duplicate, and conflicting suffixes leave the account unset. This is a manual-review
+suggestion, not sender authentication or automatic posting.
+
 Migration `20260929000110_shortcut_create_transaction.sql` must follow the inbox and existing-match
 migrations. The signed-in reviewer opens **Create new transaction** for one pending inbox item and
 chooses an owned active account, an active category matching the chosen expense/income type, an

@@ -14,18 +14,21 @@ import {
 import {
   buildForwardedEmailDraft,
   inferForwardedAccount,
+  inferForwardedBancolombiaAccount,
   suggestForwardedCategory,
 } from '@/lib/shortcut-inbox/create-draft';
 import type { LuloNoticePreview } from '@/lib/shortcut-inbox/lulo-preview';
 
 export function ShortcutCreateForm({
   inboxId,
+  rawText,
   receivedAt,
   preview = null,
   onCreated,
   onCancel,
 }: {
   inboxId: string;
+  rawText: string;
   receivedAt: string;
   preview?: LuloNoticePreview | null;
   onCreated: () => void;
@@ -45,7 +48,9 @@ export function ShortcutCreateForm({
   const [review, setReview] = useState<CandidateReview | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const suggestedAccountId = inferForwardedAccount(preview, accountsQuery.data ?? []);
+  const suggestedAccountId =
+    inferForwardedAccount(preview, accountsQuery.data ?? []) ||
+    inferForwardedBancolombiaAccount(rawText, accountsQuery.data ?? []);
   const suggestedCategoryId = suggestForwardedCategory(
     preview,
     historyQuery.data?.data ?? [],

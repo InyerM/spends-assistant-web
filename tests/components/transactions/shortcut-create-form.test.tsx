@@ -10,20 +10,17 @@ vi.mock('next-intl', () => ({
 }));
 
 const receivedAt = '2026-09-26T01:20:00.000Z';
-const preview = previewLuloNotice(
-  'forwarded_email',
-  [
-    'From (unverified): notificaciones@lulobank.com',
-    '',
-    'Compra realizada',
-    '',
-    'Realizaste una compra en Demo Store por $121,000',
-    'Origen tarjeta de crédito •8456',
-    'Fecha 25 de septiembre de 2026',
-    'Hora 7:18 p.m.',
-  ].join('\n'),
-  receivedAt,
-);
+const rawText = [
+  'From (unverified): notificaciones@lulobank.com',
+  '',
+  'Compra realizada',
+  '',
+  'Realizaste una compra en Demo Store por $121,000',
+  'Origen tarjeta de crédito •8456',
+  'Fecha 25 de septiembre de 2026',
+  'Hora 7:18 p.m.',
+].join('\n');
+const preview = previewLuloNotice('forwarded_email', rawText, receivedAt);
 
 describe('ShortcutCreateForm', () => {
   vi.stubGlobal(
@@ -79,6 +76,7 @@ describe('ShortcutCreateForm', () => {
     render(
       <QueryClientProvider client={client}>
         <ShortcutCreateForm
+          rawText={rawText}
           inboxId='item-1'
           receivedAt={receivedAt}
           preview={preview}

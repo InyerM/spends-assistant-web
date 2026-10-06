@@ -1,4 +1,5 @@
 export type LuloNoticeKind = 'card_purchase' | 'zero_amount_authorization' | 'needs_review';
+import { decodeEmailEntities } from './email-text';
 
 export interface LuloNoticePreview {
   kind: LuloNoticeKind;
@@ -93,10 +94,11 @@ export function previewLuloNotice(
   receivedAt: string,
 ): LuloNoticePreview | null {
   if (source !== 'lulo-email-backfill' && source !== 'forwarded_email') return null;
+  rawText = decodeEmailEntities(rawText);
   const forwarded = /^From \(unverified\): ([^\n]+)\n\n([^\n]+)\n\n([\s\S]*)$/u.exec(rawText);
   if (source === 'forwarded_email') {
     if (!forwarded) return null;
-    rawText = `From: ${forwarded[1]}\nSubject: ${forwarded[2]}\n\n${decodeEmailEntities(forwarded[3])}`;
+    rawText = `From: ${forwarded[1]}\nSubject: ${forwarded[2]}\n\n${forwarded[3]}`;
   }
   const sender = oneLine(rawText, /^From:[ \t]*(.+)$/gimu);
   const subject = oneLine(rawText, /^Subject:[ \t]*(.+)$/gimu);
@@ -146,4 +148,3 @@ export function previewLuloNotice(
     },
   };
 }
-import { decodeEmailEntities } from './email-text';

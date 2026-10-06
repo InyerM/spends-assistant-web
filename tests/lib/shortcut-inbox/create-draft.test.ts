@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   buildForwardedEmailDraft,
   inferForwardedAccount,
+  inferForwardedBancolombiaAccount,
   suggestForwardedCategory,
 } from '@/lib/shortcut-inbox/create-draft';
 import { previewLuloNotice } from '@/lib/shortcut-inbox/lulo-preview';
@@ -60,16 +61,83 @@ describe('forwarded email creation draft', () => {
     ).toBe('');
   });
 
+  it('suggests the uniquely matching Bancolombia credit card from explicit notice evidence', () => {
+    const raw = [
+      'From (unverified): alertas@an.notificacionesbancolombia.com',
+      '',
+      'Alertas y Notificaciones',
+      '',
+      'Bancolombia: Compraste $50.000 en TIENDAS ARA con tu T.Cred *8887',
+    ].join('\n');
+    const credit = {
+      id: 'credit',
+      name: 'Mastercard',
+      institution: 'Bancolombia',
+      type: 'credit_card' as const,
+      last_four: '8887',
+      bank_account_last_four: null,
+      currency: 'COP',
+      is_active: true,
+      deleted_at: null,
+    };
+    const debit = { ...credit, id: 'debit', type: 'savings' as const };
+    expect(inferForwardedBancolombiaAccount(raw, [credit, debit])).toBe('credit');
+    expect(inferForwardedBancolombiaAccount(raw, [credit, { ...credit, id: 'second' }])).toBe('');
+    expect(
+      inferForwardedBancolombiaAccount(raw.replace('*8887', '*[number omitted]'), [credit]),
+    ).toBe('');
+    expect(
+      inferForwardedBancolombiaAccount(
+        raw.replace('an.notificacionesbancolombia.com', 'example.test'),
+        [credit],
+      ),
+    ).toBe('');
+  });
+
+  it('suggests a debit account only when the Bancolombia notice says debit card', () => {
+    const raw =
+      'From (unverified): alertas@ayn.notificacionesbancolombia.com\n\nBancolombia: Compraste $15.000 en CODA.CO con tu T.Deb *7799';
+    const debit = {
+      id: 'savings',
+      name: 'Savings',
+      institution: 'Bancolombia',
+      type: 'savings' as const,
+      last_four: '2651',
+      bank_account_last_four: '7799',
+      currency: 'COP',
+      is_active: true,
+      deleted_at: null,
+    };
+    expect(inferForwardedBancolombiaAccount(raw, [debit])).toBe('savings');
+    expect(inferForwardedBancolombiaAccount(raw, [{ ...debit, is_active: false }])).toBe('');
+  });
+
   it('proposes a category only from recurring merchant history and an active expense category', () => {
     const history = [
       { description: 'Demo Store', type: 'expense' as const, category_id: 'food' },
       { description: 'Demo Store #123', type: 'expense' as const, category_id: 'food' },
     ];
-    const category = { id: 'food', type: 'expense' as const, is_active: true };
+    const category = { id: 'food', slug: 'food', type: 'expense' as const, is_active: true };
     expect(suggestForwardedCategory(preview, history, [category])).toBe('food');
     expect(suggestForwardedCategory(preview, history, [{ ...category, is_active: false }])).toBe(
       '',
     );
     expect(suggestForwardedCategory(preview, history.slice(0, 1), [category])).toBe('');
+  });
+
+  it('proposes groceries for a known supermarket without requiring two previous purchases', () => {
+    const ara = previewLuloNotice(
+      'forwarded_email',
+      rawText.replace('Demo Store', 'TIENDAS ARA'),
+      receivedAt,
+    );
+    const groceries = {
+      id: 'groceries',
+      slug: 'groceries',
+      type: 'expense' as const,
+      is_active: true,
+    };
+    expect(suggestForwardedCategory(ara, [], [groceries])).toBe('groceries');
+    expect(suggestForwardedCategory(ara, [], [{ ...groceries, is_active: false }])).toBe('');
   });
 });

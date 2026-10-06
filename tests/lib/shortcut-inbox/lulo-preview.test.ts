@@ -70,6 +70,18 @@ describe('Lulo Gmail notice preview', () => {
     });
   });
 
+  it('decodes stored HTML entities in historical Lulo card evidence', () => {
+    const rawText = notice('Realizaste una compra en TIENDAS ARA por $50,000').replace(
+      'crédito •8456',
+      'cr&eacute;dito &#8226;8456',
+    );
+    expect(previewLuloNotice('lulo-email-backfill', rawText, receivedAt)).toMatchObject({
+      kind: 'card_purchase',
+      cardLastFour: '8456',
+      merchant: 'TIENDAS ARA',
+    });
+  });
+
   it('parses a Gmail plain body with CRLF line endings', () => {
     const rawText = notice('Realizaste una compra en Demo Store por $100').replaceAll('\n', '\r\n');
     expect(previewLuloNotice('lulo-email-backfill', rawText, receivedAt)?.kind).toBe(

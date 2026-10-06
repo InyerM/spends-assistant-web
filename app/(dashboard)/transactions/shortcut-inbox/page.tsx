@@ -439,6 +439,7 @@ export default function ShortcutInboxPage({
                   {createInboxId === item.id && item.status === 'pending' && !historicalLulo && (
                     <ShortcutCreateForm
                       inboxId={item.id}
+                      rawText={item.raw_text}
                       receivedAt={item.received_at}
                       preview={luloPreview}
                       onCancel={(): void => setCreateInboxId(null)}
