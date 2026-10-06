@@ -157,6 +157,12 @@ export default function LoginPage(): React.ReactElement {
                 {isLoading ? a('signingIn') : a('signIn')}
               </Button>
 
+              <Link
+                href='/forgot-password'
+                className='text-brand block text-center text-sm hover:underline'>
+                {a('forgotPassword')}
+              </Link>
+
               <div className='relative'>
                 <div className='absolute inset-0 flex items-center'>
                   <span className='border-border w-full border-t' />

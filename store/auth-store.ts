@@ -14,6 +14,8 @@ export interface AuthActions {
   signUp: (email: string, password: string) => Promise<void>;
   signInWithPassword: (email: string, password: string) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
+  requestPasswordReset: (email: string) => Promise<void>;
+  completePasswordReset: (password: string) => Promise<void>;
   signOut: () => Promise<void>;
   initialize: () => Promise<void>;
 }
@@ -91,6 +93,19 @@ export const useAuthStore = create<AuthStore>((set) => ({
       set({ isLoading: false });
       throw error;
     }
+  },
+
+  requestPasswordReset: async (email): Promise<void> => {
+    const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/auth/recovery`,
+    });
+    if (error) throw error;
+  },
+
+  completePasswordReset: async (password): Promise<void> => {
+    const { error } = await supabaseClient.auth.updateUser({ password });
+    if (error) throw error;
+    await useAuthStore.getState().signOut();
   },
 
   signOut: async (): Promise<void> => {

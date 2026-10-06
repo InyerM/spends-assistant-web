@@ -59,6 +59,24 @@ describe('authentication proxy', () => {
     expect(response.status).toBe(307);
   });
 
+  it('allows recovery requests before sign-in but protects the password form', async () => {
+    const requestLink = await proxy(request('/forgot-password'));
+    const callback = await proxy(request('/auth/recovery?code=synthetic'));
+    const resetForm = await proxy(request('/reset-password'));
+
+    expect(requestLink.status).toBe(200);
+    expect(callback.status).toBe(200);
+    expect(resetForm.status).toBe(307);
+  });
+
+  it('lets an already signed-in browser exchange a newer recovery code', async () => {
+    getUser.mockResolvedValue({ data: { user: { id: 'synthetic-user' } } });
+
+    const response = await proxy(request('/auth/recovery?code=synthetic'));
+
+    expect(response.status).toBe(200);
+  });
+
   it('allows the transaction creation route to verify a mobile bearer token', async () => {
     const response = await proxy(request('/api/transactions', 'POST', 'Bearer mobile-jwt'));
     expect(response.status).toBe(200);

@@ -84,4 +84,16 @@ describe('localized Anotto authentication', () => {
     expect(password).toHaveAttribute('aria-invalid', 'true');
     expect(password.getAttribute('aria-describedby')?.split(' ')).toContain(message.id);
   });
+
+  it('offers password recovery from the login screen', () => {
+    render(
+      <NextIntlClientProvider locale='es' messages={es}>
+        <LoginPage />
+      </NextIntlClientProvider>,
+    );
+    expect(screen.getByRole('link', { name: '¿Olvidaste tu contraseña?' })).toHaveAttribute(
+      'href',
+      '/forgot-password',
+    );
+  });
 });

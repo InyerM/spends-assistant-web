@@ -8,6 +8,8 @@ interface UseAuthReturn {
   signUp: AuthStore['signUp'];
   signInWithPassword: AuthStore['signInWithPassword'];
   signInWithGoogle: AuthStore['signInWithGoogle'];
+  requestPasswordReset: AuthStore['requestPasswordReset'];
+  completePasswordReset: AuthStore['completePasswordReset'];
   signOut: AuthStore['signOut'];
 }
 
@@ -18,6 +20,8 @@ export function useAuth(): UseAuthReturn {
   const signUp = useAuthStore((state) => state.signUp);
   const signInWithPassword = useAuthStore((state) => state.signInWithPassword);
   const signInWithGoogle = useAuthStore((state) => state.signInWithGoogle);
+  const requestPasswordReset = useAuthStore((state) => state.requestPasswordReset);
+  const completePasswordReset = useAuthStore((state) => state.completePasswordReset);
   const signOut = useAuthStore((state) => state.signOut);
 
   return {
@@ -27,6 +31,8 @@ export function useAuth(): UseAuthReturn {
     signUp,
     signInWithPassword,
     signInWithGoogle,
+    requestPasswordReset,
+    completePasswordReset,
     signOut,
   };
 }

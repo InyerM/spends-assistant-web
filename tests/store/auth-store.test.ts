@@ -5,6 +5,8 @@ const mockSignInWithOAuth = vi.fn();
 const mockSignOut = vi.fn();
 const mockGetUser = vi.fn();
 const mockOnAuthStateChange = vi.fn();
+const mockResetPasswordForEmail = vi.fn();
+const mockUpdateUser = vi.fn();
 
 vi.mock('@/lib/supabase/client', () => ({
   supabaseClient: {
@@ -14,6 +16,8 @@ vi.mock('@/lib/supabase/client', () => ({
       signOut: (...args: unknown[]) => mockSignOut(...args),
       getUser: (...args: unknown[]) => mockGetUser(...args),
       onAuthStateChange: (...args: unknown[]) => mockOnAuthStateChange(...args),
+      resetPasswordForEmail: (...args: unknown[]) => mockResetPasswordForEmail(...args),
+      updateUser: (...args: unknown[]) => mockUpdateUser(...args),
     },
   },
 }));
@@ -21,6 +25,7 @@ vi.mock('@/lib/supabase/client', () => ({
 describe('useAuthStore', () => {
   beforeEach(async () => {
     vi.restoreAllMocks();
+    vi.clearAllMocks();
     // Reset module to get fresh store
     vi.resetModules();
   });
@@ -165,6 +170,40 @@ describe('useAuthStore', () => {
 
     await expect(useAuthStore.getState().signInWithGoogle()).rejects.toThrow('OAuth error');
     expect(useAuthStore.getState().isLoading).toBe(false);
+  });
+
+  it('sends a recovery link back to the requesting host without authenticating the browser', async () => {
+    const { useAuthStore } = await import('@/store/auth-store');
+    mockResetPasswordForEmail.mockResolvedValue({ error: null });
+
+    await useAuthStore.getState().requestPasswordReset('user@example.com');
+
+    expect(mockResetPasswordForEmail).toHaveBeenCalledWith('user@example.com', {
+      redirectTo: `${window.location.origin}/auth/recovery`,
+    });
+    expect(useAuthStore.getState().isAuthenticated).toBe(false);
+  });
+
+  it('updates a recovered password and signs out the temporary session', async () => {
+    const { useAuthStore } = await import('@/store/auth-store');
+    mockUpdateUser.mockResolvedValue({ error: null });
+    mockSignOut.mockResolvedValue({ error: null });
+
+    await useAuthStore.getState().completePasswordReset('new-password-123');
+
+    expect(mockUpdateUser).toHaveBeenCalledWith({ password: 'new-password-123' });
+    expect(mockSignOut).toHaveBeenCalled();
+    expect(useAuthStore.getState().isAuthenticated).toBe(false);
+  });
+
+  it('does not sign out when recovery password update fails', async () => {
+    const { useAuthStore } = await import('@/store/auth-store');
+    mockUpdateUser.mockResolvedValue({ error: new Error('Expired recovery session') });
+
+    await expect(useAuthStore.getState().completePasswordReset('new-password-123')).rejects.toThrow(
+      'Expired recovery session',
+    );
+    expect(mockSignOut).not.toHaveBeenCalled();
   });
 
   it('onAuthStateChange callback updates user', async () => {

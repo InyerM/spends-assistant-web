@@ -3,7 +3,7 @@ import { createServerClient } from '@supabase/ssr';
 import { env } from './lib/env';
 import { defaultLocale, isValidLocale } from './i18n/config';
 
-const PUBLIC_PATHS = ['/login', '/register', '/auth'];
+const PUBLIC_PATHS = ['/login', '/register', '/forgot-password', '/auth'];
 const MOBILE_BEARER_ROUTES: Record<string, readonly string[]> = {
   '/api/api-keys': ['GET', 'POST', 'DELETE'],
   '/api/settings/sessions': ['GET'],
@@ -109,7 +109,7 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
   }
 
   // Redirect authenticated users away from auth pages
-  if (user && isPublicPath(pathname)) {
+  if (user && isPublicPath(pathname) && pathname !== '/auth/recovery') {
     const url = request.nextUrl.clone();
     url.pathname = '/dashboard';
     return NextResponse.redirect(url);
