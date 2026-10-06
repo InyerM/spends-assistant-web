@@ -7,6 +7,13 @@ import { useTranslations } from 'next-intl';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { ShortcutCreateForm } from '@/components/transactions/shortcut-create-form';
 import { ForwardedEmailEvidence } from '@/components/transactions/forwarded-email-evidence';
 import { previewLuloNotice, type LuloNoticePreview } from '@/lib/shortcut-inbox/lulo-preview';
@@ -272,23 +279,24 @@ export default function ShortcutInboxPage({
       </div>
 
       <div className='border-border flex flex-wrap items-center justify-between gap-3 border-b pb-5'>
-        <label className='text-sm font-medium' htmlFor='inbox-status'>
-          {t('statusFilter')}
-        </label>
-        <select
-          id='inbox-status'
-          className='border-input bg-card rounded-md border px-3 py-2 text-sm'
+        <label className='text-sm font-medium'>{t('statusFilter')}</label>
+        <Select
           value={filter}
-          onChange={(event): void => {
-            setFilter(event.target.value);
+          onValueChange={(value): void => {
+            setFilter(value);
             setPage(1);
           }}>
-          <option value='pending'>{t('pending')}</option>
-          <option value='non_transaction'>{t('nonTransaction')}</option>
-          <option value='dismissed'>{t('dismissed')}</option>
-          <option value='matched'>{t('matched')}</option>
-          <option value='created'>{t('created')}</option>
-        </select>
+          <SelectTrigger aria-label={t('statusFilter')}>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value='pending'>{t('pending')}</SelectItem>
+            <SelectItem value='non_transaction'>{t('nonTransaction')}</SelectItem>
+            <SelectItem value='dismissed'>{t('dismissed')}</SelectItem>
+            <SelectItem value='matched'>{t('matched')}</SelectItem>
+            <SelectItem value='created'>{t('created')}</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       {error && (
@@ -367,7 +375,6 @@ export default function ShortcutInboxPage({
                     {item.status === 'pending' && !historicalLulo && (
                       <Button
                         size='sm'
-                        variant='outline'
                         onClick={(): void =>
                           setCreateInboxId(createInboxId === item.id ? null : item.id)
                         }>
@@ -401,7 +408,7 @@ export default function ShortcutInboxPage({
                       item.status !== 'created' && (
                         <Button
                           size='sm'
-                          variant='ghost'
+                          variant='destructive'
                           disabled={busyId === item.id}
                           onClick={(): void => void review(item.id, 'dismissed')}>
                           {t('dismiss')}
@@ -433,6 +440,7 @@ export default function ShortcutInboxPage({
                     <ShortcutCreateForm
                       inboxId={item.id}
                       receivedAt={item.received_at}
+                      preview={luloPreview}
                       onCancel={(): void => setCreateInboxId(null)}
                       onCreated={(): void => {
                         setCreateInboxId(null);

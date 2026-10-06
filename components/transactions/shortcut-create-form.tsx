@@ -1,147 +1,114 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
-
-interface AccountOption {
-  id: string;
-  name: string;
-}
-interface CategoryOption {
-  id: string;
-  name: string;
-  type: string;
-}
-interface Candidate {
-  id: string;
-  date: string;
-  amount: string;
-  description: string;
-  source: string;
-}
-interface CandidateReview {
-  status: 'review_required' | 'review_overflow';
-  candidate_hash?: string;
-  candidate_count: number;
-  candidates: Candidate[];
-}
-
-function bogotaDate(value: string): string {
-  const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone: 'America/Bogota',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).formatToParts(new Date(value));
-  const part = (kind: string): string => parts.find(({ type }) => type === kind)?.value ?? '';
-  return `${part('year')}-${part('month')}-${part('day')}`;
-}
+import { ShortcutCreateFields, type ShortcutCreateDraft } from './shortcut-create-fields';
+import { useAccounts } from '@/lib/api/queries/account.queries';
+import { useCategories } from '@/lib/api/queries/category.queries';
+import { useTransactions } from '@/lib/api/queries/transaction.queries';
+import {
+  useCreateInboxTransaction,
+  type CandidateReview,
+} from '@/lib/api/mutations/shortcut-inbox.mutations';
+import {
+  buildForwardedEmailDraft,
+  inferForwardedAccount,
+  suggestForwardedCategory,
+} from '@/lib/shortcut-inbox/create-draft';
+import type { LuloNoticePreview } from '@/lib/shortcut-inbox/lulo-preview';
 
 export function ShortcutCreateForm({
   inboxId,
   receivedAt,
+  preview = null,
   onCreated,
   onCancel,
 }: {
   inboxId: string;
   receivedAt: string;
+  preview?: LuloNoticePreview | null;
   onCreated: () => void;
   onCancel: () => void;
 }): React.ReactElement {
   const t = useTranslations('shortcutInbox');
-  const [accounts, setAccounts] = useState<AccountOption[]>([]);
-  const [categories, setCategories] = useState<CategoryOption[]>([]);
-  const [optionsError, setOptionsError] = useState(false);
-  const [accountId, setAccountId] = useState('');
-  const [categoryId, setCategoryId] = useState('');
-  const [type, setType] = useState<'expense' | 'income'>('expense');
-  const [amount, setAmount] = useState('');
-  const [date, setDate] = useState(() => bogotaDate(receivedAt));
-  const [eventTime, setEventTime] = useState('');
-  const [eventTimeConfirmed, setEventTimeConfirmed] = useState(false);
-  const [description, setDescription] = useState('');
+  const accountsQuery = useAccounts();
+  const categoriesQuery = useCategories();
+  const historyQuery = useTransactions(
+    { search: preview?.merchant ?? '', type: 'expense', limit: 50 },
+    { enabled: preview?.kind === 'card_purchase' && !!preview.merchant },
+  );
+  const createMutation = useCreateInboxTransaction();
+  const [fieldDraft, setFieldDraft] = useState(() => buildForwardedEmailDraft(preview, receivedAt));
+  const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [review, setReview] = useState<CandidateReview | null>(null);
-  const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    let active = true;
-    void Promise.all([
-      fetch('/api/accounts', { cache: 'no-store' }),
-      fetch('/api/categories', { cache: 'no-store' }),
-    ])
-      .then(async ([accountResponse, categoryResponse]) => {
-        if (!accountResponse.ok || !categoryResponse.ok) throw new Error('Options unavailable');
-        const [accountRows, categoryRows] = await Promise.all([
-          accountResponse.json() as Promise<AccountOption[]>,
-          categoryResponse.json() as Promise<CategoryOption[]>,
-        ]);
-        if (active) {
-          setAccounts(accountRows);
-          setCategories(categoryRows);
-        }
-      })
-      .catch(() => {
-        if (active) setOptionsError(true);
-      });
-    return (): void => {
-      active = false;
-    };
-  }, []);
+  const suggestedAccountId = inferForwardedAccount(preview, accountsQuery.data ?? []);
+  const suggestedCategoryId = suggestForwardedCategory(
+    preview,
+    historyQuery.data?.data ?? [],
+    categoriesQuery.data ?? [],
+  );
+  const draft: ShortcutCreateDraft = {
+    ...fieldDraft,
+    accountId: selectedAccountId ?? suggestedAccountId,
+    categoryId: selectedCategoryId ?? (fieldDraft.type === 'expense' ? suggestedCategoryId : ''),
+  };
 
-  const clearReview = (): void => {
+  const changeDraft = (patch: Partial<ShortcutCreateDraft>): void => {
+    const { accountId, categoryId, ...fields } = patch;
+    if (accountId !== undefined) setSelectedAccountId(accountId);
+    if (categoryId !== undefined) setSelectedCategoryId(categoryId);
+    if (Object.keys(fields).length) setFieldDraft((current) => ({ ...current, ...fields }));
     setReview(null);
     setError(null);
   };
+
   const submit = async (confirmDistinct = false): Promise<void> => {
-    if (eventTime && !eventTimeConfirmed) {
+    if (
+      !draft.accountId ||
+      !draft.categoryId ||
+      !draft.amount ||
+      !draft.date ||
+      !draft.description.trim()
+    ) {
+      setError(t('completeRequired'));
+      return;
+    }
+    if (draft.eventTime && !draft.eventTimeConfirmed) {
       setError(t('eventTimeNeedsConfirmation'));
       return;
     }
-    setBusy(true);
     setError(null);
     try {
-      const response = await fetch(`/api/shortcut-inbox/${inboxId}/create`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          account_id: accountId,
-          category_id: categoryId,
-          type,
-          amount,
-          date,
-          description,
-          ...(eventTime
-            ? { event_at: `${date}T${eventTime}:00-05:00`, event_time_confirmed: true }
-            : {}),
-          ...(confirmDistinct && review?.status === 'review_required'
-            ? {
-                reviewed_candidate_hash: review.candidate_hash,
-                confirm_distinct: true,
-              }
-            : {}),
-        }),
+      const result = await createMutation.mutateAsync({
+        inboxId,
+        account_id: draft.accountId,
+        category_id: draft.categoryId,
+        type: draft.type,
+        amount: draft.amount,
+        date: draft.date,
+        description: draft.description.trim(),
+        ...(draft.eventTime
+          ? {
+              event_at: `${draft.date}T${draft.eventTime}:00-05:00`,
+              event_time_confirmed: true as const,
+            }
+          : {}),
+        ...(confirmDistinct && review?.status === 'review_required'
+          ? { reviewed_candidate_hash: review.candidate_hash, confirm_distinct: true as const }
+          : {}),
       });
-      const result = (await response.json()) as
-        | CandidateReview
-        | { status?: string; error?: string };
-      if (
-        response.status === 409 &&
-        (result.status === 'review_required' || result.status === 'review_overflow')
-      ) {
-        setReview(result as CandidateReview);
-        return;
-      }
-      if (!response.ok) throw new Error('Creation failed');
-      onCreated();
+      if (result.status === 'created') onCreated();
+      else setReview(result);
     } catch {
       setError(t('createFailed'));
-    } finally {
-      setBusy(false);
     }
   };
 
+  const optionsError = accountsQuery.isError || categoriesQuery.isError;
   return (
     <form
       className='border-border bg-card-overlay space-y-4 rounded-xl border p-4 text-sm'
@@ -156,130 +123,12 @@ export function ShortcutCreateForm({
           {t('optionsFailed')}
         </p>
       )}
-      <div className='grid gap-3 sm:grid-cols-2'>
-        <label className='space-y-1'>
-          {t('createAccount')}
-          <select
-            className='border-input bg-card block w-full rounded-md border p-2'
-            value={accountId}
-            required
-            onChange={(event): void => {
-              setAccountId(event.target.value);
-              clearReview();
-            }}>
-            <option value=''>{t('chooseAccount')}</option>
-            {accounts.map((account) => (
-              <option key={account.id} value={account.id}>
-                {account.name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className='space-y-1'>
-          {t('createType')}
-          <select
-            className='border-input bg-card block w-full rounded-md border p-2'
-            value={type}
-            onChange={(event): void => {
-              setType(event.target.value as 'expense' | 'income');
-              setCategoryId('');
-              clearReview();
-            }}>
-            <option value='expense'>{t('expense')}</option>
-            <option value='income'>{t('income')}</option>
-          </select>
-        </label>
-        <label className='space-y-1'>
-          {t('createCategory')}
-          <select
-            className='border-input bg-card block w-full rounded-md border p-2'
-            value={categoryId}
-            required
-            onChange={(event): void => {
-              setCategoryId(event.target.value);
-              clearReview();
-            }}>
-            <option value=''>{t('chooseCategory')}</option>
-            {categories
-              .filter((category) => category.type === type)
-              .map((category) => (
-                <option key={category.id} value={category.id}>
-                  {category.name}
-                </option>
-              ))}
-          </select>
-        </label>
-        <label className='space-y-1'>
-          {t('createAmount')}
-          <input
-            className='border-input bg-card block w-full rounded-md border p-2'
-            type='text'
-            inputMode='decimal'
-            pattern='(0|[1-9][0-9]{0,12})(\.[0-9]{1,2})?'
-            value={amount}
-            required
-            onChange={(event): void => {
-              setAmount(event.target.value);
-              clearReview();
-            }}
-          />
-        </label>
-        <label className='space-y-1'>
-          {t('createDate')}
-          <input
-            className='border-input bg-card block w-full rounded-md border p-2'
-            type='date'
-            value={date}
-            required
-            onChange={(event): void => {
-              setDate(event.target.value);
-              setEventTimeConfirmed(false);
-              clearReview();
-            }}
-          />
-        </label>
-        <label className='space-y-1'>
-          {t('createEventTime')}
-          <input
-            className='border-input bg-card block w-full rounded-md border p-2'
-            type='time'
-            step={60}
-            value={eventTime}
-            onChange={(event): void => {
-              setEventTime(event.target.value);
-              setEventTimeConfirmed(false);
-              clearReview();
-            }}
-          />
-        </label>
-        {eventTime && (
-          <label className='flex items-center gap-2 sm:col-span-2'>
-            <input
-              type='checkbox'
-              checked={eventTimeConfirmed}
-              onChange={(event): void => {
-                setEventTimeConfirmed(event.target.checked);
-                clearReview();
-              }}
-            />
-            {t('confirmEventTime')}
-          </label>
-        )}
-        <label className='space-y-1 sm:col-span-2'>
-          {t('createDescription')}
-          <input
-            className='border-input bg-card block w-full rounded-md border p-2'
-            type='text'
-            maxLength={500}
-            value={description}
-            required
-            onChange={(event): void => {
-              setDescription(event.target.value);
-              clearReview();
-            }}
-          />
-        </label>
-      </div>
+      <ShortcutCreateFields
+        draft={draft}
+        accounts={accountsQuery.data ?? []}
+        categories={categoriesQuery.data ?? []}
+        onChange={changeDraft}
+      />
       {error && (
         <p role='alert' className='text-destructive'>
           {error}
@@ -298,7 +147,10 @@ export function ShortcutCreateForm({
             </p>
           ))}
           {review.status === 'review_required' && (
-            <Button type='button' disabled={busy} onClick={(): void => void submit(true)}>
+            <Button
+              type='button'
+              disabled={createMutation.isPending}
+              onClick={(): void => void submit(true)}>
               {t('confirmDistinct')}
             </Button>
           )}
@@ -306,11 +158,22 @@ export function ShortcutCreateForm({
       )}
       <div className='flex gap-2'>
         {!review && (
-          <Button type='submit' disabled={busy || optionsError}>
+          <Button
+            type='submit'
+            disabled={
+              createMutation.isPending ||
+              optionsError ||
+              accountsQuery.isPending ||
+              categoriesQuery.isPending
+            }>
             {t('saveReviewed')}
           </Button>
         )}
-        <Button type='button' variant='outline' disabled={busy} onClick={onCancel}>
+        <Button
+          type='button'
+          variant='outline'
+          disabled={createMutation.isPending}
+          onClick={onCancel}>
           {t('cancelCreate')}
         </Button>
       </div>

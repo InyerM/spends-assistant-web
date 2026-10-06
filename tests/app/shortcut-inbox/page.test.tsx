@@ -1,5 +1,6 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import ShortcutInboxPage from '@/app/(dashboard)/transactions/shortcut-inbox/page';
 
 const { useTranslations } = vi.hoisted(() => {
@@ -53,9 +54,37 @@ const { useTranslations } = vi.hoisted(() => {
   return { useTranslations: vi.fn(() => translate) };
 });
 
-vi.mock('next-intl', () => ({ useTranslations }));
+vi.mock('next-intl', () => ({ useTranslations, useLocale: () => 'en' }));
+vi.mock('@/hooks/use-user-settings', () => ({
+  useUserSettings: () => ({ data: { hour_format: '24h' } }),
+}));
+
+function renderPage(source?: 'forwarded_email'): void {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  render(
+    <QueryClientProvider client={client}>
+      <ShortcutInboxPage source={source} />
+    </QueryClientProvider>,
+  );
+}
+
+async function selectOption(label: string, option: string): Promise<void> {
+  fireEvent.click(screen.getByRole('combobox', { name: label }));
+  fireEvent.click(await screen.findByRole('option', { name: option }));
+}
 
 describe('Shortcut inbox review page', () => {
+  beforeEach(() => {
+    Element.prototype.scrollIntoView = vi.fn();
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        observe(): void {}
+        unobserve(): void {}
+        disconnect(): void {}
+      },
+    );
+  });
   afterEach(() => {
     cleanup();
     vi.unstubAllGlobals();
@@ -90,7 +119,7 @@ describe('Shortcut inbox review page', () => {
         }),
       ),
     );
-    render(<ShortcutInboxPage />);
+    renderPage();
     expect(await screen.findByText('Zero-amount card notice')).toBeInTheDocument();
     expect(screen.getByText('No charge inferred from a zero-amount notice.')).toBeInTheDocument();
     expect(screen.getByText('Gmail message time')).toBeInTheDocument();
@@ -131,7 +160,7 @@ describe('Shortcut inbox review page', () => {
         }),
       ),
     );
-    render(<ShortcutInboxPage />);
+    renderPage();
     expect(await screen.findByText('Possible card purchase')).toBeInTheDocument();
     expect(screen.getByText('$492,041.3')).toBeInTheDocument();
     expect(screen.getByText('Example Network')).toBeInTheDocument();
@@ -171,9 +200,12 @@ describe('Shortcut inbox review page', () => {
         }),
       ),
     );
-    render(<ShortcutInboxPage source='forwarded_email' />);
+    renderPage('forwarded_email');
     expect(await screen.findByText('Possible card purchase')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Create new transaction' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Create new transaction' })).toHaveAttribute(
+      'data-variant',
+      'default',
+    );
     expect(screen.queryByRole('link', { name: 'Export JSON' })).not.toBeInTheDocument();
   });
 
@@ -197,11 +229,14 @@ describe('Shortcut inbox review page', () => {
         }),
       ),
     );
-    render(<ShortcutInboxPage />);
+    renderPage();
     await waitFor(() => expect(screen.getByText('Synthetic private message')).toBeInTheDocument());
     expect(useTranslations).toHaveBeenCalledWith('shortcutInbox');
     expect(screen.getByRole('button', { name: 'Mark non-transaction' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Dismiss' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Dismiss' })).toHaveAttribute(
+      'data-variant',
+      'destructive',
+    );
     expect(screen.queryByRole('button', { name: /confirm transaction/i })).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Export JSON' })).toHaveAttribute(
       'href',
@@ -230,7 +265,7 @@ describe('Shortcut inbox review page', () => {
         }),
       ),
     );
-    render(<ShortcutInboxPage />);
+    renderPage();
     expect(await screen.findByText('Unverified sender')).toBeInTheDocument();
     expect(screen.getByText('Forwarded email')).toBeInTheDocument();
     expect(screen.getByText('new-alert@bancolombia.example')).toBeInTheDocument();
@@ -276,7 +311,7 @@ describe('Shortcut inbox review page', () => {
       ),
     );
     vi.stubGlobal('fetch', fetchMock);
-    render(<ShortcutInboxPage />);
+    renderPage();
     fireEvent.click(await screen.findByRole('button', { name: 'Show possible matches' }));
     expect(await screen.findByText('Synthetic existing transaction')).toBeInTheDocument();
     expect(screen.getByText('Possible match')).toBeInTheDocument();
@@ -342,7 +377,7 @@ describe('Shortcut inbox review page', () => {
       );
     });
     vi.stubGlobal('fetch', fetchMock);
-    render(<ShortcutInboxPage />);
+    renderPage();
     fireEvent.click(await screen.findByRole('button', { name: 'Show possible matches' }));
     expect(await screen.findByText('Synthetic existing transaction')).toBeInTheDocument();
     expect(
@@ -394,8 +429,8 @@ describe('Shortcut inbox review page', () => {
       );
     });
     vi.stubGlobal('fetch', fetchMock);
-    render(<ShortcutInboxPage />);
-    fireEvent.change(screen.getByLabelText('statusFilter'), { target: { value: 'matched' } });
+    renderPage();
+    await selectOption('statusFilter', 'Matched existing transaction');
     expect(await screen.findByText('Linked transaction: tx-1')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Review incorrect match' }));
     expect(
@@ -421,10 +456,12 @@ describe('Shortcut inbox review page', () => {
   it('requires reviewed fields and a second explicit decision when the database finds a same-value transaction', async () => {
     const fetchMock = vi.fn().mockImplementation((url: string, init?: RequestInit) => {
       if (url === '/api/accounts')
-        return Promise.resolve(Response.json([{ id: 'account-1', name: 'Cash' }]));
+        return Promise.resolve(
+          Response.json([{ id: 'account-1', name: 'Cash', is_active: true, deleted_at: null }]),
+        );
       if (url === '/api/categories')
         return Promise.resolve(
-          Response.json([{ id: 'category-1', name: 'Food', type: 'expense' }]),
+          Response.json([{ id: 'category-1', name: 'Food', type: 'expense', is_active: true }]),
         );
       if (url.endsWith('/create')) {
         const body = JSON.parse(init?.body as string) as Record<string, unknown>;
@@ -478,14 +515,16 @@ describe('Shortcut inbox review page', () => {
       );
     });
     vi.stubGlobal('fetch', fetchMock);
-    render(<ShortcutInboxPage />);
+    renderPage();
     fireEvent.click(await screen.findByRole('button', { name: 'Create new transaction' }));
     expect(
       fetchMock.mock.calls.some(([url]) => typeof url === 'string' && url.endsWith('/create')),
     ).toBe(false);
-    expect(await screen.findByRole('option', { name: 'Food' })).toBeInTheDocument();
-    fireEvent.change(screen.getByLabelText('Account'), { target: { value: 'account-1' } });
-    fireEvent.change(screen.getByLabelText('Category'), { target: { value: 'category-1' } });
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Save reviewed transaction' })).toBeEnabled(),
+    );
+    await selectOption('Account', 'Cash');
+    await selectOption('Category', 'Food');
     fireEvent.change(screen.getByLabelText('Amount'), { target: { value: '1200.50' } });
     fireEvent.change(screen.getByLabelText('Description'), {
       target: { value: 'Reviewed market expense' },
@@ -515,10 +554,12 @@ describe('Shortcut inbox review page', () => {
   it('requires explicit time confirmation and sends the original instant for a delayed SMS', async () => {
     const fetchMock = vi.fn().mockImplementation((url: string) => {
       if (url === '/api/accounts')
-        return Promise.resolve(Response.json([{ id: 'account-1', name: 'Savings' }]));
+        return Promise.resolve(
+          Response.json([{ id: 'account-1', name: 'Savings', is_active: true, deleted_at: null }]),
+        );
       if (url === '/api/categories')
         return Promise.resolve(
-          Response.json([{ id: 'category-1', name: 'Food', type: 'expense' }]),
+          Response.json([{ id: 'category-1', name: 'Food', type: 'expense', is_active: true }]),
         );
       if (url.endsWith('/create'))
         return Promise.resolve(
@@ -542,16 +583,19 @@ describe('Shortcut inbox review page', () => {
       );
     });
     vi.stubGlobal('fetch', fetchMock);
-    render(<ShortcutInboxPage />);
+    renderPage();
     fireEvent.click(await screen.findByRole('button', { name: 'Create new transaction' }));
-    expect(await screen.findByRole('option', { name: 'Food' })).toBeInTheDocument();
-    fireEvent.change(screen.getByLabelText('Account'), { target: { value: 'account-1' } });
-    fireEvent.change(screen.getByLabelText('Category'), { target: { value: 'category-1' } });
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Save reviewed transaction' })).toBeEnabled(),
+    );
+    await selectOption('Account', 'Savings');
+    await selectOption('Category', 'Food');
     fireEvent.change(screen.getByLabelText('Amount'), { target: { value: '1200.50' } });
     fireEvent.change(screen.getByLabelText('Description'), { target: { value: 'Reviewed meal' } });
-    fireEvent.change(screen.getByLabelText('Original transaction time'), {
-      target: { value: '14:29' },
-    });
+    fireEvent.change(screen.getByRole('textbox', { name: 'Hours' }), { target: { value: '14' } });
+    fireEvent.blur(screen.getByRole('textbox', { name: 'Hours' }));
+    fireEvent.change(screen.getByRole('textbox', { name: 'Minutes' }), { target: { value: '29' } });
+    fireEvent.blur(screen.getByRole('textbox', { name: 'Minutes' }));
     fireEvent.click(screen.getByRole('button', { name: 'Save reviewed transaction' }));
     expect(
       fetchMock.mock.calls.some(([url]) => typeof url === 'string' && url.endsWith('/create')),
@@ -576,10 +620,12 @@ describe('Shortcut inbox review page', () => {
   it('shows a bounded candidate overflow and does not offer creation', async () => {
     const fetchMock = vi.fn().mockImplementation((url: string) => {
       if (url === '/api/accounts')
-        return Promise.resolve(Response.json([{ id: 'account-1', name: 'Cash' }]));
+        return Promise.resolve(
+          Response.json([{ id: 'account-1', name: 'Cash', is_active: true, deleted_at: null }]),
+        );
       if (url === '/api/categories')
         return Promise.resolve(
-          Response.json([{ id: 'category-1', name: 'Food', type: 'expense' }]),
+          Response.json([{ id: 'category-1', name: 'Food', type: 'expense', is_active: true }]),
         );
       if (url.endsWith('/create'))
         return Promise.resolve(
@@ -618,11 +664,13 @@ describe('Shortcut inbox review page', () => {
       );
     });
     vi.stubGlobal('fetch', fetchMock);
-    render(<ShortcutInboxPage />);
+    renderPage();
     fireEvent.click(await screen.findByRole('button', { name: 'Create new transaction' }));
-    expect(await screen.findByRole('option', { name: 'Food' })).toBeInTheDocument();
-    fireEvent.change(screen.getByLabelText('Account'), { target: { value: 'account-1' } });
-    fireEvent.change(screen.getByLabelText('Category'), { target: { value: 'category-1' } });
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Save reviewed transaction' })).toBeEnabled(),
+    );
+    await selectOption('Account', 'Cash');
+    await selectOption('Category', 'Food');
     fireEvent.change(screen.getByLabelText('Amount'), { target: { value: '1200.50' } });
     fireEvent.change(screen.getByLabelText('Description'), {
       target: { value: 'Reviewed expense' },
