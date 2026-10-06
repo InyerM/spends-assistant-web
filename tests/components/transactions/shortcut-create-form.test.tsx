@@ -99,6 +99,9 @@ describe('ShortcutCreateForm', () => {
         'Lulo card',
       ),
     );
+    expect(
+      screen.getByRole('combobox', { name: 'createAccount' }).textContent.match(/Lulo card/g),
+    ).toHaveLength(1);
     await waitFor(() =>
       expect(screen.getByRole('combobox', { name: 'createCategory' })).toHaveTextContent('Food'),
     );
@@ -150,6 +153,9 @@ describe('ShortcutCreateForm', () => {
         'Shopping',
       ),
     );
+    expect(
+      screen.getByRole('combobox', { name: 'createAccount' }).textContent.match(/chooseAccount/g),
+    ).toHaveLength(1);
     expect(screen.getByText('merchantCatalogSuggestion')).toBeInTheDocument();
     expect(fetchMock).toHaveBeenCalledWith(
       '/api/merchant-suggestions',

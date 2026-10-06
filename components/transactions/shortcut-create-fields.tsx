@@ -33,7 +33,6 @@ export function ShortcutCreateFields({
   onChange: (patch: Partial<ShortcutCreateDraft>) => void;
 }): React.ReactElement {
   const t = useTranslations('shortcutInbox');
-  const selectedAccount = accounts.find((account) => account.id === draft.accountId);
   return (
     <div className='grid gap-3 sm:grid-cols-2'>
       <div className='space-y-1'>
@@ -44,12 +43,7 @@ export function ShortcutCreateFields({
             if (accountId) onChange({ accountId });
           }}>
           <SelectTrigger className='w-full' aria-label={t('createAccount')}>
-            <SelectValue className='sr-only' placeholder={t('chooseAccount')} />
-            <span className='truncate' aria-hidden='true'>
-              {selectedAccount
-                ? `${selectedAccount.name}${selectedAccount.last_four ? ` · ${selectedAccount.last_four}` : ''}`
-                : t('chooseAccount')}
-            </span>
+            <SelectValue placeholder={t('chooseAccount')} />
           </SelectTrigger>
           <SelectContent>
             {accounts
