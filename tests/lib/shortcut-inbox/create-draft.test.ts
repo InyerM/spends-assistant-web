@@ -21,6 +21,39 @@ const rawText = [
 const preview = previewLuloNotice('forwarded_email', rawText, receivedAt)!;
 
 describe('forwarded email creation draft', () => {
+  it('prefills an older indented Lulo notice for review without confirming its time or guessing a category', () => {
+    const stored = [
+      'From (unverified): notificaciones@lulobank.com',
+      '',
+      'Compra realizada',
+      '',
+      '                    Realizaste una compra en CEA PRACTICAR DEL EJE por $1,550,000',
+      'Origen tarjeta de crédito •8456',
+      'Fecha 6 de octubre de 2026',
+      'Hora 3:42 p.m.',
+    ].join('\n');
+    const parsed = previewLuloNotice('forwarded_email', stored, '2026-10-06T20:42:35Z');
+    const account = {
+      id: 'lulo-8456',
+      name: 'Lulo credit card',
+      institution: 'Lulobank',
+      type: 'credit_card' as const,
+      last_four: '8456',
+      currency: 'COP',
+      is_active: true,
+      deleted_at: null,
+    };
+
+    expect(buildForwardedEmailDraft(parsed, '2026-10-06T20:42:35Z')).toMatchObject({
+      amount: '1550000.00',
+      date: '2026-10-06',
+      eventTime: '15:42',
+      eventTimeConfirmed: false,
+      description: 'CEA PRACTICAR DEL EJE',
+    });
+    expect(inferForwardedAccount(parsed, [account])).toBe('lulo-8456');
+    expect(suggestForwardedCategory(parsed, [], [])).toBe('');
+  });
   it('prefills only parsed purchase values and never confirms the event time', () => {
     expect(buildForwardedEmailDraft(preview, receivedAt)).toEqual({
       type: 'expense',

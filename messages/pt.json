@@ -215,6 +215,8 @@
     "reversalFailed": "Não foi possível desfazer a correspondência. Atualize e revise o estado atual.",
     "createdTransaction": "Transação criada",
     "createNew": "Criar nova transação",
+    "reanalyzeEmail": "Analisar e revisar transação",
+    "reanalyzeFailed": "Não foi possível salvar a análise. Revise a mensagem antes de criar uma transação.",
     "createTitle": "Revisar nova transação",
     "createCaution": "Confira cada campo com a mensagem original. Nada é salvo até você confirmar.",
     "aiCategorySuggestion": "A IA sugeriu esta categoria pelo nome do estabelecimento. Confira com a compra original antes de salvar.",

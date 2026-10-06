@@ -1,5 +1,24 @@
 import { useMutation } from '@tanstack/react-query';
 
+export interface ForwardedEmailAnalysis {
+  status: 'parsed' | 'needs_review';
+  account_id: string | null;
+  category_id: string | null;
+  category_source: 'ai' | 'catalog' | null;
+}
+
+export async function analyzeForwardedEmail(inboxId: string): Promise<ForwardedEmailAnalysis> {
+  const response = await fetch(`/api/shortcut-inbox/${inboxId}/analyze`, { method: 'POST' });
+  if (!response.ok) throw new Error('Email analysis failed');
+  return (await response.json()) as ForwardedEmailAnalysis;
+}
+
+export function useAnalyzeForwardedEmail(): ReturnType<
+  typeof useMutation<ForwardedEmailAnalysis, Error, string>
+> {
+  return useMutation({ mutationFn: analyzeForwardedEmail });
+}
+
 export interface CandidateReview {
   status: 'review_required' | 'review_overflow';
   candidate_hash?: string;

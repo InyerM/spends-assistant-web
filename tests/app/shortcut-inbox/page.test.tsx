@@ -27,6 +27,7 @@ const { useTranslations } = vi.hoisted(() => {
       reversalCaution:
         'The message returns to review, but it cannot be linked to this same transaction again. Choose a different existing transaction or create a reviewed one. The transaction and balance remain unchanged.',
       createNew: 'Create new transaction',
+      reanalyzeEmail: 'Analyze and review transaction',
       createAccount: 'Account',
       createCategory: 'Category',
       createAmount: 'Amount',
@@ -202,11 +203,135 @@ describe('Shortcut inbox review page', () => {
     );
     renderPage('forwarded_email');
     expect(await screen.findByText('Possible card purchase')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Create new transaction' })).toHaveAttribute(
+    expect(screen.getByRole('button', { name: 'Analyze and review transaction' })).toHaveAttribute(
       'data-variant',
       'default',
     );
     expect(screen.queryByRole('link', { name: 'Export JSON' })).not.toBeInTheDocument();
+  });
+
+  it('reanalyzes an older pending email into a review draft without posting', async () => {
+    const fetchMock = vi.fn().mockImplementation((url: string) => {
+      if (url.startsWith('/api/shortcut-inbox?'))
+        return Promise.resolve(
+          Response.json({
+            data: [
+              {
+                id: 'older-mail',
+                source: 'forwarded_email',
+                external_id: 'older-message',
+                received_at: '2026-10-06T20:42:35Z',
+                raw_text: [
+                  'From (unverified): notificaciones@lulobank.com',
+                  '',
+                  'Compra realizada',
+                  '',
+                  '                    Realizaste una compra en CEA PRACTICAR DEL EJE por $1,550,000',
+                  'Origen tarjeta de crédito •8456',
+                  'Fecha 6 de octubre de 2026',
+                  'Hora 3:42 p.m.',
+                ].join('\n'),
+                status: 'pending',
+                created_at: '2026-10-06T20:42:35Z',
+              },
+            ],
+            count: 1,
+          }),
+        );
+      if (url === '/api/accounts')
+        return Promise.resolve(
+          Response.json([
+            {
+              id: 'lulo-card',
+              name: 'Lulo card',
+              institution: 'Lulobank',
+              type: 'credit_card',
+              last_four: '8456',
+              currency: 'COP',
+              is_active: true,
+              deleted_at: null,
+            },
+          ]),
+        );
+      if (url === '/api/categories')
+        return Promise.resolve(
+          Response.json([
+            {
+              id: 'education',
+              slug: 'education',
+              name: 'Education',
+              type: 'expense',
+              is_active: true,
+            },
+            {
+              id: 'restaurant',
+              slug: 'restaurants',
+              name: 'Restaurants',
+              type: 'expense',
+              is_active: true,
+            },
+          ]),
+        );
+      if (url.startsWith('/api/transactions?'))
+        return Promise.resolve(
+          Response.json({
+            data: [
+              { description: 'CEA PRACTICAR DEL EJE', type: 'expense', category_id: 'restaurant' },
+              { description: 'CEA PRACTICAR DEL EJE', type: 'expense', category_id: 'restaurant' },
+            ],
+            count: 2,
+          }),
+        );
+      if (url === '/api/shortcut-inbox/older-mail/analyze')
+        return Promise.resolve(
+          Response.json({
+            status: 'parsed',
+            account_id: 'lulo-card',
+            category_id: 'education',
+            category_source: 'catalog',
+          }),
+        );
+      if (url === '/api/settings/user-settings')
+        return Promise.resolve(Response.json({ hour_format: '24h' }));
+      throw new Error(`Unexpected request: ${url}`);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    renderPage('forwarded_email');
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Analyze and review transaction' }));
+    expect(await screen.findByText('createTitle')).toBeInTheDocument();
+    expect(await screen.findByRole('textbox', { name: 'Amount' })).toHaveValue('1550000.00');
+    expect(screen.getByRole('textbox', { name: 'Description' })).toHaveValue(
+      'CEA PRACTICAR DEL EJE',
+    );
+    await waitFor(() => expect(screen.getByRole('textbox', { name: 'Hours' })).toHaveValue('15'));
+    expect(screen.getByRole('textbox', { name: 'Minutes' })).toHaveValue('42');
+    expect(
+      screen.getByRole('checkbox', { name: 'I confirmed this original time' }),
+    ).not.toBeChecked();
+    await waitFor(() =>
+      expect(screen.getByRole('combobox', { name: 'Account' })).toHaveTextContent('Lulo card'),
+    );
+    await waitFor(() =>
+      expect(screen.getByRole('combobox', { name: 'Category' })).toHaveTextContent('Education'),
+    );
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/shortcut-inbox/older-mail/analyze',
+      expect.objectContaining({ method: 'POST' }),
+    );
+    expect(fetchMock.mock.calls.some(([url]) => url === '/api/merchant-suggestions')).toBe(false);
+    expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith('/create'))).toBe(false);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Analyze and review transaction' }));
+    expect(screen.queryByText('createTitle')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Analyze and review transaction' }));
+    expect(await screen.findByText('createTitle')).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.getByRole('combobox', { name: 'Category' })).toHaveTextContent('Education'),
+    );
+    expect(
+      fetchMock.mock.calls.filter(([url]) => url === '/api/shortcut-inbox/older-mail/analyze'),
+    ).toHaveLength(2);
   });
 
   it('shows private intake text with reversible review actions and no confirmation action', async () => {

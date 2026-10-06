@@ -241,6 +241,8 @@
     "reversalFailed": "No se pudo deshacer la coincidencia. Actualiza y revisa el estado actual.",
     "createdTransaction": "Transacción creada",
     "createNew": "Crear nueva transacción",
+    "reanalyzeEmail": "Analizar y revisar transacción",
+    "reanalyzeFailed": "No pudimos guardar el análisis. Revisa el mensaje antes de crear una transacción.",
     "createTitle": "Revisar nueva transacción",
     "createCaution": "Comprueba cada dato propuesto con el mensaje original y tus registros. Nada se guarda hasta que confirmes.",
     "aiCategorySuggestion": "La IA sugirió esta categoría según el nombre del comercio. Compruébala con la compra original antes de guardar.",

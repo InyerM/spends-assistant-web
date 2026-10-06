@@ -70,6 +70,43 @@ describe('Lulo Gmail notice preview', () => {
     });
   });
 
+  it('extracts an indented Lulo purchase from stored HTML-derived email text', () => {
+    const rawText = [
+      'From (unverified): notificaciones@lulobank.com',
+      '',
+      'Compra realizada',
+      '',
+      'Compra realizada',
+      '                    Realizaste una compra en CEA PRACTICAR DEL EJE por $1,550,000',
+      'Origen tarjeta de crédito •8456',
+      'Fecha 6 de octubre de 2026',
+      'Hora 3:42 p.m.',
+    ].join('\n');
+
+    expect(previewLuloNotice('forwarded_email', rawText, '2026-10-06T20:42:35Z')).toMatchObject({
+      kind: 'card_purchase',
+      confidence: 'structured',
+      merchant: 'CEA PRACTICAR DEL EJE',
+      amountDecimal: '1550000.00',
+      cardLastFour: '8456',
+      bankEventAt: '2026-10-06T15:42:00-05:00',
+    });
+  });
+
+  it('accepts indented card, date, and time evidence with Colombian amount separators', () => {
+    const rawText = notice('Realizaste una compra en Otro Comercio por $1.550.000,50')
+      .replace('Origen tarjeta', '    Origen tarjeta')
+      .replace('Fecha 25', '    Fecha 25')
+      .replace('Hora 7', '    Hora 7');
+    expect(previewLuloNotice('lulo-email-backfill', rawText, receivedAt)).toMatchObject({
+      kind: 'card_purchase',
+      merchant: 'Otro Comercio',
+      amountDecimal: '1550000.50',
+      cardLastFour: '8456',
+      bankEventAt: '2026-09-25T19:18:00-05:00',
+    });
+  });
+
   it('decodes stored HTML entities in historical Lulo card evidence', () => {
     const rawText = notice('Realizaste una compra en TIENDAS ARA por $50,000').replace(
       'crédito •8456',

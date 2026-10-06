@@ -11,6 +11,7 @@ import { useMerchantSuggestion } from '@/lib/api/queries/merchant-suggestion.que
 import {
   useCreateInboxTransaction,
   type CandidateReview,
+  type ForwardedEmailAnalysis,
 } from '@/lib/api/mutations/shortcut-inbox.mutations';
 import {
   buildForwardedEmailDraft,
@@ -25,6 +26,7 @@ export function ShortcutCreateForm({
   rawText,
   receivedAt,
   preview = null,
+  analysis,
   onCreated,
   onCancel,
 }: {
@@ -32,6 +34,7 @@ export function ShortcutCreateForm({
   rawText: string;
   receivedAt: string;
   preview?: LuloNoticePreview | null;
+  analysis?: ForwardedEmailAnalysis;
   onCreated: () => void;
   onCancel: () => void;
 }): React.ReactElement {
@@ -49,7 +52,20 @@ export function ShortcutCreateForm({
   const [review, setReview] = useState<CandidateReview | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const persistedAccountId = (accountsQuery.data ?? []).some(
+    (account) =>
+      account.id === analysis?.account_id &&
+      account.is_active &&
+      !account.deleted_at &&
+      account.type === 'credit_card' &&
+      account.currency === 'COP' &&
+      account.last_four === preview?.cardLastFour &&
+      /\blulo\b/iu.test(`${account.institution ?? ''} ${account.name}`),
+  )
+    ? (analysis?.account_id ?? '')
+    : '';
   const suggestedAccountId =
+    persistedAccountId ||
     inferForwardedAccount(preview, accountsQuery.data ?? []) ||
     inferForwardedBancolombiaAccount(rawText, accountsQuery.data ?? []);
   const localSuggestedCategoryId = suggestForwardedCategory(
@@ -57,6 +73,12 @@ export function ShortcutCreateForm({
     historyQuery.data?.data ?? [],
     categoriesQuery.data ?? [],
   );
+  const persistedCategoryId = (categoriesQuery.data ?? []).some(
+    (category) =>
+      category.id === analysis?.category_id && category.type === 'expense' && category.is_active,
+  )
+    ? (analysis?.category_id ?? '')
+    : '';
   const categoryScope = (categoriesQuery.data ?? [])
     .filter((category) => category.type === 'expense' && category.is_active)
     .map((category) => category.id)
@@ -67,6 +89,7 @@ export function ShortcutCreateForm({
     !historyQuery.isPending &&
       categoriesQuery.isSuccess &&
       !localSuggestedCategoryId &&
+      analysis === undefined &&
       selectedCategoryId === null,
     categoryScope,
   );
@@ -78,7 +101,7 @@ export function ShortcutCreateForm({
   )
     ? (aiCategoryQuery.data?.category_id ?? '')
     : '';
-  const suggestedCategoryId = localSuggestedCategoryId || aiCategoryId;
+  const suggestedCategoryId = persistedCategoryId || localSuggestedCategoryId || aiCategoryId;
   const draft: ShortcutCreateDraft = {
     ...fieldDraft,
     accountId: selectedAccountId ?? suggestedAccountId,

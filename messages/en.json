@@ -241,6 +241,8 @@
     "reversalFailed": "Could not undo the match. Refresh and review the current state.",
     "createdTransaction": "Created transaction",
     "createNew": "Create new transaction",
+    "reanalyzeEmail": "Analyze and review transaction",
+    "reanalyzeFailed": "We could not save an analysis. Review the message manually before creating a transaction.",
     "createTitle": "Review a new transaction",
     "createCaution": "Check every prefilled field against the original message and your records. Nothing is saved until you confirm.",
     "aiCategorySuggestion": "AI suggested this category from the merchant name. Check it against the original purchase before saving.",

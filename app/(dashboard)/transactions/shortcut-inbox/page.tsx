@@ -17,6 +17,10 @@ import {
 import { ShortcutCreateForm } from '@/components/transactions/shortcut-create-form';
 import { ForwardedEmailEvidence } from '@/components/transactions/forwarded-email-evidence';
 import { previewLuloNotice, type LuloNoticePreview } from '@/lib/shortcut-inbox/lulo-preview';
+import {
+  useAnalyzeForwardedEmail,
+  type ForwardedEmailAnalysis,
+} from '@/lib/api/mutations/shortcut-inbox.mutations';
 
 interface InboxItem {
   id: string;
@@ -148,6 +152,28 @@ export default function ShortcutInboxPage({
   const [reverseBusyId, setReverseBusyId] = useState<string | null>(null);
   const [reverseErrorId, setReverseErrorId] = useState<string | null>(null);
   const [createInboxId, setCreateInboxId] = useState<string | null>(null);
+  const [analysisById, setAnalysisById] = useState<Record<string, ForwardedEmailAnalysis>>({});
+  const [analysisBusyId, setAnalysisBusyId] = useState<string | null>(null);
+  const analysisMutation = useAnalyzeForwardedEmail();
+
+  const openCreateReview = async (item: InboxItem): Promise<void> => {
+    if (createInboxId === item.id) {
+      setCreateInboxId(null);
+      return;
+    }
+    if (item.source === 'forwarded_email') {
+      setAnalysisBusyId(item.id);
+      try {
+        const analysis = await analysisMutation.mutateAsync(item.id);
+        setAnalysisById((current) => ({ ...current, [item.id]: analysis }));
+      } catch {
+        setError(t('reanalyzeFailed'));
+      } finally {
+        setAnalysisBusyId(null);
+      }
+    }
+    setCreateInboxId(item.id);
+  };
 
   const load = useCallback(async (): Promise<void> => {
     setLoading(true);
@@ -375,10 +401,9 @@ export default function ShortcutInboxPage({
                     {item.status === 'pending' && !historicalLulo && (
                       <Button
                         size='sm'
-                        onClick={(): void =>
-                          setCreateInboxId(createInboxId === item.id ? null : item.id)
-                        }>
-                        {t('createNew')}
+                        disabled={analysisBusyId === item.id}
+                        onClick={(): void => void openCreateReview(item)}>
+                        {t(item.source === 'forwarded_email' ? 'reanalyzeEmail' : 'createNew')}
                       </Button>
                     )}
                     {item.status !== 'pending' &&
@@ -442,6 +467,7 @@ export default function ShortcutInboxPage({
                       rawText={item.raw_text}
                       receivedAt={item.received_at}
                       preview={luloPreview}
+                      analysis={analysisById[item.id]}
                       onCancel={(): void => setCreateInboxId(null)}
                       onCreated={(): void => {
                         setCreateInboxId(null);

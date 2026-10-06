@@ -104,11 +104,14 @@ export function previewLuloNotice(
   const subject = oneLine(rawText, /^Subject:[ \t]*(.+)$/gimu);
   const purchase = oneLine(
     rawText,
-    /^(Realizaste una compra en (.{1,100}?) por (\$[ \t]*[0-9][0-9.,]*))$/gimu,
+    /^[ \t]*(Realizaste una compra en (.{1,100}?) por (\$[ \t]*[0-9][0-9.,]*))[ \t]*$/gimu,
   );
-  const card = oneLine(rawText, /^(Origen tarjeta de cr[eé]dito[ \t]*[•*][ \t]*(\d{4}))$/gimu);
-  const date = oneLine(rawText, /^(Fecha[ \t]+(.+))$/gimu);
-  const time = oneLine(rawText, /^(Hora[ \t]+(.+))$/gimu);
+  const card = oneLine(
+    rawText,
+    /^[ \t]*(Origen tarjeta de cr[eé]dito[ \t]*[•*][ \t]*(\d{4}))[ \t]*$/gimu,
+  );
+  const date = oneLine(rawText, /^[ \t]*(Fecha[ \t]+(.+?))[ \t]*$/gimu);
+  const time = oneLine(rawText, /^[ \t]*(Hora[ \t]+(.+?))[ \t]*$/gimu);
   const senderAddress = sender?.[1].match(/<([^<>]+)>$/u)?.[1] ?? sender?.[1].trim();
   const amountText = purchase?.[3] ?? null;
   const amountDecimal = amountText ? parseAmount(amountText) : null;
