@@ -7,6 +7,7 @@ import { ShortcutCreateFields, type ShortcutCreateDraft } from './shortcut-creat
 import { useAccounts } from '@/lib/api/queries/account.queries';
 import { useCategories } from '@/lib/api/queries/category.queries';
 import { useTransactions } from '@/lib/api/queries/transaction.queries';
+import { useMerchantSuggestion } from '@/lib/api/queries/merchant-suggestion.queries';
 import {
   useCreateInboxTransaction,
   type CandidateReview,
@@ -51,11 +52,33 @@ export function ShortcutCreateForm({
   const suggestedAccountId =
     inferForwardedAccount(preview, accountsQuery.data ?? []) ||
     inferForwardedBancolombiaAccount(rawText, accountsQuery.data ?? []);
-  const suggestedCategoryId = suggestForwardedCategory(
+  const localSuggestedCategoryId = suggestForwardedCategory(
     preview,
     historyQuery.data?.data ?? [],
     categoriesQuery.data ?? [],
   );
+  const categoryScope = (categoriesQuery.data ?? [])
+    .filter((category) => category.type === 'expense' && category.is_active)
+    .map((category) => category.id)
+    .sort()
+    .join(',');
+  const aiCategoryQuery = useMerchantSuggestion(
+    preview?.kind === 'card_purchase' ? (preview.merchant ?? undefined) : undefined,
+    !historyQuery.isPending &&
+      categoriesQuery.isSuccess &&
+      !localSuggestedCategoryId &&
+      selectedCategoryId === null,
+    categoryScope,
+  );
+  const aiCategoryId = (categoriesQuery.data ?? []).some(
+    (category) =>
+      category.id === aiCategoryQuery.data?.category_id &&
+      category.type === 'expense' &&
+      category.is_active,
+  )
+    ? (aiCategoryQuery.data?.category_id ?? '')
+    : '';
+  const suggestedCategoryId = localSuggestedCategoryId || aiCategoryId;
   const draft: ShortcutCreateDraft = {
     ...fieldDraft,
     accountId: selectedAccountId ?? suggestedAccountId,
@@ -134,6 +157,15 @@ export function ShortcutCreateForm({
         categories={categoriesQuery.data ?? []}
         onChange={changeDraft}
       />
+      {aiCategoryId && selectedCategoryId === null && (
+        <p className='text-muted-foreground'>
+          {t(
+            aiCategoryQuery.data?.source === 'catalog'
+              ? 'merchantCatalogSuggestion'
+              : 'aiCategorySuggestion',
+          )}
+        </p>
+      )}
       {error && (
         <p role='alert' className='text-destructive'>
           {error}

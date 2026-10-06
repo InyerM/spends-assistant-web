@@ -64,4 +64,29 @@ describe('authentication proxy', () => {
     expect(response.status).toBe(200);
     expect(getUser).not.toHaveBeenCalled();
   });
+
+  it.each([
+    ['/api/api-keys', 'GET'],
+    ['/api/api-keys', 'POST'],
+    ['/api/api-keys', 'DELETE'],
+    ['/api/settings/sessions', 'GET'],
+    ['/api/settings/user-settings', 'GET'],
+    ['/api/settings/user-settings', 'PATCH'],
+    ['/api/settings/account/delete', 'POST'],
+    ['/api/merchant-suggestions', 'POST'],
+  ])('lets %s %s verify mobile bearer tokens in its route', async (path, method) => {
+    const response = await proxy(request(path, method, 'Bearer mobile-jwt'));
+    expect(response.status).toBe(200);
+    expect(getUser).not.toHaveBeenCalled();
+  });
+
+  it('keeps mobile security routes protected without a bearer token', async () => {
+    for (const [path, method] of [
+      ['/api/api-keys', 'GET'],
+      ['/api/settings/user-settings', 'PATCH'],
+      ['/api/settings/account/delete', 'POST'],
+    ]) {
+      expect((await proxy(request(path, method))).status).toBe(307);
+    }
+  });
 });

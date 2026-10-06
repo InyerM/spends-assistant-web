@@ -243,6 +243,8 @@
     "createNew": "Crear nueva transacción",
     "createTitle": "Revisar nueva transacción",
     "createCaution": "Comprueba cada dato propuesto con el mensaje original y tus registros. Nada se guarda hasta que confirmes.",
+    "aiCategorySuggestion": "La IA sugirió esta categoría según el nombre del comercio. Compruébala con la compra original antes de guardar.",
+    "merchantCatalogSuggestion": "Esta categoría coincide con un comercio reconocido. Compruébala con la compra original antes de guardar.",
     "optionsFailed": "No se pudieron cargar cuentas o categorías. Inténtalo de nuevo.",
     "createAccount": "Cuenta",
     "chooseAccount": "Elige una cuenta",

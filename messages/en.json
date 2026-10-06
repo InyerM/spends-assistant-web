@@ -243,6 +243,8 @@
     "createNew": "Create new transaction",
     "createTitle": "Review a new transaction",
     "createCaution": "Check every prefilled field against the original message and your records. Nothing is saved until you confirm.",
+    "aiCategorySuggestion": "AI suggested this category from the merchant name. Check it against the original purchase before saving.",
+    "merchantCatalogSuggestion": "This category matches a recognized merchant. Check it against the original purchase before saving.",
     "optionsFailed": "Could not load accounts or categories. Try again.",
     "createAccount": "Account",
     "chooseAccount": "Choose an account",

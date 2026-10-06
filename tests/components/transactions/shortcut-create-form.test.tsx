@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ShortcutCreateForm } from '@/components/transactions/shortcut-create-form';
@@ -23,14 +23,16 @@ const rawText = [
 const preview = previewLuloNotice('forwarded_email', rawText, receivedAt);
 
 describe('ShortcutCreateForm', () => {
-  vi.stubGlobal(
-    'ResizeObserver',
-    class {
-      observe(): void {}
-      unobserve(): void {}
-      disconnect(): void {}
-    },
-  );
+  beforeEach(() => {
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        observe(): void {}
+        unobserve(): void {}
+        disconnect(): void {}
+      },
+    );
+  });
   afterEach(() => {
     cleanup();
     vi.unstubAllGlobals();
@@ -99,6 +101,62 @@ describe('ShortcutCreateForm', () => {
     );
     await waitFor(() =>
       expect(screen.getByRole('combobox', { name: 'createCategory' })).toHaveTextContent('Food'),
+    );
+    expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith('/create'))).toBe(false);
+  });
+
+  it('suggests broad shopping for a first-time marketplace purchase without creating it', async () => {
+    const amazonText = rawText.replace('Demo Store', 'AMAZON.COM');
+    const amazonPreview = previewLuloNotice('forwarded_email', amazonText, receivedAt);
+    const fetchMock = vi.fn().mockImplementation((url: string) => {
+      if (url === '/api/accounts') return Promise.resolve(Response.json([]));
+      if (url === '/api/categories')
+        return Promise.resolve(
+          Response.json([
+            {
+              id: 'shopping-id',
+              slug: 'shopping',
+              name: 'Shopping',
+              type: 'expense',
+              is_active: true,
+            },
+          ]),
+        );
+      if (url.startsWith('/api/transactions?'))
+        return Promise.resolve(Response.json({ data: [], count: 0 }));
+      if (url === '/api/merchant-suggestions')
+        return Promise.resolve(Response.json({ category_id: 'shopping-id', source: 'catalog' }));
+      if (url === '/api/settings/user-settings')
+        return Promise.resolve(Response.json({ hour_format: '24h' }));
+      throw new Error(`Unexpected request: ${url}`);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <ShortcutCreateForm
+          rawText={amazonText}
+          inboxId='item-amazon'
+          receivedAt={receivedAt}
+          preview={amazonPreview}
+          onCreated={vi.fn()}
+          onCancel={vi.fn()}
+        />
+      </QueryClientProvider>,
+    );
+
+    await waitFor(() =>
+      expect(screen.getByRole('combobox', { name: 'createCategory' })).toHaveTextContent(
+        'Shopping',
+      ),
+    );
+    expect(screen.getByText('merchantCatalogSuggestion')).toBeInTheDocument();
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/merchant-suggestions',
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({ merchant: 'AMAZON.COM' }),
+      }),
     );
     expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith('/create'))).toBe(false);
   });

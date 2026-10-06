@@ -4,6 +4,13 @@ import { env } from './lib/env';
 import { defaultLocale, isValidLocale } from './i18n/config';
 
 const PUBLIC_PATHS = ['/login', '/register', '/auth'];
+const MOBILE_BEARER_ROUTES: Record<string, readonly string[]> = {
+  '/api/api-keys': ['GET', 'POST', 'DELETE'],
+  '/api/settings/sessions': ['GET'],
+  '/api/settings/user-settings': ['GET', 'PATCH'],
+  '/api/settings/account/delete': ['POST'],
+  '/api/merchant-suggestions': ['POST'],
+};
 
 function isPublicPath(pathname: string): boolean {
   return PUBLIC_PATHS.some((path) => pathname.startsWith(path));
@@ -27,6 +34,14 @@ function ensureLocaleCookie(request: NextRequest, response: NextResponse): void 
 
 export async function proxy(request: NextRequest): Promise<NextResponse> {
   const pathname = request.nextUrl.pathname;
+
+  if (
+    request.headers.has('authorization') &&
+    Object.hasOwn(MOBILE_BEARER_ROUTES, pathname) &&
+    MOBILE_BEARER_ROUTES[pathname].includes(request.method)
+  ) {
+    return NextResponse.next({ request });
+  }
 
   // The Shortcut inbox handler validates bearer API keys without a browser session.
   if (
