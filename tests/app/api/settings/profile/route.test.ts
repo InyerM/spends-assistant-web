@@ -41,7 +41,7 @@ describe('Settings Profile API', () => {
         userId: 'user-1',
       });
 
-      const response = await GET();
+      const response = await GET(new NextRequest('http://localhost/api/settings/profile'));
       expect(response.status).toBe(200);
       const body = await response.json();
       expect(body.email).toBe('test@test.com');
@@ -59,7 +59,7 @@ describe('Settings Profile API', () => {
         userId: 'user-1',
       });
 
-      const response = await GET();
+      const response = await GET(new NextRequest('http://localhost/api/settings/profile'));
       expect(response.status).toBe(401);
     });
   });

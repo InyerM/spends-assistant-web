@@ -29,6 +29,7 @@ describe('mobile workspace navigation', () => {
     ['receivables', '/receivables'],
     ['reliefFunds', '/relief-funds'],
     ['emailInbox', '/inbox'],
+    ['help', '/help'],
   ] as const)('exposes and opens %s in the More sheet', (key, href) => {
     render(
       <NextIntlClientProvider locale='es' messages={es}>

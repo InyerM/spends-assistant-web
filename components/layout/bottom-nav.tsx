@@ -18,6 +18,7 @@ import {
   Landmark,
   HandCoins,
   HeartHandshake,
+  LifeBuoy,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -49,6 +50,7 @@ const moreItems: NavItem[] = [
   { titleKey: 'reliefFunds', href: '/relief-funds', icon: HeartHandshake },
   { titleKey: 'automation', href: '/automation', icon: Zap },
   { titleKey: 'settings', href: '/settings', icon: Settings },
+  { titleKey: 'help', href: '/help', icon: LifeBuoy },
 ];
 
 function isActivePath(pathname: string, href: string): boolean {

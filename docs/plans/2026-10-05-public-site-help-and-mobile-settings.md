@@ -1,7 +1,8 @@
 # Anotto public site, help, and mobile settings roadmap
 
-Status: planned after the email inbox and transaction review flows are stable on web and iOS. This
-document does not authorize a domain cutover or publication of legal text.
+Status: web Help Center implemented at `/help` and in Settings; mobile Help, a verified support
+address, the public site, and legal pages remain planned. This document does not authorize a domain
+cutover or publication of legal text.
 
 ## Current boundary
 
@@ -15,15 +16,18 @@ document does not authorize a domain cutover or publication of legal text.
 
 ## Delivery order
 
-1. **Help content and contact route.** Define a support address on `anotto.app` and verify delivery
-   before displaying it. Write a short FAQ for forwarded email verification, pending versus posted
-   transactions, duplicate review, receipts, account balances, and data deletion. Add Help entry
-   points to web Settings and mobile Settings. Keep support messages separate from private financial
-   records; instruct users to remove account numbers and credentials from attachments.
-2. **Mobile security and API keys.** Match the released web settings contract: session/security
-   information, key list, create, copy once, and revoke. Use owner-scoped APIs or RPCs; do not put a
-   service key in the mobile bundle or persist a newly generated secret in local logs or the offline
-   database. Show offline read-only state and require connectivity for mutations.
+1. **Help content and contact route.** The web app now has a localized FAQ and Help entry points in
+   navigation and Settings (`app/(dashboard)/help/page.tsx`,
+   `components/settings/help-section.tsx`). Define a support address on `anotto.app` and verify
+   delivery before displaying it. Add Help to mobile Settings. Keep support messages separate from
+   private financial records; instruct users to remove account numbers and credentials from
+   attachments.
+2. **Mobile security and API keys.** Match the released web settings contract: recent device
+   metadata, key list, create, copy once, and revoke API keys. The current `user_sessions` table
+   stores device activity, not Supabase auth session IDs; its DELETE endpoint only removes a display
+   record and must never be labeled as session revocation. Use owner-scoped APIs or RPCs; do not put
+   a service key in the mobile bundle or persist a newly generated secret in local logs or the
+   offline database. Show offline read-only state and require connectivity for mutations.
 3. **Transactional subdomain.** Use `app.anotto.app` for the existing Vercel app. Add its DNS and
    Vercel alias, update Supabase redirect allowlists and any Google/OAuth callback settings, verify
    sign-in and email links, and update the Worker's `APP_URL` plus mobile web links. Preserve old

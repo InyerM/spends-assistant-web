@@ -1,12 +1,12 @@
 import type { NextRequest } from 'next/server';
 import { getUserClient, AuthError, jsonResponse, errorResponse } from '@/lib/api/server';
 
-export async function GET(): Promise<Response> {
+export async function GET(request: NextRequest): Promise<Response> {
   try {
-    const { supabase } = await getUserClient();
+    const { supabase, accessToken } = await getUserClient(request);
     const {
       data: { user },
-    } = await supabase.auth.getUser();
+    } = await supabase.auth.getUser(accessToken);
 
     if (!user) return errorResponse('Unauthorized', 401);
 
@@ -26,7 +26,7 @@ export async function GET(): Promise<Response> {
 
 export async function PATCH(request: NextRequest): Promise<Response> {
   try {
-    const { supabase } = await getUserClient();
+    const { supabase } = await getUserClient(request);
     const body = (await request.json()) as { display_name?: string };
 
     const { data, error } = await supabase.auth.updateUser({

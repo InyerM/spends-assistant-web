@@ -63,11 +63,52 @@
     "loans": "Empréstimos",
     "receivables": "Empréstimos concedidos",
     "reliefFunds": "Fundos de ajuda",
+    "help": "Ajuda",
     "collapseSidebar": "Recolher menu lateral",
     "expandSidebar": "Expandir menu lateral",
     "userMenu": "Menu do usuário",
     "primaryNavigation": "Navegação principal",
     "addTransaction": "Adicionar transação"
+  },
+  "helpCenter": {
+    "title": "Central de ajuda",
+    "description": "Encontre respostas sobre e-mails, comprovantes e transações. Cada resposta indica onde você pode agir.",
+    "faqTitle": "Perguntas frequentes",
+    "faqDescription": "Abra uma pergunta para ver o próximo passo.",
+    "forwarding": {
+      "question": "Como confirmo o encaminhamento do Gmail?",
+      "answer": "No Gmail, abra a mensagem de confirmação recebida no Anotto e aprove o link. Depois, marque o endereço como verificado nas configurações de encaminhamento e crie um filtro para os avisos que deseja enviar.",
+      "link": "Configurar encaminhamento"
+    },
+    "pending": {
+      "question": "Por que um e-mail ainda está pendente?",
+      "answer": "Primeiro confirme o endereço de encaminhamento no Gmail e depois confira a caixa de entrada. Ela mostra se um aviso precisa de revisão ou contém uma possível transação.",
+      "link": "Revisar encaminhamento"
+    },
+    "duplicates": {
+      "question": "E se uma transação já existir?",
+      "answer": "Antes de criar outra transação, abra as possíveis correspondências na caixa de entrada. Se for o mesmo movimento, descarte o aviso pelo motivo de duplicidade.",
+      "link": "Abrir caixa de entrada"
+    },
+    "receipts": {
+      "question": "Como reviso um comprovante?",
+      "answer": "Envie a imagem ou o PDF em Documentos. Confira data, valor, moeda e conta sugeridos; corrija cada movimento antes de aprová-lo.",
+      "link": "Ver documentos"
+    },
+    "balances": {
+      "question": "Por que o saldo de uma conta pode ser diferente?",
+      "answer": "Pode faltar um débito automático, uma tarifa ou um movimento antigo. Revise os movimentos da conta e compare com um extrato disponível antes de ajustar o saldo.",
+      "link": "Revisar contas"
+    },
+    "deletion": {
+      "question": "Onde encontro a exclusão da minha conta?",
+      "answer": "Em Configurações, abra Perfil e procure a Zona de perigo. Ela mostra o método disponível para solicitar a exclusão da conta.",
+      "link": "Ir para configurações"
+    },
+    "contactTitle": "Precisa de mais ajuda?",
+    "contactDescription": "Se houver um e-mail de suporte configurado, você poderá falar conosco. Não inclua senhas, números completos de conta nem extratos sem ocultar dados sensíveis.",
+    "contactAction": "Escrever ao suporte",
+    "externalFaq": "Abrir guia externo"
   },
   "dashboard": {
     "uncategorized": "Sem categoria",
@@ -596,15 +637,15 @@
     "failedToUpdatePassword": "Falha ao atualizar senha",
     "passwordsDoNotMatch": "As senhas não coincidem",
     "passwordMinLength": "A senha deve ter pelo menos 8 caracteres",
-    "activeSessions": "Sessões ativas",
-    "activeSessionsDescription": "Dispositivos que estão atualmente conectados à sua conta",
+    "activeSessions": "Dispositivos recentes",
+    "activeSessionsDescription": "Atividade registrada por dispositivo. Remover um registro desta lista não encerra a sessão nesse dispositivo.",
     "unknownDevice": "Dispositivo desconhecido",
     "current": "Atual",
     "lastActive": "Último acesso {date}",
-    "revoke": "Revogar",
-    "sessionRevoked": "Sessão revogada",
-    "failedToRevokeSession": "Falha ao revogar sessão",
-    "noActiveSessions": "Nenhuma sessão ativa registrada.",
+    "revoke": "Remover do histórico",
+    "sessionRevoked": "Registro removido do histórico",
+    "failedToRevokeSession": "Falha ao remover o registro do dispositivo",
+    "noActiveSessions": "Nenhum dispositivo recente registrado.",
     "setPasswordConfirm": "Definir senha?",
     "changePasswordConfirm": "Alterar senha?",
     "setPasswordConfirmDescription": "Uma senha será definida para sua conta. Você poderá fazer login com Google e email/senha.",
@@ -699,7 +740,7 @@
     "confirmPassword": "Confirmar senha",
     "passwordUpdated": "Senha atualizada com sucesso",
     "revokeConfirm": "Tem certeza de que deseja revogar esta sessão?",
-    "sessionRevoked": "Sessão revogada com sucesso"
+    "sessionRevoked": "Registro removido do histórico"
   },
   "subscription": {
     "freePlan": "Gratuito",

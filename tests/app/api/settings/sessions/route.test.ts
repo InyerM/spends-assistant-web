@@ -43,7 +43,7 @@ describe('Settings Sessions API', () => {
         userId: 'user-1',
       });
 
-      const response = await GET();
+      const response = await GET(new NextRequest('http://localhost/api/settings/sessions'));
       expect(response.status).toBe(200);
       const body = await response.json();
       expect(body).toHaveLength(1);

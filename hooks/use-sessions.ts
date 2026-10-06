@@ -23,11 +23,11 @@ async function fetchSessions(): Promise<UserSession[]> {
   return res.json() as Promise<UserSession[]>;
 }
 
-async function revokeSession(id: string): Promise<void> {
+async function removeDeviceRecord(id: string): Promise<void> {
   const res = await fetch(`/api/settings/sessions?id=${id}`, { method: 'DELETE' });
   if (!res.ok) {
     const error = await res.json();
-    throw new Error((error as { error: string }).error || 'Failed to revoke session');
+    throw new Error((error as { error: string }).error || 'Failed to remove device record');
   }
 }
 
@@ -38,11 +38,11 @@ export function useSessions(): ReturnType<typeof useQuery<UserSession[]>> {
   });
 }
 
-export function useRevokeSession(): ReturnType<typeof useMutation<void, Error, string>> {
+export function useRemoveDeviceRecord(): ReturnType<typeof useMutation<void, Error, string>> {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: revokeSession,
+    mutationFn: removeDeviceRecord,
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: sessionKeys.all });
     },

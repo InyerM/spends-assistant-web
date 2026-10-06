@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -17,8 +17,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Badge } from '@/components/ui/badge';
-import { useSessions, useRevokeSession } from '@/hooks/use-sessions';
+import { useSessions, useRemoveDeviceRecord } from '@/hooks/use-sessions';
 import { useProfile } from '@/hooks/use-profile';
 import { supabaseClient } from '@/lib/supabase/client';
 import { Eye, EyeOff, Monitor, Smartphone, Tablet } from 'lucide-react';
@@ -33,8 +32,8 @@ function getDeviceIcon(deviceType: string | null): LucideIcon {
   return deviceIcons[deviceType ?? ''] ?? Monitor;
 }
 
-function formatDate(dateStr: string): string {
-  return new Date(dateStr).toLocaleDateString('en-US', {
+function formatDate(dateStr: string, locale: string): string {
+  return new Date(dateStr).toLocaleDateString(locale, {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
@@ -46,9 +45,10 @@ function formatDate(dateStr: string): string {
 export function SecurityTab(): React.ReactElement {
   const t = useTranslations('settings');
   const tc = useTranslations('common');
+  const locale = useLocale();
   const { data: profile } = useProfile();
   const { data: sessions, isLoading: sessionsLoading } = useSessions();
-  const revokeSession = useRevokeSession();
+  const removeDeviceRecord = useRemoveDeviceRecord();
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -112,19 +112,12 @@ export function SecurityTab(): React.ReactElement {
     setShowPasswordConfirm(true);
   };
 
-  const handleRevoke = (id: string): void => {
-    revokeSession.mutate(id, {
+  const handleRemoveDevice = (id: string): void => {
+    removeDeviceRecord.mutate(id, {
       onSuccess: () => toast.success(t('sessionRevoked')),
       onError: () => toast.error(t('failedToRevokeSession')),
     });
   };
-
-  // Find the most recently active session (likely the current one)
-  const currentSessionId = sessions?.length
-    ? [...sessions].sort(
-        (a, b) => new Date(b.last_active_at).getTime() - new Date(a.last_active_at).getTime(),
-      )[0].id
-    : null;
 
   return (
     <div className='space-y-6'>
@@ -264,7 +257,6 @@ export function SecurityTab(): React.ReactElement {
             <div className='space-y-3'>
               {sessions.map((session) => {
                 const Icon = getDeviceIcon(session.device_type);
-                const isCurrent = session.id === currentSessionId;
                 return (
                   <div
                     key={session.id}
@@ -274,27 +266,20 @@ export function SecurityTab(): React.ReactElement {
                       <div>
                         <p className='flex items-center gap-2 text-sm font-medium'>
                           {session.device_name ?? t('unknownDevice')}
-                          {isCurrent && (
-                            <Badge variant='secondary' className='text-xs'>
-                              {t('current')}
-                            </Badge>
-                          )}
                         </p>
                         <p className='text-muted-foreground text-xs'>
                           {session.ip_address && `${session.ip_address} · `}
-                          {t('lastActive', { date: formatDate(session.last_active_at) })}
+                          {t('lastActive', { date: formatDate(session.last_active_at, locale) })}
                         </p>
                       </div>
                     </div>
-                    {!isCurrent && (
-                      <Button
-                        variant='outline'
-                        size='sm'
-                        onClick={(): void => handleRevoke(session.id)}
-                        disabled={revokeSession.isPending}>
-                        {t('revoke')}
-                      </Button>
-                    )}
+                    <Button
+                      variant='outline'
+                      size='sm'
+                      onClick={(): void => handleRemoveDevice(session.id)}
+                      disabled={removeDeviceRecord.isPending}>
+                      {t('revoke')}
+                    </Button>
                   </div>
                 );
               })}

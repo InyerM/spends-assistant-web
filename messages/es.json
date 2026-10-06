@@ -63,11 +63,52 @@
     "loans": "Créditos",
     "receivables": "Préstamos hechos",
     "reliefFunds": "Fondos de ayuda",
+    "help": "Ayuda",
     "collapseSidebar": "Contraer barra lateral",
     "expandSidebar": "Expandir barra lateral",
     "userMenu": "Menú de usuario",
     "primaryNavigation": "Navegación principal",
     "addTransaction": "Añadir transacción"
+  },
+  "helpCenter": {
+    "title": "Centro de ayuda",
+    "description": "Resuelve las dudas más comunes sobre correos, comprobantes y movimientos. Cada respuesta te lleva al lugar donde puedes actuar.",
+    "faqTitle": "Preguntas frecuentes",
+    "faqDescription": "Abre una pregunta para ver el siguiente paso.",
+    "forwarding": {
+      "question": "¿Cómo confirmo el reenvío de Gmail?",
+      "answer": "En Gmail, abre el mensaje de confirmación recibido en Anotto y acepta el enlace. Después, marca la dirección como verificada en la configuración de reenvío y crea un filtro para los avisos que quieres enviar.",
+      "link": "Configurar reenvío"
+    },
+    "pending": {
+      "question": "¿Por qué un correo sigue pendiente?",
+      "answer": "Confirma primero la dirección de reenvío en Gmail y revisa la bandeja de correo. Allí verás si un aviso necesita revisión o si se detectó una posible transacción.",
+      "link": "Revisar reenvío"
+    },
+    "duplicates": {
+      "question": "¿Qué hago si una transacción ya existe?",
+      "answer": "Antes de crear otra transacción, abre las posibles coincidencias en la bandeja. Si corresponde al mismo movimiento, descarta el aviso con el motivo de duplicado.",
+      "link": "Abrir bandeja de correo"
+    },
+    "receipts": {
+      "question": "¿Cómo reviso un comprobante?",
+      "answer": "Sube la imagen o el PDF en Documentos. Revisa la fecha, el monto, la moneda y la cuenta sugeridos; corrige cada movimiento antes de aprobarlo.",
+      "link": "Ver documentos"
+    },
+    "balances": {
+      "question": "¿Por qué el saldo de una cuenta puede diferir?",
+      "answer": "Puede faltar un débito automático, una comisión o un movimiento antiguo. Revisa los movimientos de la cuenta y compáralos con el extracto disponible antes de ajustar el saldo.",
+      "link": "Revisar cuentas"
+    },
+    "deletion": {
+      "question": "¿Dónde consulto la eliminación de mi cuenta?",
+      "answer": "En Configuración, abre Perfil y busca Zona de peligro. Allí se muestra el método disponible para solicitar la eliminación de tu cuenta.",
+      "link": "Ir a configuración"
+    },
+    "contactTitle": "¿Necesitas más ayuda?",
+    "contactDescription": "Si hay un correo de soporte configurado, puedes escribirnos. No incluyas claves, números de cuenta completos ni extractos sin ocultar datos sensibles.",
+    "contactAction": "Escribir a soporte",
+    "externalFaq": "Abrir guía externa"
   },
   "dashboard": {
     "uncategorized": "Sin categoría",
@@ -629,15 +670,15 @@
     "failedToUpdatePassword": "Error al actualizar contraseña",
     "passwordsDoNotMatch": "Las contraseñas no coinciden",
     "passwordMinLength": "La contraseña debe tener al menos 8 caracteres",
-    "activeSessions": "Sesiones activas",
-    "activeSessionsDescription": "Dispositivos que actualmente tienen sesión iniciada en tu cuenta",
+    "activeSessions": "Dispositivos recientes",
+    "activeSessionsDescription": "Actividad registrada por dispositivo. Quitar un registro de esta lista no cierra la sesión en ese dispositivo.",
     "unknownDevice": "Dispositivo desconocido",
     "current": "Actual",
     "lastActive": "Última actividad {date}",
-    "revoke": "Revocar",
-    "sessionRevoked": "Sesión revocada",
-    "failedToRevokeSession": "Error al revocar sesión",
-    "noActiveSessions": "No hay sesiones activas registradas.",
+    "revoke": "Quitar del historial",
+    "sessionRevoked": "Registro quitado del historial",
+    "failedToRevokeSession": "No se pudo quitar el registro",
+    "noActiveSessions": "No hay dispositivos recientes registrados.",
     "setPasswordConfirm": "¿Establecer contraseña?",
     "changePasswordConfirm": "¿Cambiar contraseña?",
     "setPasswordConfirmDescription": "Se establecerá una contraseña para tu cuenta. Podrás iniciar sesión con Google y con correo/contraseña.",
@@ -732,7 +773,7 @@
     "confirmPassword": "Confirmar contraseña",
     "passwordUpdated": "Contraseña actualizada exitosamente",
     "revokeConfirm": "¿Estás seguro de que quieres revocar esta sesión?",
-    "sessionRevoked": "Sesión revocada exitosamente"
+    "sessionRevoked": "Registro quitado del historial"
   },
   "subscription": {
     "freePlan": "Gratis",

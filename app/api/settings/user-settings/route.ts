@@ -12,9 +12,9 @@ const DEFAULTS = {
   show_api_keys: false,
 };
 
-export async function GET(): Promise<Response> {
+export async function GET(request: NextRequest): Promise<Response> {
   try {
-    const { supabase, userId } = await getUserClient();
+    const { supabase, userId } = await getUserClient(request);
 
     const { data, error } = await supabase
       .from('user_settings')
@@ -44,7 +44,7 @@ export async function GET(): Promise<Response> {
 
 export async function PATCH(request: NextRequest): Promise<Response> {
   try {
-    const { supabase, userId } = await getUserClient();
+    const { supabase, userId } = await getUserClient(request);
     const body = (await request.json()) as Partial<{
       hour_format: string;
       show_api_keys: boolean;

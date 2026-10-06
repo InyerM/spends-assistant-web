@@ -63,11 +63,52 @@
     "loans": "Loans",
     "receivables": "Personal loans made",
     "reliefFunds": "Relief funds",
+    "help": "Help",
     "collapseSidebar": "Collapse sidebar",
     "expandSidebar": "Expand sidebar",
     "userMenu": "User menu",
     "primaryNavigation": "Primary navigation",
     "addTransaction": "Add transaction"
+  },
+  "helpCenter": {
+    "title": "Help center",
+    "description": "Find answers about email, receipts, and transactions. Each answer links to the place where you can take action.",
+    "faqTitle": "Frequently asked questions",
+    "faqDescription": "Open a question to see the next step.",
+    "forwarding": {
+      "question": "How do I confirm Gmail forwarding?",
+      "answer": "In Gmail, open the confirmation message received in Anotto and approve the link. Then mark the address as verified in forwarding settings and create a filter for the notices you want to forward.",
+      "link": "Set up forwarding"
+    },
+    "pending": {
+      "question": "Why is an email still pending?",
+      "answer": "First confirm the forwarding address in Gmail, then check the email inbox. It shows whether a notice needs review or contains a possible transaction.",
+      "link": "Review forwarding"
+    },
+    "duplicates": {
+      "question": "What if a transaction already exists?",
+      "answer": "Before creating another transaction, open the possible matches in the inbox. If it is the same movement, dismiss the notice using the duplicate reason.",
+      "link": "Open email inbox"
+    },
+    "receipts": {
+      "question": "How do I review a receipt?",
+      "answer": "Upload the image or PDF in Documents. Check the suggested date, amount, currency, and account, then correct each movement before approving it.",
+      "link": "View documents"
+    },
+    "balances": {
+      "question": "Why might an account balance differ?",
+      "answer": "An automatic debit, fee, or older movement may be missing. Review the account's movements and compare them with an available statement before adjusting the balance.",
+      "link": "Review accounts"
+    },
+    "deletion": {
+      "question": "Where can I find account deletion?",
+      "answer": "In Settings, open Profile and find Danger Zone. It shows the currently available way to request account deletion.",
+      "link": "Go to settings"
+    },
+    "contactTitle": "Need more help?",
+    "contactDescription": "If a support email is configured, you can contact us. Do not include passwords, full account numbers, or unredacted statements.",
+    "contactAction": "Email support",
+    "externalFaq": "Open external guide"
   },
   "dashboard": {
     "uncategorized": "Uncategorized",
@@ -629,15 +670,15 @@
     "failedToUpdatePassword": "Failed to update password",
     "passwordsDoNotMatch": "Passwords do not match",
     "passwordMinLength": "Password must be at least 8 characters",
-    "activeSessions": "Active sessions",
-    "activeSessionsDescription": "Devices that are currently signed in to your account",
+    "activeSessions": "Recent devices",
+    "activeSessionsDescription": "Recorded activity by device. Removing a record from this list does not sign out that device.",
     "unknownDevice": "Unknown device",
     "current": "Current",
     "lastActive": "Last active {date}",
-    "revoke": "Revoke",
-    "sessionRevoked": "Session revoked",
-    "failedToRevokeSession": "Failed to revoke session",
-    "noActiveSessions": "No active sessions recorded.",
+    "revoke": "Remove from history",
+    "sessionRevoked": "Record removed from history",
+    "failedToRevokeSession": "Failed to remove device record",
+    "noActiveSessions": "No recent devices recorded.",
     "setPasswordConfirm": "Set password?",
     "changePasswordConfirm": "Change password?",
     "setPasswordConfirmDescription": "A password will be set for your account. You will be able to sign in with both Google and email/password.",
@@ -732,7 +773,7 @@
     "confirmPassword": "Confirm password",
     "passwordUpdated": "Password updated successfully",
     "revokeConfirm": "Are you sure you want to revoke this session?",
-    "sessionRevoked": "Session revoked successfully"
+    "sessionRevoked": "Record removed from history"
   },
   "subscription": {
     "freePlan": "Free",

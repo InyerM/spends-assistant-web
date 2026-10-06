@@ -2,9 +2,9 @@ import type { NextRequest } from 'next/server';
 import { getUserClient, AuthError, jsonResponse, errorResponse } from '@/lib/api/server';
 import { generateApiKey, hashApiKey } from '@/lib/utils/api-key';
 
-export async function GET(): Promise<Response> {
+export async function GET(request: NextRequest): Promise<Response> {
   try {
-    const { supabase } = await getUserClient();
+    const { supabase } = await getUserClient(request);
 
     const { data, error } = await supabase
       .from('user_api_keys')
@@ -21,7 +21,7 @@ export async function GET(): Promise<Response> {
 
 export async function POST(request: NextRequest): Promise<Response> {
   try {
-    const { supabase, userId } = await getUserClient();
+    const { supabase, userId } = await getUserClient(request);
     const body = (await request.json()) as { name?: string };
     const name = body.name ?? 'Default';
 
@@ -46,13 +46,17 @@ export async function POST(request: NextRequest): Promise<Response> {
 
 export async function DELETE(request: NextRequest): Promise<Response> {
   try {
-    const { supabase } = await getUserClient();
+    const { supabase, userId } = await getUserClient(request);
     const { searchParams } = request.nextUrl;
     const id = searchParams.get('id');
 
     if (!id) return errorResponse('Key ID is required', 400);
 
-    const { error } = await supabase.from('user_api_keys').delete().eq('id', id);
+    const { error } = await supabase
+      .from('user_api_keys')
+      .delete()
+      .eq('id', id)
+      .eq('user_id', userId);
 
     if (error) return errorResponse(error.message, 400);
     return jsonResponse({ success: true });

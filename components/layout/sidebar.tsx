@@ -22,6 +22,7 @@ import {
   Landmark,
   HandCoins,
   HeartHandshake,
+  LifeBuoy,
 } from 'lucide-react';
 import { AnottoWordmark } from '@/components/layout/anotto-wordmark';
 import { Button } from '@/components/ui/button';
@@ -52,6 +53,7 @@ const navItems: NavItem[] = [
   { titleKey: 'reliefFunds', href: '/relief-funds', icon: HeartHandshake },
   { titleKey: 'categories', href: '/categories', icon: Tags },
   { titleKey: 'automation', href: '/automation', icon: Zap },
+  { titleKey: 'help', href: '/help', icon: LifeBuoy },
 ];
 
 interface SidebarProps {
