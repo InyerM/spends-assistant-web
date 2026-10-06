@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { DocumentBatchReviewHints } from '@/components/documents/document-batch-review-hints';
 import { DocumentReviewFields } from '@/components/documents/document-review-fields';
+import { AiConsentNotice } from '@/components/ai-consent-notice';
 import { suggestDocumentReview, type ReviewHistoryObservation } from '@/lib/document-review';
 import type { DocumentSuggestionGroup } from '@/lib/api/queries/document.queries';
 import type { Account, Category } from '@/types';
@@ -81,7 +82,8 @@ export function DocumentBatchReviewRow({
             suggestions={suggestions}
             review={review}
           />
-          {errors[row.id] && (
+          {errors[row.id] === 'AI_CONSENT_REQUIRED' && <AiConsentNotice scope='financial_text' />}
+          {errors[row.id] && errors[row.id] !== 'AI_CONSENT_REQUIRED' && (
             <p role='alert' className='text-destructive mt-2 text-xs'>
               {errors[row.id]}
             </p>

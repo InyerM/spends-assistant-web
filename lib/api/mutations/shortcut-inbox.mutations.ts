@@ -1,4 +1,5 @@
 import { useMutation } from '@tanstack/react-query';
+import { aiConsentErrorFromResponse } from '@/lib/ai-consent';
 
 export interface ForwardedEmailAnalysis {
   status: 'parsed' | 'needs_review';
@@ -9,7 +10,10 @@ export interface ForwardedEmailAnalysis {
 
 export async function analyzeForwardedEmail(inboxId: string): Promise<ForwardedEmailAnalysis> {
   const response = await fetch(`/api/shortcut-inbox/${inboxId}/analyze`, { method: 'POST' });
-  if (!response.ok) throw new Error('Email analysis failed');
+  if (!response.ok) {
+    const consentError = await aiConsentErrorFromResponse(response);
+    throw consentError ?? new Error('Email analysis failed');
+  }
   return (await response.json()) as ForwardedEmailAnalysis;
 }
 

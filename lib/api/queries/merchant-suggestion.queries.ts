@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { aiConsentErrorFromResponse } from '@/lib/ai-consent';
 
 interface MerchantSuggestion {
   category_id: string | null;
@@ -24,7 +25,10 @@ export function merchantSuggestionQuery(
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ merchant: merchant.trim() }),
       });
-      if (!response.ok) throw new Error('Merchant suggestion failed');
+      if (!response.ok) {
+        const consentError = await aiConsentErrorFromResponse(response);
+        throw consentError ?? new Error('Merchant suggestion failed');
+      }
       return (await response.json()) as MerchantSuggestion;
     },
     retry: false,

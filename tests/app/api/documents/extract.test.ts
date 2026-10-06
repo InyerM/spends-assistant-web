@@ -131,6 +131,33 @@ describe('POST /api/documents/[id]/extract', () => {
     expect(fetchMock.mock.calls[0][1].headers.Authorization).toBe('Bearer mobile-jwt');
   });
 
+  it('returns the image consent requirement and releases the extraction claim', async () => {
+    fetchMock.mockResolvedValue(
+      Response.json(
+        { code: 'AI_CONSENT_REQUIRED', scope: 'document_images', version: 'external-ai-v1' },
+        { status: 428 },
+      ),
+    );
+    const response = await POST(new Request('http://localhost') as never, {
+      params: Promise.resolve({ id: 'doc-1' }),
+    });
+    expect(response.status).toBe(428);
+    expect(await response.json()).toMatchObject({
+      code: 'AI_CONSENT_REQUIRED',
+      scope: 'document_images',
+    });
+    expect(adminRpc).toHaveBeenCalledWith(
+      'fail_document_extraction_server',
+      expect.objectContaining({
+        p_error_code: 'AI_CONSENT_REQUIRED',
+      }),
+    );
+    expect(adminRpc).not.toHaveBeenCalledWith(
+      'complete_document_extraction_server',
+      expect.anything(),
+    );
+  });
+
   it('rejects extraction of another user document', async () => {
     documentQuery.mockResolvedValue({ data: null, error: { message: 'not found' } });
     const response = await POST(new Request('http://localhost') as never, {

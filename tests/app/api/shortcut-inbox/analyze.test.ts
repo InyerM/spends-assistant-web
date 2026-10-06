@@ -156,6 +156,25 @@ describe('POST forwarded email analysis', () => {
     expect(db.calls.some(({ table }) => table === 'transactions')).toBe(false);
   });
 
+  it('leaves email pending when AI consent is required', async () => {
+    const db = fakeDb();
+    getUserClient.mockResolvedValue({ userId: 'owner-a', accessToken: 'test-jwt', supabase: db });
+    vi.stubGlobal(
+      'fetch',
+      vi
+        .fn()
+        .mockResolvedValue(
+          Response.json(
+            { code: 'AI_CONSENT_REQUIRED', scope: 'forwarded_email', version: 'external-ai-v1' },
+            { status: 428 },
+          ),
+        ),
+    );
+    const response = await POST(request() as never, context);
+    expect(response.status).toBe(428);
+    expect(db.inserts).toHaveLength(0);
+  });
+
   it('keeps other bank formats in review without inventing a card suffix', async () => {
     const db = fakeDb({
       inbox: {

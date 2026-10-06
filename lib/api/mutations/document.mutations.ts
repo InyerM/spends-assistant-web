@@ -1,7 +1,10 @@
 import type { StoredDocument } from '@/lib/api/queries/document.queries';
+import { aiConsentErrorFromResponse } from '@/lib/ai-consent';
 
 async function check(response: Response): Promise<Response> {
   if (response.ok) return response;
+  const consentError = await aiConsentErrorFromResponse(response);
+  if (consentError) throw consentError;
   const body = (await response.json().catch(() => ({}))) as { error?: string };
   throw new Error(body.error ?? 'Document request failed');
 }

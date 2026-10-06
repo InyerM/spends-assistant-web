@@ -629,6 +629,27 @@
     "conditionsExample": "ej., cuando la descripción contiene 'Uber' o monto > 50000",
     "actionsExample": "ej., asignar categoría 'Transporte', asignar cuenta 'Corriente'"
   },
+  "aiConsent": {
+    "tab": "Permisos de IA",
+    "title": "Permisos para procesamiento con IA",
+    "description": "Elige qué información puede enviar Anotto a servicios externos de IA. Cada permiso es independiente y empieza desactivado hasta que lo actives.",
+    "providerDisclosure": "Al activar un permiso, Anotto envía los datos seleccionados a OpenRouter, que los dirige a un proveedor de modelos externo, para extraer detalles de transacciones, sugerir categorías o proponer reglas de automatización. El tratamiento depende del modelo y proveedor seleccionados.",
+    "revocationDisclosure": "Puedes desactivar cada permiso cuando quieras para detener futuras solicitudes de IA con esos datos. Revisa los detalles extraídos antes de crear una transacción financiera.",
+    "financialText": "Texto financiero",
+    "financialTextDescription": "Enviar texto de transacciones ingresado manualmente o recibido por canales conectados (Atajos SMS, Telegram, API y avisos bancarios no reenviados), además de nombres de comercios para sugerir categorías y texto para proponer reglas. Las sugerencias manuales de correos antiguos también necesitan este permiso.",
+    "documentImages": "Imágenes de documentos",
+    "documentImagesDescription": "Enviar imágenes de recibos, capturas o extractos que subas para extraer transacciones. Subirlas no concede permiso para analizarlas.",
+    "forwardedEmail": "Correos reenviados",
+    "forwardedEmailDescription": "Enviar el contenido relevante de avisos bancarios reenviados y verificados para sugerir detalles y categorías. Si desactivas el permiso, los avisos siguen disponibles para revisión manual.",
+    "loading": "Cargando permisos…",
+    "loadError": "Los permisos de IA no están disponibles ahora. No se puede asumir ningún permiso mientras el servicio esté inactivo.",
+    "saveError": "No se pudo actualizar el permiso. Tu elección anterior sigue vigente.",
+    "retry": "Reintentar",
+    "requiredFinancialText": "Activa el permiso de texto financiero para usar esta sugerencia de IA. También se necesita para sugerir categorías manualmente en correos reenviados.",
+    "requiredDocumentImages": "Activa el permiso de imágenes de documentos antes de extraer esta captura con IA.",
+    "requiredForwardedEmail": "Activa el permiso de correos reenviados antes de analizar este aviso bancario con IA.",
+    "reviewPermissions": "Revisar permisos de IA"
+  },
   "settings": {
     "title": "Configuración",
     "profile": "Perfil",

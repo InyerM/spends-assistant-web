@@ -2,6 +2,7 @@ import type { NextRequest } from 'next/server';
 import { AuthError, errorResponse, getAdminClient, getUserClient } from '@/lib/api/server';
 import { workerConfig } from '@/lib/config';
 import { parseExtraction } from '@/lib/documents';
+import { forwardAiConsentError } from '@/lib/ai-consent';
 
 const privateHeaders = { 'Cache-Control': 'private, no-store' };
 
@@ -72,6 +73,11 @@ export async function POST(
         }),
       });
       if (!response.ok) {
+        const consentError = await forwardAiConsentError(response);
+        if (consentError) {
+          await markFailed('AI_CONSENT_REQUIRED');
+          return consentError;
+        }
         await markFailed(`WORKER_${response.status}`);
         return errorResponse('Image extraction failed', response.status);
       }

@@ -52,6 +52,7 @@ import { UsageIndicator } from '@/components/shared/usage-indicator';
 import { useUsage } from '@/hooks/use-usage';
 import { useSubscription } from '@/hooks/use-subscription';
 import { useAiParse } from '@/hooks/use-ai-parse';
+import { AiConsentNotice } from '@/components/ai-consent-notice';
 import { SKIPPED_REASON_KEYS } from '@/lib/utils/ai-parse';
 import {
   createTransactionFormSchema,
@@ -454,6 +455,8 @@ export function TransactionForm({
                     </div>
                   </div>
                 )}
+
+                {ai.consentRequired && <AiConsentNotice scope='financial_text' />}
 
                 {ai.skippedReason && (
                   <div className='border-warning/30 bg-warning/5 space-y-3 rounded-lg border p-4'>

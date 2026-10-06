@@ -20,6 +20,7 @@ import {
 import type { Account, Category, Transaction } from '@/types';
 import type { ReconciliationCandidate } from '@/lib/document-reconciliation';
 import { merchantSuggestionQuery } from '@/lib/api/queries/merchant-suggestion.queries';
+import { AiConsentRequiredError } from '@/lib/ai-consent';
 
 export interface DocumentReviewRow extends ReviewHistoryObservation {
   ordinal: number;
@@ -247,7 +248,11 @@ export function useDocumentBatchReview({
         });
         setAiHints((current) => ({ ...current, [row.id]: category.name }));
       })
-      .catch(() => undefined)
+      .catch((cause: unknown) => {
+        if (cause instanceof AiConsentRequiredError) {
+          setErrors((current) => ({ ...current, [row.id]: 'AI_CONSENT_REQUIRED' }));
+        }
+      })
       .finally(() => setAiBusy((current) => (current === row.id ? null : current)));
   };
 
@@ -299,7 +304,12 @@ export function useDocumentBatchReview({
     } catch (cause) {
       setErrors((current) => ({
         ...current,
-        [row.id]: cause instanceof Error ? cause.message : t('aiCategoryFailed'),
+        [row.id]:
+          cause instanceof AiConsentRequiredError
+            ? 'AI_CONSENT_REQUIRED'
+            : cause instanceof Error
+              ? cause.message
+              : t('aiCategoryFailed'),
       }));
     } finally {
       setAiBusy(null);

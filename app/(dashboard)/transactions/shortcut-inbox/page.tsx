@@ -16,6 +16,8 @@ import {
 } from '@/components/ui/select';
 import { ShortcutCreateForm } from '@/components/transactions/shortcut-create-form';
 import { ForwardedEmailEvidence } from '@/components/transactions/forwarded-email-evidence';
+import { AiConsentNotice } from '@/components/ai-consent-notice';
+import { AiConsentRequiredError, type AiConsentScope } from '@/lib/ai-consent';
 import { previewLuloNotice, type LuloNoticePreview } from '@/lib/shortcut-inbox/lulo-preview';
 import {
   useAnalyzeForwardedEmail,
@@ -136,6 +138,7 @@ export default function ShortcutInboxPage({
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [consentRequired, setConsentRequired] = useState<AiConsentScope | null>(null);
   const [candidateById, setCandidateById] = useState<Partial<Record<string, CandidateResponse>>>(
     {},
   );
@@ -163,11 +166,13 @@ export default function ShortcutInboxPage({
     }
     if (item.source === 'forwarded_email') {
       setAnalysisBusyId(item.id);
+      setConsentRequired(null);
       try {
         const analysis = await analysisMutation.mutateAsync(item.id);
         setAnalysisById((current) => ({ ...current, [item.id]: analysis }));
-      } catch {
-        setError(t('reanalyzeFailed'));
+      } catch (cause) {
+        if (cause instanceof AiConsentRequiredError) setConsentRequired(cause.scope);
+        else setError(t('reanalyzeFailed'));
       } finally {
         setAnalysisBusyId(null);
       }
@@ -330,6 +335,7 @@ export default function ShortcutInboxPage({
           {error}
         </p>
       )}
+      {consentRequired && <AiConsentNotice scope={consentRequired} />}
       {loading ? (
         <p className='text-muted-foreground text-sm'>{t('loading')}</p>
       ) : items.length === 0 ? (

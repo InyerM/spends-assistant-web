@@ -1,6 +1,7 @@
 import type { NextRequest } from 'next/server';
 import { getUserClient, AuthError, jsonResponse, errorResponse } from '@/lib/api/server';
 import { workerConfig } from '@/lib/config';
+import { forwardAiConsentError } from '@/lib/ai-consent';
 
 export async function POST(request: NextRequest): Promise<Response> {
   try {
@@ -36,6 +37,8 @@ export async function POST(request: NextRequest): Promise<Response> {
     });
 
     if (!res.ok) {
+      const consentError = await forwardAiConsentError(res);
+      if (consentError) return consentError;
       const err = await res.json().catch(() => ({ error: 'Worker error' }));
       return errorResponse((err as { error: string }).error || 'Generation failed', res.status);
     }

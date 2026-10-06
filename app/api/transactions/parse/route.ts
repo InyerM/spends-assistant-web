@@ -7,6 +7,7 @@ import {
   applyAutomationRules,
 } from '@/lib/api/server';
 import { workerConfig } from '@/lib/config';
+import { forwardAiConsentError } from '@/lib/ai-consent';
 
 interface WorkerParsed {
   amount: number;
@@ -66,6 +67,8 @@ export async function POST(request: NextRequest): Promise<Response> {
     });
 
     if (!res.ok) {
+      const consentError = await forwardAiConsentError(res);
+      if (consentError) return consentError;
       const err = await res.json().catch(() => ({ error: 'Worker error' }));
       const errObj = err as { error: string; code?: string; used?: number; limit?: number };
 

@@ -1,5 +1,6 @@
 import { AuthError, errorResponse, getUserClient } from '@/lib/api/server';
 import { workerConfig } from '@/lib/config';
+import { forwardAiConsentError } from '@/lib/ai-consent';
 
 export async function POST(request: Request): Promise<Response> {
   try {
@@ -29,7 +30,10 @@ export async function POST(request: Request): Promise<Response> {
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       body: JSON.stringify({ merchant: merchant.trim() }),
     });
-    if (!response.ok) return errorResponse('Merchant suggestion unavailable', 503);
+    if (!response.ok) {
+      const consentError = await forwardAiConsentError(response);
+      return consentError ?? errorResponse('Merchant suggestion unavailable', 503);
+    }
     const result = (await response.json()) as { category_id?: unknown; source?: unknown };
     if (
       (result.category_id !== null && typeof result.category_id !== 'string') ||

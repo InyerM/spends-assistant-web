@@ -113,6 +113,31 @@ describe('POST /api/transactions/parse', () => {
     expect(response.status).toBe(400);
   });
 
+  it('forwards a required financial text consent instead of a generic parse failure', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi
+        .fn()
+        .mockResolvedValue(
+          Response.json(
+            { code: 'AI_CONSENT_REQUIRED', scope: 'financial_text', version: 'external-ai-v1' },
+            { status: 428 },
+          ),
+        ),
+    );
+    const response = await POST(
+      new NextRequest('http://localhost/api/transactions/parse', {
+        method: 'POST',
+        body: JSON.stringify({ text: 'Coffee 10000' }),
+      }),
+    );
+    expect(response.status).toBe(428);
+    expect(await response.json()).toMatchObject({
+      code: 'AI_CONSENT_REQUIRED',
+      scope: 'financial_text',
+    });
+  });
+
   it('returns error when worker fails', async () => {
     vi.stubGlobal(
       'fetch',

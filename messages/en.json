@@ -629,6 +629,27 @@
     "conditionsExample": "e.g., when description contains 'Uber' or amount > 50000",
     "actionsExample": "e.g., set category to 'Transportation', set account to 'Checking'"
   },
+  "aiConsent": {
+    "tab": "AI permissions",
+    "title": "AI processing permissions",
+    "description": "Choose which information Anotto may send to external AI services. Each permission is independent and starts off until you enable it.",
+    "providerDisclosure": "When you enable a permission, Anotto sends the selected data to OpenRouter, which routes it to a third-party model provider, to extract transaction details, suggest categories, or draft automation rules. Provider processing depends on the selected model and provider.",
+    "revocationDisclosure": "You can turn off any permission at any time to stop future AI requests for that type of data. Review extracted details before creating a financial transaction.",
+    "financialText": "Financial text",
+    "financialTextDescription": "Send transaction text from manual entry or connected channels (SMS Shortcuts, Telegram, API and non-forwarded bank notices), plus merchant names for category suggestions and text for automation rule drafts. Manual suggestions for old forwarded email also need this permission.",
+    "documentImages": "Document images",
+    "documentImagesDescription": "Send uploaded receipt, screenshot, or statement images for transaction extraction. Uploading alone does not grant permission to extract them.",
+    "forwardedEmail": "Forwarded email",
+    "forwardedEmailDescription": "Send the relevant content of verified forwarded bank notices to suggest transaction details and categories. The notices remain available for manual review when this is off.",
+    "loading": "Loading permissions…",
+    "loadError": "AI permissions are unavailable right now. No permission can be assumed while the service is unavailable.",
+    "saveError": "Could not update this permission. Your previous choice is still in effect.",
+    "retry": "Try again",
+    "requiredFinancialText": "Allow financial text processing to use this AI suggestion. Manual category suggestions for forwarded email also need this permission.",
+    "requiredDocumentImages": "Allow document image processing before extracting this capture with AI.",
+    "requiredForwardedEmail": "Allow forwarded email processing before analyzing this bank notice with AI.",
+    "reviewPermissions": "Review AI permissions"
+  },
   "settings": {
     "title": "Settings",
     "profile": "Profile",

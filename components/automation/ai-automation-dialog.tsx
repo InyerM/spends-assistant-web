@@ -10,6 +10,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Sparkles } from 'lucide-react';
 import { InlineLoader } from '@/components/shared/loader';
 import { useGenerateAutomationRules } from '@/lib/api/mutations/ai-automation.mutations';
+import { AiConsentNotice } from '@/components/ai-consent-notice';
+import { AiConsentRequiredError } from '@/lib/ai-consent';
 import type { CreateAutomationRuleInput } from '@/types';
 
 interface GeneratedRule {
@@ -55,7 +57,9 @@ export function AiAutomationDialog({
     try {
       await generateMutation.mutateAsync(prompt);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to generate');
+      if (!(err instanceof AiConsentRequiredError)) {
+        toast.error(err instanceof Error ? err.message : 'Failed to generate');
+      }
     }
   }
 
@@ -86,6 +90,9 @@ export function AiAutomationDialog({
         </DialogHeader>
 
         <div className='space-y-4'>
+          {generateMutation.error instanceof AiConsentRequiredError && (
+            <AiConsentNotice scope={generateMutation.error.scope} />
+          )}
           <Textarea
             placeholder={t('aiPromptPlaceholder')}
             value={prompt}

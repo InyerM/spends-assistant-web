@@ -8,6 +8,8 @@ import { useAccounts } from '@/lib/api/queries/account.queries';
 import { useCategories } from '@/lib/api/queries/category.queries';
 import { useTransactions } from '@/lib/api/queries/transaction.queries';
 import { useMerchantSuggestion } from '@/lib/api/queries/merchant-suggestion.queries';
+import { AiConsentNotice } from '@/components/ai-consent-notice';
+import { AiConsentRequiredError } from '@/lib/ai-consent';
 import {
   useCreateInboxTransaction,
   type CandidateReview,
@@ -188,6 +190,9 @@ export function ShortcutCreateForm({
               : 'aiCategorySuggestion',
           )}
         </p>
+      )}
+      {aiCategoryQuery.error instanceof AiConsentRequiredError && (
+        <AiConsentNotice scope={aiCategoryQuery.error.scope} />
       )}
       {error && (
         <p role='alert' className='text-destructive'>

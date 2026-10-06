@@ -596,6 +596,27 @@
     "conditionsExample": "ex., quando a descrição contém 'Uber' ou valor > 50000",
     "actionsExample": "ex., definir categoria 'Transporte', definir conta 'Corrente'"
   },
+  "aiConsent": {
+    "tab": "Permissões de IA",
+    "title": "Permissões para processamento com IA",
+    "description": "Escolha quais informações o Anotto pode enviar a serviços externos de IA. Cada permissão é independente e começa desativada até você ativá-la.",
+    "providerDisclosure": "Ao ativar uma permissão, o Anotto envia os dados selecionados ao OpenRouter, que os encaminha a um provedor externo de modelos, para extrair detalhes de transações, sugerir categorias ou propor regras de automação. O processamento depende do modelo e do provedor selecionados.",
+    "revocationDisclosure": "Você pode desativar qualquer permissão a qualquer momento para interromper futuras solicitações de IA com esse tipo de dado. Revise os detalhes extraídos antes de criar uma transação financeira.",
+    "financialText": "Texto financeiro",
+    "financialTextDescription": "Enviar texto de transações digitado manualmente ou recebido por canais conectados (Atalhos SMS, Telegram, API e avisos bancários não encaminhados), além de nomes de comerciantes para sugerir categorias e texto para propor regras. Sugestões manuais para e-mails antigos também precisam desta permissão.",
+    "documentImages": "Imagens de documentos",
+    "documentImagesDescription": "Enviar imagens de recibos, capturas de tela ou extratos enviados para extrair transações. O envio por si só não concede permissão para analisá-las.",
+    "forwardedEmail": "E-mails encaminhados",
+    "forwardedEmailDescription": "Enviar o conteúdo relevante de avisos bancários encaminhados e verificados para sugerir detalhes e categorias. Quando desativado, os avisos continuam disponíveis para revisão manual.",
+    "loading": "Carregando permissões…",
+    "loadError": "As permissões de IA estão indisponíveis no momento. Nenhuma permissão pode ser presumida enquanto o serviço estiver indisponível.",
+    "saveError": "Não foi possível atualizar esta permissão. Sua escolha anterior continua em vigor.",
+    "retry": "Tentar novamente",
+    "requiredFinancialText": "Ative a permissão para texto financeiro para usar esta sugestão de IA. Ela também é necessária para sugerir categorias manualmente em e-mails encaminhados.",
+    "requiredDocumentImages": "Ative a permissão para imagens de documentos antes de extrair esta captura com IA.",
+    "requiredForwardedEmail": "Ative a permissão para e-mails encaminhados antes de analisar este aviso bancário com IA.",
+    "reviewPermissions": "Revisar permissões de IA"
+  },
   "settings": {
     "title": "Configurações",
     "profile": "Perfil",

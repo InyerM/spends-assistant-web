@@ -205,6 +205,25 @@ describe('useAiParse', () => {
     expect(result.current.step).toBe('ai-prompt');
   });
 
+  it('keeps the draft open when financial text consent is required', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+      Response.json(
+        { code: 'AI_CONSENT_REQUIRED', scope: 'financial_text', version: 'external-ai-v1' },
+        { status: 428 },
+      ),
+    );
+    const { result } = renderHook(() => useAiParse());
+    act(() => result.current.setAiText('Coffee 10000'));
+
+    await act(async () => {
+      await result.current.handleParse();
+    });
+
+    expect(result.current.consentRequired).toBe(true);
+    expect(result.current.aiText).toBe('Coffee 10000');
+    expect(result.current.step).toBe('ai-prompt');
+  });
+
   it('handleParse sets skippedReason when response status is skipped', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
       new Response(JSON.stringify({ status: 'skipped', reason: 'spending_summary' }), {

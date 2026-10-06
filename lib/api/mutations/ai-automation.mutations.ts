@@ -1,4 +1,5 @@
 import { useMutation } from '@tanstack/react-query';
+import { aiConsentErrorFromResponse } from '@/lib/ai-consent';
 
 interface GeneratedRule {
   name: string;
@@ -22,6 +23,8 @@ async function generateAutomationRules(prompt: string): Promise<GenerateRulesRes
   });
 
   if (!res.ok) {
+    const consentError = await aiConsentErrorFromResponse(res);
+    if (consentError) throw consentError;
     const data = await res.json().catch(() => ({ error: 'Generation failed' }));
     throw new Error((data as { error: string }).error || 'Failed to generate rules');
   }

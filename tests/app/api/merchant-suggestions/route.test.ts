@@ -49,4 +49,24 @@ describe('POST /api/merchant-suggestions', () => {
     const response = await POST(request('AMAZON.COM', { Origin: 'https://attacker.example' }));
     expect(response.status).toBe(403);
   });
+
+  it('preserves the Worker consent requirement for the client', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi
+        .fn()
+        .mockResolvedValue(
+          Response.json(
+            { code: 'AI_CONSENT_REQUIRED', scope: 'financial_text', version: 'external-ai-v1' },
+            { status: 428 },
+          ),
+        ),
+    );
+    const response = await POST(request('Unknown merchant', { Authorization: 'Bearer user-jwt' }));
+    expect(response.status).toBe(428);
+    expect(await response.json()).toMatchObject({
+      code: 'AI_CONSENT_REQUIRED',
+      scope: 'financial_text',
+    });
+  });
 });

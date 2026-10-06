@@ -8,6 +8,8 @@ import { FileImage, LoaderCircle, MailPlus, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { DocumentCaptureCard } from '@/components/documents/document-capture-card';
+import { AiConsentNotice } from '@/components/ai-consent-notice';
+import { AiConsentRequiredError } from '@/lib/ai-consent';
 import { MAX_DOCUMENT_BYTES } from '@/lib/documents';
 import { useAccounts } from '@/lib/api/queries/account.queries';
 import { useCategories } from '@/lib/api/queries/category.queries';
@@ -37,7 +39,7 @@ export default function DocumentsPage(): React.ReactElement {
   const inputRef = useRef<HTMLInputElement>(null);
   const [showArchived, setShowArchived] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | AiConsentRequiredError | null>(null);
   const [suggestions, setSuggestions] = useState<Partial<Record<string, SuggestionGroup[]>>>({});
   const [suggestionBusy, setSuggestionBusy] = useState<string | null>(null);
 
@@ -76,7 +78,13 @@ export default function DocumentsPage(): React.ReactElement {
       await extractDocument(id);
       await load();
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : t('extractFailed'));
+      setError(
+        cause instanceof AiConsentRequiredError
+          ? cause
+          : cause instanceof Error
+            ? cause.message
+            : t('extractFailed'),
+      );
     } finally {
       setBusy(null);
     }
@@ -162,11 +170,12 @@ export default function DocumentsPage(): React.ReactElement {
         </Button>
       </div>
 
-      {(error || documentQuery.error) && (
+      {error instanceof AiConsentRequiredError && <AiConsentNotice scope={error.scope} />}
+      {(typeof error === 'string' || documentQuery.error) && (
         <p
           role='alert'
           className='text-destructive rounded-lg border border-current/20 p-3 text-sm'>
-          {error ?? documentQuery.error?.message}
+          {typeof error === 'string' ? error : documentQuery.error?.message}
         </p>
       )}
       {loading ? (

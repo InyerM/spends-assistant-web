@@ -3,6 +3,7 @@ import { workerConfig } from '@/lib/config';
 import { inferForwardedAccount } from '@/lib/shortcut-inbox/create-draft';
 import { previewLuloNotice } from '@/lib/shortcut-inbox/lulo-preview';
 import type { Account } from '@/types';
+import { forwardAiConsentError } from '@/lib/ai-consent';
 
 interface Context {
   params: Promise<{ id: string }>;
@@ -99,7 +100,10 @@ export async function POST(request: Request, context: Context): Promise<Response
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ merchant: preview.merchant }),
       });
-      if (!response.ok) return errorResponse('Merchant classification unavailable', 503);
+      if (!response.ok) {
+        const consentError = await forwardAiConsentError(response);
+        return consentError ?? errorResponse('Merchant classification unavailable', 503);
+      }
       const suggestion = (await response.json()) as { category_id?: unknown; source?: unknown };
       if (
         typeof suggestion.category_id === 'string' &&

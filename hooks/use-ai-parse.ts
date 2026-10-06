@@ -3,6 +3,7 @@ import { toast } from 'sonner';
 import { getCurrentColombiaTimes } from '@/lib/utils/date';
 import { buildFieldsFromParse, type ParseResponse, type FormFields } from '@/lib/utils/ai-parse';
 import type { AppliedRule } from '@/types';
+import { aiConsentErrorFromResponse } from '@/lib/ai-consent';
 
 type Step = 'ai-prompt' | 'ai-result' | 'form';
 
@@ -20,6 +21,7 @@ export interface UseAiParseReturn {
   isParsing: boolean;
   parseResult: ParseResponse | null;
   limitReached: boolean;
+  consentRequired: boolean;
   skippedReason: string | null;
   aiSource: AiSource | null;
   handleParse: () => Promise<void>;
@@ -41,6 +43,7 @@ export function useAiParse(): UseAiParseReturn {
   const [isParsing, setIsParsing] = useState(false);
   const [parseResult, setParseResult] = useState<ParseResponse | null>(null);
   const [limitReached, setLimitReached] = useState(false);
+  const [consentRequired, setConsentRequired] = useState(false);
   const [skippedReason, setSkippedReason] = useState<string | null>(null);
   const [aiSource, setAiSource] = useState<AiSource | null>(null);
 
@@ -49,6 +52,7 @@ export function useAiParse(): UseAiParseReturn {
     setIsParsing(true);
     setParseResult(null);
     setLimitReached(false);
+    setConsentRequired(false);
     setSkippedReason(null);
     try {
       const res = await fetch('/api/transactions/parse', {
@@ -57,6 +61,11 @@ export function useAiParse(): UseAiParseReturn {
         body: JSON.stringify({ text: aiText }),
       });
       if (!res.ok) {
+        const consentError = await aiConsentErrorFromResponse(res);
+        if (consentError) {
+          setConsentRequired(true);
+          return;
+        }
         const err = await res.json().catch(() => ({ error: 'Parse failed' }));
         const errObj = err as { error: string; code?: string };
         if (res.status === 429 && errObj.code === 'PARSE_LIMIT_REACHED') {
@@ -108,6 +117,7 @@ export function useAiParse(): UseAiParseReturn {
     setAiText('');
     setParseResult(null);
     setLimitReached(false);
+    setConsentRequired(false);
     setSkippedReason(null);
     setAiSource(null);
     setStep('ai-prompt');
@@ -125,6 +135,7 @@ export function useAiParse(): UseAiParseReturn {
       isParsing,
       parseResult,
       limitReached,
+      consentRequired,
       skippedReason,
       aiSource,
       handleParse,
@@ -145,6 +156,7 @@ export function useAiParse(): UseAiParseReturn {
       isParsing,
       parseResult,
       limitReached,
+      consentRequired,
       skippedReason,
       aiSource,
       handleParse,

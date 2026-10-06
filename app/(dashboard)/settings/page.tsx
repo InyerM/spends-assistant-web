@@ -12,14 +12,16 @@ import { LanguageSelector } from '@/components/settings/language-selector';
 import { HelpSection } from '@/components/settings/help-section';
 import { DangerZoneSection } from '@/components/settings/danger-zone-section';
 import { EmailForwardingTab } from '@/components/settings/email-forwarding-tab';
+import { AiConsentTab } from '@/components/settings/ai-consent-tab';
 import { useUserSettings } from '@/hooks/use-user-settings';
-import { User, Shield, CreditCard, Key, LifeBuoy, Mail } from 'lucide-react';
+import { User, Shield, CreditCard, Key, LifeBuoy, Mail, Sparkles } from 'lucide-react';
 
 const VALID_TABS = [
   'profile',
   'security',
   'subscription',
   'email-forwarding',
+  'ai-processing',
   'api-keys',
   'help',
 ] as const;
@@ -32,6 +34,7 @@ function isValidTab(value: string | null): value is TabValue {
 export default function SettingsPage(): React.ReactElement {
   const t = useTranslations('settings');
   const emailT = useTranslations('emailForwarding');
+  const aiT = useTranslations('aiConsent');
   const router = useRouter();
   const searchParams = useSearchParams();
   const { data: userSettings } = useUserSettings();
@@ -67,6 +70,10 @@ export default function SettingsPage(): React.ReactElement {
             <Mail className='h-4 w-4' />
             <span className='hidden sm:inline'>{emailT('tab')}</span>
           </TabsTrigger>
+          <TabsTrigger value='ai-processing' aria-label={aiT('tab')}>
+            <Sparkles className='h-4 w-4' />
+            <span className='hidden sm:inline'>{aiT('tab')}</span>
+          </TabsTrigger>
           {showApiKeys && (
             <TabsTrigger value='api-keys' aria-label={t('apiKeys')}>
               <Key className='h-4 w-4' />
@@ -97,6 +104,10 @@ export default function SettingsPage(): React.ReactElement {
 
         <TabsContent value='email-forwarding' className='mt-6'>
           <EmailForwardingTab />
+        </TabsContent>
+
+        <TabsContent value='ai-processing' className='mt-6'>
+          <AiConsentTab />
         </TabsContent>
 
         {showApiKeys && (
