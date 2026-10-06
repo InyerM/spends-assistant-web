@@ -53,7 +53,7 @@ export default function SettingsPage(): React.ReactElement {
   return (
     <div className='mx-auto w-full max-w-3xl space-y-6 p-4 sm:p-6 lg:p-8'>
       <Tabs value={tab} onValueChange={handleTabChange}>
-        <TabsList variant='line' className='scrollbar-none w-full overflow-x-auto'>
+        <TabsList variant='line' className='scrollbar-none w-full justify-start overflow-x-auto'>
           <TabsTrigger value='profile' aria-label={t('profile')}>
             <User className='h-4 w-4' />
             <span className='hidden sm:inline'>{t('profile')}</span>
