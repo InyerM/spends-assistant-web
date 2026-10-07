@@ -3,7 +3,7 @@ import type { AutomationRule } from '@/types/automation-rule';
 import { inferCategoryFromHistory } from '@/lib/document-review';
 import { decodeEmailEntities } from './email-text';
 import type { LuloNoticePreview } from './lulo-preview';
-import type { BancolombiaNoticePreview } from './bancolombia-preview';
+import { previewBancolombiaNotice, type BancolombiaNoticePreview } from './bancolombia-preview';
 import { matchesAccountSuffix } from '@/lib/accounts/identifiers';
 
 export interface ForwardedEmailDraft {
@@ -37,7 +37,9 @@ export function buildForwardedEmailDraft(
   const purchaseEvidence = preview?.merchant && preview.amountDecimal ? preview : null;
   return {
     type: bancolombia?.kind === 'income' ? 'income' : 'expense',
-    amount: purchaseEvidence?.amountDecimal ?? bancolombia?.amountDecimal ?? '',
+    amount:
+      purchaseEvidence?.amountDecimal ??
+      (bancolombia?.currency === 'COP' ? (bancolombia.amountDecimal ?? '') : ''),
     date: bancolombia
       ? (bancolombia.date ?? '')
       : preview
@@ -72,6 +74,7 @@ export function inferForwardedBancolombiaAccount(
   rawText: string,
   accounts: MatchableAccount[],
 ): string {
+  if (previewBancolombiaNotice('forwarded_email', rawText)?.currency === 'USD') return '';
   if (
     !/^From \(unverified\): [^\n]*@(?:[a-z0-9-]+\.)?notificacionesbancolombia\.com\s*$/imu.test(
       rawText,
@@ -142,6 +145,7 @@ export function inferForwardedAccountFromRules(
     'rule_type' | 'is_active' | 'condition_logic' | 'conditions' | 'actions'
   >[],
 ): string {
+  if (previewBancolombiaNotice('forwarded_email', rawText)?.currency === 'USD') return '';
   const source = sourceAccountReference(rawText);
   if (!source) return '';
   const evidence = decodeEmailEntities(rawText).toLowerCase();

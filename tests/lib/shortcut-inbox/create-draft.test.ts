@@ -72,6 +72,28 @@ describe('forwarded email creation draft', () => {
       eventTime: '',
     });
   });
+
+  it('does not put an explicit USD amount into a COP-only review draft', () => {
+    const raw =
+      'From (unverified): alerts@an.notificacionesbancolombia.com\n\nAlertas\n\nBancolombia: Compraste USD25.00 en DEMO con tu T.Cred *4899, el 05/10/2026 a las 11:46.';
+    const bank = previewBancolombiaNotice('forwarded_email', raw);
+    expect(bank?.currency).toBe('USD');
+    expect(buildForwardedEmailDraft(null, '2026-10-06T20:00:00Z', bank).amount).toBe('');
+    expect(
+      inferForwardedBancolombiaAccount(raw, [
+        {
+          id: 'card',
+          name: 'Bancolombia card',
+          institution: 'Bancolombia',
+          type: 'credit_card',
+          last_four: '4899',
+          currency: 'COP',
+          is_active: true,
+          deleted_at: null,
+        },
+      ]),
+    ).toBe('');
+  });
   it('prefills an older indented Lulo notice for review without confirming its time or guessing a category', () => {
     const stored = [
       'From (unverified): notificaciones@lulobank.com',
