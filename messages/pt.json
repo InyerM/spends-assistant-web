@@ -104,6 +104,10 @@
       "answer": "Em Configurações, abra Perfil e procure a Zona de perigo. Você pode excluir sua conta e os dados associados após confirmar seu e-mail.",
       "link": "Ir para configurações"
     },
+    "legalTitle": "Privacidade e termos",
+    "legalDescription": "Veja como o Anotto trata seus dados e as condições de uso do serviço.",
+    "privacyAction": "Política de privacidade",
+    "termsAction": "Termos de uso",
     "contactTitle": "Precisa de mais ajuda?",
     "contactDescription": "Se houver um e-mail de suporte configurado, você poderá falar conosco. Não inclua senhas, números completos de conta nem extratos sem ocultar dados sensíveis.",
     "contactAction": "Escrever ao suporte",

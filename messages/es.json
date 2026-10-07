@@ -104,6 +104,10 @@
       "answer": "En Configuración, abre Perfil y busca Zona de peligro. Allí puedes eliminar tu cuenta y los datos asociados después de confirmar tu correo.",
       "link": "Ir a configuración"
     },
+    "legalTitle": "Privacidad y condiciones",
+    "legalDescription": "Consulta cómo se tratan tus datos y las condiciones de uso de Anotto.",
+    "privacyAction": "Política de privacidad",
+    "termsAction": "Términos de uso",
     "contactTitle": "¿Necesitas más ayuda?",
     "contactDescription": "Si hay un correo de soporte configurado, puedes escribirnos. No incluyas claves, números de cuenta completos ni extractos sin ocultar datos sensibles.",
     "contactAction": "Escribir a soporte",

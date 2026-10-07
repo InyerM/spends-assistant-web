@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
-import { ChevronDown, ExternalLink, LifeBuoy, Mail } from 'lucide-react';
+import { ChevronDown, ExternalLink, FileText, LifeBuoy, Mail } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { HELP_TOPICS } from '@/lib/constants/help-center';
@@ -41,6 +41,30 @@ export function HelpSection(): React.ReactElement {
               </div>
             </details>
           ))}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className='flex items-center gap-2'>
+            <FileText className='text-brand h-5 w-5' />
+            {t('legalTitle')}
+          </CardTitle>
+          <CardDescription>{t('legalDescription')}</CardDescription>
+        </CardHeader>
+        <CardContent className='flex flex-wrap gap-3'>
+          <Button variant='outline' size='sm' asChild>
+            <a href='https://anotto.app/privacy/' target='_blank' rel='noopener noreferrer'>
+              {t('privacyAction')}
+              <ExternalLink className='h-4 w-4' />
+            </a>
+          </Button>
+          <Button variant='outline' size='sm' asChild>
+            <a href='https://anotto.app/terms/' target='_blank' rel='noopener noreferrer'>
+              {t('termsAction')}
+              <ExternalLink className='h-4 w-4' />
+            </a>
+          </Button>
         </CardContent>
       </Card>
 
