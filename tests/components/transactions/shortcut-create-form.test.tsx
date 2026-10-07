@@ -82,6 +82,15 @@ describe('ShortcutCreateForm', () => {
           inboxId='item-1'
           receivedAt={receivedAt}
           preview={preview}
+          analysis={{
+            status: 'parsed',
+            account_id: 'card-1',
+            category_id: 'food',
+            category_source: 'ai',
+            suggested_type: 'expense',
+            description: 'Purchase at Demo Store',
+            notes: 'Lulo credit card ending in 8456.',
+          }}
           onCreated={vi.fn()}
           onCancel={vi.fn()}
         />
@@ -89,7 +98,12 @@ describe('ShortcutCreateForm', () => {
     );
 
     expect(screen.getByRole('textbox', { name: 'createAmount' })).toHaveValue('121000.00');
-    expect(screen.getByRole('textbox', { name: 'createDescription' })).toHaveValue('Demo Store');
+    expect(screen.getByRole('textbox', { name: 'createDescription' })).toHaveValue(
+      'Purchase at Demo Store',
+    );
+    expect(screen.getByRole('textbox', { name: 'createNotes' })).toHaveValue(
+      'Lulo credit card ending in 8456.',
+    );
     expect(screen.getByRole('button', { name: 'createDate' })).toHaveTextContent('Sep 25, 2026');
     await waitFor(() => expect(screen.getByRole('textbox', { name: 'Hours' })).toHaveValue('19'));
     expect(screen.getByRole('textbox', { name: 'Minutes' })).toHaveValue('18');

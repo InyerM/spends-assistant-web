@@ -263,6 +263,7 @@
     "confirmEventTime": "I confirmed this original time from the message or my records",
     "eventTimeNeedsConfirmation": "Confirm the original time before saving.",
     "createDescription": "Description",
+    "createNotes": "Notes",
     "saveReviewed": "Save reviewed transaction",
     "cancelCreate": "Cancel",
     "createFailed": "Could not save this transaction. Refresh and review the current state.",

@@ -36,7 +36,13 @@ const inbox = {
   ].join('\n'),
 };
 
-function fakeDb(options: { inbox?: typeof inbox | null; verified?: boolean } = {}) {
+function fakeDb(
+  options: {
+    inbox?: typeof inbox | null;
+    verified?: boolean;
+    cached?: Record<string, unknown>;
+  } = {},
+) {
   const rows: Record<string, unknown> = {
     shortcut_inbox_items: options.inbox === undefined ? inbox : options.inbox,
     email_forwarding_routes:
@@ -46,14 +52,16 @@ function fakeDb(options: { inbox?: typeof inbox | null; verified?: boolean } = {
             confirmation_received_at: '2026-10-03T00:00:00Z',
             user_confirmed_at: '2026-10-03T00:00:00Z',
           },
-    forwarded_email_analyses: null,
+    forwarded_email_analyses: options.cached ?? null,
     categories: { id: categoryId },
   };
   const calls: Array<{ table: string; filters: Array<[string, unknown]> }> = [];
   const inserts: Array<Record<string, unknown>> = [];
+  const updates: Array<Record<string, unknown>> = [];
   return {
     calls,
     inserts,
+    updates,
     from(table: string) {
       const filters: Array<[string, unknown]> = [];
       calls.push({ table, filters });
@@ -66,6 +74,14 @@ function fakeDb(options: { inbox?: typeof inbox | null; verified?: boolean } = {
         insert: (value: Record<string, unknown>) => {
           inserts.push(value);
           rows.forwarded_email_analyses = value;
+          return query;
+        },
+        update: (value: Record<string, unknown>) => {
+          updates.push(value);
+          rows.forwarded_email_analyses = {
+            ...(rows.forwarded_email_analyses as object),
+            ...value,
+          };
           return query;
         },
         maybeSingle: async () => ({ data: rows[table] ?? null, error: null }),
@@ -100,7 +116,15 @@ describe('POST forwarded email analysis', () => {
     vi.clearAllMocks();
     vi.stubGlobal(
       'fetch',
-      vi.fn().mockResolvedValue(Response.json({ category_id: categoryId, source: 'catalog' })),
+      vi.fn().mockResolvedValue(
+        Response.json({
+          type: 'expense',
+          category_id: categoryId,
+          category_source: 'ai',
+          description: 'Driving course at CEA Practicar del Eje',
+          notes: 'Credit card ending in 8456.',
+        }),
+      ),
     );
   });
 
@@ -116,6 +140,8 @@ describe('POST forwarded email analysis', () => {
       card_last_four: '8456',
       account_id: accountId,
       category_id: categoryId,
+      description: 'Driving course at CEA Practicar del Eje',
+      notes: 'Credit card ending in 8456.',
     });
     expect(db.inserts).toHaveLength(1);
     expect(db.calls.some(({ table }) => table === 'transactions')).toBe(false);
@@ -126,6 +152,20 @@ describe('POST forwarded email analysis', () => {
     expect(replay.status).toBe(200);
     expect(vi.mocked(fetch)).toHaveBeenCalledTimes(1);
     expect(db.inserts).toHaveLength(1);
+  });
+
+  it('enriches an older proposal without creating a second analysis row', async () => {
+    const db = fakeDb({ cached: { inbox_item_id: id, user_id: 'owner-a', analysis_version: 1 } });
+    getUserClient.mockResolvedValue({ userId: 'owner-a', accessToken: 'test-jwt', supabase: db });
+    const response = await POST(request() as never, context);
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({
+      analysis_version: 2,
+      category_id: categoryId,
+      description: 'Driving course at CEA Practicar del Eje',
+    });
+    expect(db.inserts).toHaveLength(0);
+    expect(db.updates).toHaveLength(1);
   });
 
   it('rejects a foreign item or unverified forwarding before provider calls', async () => {
@@ -139,12 +179,37 @@ describe('POST forwarded email analysis', () => {
     expect(fetch).not.toHaveBeenCalled();
   });
 
+  it('prefills a category and readable copy for a non-Lulo forwarded purchase', async () => {
+    const db = fakeDb({
+      inbox: {
+        ...inbox,
+        raw_text:
+          'From (unverified): alertas@an.notificacionesbancolombia.com\n\nCompra\n\nBancolombia: Compraste $62.000 en BOLD SA KROKAN P con tu T.Deb *7799',
+      },
+    });
+    getUserClient.mockResolvedValue({ userId: 'owner-a', accessToken: 'test-jwt', supabase: db });
+    const response = await POST(request() as never, context);
+    expect(response.status).toBe(201);
+    expect(await response.json()).toMatchObject({
+      status: 'needs_review',
+      category_id: categoryId,
+      category_source: 'ai',
+      description: 'Driving course at CEA Practicar del Eje',
+      notes: 'Credit card ending in 8456.',
+    });
+    expect(db.calls.some(({ table }) => table === 'transactions')).toBe(false);
+  });
+
   it('keeps an uncertain category empty without a financial write', async () => {
     const db = fakeDb();
     getUserClient.mockResolvedValue({ userId: 'owner-a', accessToken: 'test-jwt', supabase: db });
     vi.stubGlobal(
       'fetch',
-      vi.fn().mockResolvedValue(Response.json({ category_id: null, source: null })),
+      vi
+        .fn()
+        .mockResolvedValue(
+          Response.json({ type: 'expense', category_id: null, description: null, notes: null }),
+        ),
     );
     const response = await POST(request() as never, context);
     expect(response.status).toBe(201);
@@ -183,6 +248,14 @@ describe('POST forwarded email analysis', () => {
       },
     });
     getUserClient.mockResolvedValue({ userId: 'owner-a', accessToken: 'test-jwt', supabase: db });
+    vi.stubGlobal(
+      'fetch',
+      vi
+        .fn()
+        .mockResolvedValue(
+          Response.json({ type: null, category_id: null, description: null, notes: null }),
+        ),
+    );
     const response = await POST(request() as never, context);
     expect(response.status).toBe(201);
     expect(await response.json()).toMatchObject({
@@ -190,6 +263,6 @@ describe('POST forwarded email analysis', () => {
       card_last_four: null,
       category_id: null,
     });
-    expect(fetch).not.toHaveBeenCalled();
+    expect(fetch).toHaveBeenCalledTimes(1);
   });
 });

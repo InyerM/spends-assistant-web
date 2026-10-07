@@ -1,6 +1,9 @@
 import { AuthError, errorResponse, getUserClient } from '@/lib/api/server';
 import { workerConfig } from '@/lib/config';
-import { inferForwardedAccount } from '@/lib/shortcut-inbox/create-draft';
+import {
+  inferForwardedAccount,
+  inferForwardedBancolombiaAccount,
+} from '@/lib/shortcut-inbox/create-draft';
 import { previewLuloNotice } from '@/lib/shortcut-inbox/lulo-preview';
 import type { Account } from '@/types';
 import { forwardAiConsentError } from '@/lib/ai-consent';
@@ -20,6 +23,10 @@ interface EmailAnalysis {
   account_id: string | null;
   category_id: string | null;
   category_source: 'ai' | 'catalog' | null;
+  analysis_version: 2;
+  suggested_type: 'expense' | 'income' | null;
+  description: string | null;
+  notes: string | null;
 }
 
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu;
@@ -61,7 +68,7 @@ export async function POST(request: Request, context: Context): Promise<Response
       .eq('user_id', userId)
       .maybeSingle();
     if (cacheError) return errorResponse('Email analysis lookup failed');
-    if (cached) return Response.json(cached, { headers: privateHeaders });
+    if (cached?.analysis_version === 2) return Response.json(cached, { headers: privateHeaders });
     if (inbox.status !== 'pending') return errorResponse('Inbox item is not pending', 409);
 
     const inboxFields: Record<string, unknown> = inbox;
@@ -82,47 +89,57 @@ export async function POST(request: Request, context: Context): Promise<Response
     let categoryId: string | null = null;
     let categorySource: 'ai' | 'catalog' | null = null;
 
-    if (parsed && preview.merchant) {
-      const { data: accounts, error: accountsError } = await supabase
-        .from('accounts')
-        .select('id,name,institution,type,last_four,currency,is_active,deleted_at')
-        .eq('user_id', userId);
-      if (accountsError) return errorResponse('Email account analysis failed');
-      accountId =
-        inferForwardedAccount(preview, Array.isArray(accounts) ? (accounts as Account[]) : []) ||
-        null;
+    const { data: accounts, error: accountsError } = await supabase
+      .from('accounts')
+      .select(
+        'id,name,institution,type,last_four,bank_account_last_four,currency,is_active,deleted_at',
+      )
+      .eq('user_id', userId);
+    if (accountsError) return errorResponse('Email account analysis failed');
+    const ownedAccounts = Array.isArray(accounts) ? (accounts as Account[]) : [];
+    accountId =
+      inferForwardedAccount(preview, ownedAccounts) ||
+      inferForwardedBancolombiaAccount(inboxFields.raw_text, ownedAccounts) ||
+      null;
 
-      if (!workerConfig.url) return errorResponse('Merchant classification unavailable', 503);
-      const token = accessToken ?? (await supabase.auth.getSession()).data.session?.access_token;
-      if (!token) return errorResponse('Unauthorized', 401);
-      const response = await fetch(`${workerConfig.url.replace(/\/$/u, '')}/merchant/suggest`, {
+    if (!workerConfig.url) return errorResponse('Email suggestion unavailable', 503);
+    const token = accessToken ?? (await supabase.auth.getSession()).data.session?.access_token;
+    if (!token) return errorResponse('Unauthorized', 401);
+    const suggestionResponse = await fetch(
+      `${workerConfig.url.replace(/\/$/u, '')}/forwarded-email/suggest`,
+      {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ merchant: preview.merchant }),
-      });
-      if (!response.ok) {
-        const consentError = await forwardAiConsentError(response);
-        return consentError ?? errorResponse('Merchant classification unavailable', 503);
-      }
-      const suggestion = (await response.json()) as { category_id?: unknown; source?: unknown };
-      if (
-        typeof suggestion.category_id === 'string' &&
-        uuid.test(suggestion.category_id) &&
-        (suggestion.source === 'ai' || suggestion.source === 'catalog')
-      ) {
-        const { data: category, error: categoryError } = await supabase
-          .from('categories')
-          .select('id')
-          .eq('id', suggestion.category_id)
-          .eq('user_id', userId)
-          .eq('type', 'expense')
-          .eq('is_active', true)
-          .maybeSingle();
-        if (categoryError) return errorResponse('Email category analysis failed');
-        if (category) {
-          categoryId = category.id;
-          categorySource = suggestion.source;
-        }
+        body: JSON.stringify({ message: inboxFields.raw_text }),
+      },
+    );
+    if (!suggestionResponse.ok) {
+      const consentError = await forwardAiConsentError(suggestionResponse);
+      return consentError ?? errorResponse('Email suggestion unavailable', 503);
+    }
+    const suggestion = (await suggestionResponse.json()) as Record<string, unknown>;
+    const suggestedType = parsed
+      ? 'expense'
+      : suggestion.type === 'expense' || suggestion.type === 'income'
+        ? suggestion.type
+        : null;
+    if (
+      suggestedType &&
+      typeof suggestion.category_id === 'string' &&
+      uuid.test(suggestion.category_id)
+    ) {
+      const { data: category, error: categoryError } = await supabase
+        .from('categories')
+        .select('id')
+        .eq('id', suggestion.category_id)
+        .eq('user_id', userId)
+        .eq('type', suggestedType)
+        .eq('is_active', true)
+        .maybeSingle();
+      if (categoryError) return errorResponse('Email category analysis failed');
+      if (category) {
+        categoryId = category.id;
+        categorySource = suggestion.category_source === 'catalog' ? 'catalog' : 'ai';
       }
     }
 
@@ -137,7 +154,36 @@ export async function POST(request: Request, context: Context): Promise<Response
       account_id: accountId,
       category_id: categoryId,
       category_source: categorySource,
+      analysis_version: 2,
+      suggested_type: suggestedType,
+      description:
+        typeof suggestion.description === 'string' && suggestion.description.trim().length <= 150
+          ? suggestion.description.trim() || null
+          : null,
+      notes:
+        typeof suggestion.notes === 'string' && suggestion.notes.trim().length <= 500
+          ? suggestion.notes.trim() || null
+          : null,
     };
+    if (cached) {
+      const { data: updated, error: updateError } = await supabase
+        .from('forwarded_email_analyses')
+        .update({
+          analysis_version: 2,
+          suggested_type: analysis.suggested_type,
+          description: analysis.description,
+          notes: analysis.notes,
+          account_id: analysis.account_id,
+          category_id: analysis.category_id,
+          category_source: analysis.category_source,
+        })
+        .eq('inbox_item_id', id)
+        .eq('user_id', userId)
+        .select('*')
+        .maybeSingle();
+      if (updateError || !updated) return errorResponse('Email analysis failed');
+      return Response.json(updated, { headers: privateHeaders });
+    }
     const { data: inserted, error: insertError } = await supabase
       .from('forwarded_email_analyses')
       .insert(analysis)

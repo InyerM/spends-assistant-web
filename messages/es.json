@@ -263,6 +263,7 @@
     "confirmEventTime": "Confirmé esta hora original con el mensaje o mis registros",
     "eventTimeNeedsConfirmation": "Confirma la hora original antes de guardar.",
     "createDescription": "Descripción",
+    "createNotes": "Notas",
     "saveReviewed": "Guardar transacción revisada",
     "cancelCreate": "Cancelar",
     "createFailed": "No se pudo guardar la transacción. Actualiza y revisa el estado actual.",

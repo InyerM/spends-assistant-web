@@ -10,6 +10,7 @@ export interface ForwardedEmailDraft {
   eventTime: string;
   eventTimeConfirmed: boolean;
   description: string;
+  notes: string;
 }
 
 export function buildForwardedEmailDraft(
@@ -34,6 +35,7 @@ export function buildForwardedEmailDraft(
     eventTime: parsed && preview.bankEventAt ? preview.bankEventAt.slice(11, 16) : '',
     eventTimeConfirmed: false,
     description: parsed ? (preview.merchant ?? '') : '',
+    notes: '',
   };
 }
 

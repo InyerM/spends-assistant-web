@@ -16,6 +16,7 @@ const allowedFields = new Set([
   'confirm_distinct',
   'event_at',
   'event_time_confirmed',
+  'notes',
 ]);
 
 function validDate(value: string): boolean {
@@ -75,6 +76,8 @@ export async function POST(request: NextRequest, context: Context): Promise<Resp
       typeof body.description !== 'string' ||
       body.description.trim().length < 1 ||
       body.description.trim().length > 500 ||
+      (body.notes !== undefined &&
+        (typeof body.notes !== 'string' || body.notes.trim().length > 2000)) ||
       (body.reviewed_candidate_hash !== undefined &&
         (typeof body.reviewed_candidate_hash !== 'string' ||
           !hash.test(body.reviewed_candidate_hash))) ||
@@ -96,6 +99,7 @@ export async function POST(request: NextRequest, context: Context): Promise<Resp
       amount: body.amount,
       date: body.date,
       description: body.description.trim(),
+      ...(body.notes !== undefined ? { notes: (body.notes as string).trim() } : {}),
       ...(body.event_at !== undefined
         ? { event_at: body.event_at, event_time_confirmed: true }
         : {}),

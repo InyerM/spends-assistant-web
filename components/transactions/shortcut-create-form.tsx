@@ -48,28 +48,25 @@ export function ShortcutCreateForm({
     { enabled: preview?.kind === 'card_purchase' && !!preview.merchant },
   );
   const createMutation = useCreateInboxTransaction();
-  const [fieldDraft, setFieldDraft] = useState(() => buildForwardedEmailDraft(preview, receivedAt));
+  const [fieldDraft, setFieldDraft] = useState(() => {
+    const base = buildForwardedEmailDraft(preview, receivedAt);
+    return {
+      ...base,
+      type: analysis?.suggested_type ?? base.type,
+      description: analysis?.description || base.description,
+      notes: analysis?.notes ?? base.notes,
+    };
+  });
   const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [review, setReview] = useState<CandidateReview | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const persistedAccountId = (accountsQuery.data ?? []).some(
-    (account) =>
-      account.id === analysis?.account_id &&
-      account.is_active &&
-      !account.deleted_at &&
-      account.type === 'credit_card' &&
-      account.currency === 'COP' &&
-      account.last_four === preview?.cardLastFour &&
-      /\blulo\b/iu.test(`${account.institution ?? ''} ${account.name}`),
-  )
-    ? (analysis?.account_id ?? '')
-    : '';
-  const suggestedAccountId =
-    persistedAccountId ||
+  const inferredAccountId =
     inferForwardedAccount(preview, accountsQuery.data ?? []) ||
     inferForwardedBancolombiaAccount(rawText, accountsQuery.data ?? []);
+  const suggestedAccountId =
+    analysis?.account_id === inferredAccountId ? analysis.account_id : inferredAccountId;
   const localSuggestedCategoryId = suggestForwardedCategory(
     preview,
     historyQuery.data?.data ?? [],
@@ -77,7 +74,9 @@ export function ShortcutCreateForm({
   );
   const persistedCategoryId = (categoriesQuery.data ?? []).some(
     (category) =>
-      category.id === analysis?.category_id && category.type === 'expense' && category.is_active,
+      category.id === analysis?.category_id &&
+      category.type === fieldDraft.type &&
+      category.is_active,
   )
     ? (analysis?.category_id ?? '')
     : '';
@@ -107,7 +106,9 @@ export function ShortcutCreateForm({
   const draft: ShortcutCreateDraft = {
     ...fieldDraft,
     accountId: selectedAccountId ?? suggestedAccountId,
-    categoryId: selectedCategoryId ?? (fieldDraft.type === 'expense' ? suggestedCategoryId : ''),
+    categoryId:
+      selectedCategoryId ??
+      (fieldDraft.type === 'expense' ? suggestedCategoryId : persistedCategoryId),
   };
 
   const changeDraft = (patch: Partial<ShortcutCreateDraft>): void => {
@@ -144,6 +145,7 @@ export function ShortcutCreateForm({
         amount: draft.amount,
         date: draft.date,
         description: draft.description.trim(),
+        notes: draft.notes.trim(),
         ...(draft.eventTime
           ? {
               event_at: `${draft.date}T${draft.eventTime}:00-05:00`,

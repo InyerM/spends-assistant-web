@@ -6,6 +6,9 @@ export interface ForwardedEmailAnalysis {
   account_id: string | null;
   category_id: string | null;
   category_source: 'ai' | 'catalog' | null;
+  suggested_type: 'expense' | 'income' | null;
+  description: string | null;
+  notes: string | null;
 }
 
 export async function analyzeForwardedEmail(inboxId: string): Promise<ForwardedEmailAnalysis> {
@@ -44,6 +47,7 @@ export interface CreateInboxTransactionInput {
   amount: string;
   date: string;
   description: string;
+  notes?: string;
   event_at?: string;
   event_time_confirmed?: true;
   reviewed_candidate_hash?: string;

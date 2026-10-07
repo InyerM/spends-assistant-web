@@ -4,6 +4,7 @@ import { useTranslations } from 'next-intl';
 import { Checkbox } from '@/components/ui/checkbox';
 import { DatePicker } from '@/components/ui/date-picker';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { TimePicker } from '@/components/ui/time-picker';
 import {
   Select,
@@ -127,6 +128,14 @@ export function ShortcutCreateFields({
           maxLength={500}
           value={draft.description}
           onChange={(event) => onChange({ description: event.target.value })}
+        />
+      </label>
+      <label className='space-y-1 sm:col-span-2'>
+        {t('createNotes')}
+        <Textarea
+          maxLength={2000}
+          value={draft.notes}
+          onChange={(event) => onChange({ notes: event.target.value })}
         />
       </label>
     </div>

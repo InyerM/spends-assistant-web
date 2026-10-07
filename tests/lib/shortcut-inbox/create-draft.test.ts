@@ -62,6 +62,7 @@ describe('forwarded email creation draft', () => {
       eventTime: '19:18',
       eventTimeConfirmed: false,
       description: 'Demo Store',
+      notes: '',
     });
   });
 

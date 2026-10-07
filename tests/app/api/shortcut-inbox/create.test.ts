@@ -88,6 +88,22 @@ describe('Shortcut reviewed transaction creation route', () => {
     expect(response.headers.get('cache-control')).toContain('no-store');
   });
 
+  it('passes edited notes through the reviewed RPC without changing the other fields', async () => {
+    const withNotes = { ...reviewed, notes: 'Lunch confirmed by the owner.' };
+    expect((await POST(request(withNotes) as never, context)).status).toBe(201);
+    expect(rpc).toHaveBeenCalledWith(
+      'confirm_shortcut_transaction',
+      expect.objectContaining({ p_reviewed_payload: withNotes }),
+    );
+  });
+
+  it('rejects oversized or non-string notes', async () => {
+    for (const notes of [false, 'x'.repeat(2001)]) {
+      expect((await POST(request({ ...reviewed, notes }) as never, context)).status).toBe(400);
+    }
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
   it('passes an explicitly confirmed original event instant into the immutable review payload', async () => {
     const eventReview = {
       ...reviewed,
