@@ -88,6 +88,30 @@ describe('PATCH /api/accounts/[id]', () => {
     expect(response.status).toBe(200);
   });
 
+  it('accepts one active primary and rejects ambiguous identifier lists', async () => {
+    const { getUserClient } = await import('@/lib/api/server');
+    const client = createChainableQuery({ id: 'acc-1' });
+    vi.mocked(getUserClient).mockResolvedValue({ supabase: client as never, userId: 'owner' });
+    const identifiers = [
+      { kind: 'bank_account', last_four: '2651', is_active: true, is_primary: true },
+      { kind: 'debit_card', last_four: '9989', is_active: true, is_primary: false },
+      { kind: 'debit_card', last_four: '7799', is_active: false, is_primary: false },
+    ];
+    const update = (items: typeof identifiers): Promise<Response> =>
+      PATCH(
+        new NextRequest('http://localhost/api/accounts/acc-1', {
+          method: 'PATCH',
+          body: JSON.stringify({ identifiers: items }),
+        }),
+        makeParams('acc-1'),
+      );
+    expect((await update(identifiers)).status).toBe(200);
+    expect(client._chain.update).toHaveBeenCalledWith({ identifiers });
+    expect((await update(identifiers.map((item) => ({ ...item, is_primary: true })))).status).toBe(
+      400,
+    );
+  });
+
   it('rejects direct balance or ownership changes without writing', async () => {
     const { getUserClient } = await import('@/lib/api/server');
     const client = createChainableQuery({ id: 'acc-1' });

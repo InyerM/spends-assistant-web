@@ -1,6 +1,7 @@
 import type { NextRequest } from 'next/server';
 import { z } from 'zod';
 import { getUserClient, AuthError, jsonResponse, errorResponse } from '@/lib/api/server';
+import { accountIdentifiersSchema } from '@/lib/accounts/identifier-schema';
 
 const accountUpdateSchema = z
   .object({
@@ -11,6 +12,7 @@ const accountUpdateSchema = z
       .string()
       .regex(/^\d{4}$/)
       .nullable(),
+    identifiers: accountIdentifiersSchema,
     color: z.string().max(7).nullable(),
     icon: z.string().max(50).nullable(),
   })

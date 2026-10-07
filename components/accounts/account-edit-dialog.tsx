@@ -11,7 +11,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -35,7 +34,10 @@ import { buildBalanceAdjustment } from '@/lib/accounts/adjustment';
 import { formatCurrency } from '@/lib/utils/formatting';
 import { getCurrentColombiaTimes } from '@/lib/utils/date';
 import { ACCOUNT_TYPES } from '@/lib/utils/account-translations';
+import { AccountIdentifierEditor } from './account-identifier-editor';
+import { accountIdentifiers, primarySuffix } from '@/lib/accounts/identifiers';
 import type { Account } from '@/types';
+import type { AccountIdentifier } from '@/types/account';
 
 const formSchema = z.object({
   name: z.string().min(1, 'Name is required'),
@@ -74,6 +76,7 @@ export function AccountEditDialog({
   const [adjustMode, setAdjustMode] = useState<'none' | 'transaction'>('none');
   const [adjustmentAmount, setAdjustmentAmount] = useState('');
   const [balanceSign, setBalanceSign] = useState<'+' | '-'>('+');
+  const [identifiers, setIdentifiers] = useState<AccountIdentifier[]>([]);
   const { openNew } = useTransactionFormStore();
 
   const form = useForm<FormValues>({
@@ -95,6 +98,7 @@ export function AccountEditDialog({
   if (openAccountId !== prevOpenAccountId) {
     setPrevOpenAccountId(openAccountId);
     if (openAccountId) {
+      if (account) setIdentifiers(accountIdentifiers(account));
       setAdjustMode('none');
       setAdjustmentAmount('');
       setBalanceSign('+');
@@ -123,7 +127,8 @@ export function AccountEditDialog({
         name: values.name,
         type: values.type,
         institution: values.institution,
-        last_four: values.last_four?.trim() || null,
+        last_four: primarySuffix({ type: values.type, last_four: null, identifiers }),
+        identifiers,
         color: values.color,
         icon: values.icon,
       };
@@ -240,20 +245,7 @@ export function AccountEditDialog({
                 </FormItem>
               )}
             />
-            <FormField
-              control={form.control}
-              name='last_four'
-              render={({ field }): React.ReactElement => (
-                <FormItem>
-                  <FormLabel>{t('lastFour')}</FormLabel>
-                  <FormControl>
-                    <Input placeholder='1234' maxLength={4} inputMode='numeric' {...field} />
-                  </FormControl>
-                  <FormDescription>{t('lastFourDescription')}</FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <AccountIdentifierEditor value={identifiers} onChange={setIdentifiers} />
             <div className='grid grid-cols-2 gap-4'>
               <FormField
                 control={form.control}

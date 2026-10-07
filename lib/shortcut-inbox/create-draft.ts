@@ -3,6 +3,7 @@ import type { AutomationRule } from '@/types/automation-rule';
 import { inferCategoryFromHistory } from '@/lib/document-review';
 import { decodeEmailEntities } from './email-text';
 import type { LuloNoticePreview } from './lulo-preview';
+import { matchesAccountSuffix } from '@/lib/accounts/identifiers';
 
 export interface ForwardedEmailDraft {
   type: 'expense' | 'income';
@@ -13,6 +14,12 @@ export interface ForwardedEmailDraft {
   description: string;
   notes: string;
 }
+
+type MatchableAccount = Pick<
+  Account,
+  'id' | 'name' | 'institution' | 'type' | 'last_four' | 'currency' | 'is_active' | 'deleted_at'
+> &
+  Partial<Pick<Account, 'bank_account_last_four' | 'identifiers'>>;
 
 export function buildForwardedEmailDraft(
   preview: LuloNoticePreview | null,
@@ -42,19 +49,17 @@ export function buildForwardedEmailDraft(
 
 export function inferForwardedAccount(
   preview: LuloNoticePreview | null,
-  accounts: Pick<
-    Account,
-    'id' | 'name' | 'institution' | 'type' | 'last_four' | 'currency' | 'is_active' | 'deleted_at'
-  >[],
+  accounts: MatchableAccount[],
 ): string {
   if (preview?.kind !== 'card_purchase' || !preview.cardLastFour) return '';
+  const cardLastFour = preview.cardLastFour;
   const matched = accounts.filter(
     (account) =>
       account.is_active &&
       !account.deleted_at &&
       account.currency === 'COP' &&
       account.type === 'credit_card' &&
-      account.last_four === preview.cardLastFour &&
+      matchesAccountSuffix(account, cardLastFour, 'credit') &&
       /\blulo\b/iu.test(`${account.institution ?? ''} ${account.name}`),
   );
   return matched.length === 1 ? matched[0].id : '';
@@ -62,18 +67,7 @@ export function inferForwardedAccount(
 
 export function inferForwardedBancolombiaAccount(
   rawText: string,
-  accounts: Pick<
-    Account,
-    | 'id'
-    | 'name'
-    | 'institution'
-    | 'type'
-    | 'last_four'
-    | 'bank_account_last_four'
-    | 'currency'
-    | 'is_active'
-    | 'deleted_at'
-  >[],
+  accounts: MatchableAccount[],
 ): string {
   if (
     !/^From \(unverified\): [^\n]*@(?:[a-z0-9-]+\.)?notificacionesbancolombia\.com\s*$/imu.test(
@@ -97,7 +91,7 @@ export function inferForwardedBancolombiaAccount(
       (credit
         ? account.type === 'credit_card'
         : account.type === 'savings' || account.type === 'checking') &&
-      (account.last_four === suffix || account.bank_account_last_four === suffix),
+      matchesAccountSuffix(account, suffix, source.kind),
   );
   return matched.length === 1 ? matched[0].id : '';
 }
@@ -131,18 +125,7 @@ function sourceAccountReference(
 
 export function inferForwardedAccountFromRules(
   rawText: string,
-  accounts: Pick<
-    Account,
-    | 'id'
-    | 'name'
-    | 'institution'
-    | 'type'
-    | 'last_four'
-    | 'bank_account_last_four'
-    | 'currency'
-    | 'is_active'
-    | 'deleted_at'
-  >[],
+  accounts: MatchableAccount[],
   rules: Pick<
     AutomationRule,
     'rule_type' | 'is_active' | 'condition_logic' | 'conditions' | 'actions'

@@ -215,6 +215,78 @@ describe('POST forwarded email analysis', () => {
     expect(fetch).not.toHaveBeenCalled();
   });
 
+  it('rechecks a cached account after its identifiers change without another provider call', async () => {
+    const db = fakeDb({
+      inbox: {
+        ...inbox,
+        raw_text:
+          'From (unverified): alertas@ayn.notificacionesbancolombia.com\n\nBancolombia: Compraste $15.000 en CODA.CO con tu T.Deb **9989',
+      },
+      cached: {
+        inbox_item_id: id,
+        user_id: 'owner-a',
+        analysis_version: 2,
+        account_id: 'stale-account',
+      },
+      accounts: [
+        {
+          id: accountId,
+          name: 'Bancolombia',
+          institution: 'Bancolombia',
+          type: 'savings',
+          last_four: '2651',
+          currency: 'COP',
+          is_active: true,
+          deleted_at: null,
+          identifiers: [
+            { kind: 'bank_account', last_four: '2651', is_active: true, is_primary: true },
+            { kind: 'debit_card', last_four: '9989', is_active: true, is_primary: false },
+          ],
+        },
+      ],
+    });
+    getUserClient.mockResolvedValue({ userId: 'owner-a', accessToken: 'test-jwt', supabase: db });
+    const response = await POST(request(), context);
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({ account_id: accountId });
+    expect(db.updates).toContainEqual({ account_id: accountId });
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it('reapplies a newly edited category rule to a cached pending suggestion', async () => {
+    const db = fakeDb({
+      cached: {
+        inbox_item_id: id,
+        user_id: 'owner-a',
+        analysis_version: 2,
+        account_id: accountId,
+        suggested_type: 'expense',
+        category_id: null,
+        category_source: null,
+        description: 'CEA PRACTICAR DEL EJE',
+        amount: 1550000,
+      },
+      rules: [
+        {
+          rule_type: 'general',
+          is_active: true,
+          priority: 100,
+          condition_logic: 'or',
+          conditions: { description_contains: ['PRACTICAR DEL EJE'] },
+          actions: { set_category: categoryId },
+        },
+      ],
+    });
+    getUserClient.mockResolvedValue({ userId: 'owner-a', accessToken: 'test-jwt', supabase: db });
+    const response = await POST(request(), context);
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({
+      category_id: categoryId,
+      category_source: 'automation',
+    });
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
   it('rejects a foreign item or unverified forwarding before provider calls', async () => {
     for (const options of [{ inbox: null }, { verified: false }]) {
       const db = fakeDb(options);

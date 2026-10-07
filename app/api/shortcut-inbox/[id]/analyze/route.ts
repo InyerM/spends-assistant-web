@@ -6,6 +6,10 @@ import {
   inferForwardedAccountFromRules,
 } from '@/lib/shortcut-inbox/create-draft';
 import { previewLuloNotice } from '@/lib/shortcut-inbox/lulo-preview';
+import {
+  categoryFromCurrentRules,
+  merchantFromForwardedEvidence,
+} from '@/lib/shortcut-inbox/updated-rules';
 import type { Account } from '@/types';
 import type { AutomationRule } from '@/types/automation-rule';
 import { forwardAiConsentError } from '@/lib/ai-consent';
@@ -24,7 +28,7 @@ interface EmailAnalysis {
   card_last_four: string | null;
   account_id: string | null;
   category_id: string | null;
-  category_source: 'ai' | 'catalog' | null;
+  category_source: 'ai' | 'catalog' | 'automation' | null;
   analysis_version: 2;
   suggested_type: 'expense' | 'income' | null;
   description: string | null;
@@ -70,7 +74,7 @@ export async function POST(request: Request, context: Context): Promise<Response
       .eq('user_id', userId)
       .maybeSingle();
     if (cacheError) return errorResponse('Email analysis lookup failed');
-    if (cached?.analysis_version === 2 && (cached.account_id || inbox.status !== 'pending')) {
+    if (cached?.analysis_version === 2 && inbox.status !== 'pending') {
       return Response.json(cached, { headers: privateHeaders });
     }
     if (inbox.status !== 'pending') return errorResponse('Inbox item is not pending', 409);
@@ -91,21 +95,20 @@ export async function POST(request: Request, context: Context): Promise<Response
     const parsed = preview?.kind === 'card_purchase' && preview.confidence === 'structured';
     let accountId: string | null = null;
     let categoryId: string | null = null;
-    let categorySource: 'ai' | 'catalog' | null = null;
+    let categorySource: 'ai' | 'catalog' | 'automation' | null = null;
 
     const [{ data: accounts, error: accountsError }, { data: rules, error: rulesError }] =
       await Promise.all([
         supabase
           .from('accounts')
           .select(
-            'id,name,institution,type,last_four,bank_account_last_four,currency,is_active,deleted_at',
+            'id,name,institution,type,last_four,bank_account_last_four,identifiers,currency,is_active,deleted_at',
           )
           .eq('user_id', userId),
         supabase
           .from('automation_rules')
-          .select('rule_type,is_active,condition_logic,conditions,actions')
+          .select('rule_type,is_active,priority,condition_logic,conditions,actions')
           .eq('user_id', userId)
-          .eq('rule_type', 'account_detection')
           .eq('is_active', true)
           .is('deleted_at', null),
       ]);
@@ -121,11 +124,63 @@ export async function POST(request: Request, context: Context): Promise<Response
       ) ||
       null;
 
+    const currentRules = Array.isArray(rules) ? (rules as AutomationRule[]) : [];
+    const cachedFields = cached as Record<string, unknown> | null;
+    const ruleCategoryId = categoryFromCurrentRules(
+      preview?.merchant ||
+        merchantFromForwardedEvidence(inboxFields.raw_text) ||
+        (typeof cachedFields?.description === 'string' ? cachedFields.description : ''),
+      inboxFields.raw_text,
+      preview?.amountDecimal
+        ? Number(preview.amountDecimal)
+        : typeof cachedFields?.amount === 'number'
+          ? cachedFields.amount
+          : null,
+      accountId,
+      currentRules,
+    );
+    let validRuleCategory: string | null = null;
+    const cachedType = cached?.suggested_type;
+    if (
+      ruleCategoryId &&
+      uuid.test(ruleCategoryId) &&
+      (cachedType === 'expense' || cachedType === 'income')
+    ) {
+      const { data: category, error: categoryError } = await supabase
+        .from('categories')
+        .select('id')
+        .eq('id', ruleCategoryId)
+        .eq('user_id', userId)
+        .eq('type', cachedType)
+        .eq('is_active', true)
+        .maybeSingle();
+      if (categoryError) return errorResponse('Email category analysis failed');
+      validRuleCategory = category?.id ?? null;
+    }
+
     if (cached?.analysis_version === 2) {
-      if (!accountId) return Response.json(cached, { headers: privateHeaders });
+      const nextCategory =
+        cached.category_source === 'review_context'
+          ? cached.category_id
+          : (validRuleCategory ??
+            (cached.category_source === 'automation' ? null : cached.category_id));
+      const nextSource =
+        cached.category_source === 'review_context'
+          ? cached.category_source
+          : validRuleCategory
+            ? 'automation'
+            : cached.category_source === 'automation'
+              ? null
+              : cached.category_source;
+      if (
+        cached.account_id === accountId &&
+        cached.category_id === nextCategory &&
+        cached.category_source === nextSource
+      )
+        return Response.json(cached, { headers: privateHeaders });
       const { data: updated, error: updateError } = await supabase
         .from('forwarded_email_analyses')
-        .update({ account_id: accountId })
+        .update({ account_id: accountId, category_id: nextCategory, category_source: nextSource })
         .eq('inbox_item_id', id)
         .eq('user_id', userId)
         .select('*')
@@ -172,6 +227,21 @@ export async function POST(request: Request, context: Context): Promise<Response
       if (category) {
         categoryId = category.id;
         categorySource = suggestion.category_source === 'catalog' ? 'catalog' : 'ai';
+      }
+    }
+    if (ruleCategoryId && uuid.test(ruleCategoryId) && suggestedType) {
+      const { data: category, error: categoryError } = await supabase
+        .from('categories')
+        .select('id')
+        .eq('id', ruleCategoryId)
+        .eq('user_id', userId)
+        .eq('type', suggestedType)
+        .eq('is_active', true)
+        .maybeSingle();
+      if (categoryError) return errorResponse('Email category analysis failed');
+      if (category) {
+        categoryId = category.id;
+        categorySource = 'automation';
       }
     }
 

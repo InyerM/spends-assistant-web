@@ -7,6 +7,13 @@ export type AccountType =
   | 'crypto'
   | 'credit';
 
+export interface AccountIdentifier {
+  kind: 'bank_account' | 'debit_card' | 'credit_card' | 'other';
+  last_four: string;
+  is_active: boolean;
+  is_primary: boolean;
+}
+
 export interface Account {
   id: string;
   user_id: string;
@@ -15,6 +22,7 @@ export interface Account {
   institution: string | null;
   last_four: string | null;
   bank_account_last_four?: string | null;
+  identifiers?: AccountIdentifier[];
   currency: string;
   balance: number;
   is_active: boolean;
@@ -31,6 +39,7 @@ export interface CreateAccountInput {
   type: AccountType;
   institution?: string;
   last_four?: string | null;
+  identifiers?: AccountIdentifier[];
   currency?: string;
   balance?: number;
   color?: string;

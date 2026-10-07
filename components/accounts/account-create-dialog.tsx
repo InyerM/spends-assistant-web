@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
@@ -11,7 +11,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -28,6 +27,9 @@ import {
 } from '@/components/ui/select';
 import { useCreateAccount } from '@/lib/api/mutations/account.mutations';
 import { ACCOUNT_TYPES } from '@/lib/utils/account-translations';
+import { AccountIdentifierEditor } from './account-identifier-editor';
+import { primarySuffix } from '@/lib/accounts/identifiers';
+import type { AccountIdentifier } from '@/types/account';
 
 const formSchema = z.object({
   name: z.string().min(1, 'Name is required'),
@@ -56,6 +58,12 @@ export function AccountCreateDialog({
 }: AccountCreateDialogProps): React.ReactElement {
   const t = useTranslations('accounts');
   const tCommon = useTranslations('common');
+  const [identifiers, setIdentifiers] = useState<AccountIdentifier[]>([]);
+  const [wasOpen, setWasOpen] = useState(false);
+  if (open !== wasOpen) {
+    setWasOpen(open);
+    if (open) setIdentifiers([]);
+  }
   const createMutation = useCreateAccount();
 
   const form = useForm<FormValues>({
@@ -89,7 +97,8 @@ export function AccountCreateDialog({
     try {
       const payload = {
         ...values,
-        last_four: values.last_four?.trim() || null,
+        last_four: primarySuffix({ type: values.type, last_four: null, identifiers }),
+        identifiers,
       };
       await createMutation.mutateAsync(payload);
       toast.success(t('accountCreated'));
@@ -157,20 +166,7 @@ export function AccountCreateDialog({
                 </FormItem>
               )}
             />
-            <FormField
-              control={form.control}
-              name='last_four'
-              render={({ field }): React.ReactElement => (
-                <FormItem>
-                  <FormLabel>{t('lastFour')}</FormLabel>
-                  <FormControl>
-                    <Input placeholder='1234' maxLength={4} inputMode='numeric' {...field} />
-                  </FormControl>
-                  <FormDescription>{t('lastFourDescription')}</FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <AccountIdentifierEditor value={identifiers} onChange={setIdentifiers} />
             <div className='grid grid-cols-2 gap-4'>
               <FormField
                 control={form.control}

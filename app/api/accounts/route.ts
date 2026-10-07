@@ -1,5 +1,25 @@
 import type { NextRequest } from 'next/server';
 import { getUserClient, AuthError, jsonResponse, errorResponse } from '@/lib/api/server';
+import { z } from 'zod';
+import { accountIdentifiersSchema } from '@/lib/accounts/identifier-schema';
+
+const accountCreateSchema = z
+  .object({
+    name: z.string().trim().min(1).max(100),
+    type: z.enum(['checking', 'savings', 'credit_card', 'cash', 'investment', 'crypto', 'credit']),
+    institution: z.string().max(100).nullable().optional(),
+    last_four: z
+      .string()
+      .regex(/^\d{4}$/u)
+      .nullable()
+      .optional(),
+    identifiers: accountIdentifiersSchema.optional(),
+    currency: z.string().length(3).optional(),
+    balance: z.number().optional(),
+    color: z.string().max(7).nullable().optional(),
+    icon: z.string().max(50).nullable().optional(),
+  })
+  .strict();
 
 export async function GET(): Promise<Response> {
   try {
@@ -23,7 +43,8 @@ export async function GET(): Promise<Response> {
 export async function POST(request: NextRequest): Promise<Response> {
   try {
     const { supabase, userId } = await getUserClient();
-    const body = (await request.json()) as Record<string, unknown>;
+    const parsed = accountCreateSchema.safeParse(await request.json());
+    if (!parsed.success) return errorResponse('Invalid account', 400);
 
     // Check account limit for free plan
     const [{ data: subscription }, accountCountResult, { data: limitSetting }] = await Promise.all([
@@ -47,7 +68,7 @@ export async function POST(request: NextRequest): Promise<Response> {
 
     const { data, error } = await supabase
       .from('accounts')
-      .insert({ ...body, user_id: userId })
+      .insert({ ...parsed.data, user_id: userId })
       .select()
       .single();
 
