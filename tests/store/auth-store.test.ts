@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const mockSignInWithPassword = vi.fn();
+const mockSignUp = vi.fn();
 const mockSignInWithOAuth = vi.fn();
 const mockSignOut = vi.fn();
 const mockGetUser = vi.fn();
@@ -11,6 +12,7 @@ const mockUpdateUser = vi.fn();
 vi.mock('@/lib/supabase/client', () => ({
   supabaseClient: {
     auth: {
+      signUp: (...args: unknown[]) => mockSignUp(...args),
       signInWithPassword: (...args: unknown[]) => mockSignInWithPassword(...args),
       signInWithOAuth: (...args: unknown[]) => mockSignInWithOAuth(...args),
       signOut: (...args: unknown[]) => mockSignOut(...args),
@@ -75,6 +77,45 @@ describe('useAuthStore', () => {
     expect(state.supabaseUser).toEqual(mockUser);
     expect(state.isAuthenticated).toBe(true);
     expect(state.isLoading).toBe(false);
+  });
+
+  it('keeps a new account unauthenticated until email confirmation creates a session', async () => {
+    const { useAuthStore } = await import('@/store/auth-store');
+    const pendingUser = { id: 'pending-user', email: 'new@example.com' };
+    mockSignUp.mockResolvedValue({
+      data: { user: pendingUser, session: null },
+      error: null,
+    });
+
+    await useAuthStore.getState().signUp('new@example.com', 'secure-password');
+
+    expect(mockSignUp).toHaveBeenCalledWith({
+      email: 'new@example.com',
+      password: 'secure-password',
+      options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
+    });
+    expect(useAuthStore.getState()).toMatchObject({
+      supabaseUser: null,
+      isAuthenticated: false,
+      isLoading: false,
+    });
+  });
+
+  it('authenticates a new account when sign-up returns a session', async () => {
+    const { useAuthStore } = await import('@/store/auth-store');
+    const user = { id: 'confirmed-user', email: 'confirmed@example.com' };
+    mockSignUp.mockResolvedValue({
+      data: { user, session: { user } },
+      error: null,
+    });
+
+    await useAuthStore.getState().signUp('confirmed@example.com', 'secure-password');
+
+    expect(useAuthStore.getState()).toMatchObject({
+      supabaseUser: user,
+      isAuthenticated: true,
+      isLoading: false,
+    });
   });
 
   it('signInWithPassword throws and resets on error', async () => {

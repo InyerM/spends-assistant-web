@@ -45,12 +45,14 @@ export const useAuthStore = create<AuthStore>((set) => ({
       const { data, error } = await supabaseClient.auth.signUp({
         email,
         password,
+        options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
       });
       if (error) throw error;
 
+      const signedInUser = data.session?.user ?? null;
       set({
-        supabaseUser: data.user,
-        isAuthenticated: !!data.user,
+        supabaseUser: signedInUser,
+        isAuthenticated: !!signedInUser,
         isLoading: false,
       });
     } catch (error) {
