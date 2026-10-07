@@ -147,6 +147,29 @@ describe('forwarded email creation draft', () => {
     expect(inferForwardedBancolombiaAccount(raw, [{ ...debit, is_active: false }])).toBe('');
   });
 
+  it('accepts masked suffixes in a current account detection rule', () => {
+    const raw =
+      'From (unverified): alertas@ayn.notificacionesbancolombia.com\n\nBancolombia: Compraste $15.000 en CODA.CO con tu T.Deb **9989';
+    const account = {
+      id: 'savings',
+      name: 'Savings',
+      institution: 'Bancolombia',
+      type: 'savings' as const,
+      last_four: '2651',
+      currency: 'COP',
+      is_active: true,
+      deleted_at: null,
+    };
+    const rule = {
+      rule_type: 'account_detection' as const,
+      is_active: true,
+      condition_logic: 'or' as const,
+      conditions: { raw_text_contains: ['*7799', '*9989', '*2651'] },
+      actions: { set_account: 'savings' },
+    };
+    expect(inferForwardedAccountFromRules(raw, [account], [rule])).toBe('savings');
+  });
+
   it('uses an owner account rule for a Bancolombia debit alias with two masking stars', () => {
     const raw =
       'From (unverified): alerts@ayn.notificacionesbancolombia.com\n\nBancolombia: Compraste $15.000 en CODA.CO con tu T.Deb **9989';

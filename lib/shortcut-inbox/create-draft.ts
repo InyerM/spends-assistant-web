@@ -140,7 +140,7 @@ export function inferForwardedAccountFromRules(
     if (!rule.is_active || rule.rule_type !== 'account_detection' || !rule.actions.set_account)
       continue;
     const keywords = rule.conditions.raw_text_contains ?? [];
-    if (!keywords.some((keyword) => keyword === source.suffix)) continue;
+    if (!keywords.some((keyword) => keyword.replace(/^[*•]+/u, '') === source.suffix)) continue;
     const conditionMatches =
       rule.condition_logic === 'and'
         ? keywords.every((keyword) => evidence.includes(keyword.toLowerCase()))
