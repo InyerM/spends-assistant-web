@@ -2,6 +2,7 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import { env } from './lib/env';
 import { defaultLocale, isValidLocale } from './i18n/config';
+import { needsEligibilityAttestation } from './lib/auth/eligibility';
 
 const PUBLIC_PATHS = ['/login', '/register', '/forgot-password', '/auth'];
 const MOBILE_BEARER_ROUTES: Record<string, readonly string[]> = {
@@ -108,8 +109,29 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
     return NextResponse.redirect(url);
   }
 
+  if (user && needsEligibilityAttestation(user) && pathname !== '/auth/callback') {
+    if (pathname !== '/eligibility' && pathname !== '/api/settings/account/delete') {
+      if (pathname.startsWith('/api/')) {
+        return NextResponse.json({ error: 'Eligibility confirmation required' }, { status: 403 });
+      }
+      const url = request.nextUrl.clone();
+      url.pathname = '/eligibility';
+      url.search = '';
+      return NextResponse.redirect(url);
+    }
+  } else if (user && pathname === '/eligibility') {
+    const url = request.nextUrl.clone();
+    url.pathname = '/dashboard';
+    return NextResponse.redirect(url);
+  }
+
   // Redirect authenticated users away from auth pages
-  if (user && isPublicPath(pathname) && pathname !== '/auth/recovery') {
+  if (
+    user &&
+    isPublicPath(pathname) &&
+    pathname !== '/auth/recovery' &&
+    pathname !== '/auth/callback'
+  ) {
     const url = request.nextUrl.clone();
     url.pathname = '/dashboard';
     return NextResponse.redirect(url);

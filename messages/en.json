@@ -862,7 +862,14 @@
     "googleSignUpFailed": "Google sign-up failed",
     "showPassword": "Show password",
     "hidePassword": "Hide password",
-    "productName": "Anotto"
+    "productName": "Anotto",
+    "eligibilityTitle": "Before you continue",
+    "eligibilityDescription": "Anotto is currently available to adults in Colombia. Confirm both statements to use your account. This is a declaration, not an identity or location check.",
+    "confirmAdult": "I am at least 18 years old.",
+    "confirmColombia": "I live in Colombia.",
+    "eligibilityContinue": "Continue to Anotto",
+    "eligibilitySaving": "Saving…",
+    "eligibilitySaveFailed": "We could not save your confirmation. Try again."
   },
   "errors": {
     "unauthorized": "You are not authorized to perform this action.",

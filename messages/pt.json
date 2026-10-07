@@ -829,7 +829,14 @@
     "googleSignUpFailed": "Falha ao criar a conta com Google",
     "showPassword": "Mostrar senha",
     "hidePassword": "Ocultar senha",
-    "productName": "Anotto"
+    "productName": "Anotto",
+    "eligibilityTitle": "Antes de continuar",
+    "eligibilityDescription": "Por enquanto, o Anotto está disponível para adultos na Colômbia. Confirme as duas condições para usar sua conta. Esta declaração não verifica sua identidade nem localização.",
+    "confirmAdult": "Tenho pelo menos 18 anos.",
+    "confirmColombia": "Moro na Colômbia.",
+    "eligibilityContinue": "Continuar para o Anotto",
+    "eligibilitySaving": "Salvando…",
+    "eligibilitySaveFailed": "Não foi possível salvar sua confirmação. Tente novamente."
   },
   "errors": {
     "unauthorized": "Você não está autorizado a realizar esta ação.",

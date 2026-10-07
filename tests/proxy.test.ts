@@ -107,4 +107,45 @@ describe('authentication proxy', () => {
       expect((await proxy(request(path, method))).status).toBe(307);
     }
   });
+
+  it('asks new users to attest eligibility before opening the web app', async () => {
+    getUser.mockResolvedValue({
+      data: {
+        user: { id: 'new-user', created_at: '2026-10-07T00:00:00Z', user_metadata: {} },
+      },
+    });
+
+    const dashboard = await proxy(request('/dashboard'));
+    const accountApi = await proxy(request('/api/accounts'));
+    const attestation = await proxy(request('/eligibility'));
+    const deletion = await proxy(request('/api/settings/account/delete', 'POST'));
+    const callback = await proxy(request('/auth/callback?code=synthetic'));
+
+    expect(dashboard.status).toBe(307);
+    expect(dashboard.headers.get('location')).toBe('https://example.test/eligibility');
+    expect(accountApi.status).toBe(403);
+    expect(attestation.status).toBe(200);
+    expect(deletion.status).toBe(200);
+    expect(callback.status).toBe(200);
+  });
+
+  it('allows an attested new user and preserves access for older accounts', async () => {
+    getUser.mockResolvedValueOnce({
+      data: {
+        user: {
+          id: 'new-user',
+          created_at: '2026-10-07T00:00:00Z',
+          user_metadata: {
+            anotto_eligibility: { adult: true, country: 'CO', version: '2026-10-06' },
+          },
+        },
+      },
+    });
+    expect((await proxy(request('/dashboard'))).status).toBe(200);
+
+    getUser.mockResolvedValueOnce({
+      data: { user: { id: 'older-user', created_at: '2026-10-05T00:00:00Z', user_metadata: {} } },
+    });
+    expect((await proxy(request('/dashboard'))).status).toBe(200);
+  });
 });
