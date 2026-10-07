@@ -56,6 +56,22 @@ describe('forwarded email creation draft', () => {
       description: 'CODA.CO',
     });
   });
+
+  it('leaves the bank date blank when the alert date was redacted', () => {
+    const raw =
+      'From (unverified): alerts@an.notificacionesbancolombia.com\n\nAlertas\n\nBancolombia: Compraste $15.000 en CODA.CO con tu T.Deb *[number omitted], el 05/10/[number omitted] a las 11:46.';
+    expect(
+      buildForwardedEmailDraft(
+        null,
+        '2026-10-06T20:00:00Z',
+        previewBancolombiaNotice('forwarded_email', raw),
+      ),
+    ).toMatchObject({
+      amount: '15000.00',
+      date: '',
+      eventTime: '',
+    });
+  });
   it('prefills an older indented Lulo notice for review without confirming its time or guessing a category', () => {
     const stored = [
       'From (unverified): notificaciones@lulobank.com',

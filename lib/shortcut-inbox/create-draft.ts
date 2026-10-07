@@ -38,11 +38,11 @@ export function buildForwardedEmailDraft(
   return {
     type: bancolombia?.kind === 'income' ? 'income' : 'expense',
     amount: purchaseEvidence?.amountDecimal ?? bancolombia?.amountDecimal ?? '',
-    date:
-      bancolombia?.date ??
-      (preview?.bankEventAt
-        ? preview.bankEventAt.slice(0, 10)
-        : `${part('year')}-${part('month')}-${part('day')}`),
+    date: bancolombia
+      ? (bancolombia.date ?? '')
+      : preview
+        ? (preview.bankEventAt?.slice(0, 10) ?? '')
+        : `${part('year')}-${part('month')}-${part('day')}`,
     eventTime: bancolombia?.time ?? (preview?.bankEventAt ? preview.bankEventAt.slice(11, 16) : ''),
     eventTimeConfirmed: false,
     description: purchaseEvidence?.merchant ?? bancolombia?.merchant ?? '',
