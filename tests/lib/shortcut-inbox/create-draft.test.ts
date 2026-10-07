@@ -7,6 +7,7 @@ import {
   suggestForwardedCategory,
 } from '@/lib/shortcut-inbox/create-draft';
 import { previewLuloNotice } from '@/lib/shortcut-inbox/lulo-preview';
+import { previewBancolombiaNotice } from '@/lib/shortcut-inbox/bancolombia-preview';
 
 const receivedAt = '2026-09-26T01:20:00.000Z';
 const rawText = [
@@ -22,6 +23,39 @@ const rawText = [
 const preview = previewLuloNotice('forwarded_email', rawText, receivedAt)!;
 
 describe('forwarded email creation draft', () => {
+  it('keeps independent Lulo date, time, and amount evidence when card evidence is missing', () => {
+    const incomplete = rawText.replace(
+      'Origen tarjeta de crédito •8456',
+      'Tarjeta sin terminación',
+    );
+    const partial = previewLuloNotice('forwarded_email', incomplete, receivedAt);
+    expect(partial?.kind).toBe('needs_review');
+    expect(buildForwardedEmailDraft(partial, receivedAt)).toMatchObject({
+      amount: '121000.00',
+      date: '2026-09-25',
+      eventTime: '19:18',
+      eventTimeConfirmed: false,
+      description: 'Demo Store',
+    });
+  });
+  it('prefills Bancolombia evidence but requires explicit confirmation of the bank time', () => {
+    const raw =
+      'From (unverified): alerts@an.notificacionesbancolombia.com\n\nAlertas\n\nBancolombia: Compraste $15.000 en CODA.CO con tu T.Deb *9989, el 05/10/2026 a las 11:46.';
+    expect(
+      buildForwardedEmailDraft(
+        null,
+        '2026-10-06T20:00:00Z',
+        previewBancolombiaNotice('forwarded_email', raw),
+      ),
+    ).toMatchObject({
+      type: 'expense',
+      amount: '15000.00',
+      date: '2026-10-05',
+      eventTime: '11:46',
+      eventTimeConfirmed: false,
+      description: 'CODA.CO',
+    });
+  });
   it('prefills an older indented Lulo notice for review without confirming its time or guessing a category', () => {
     const stored = [
       'From (unverified): notificaciones@lulobank.com',

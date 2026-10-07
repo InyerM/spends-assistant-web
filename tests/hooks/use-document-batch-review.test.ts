@@ -5,7 +5,10 @@ import { describe, expect, it, vi } from 'vitest';
 import { useDocumentBatchReview, type DocumentReviewRow } from '@/hooks/use-document-batch-review';
 import type { Account, Category } from '@/types';
 
-vi.mock('next-intl', () => ({ useTranslations: () => (key: string) => key }));
+vi.mock('next-intl', () => ({
+  useTranslations: () => (key: string) => key,
+  useLocale: () => 'es',
+}));
 
 const rows: DocumentReviewRow[] = [
   {

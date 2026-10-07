@@ -98,6 +98,7 @@ export function previewLuloNotice(
   const forwarded = /^From \(unverified\): ([^\n]+)\n\n([^\n]+)\n\n([\s\S]*)$/u.exec(rawText);
   if (source === 'forwarded_email') {
     if (!forwarded) return null;
+    if (!/^\s*(?:[^<>\n]*<)?notificaciones@lulobank\.com>?\s*$/iu.test(forwarded[1])) return null;
     rawText = `From: ${forwarded[1]}\nSubject: ${forwarded[2]}\n\n${forwarded[3]}`;
   }
   const sender = oneLine(rawText, /^From:[ \t]*(.+)$/gimu);

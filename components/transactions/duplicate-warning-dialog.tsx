@@ -20,6 +20,8 @@ import { useQueryClient } from '@tanstack/react-query';
 import { transactionKeys } from '@/lib/api/queries/transaction.queries';
 import { accountKeys } from '@/lib/api/queries/account.queries';
 import type { Transaction, CreateTransactionInput } from '@/types';
+import { getCategoryName as getTranslatedCategoryName } from '@/lib/i18n/get-category-name';
+import type { Locale } from '@/i18n/config';
 
 interface DuplicateWarningDialogProps {
   open: boolean;
@@ -49,8 +51,11 @@ export function DuplicateWarningDialog({
     [accounts],
   );
   const categoryMap = useMemo(
-    () => new Map((categories ?? []).map((c) => [c.id, c.name])),
-    [categories],
+    () =>
+      new Map(
+        (categories ?? []).map((c) => [c.id, getTranslatedCategoryName(c, locale as Locale)]),
+      ),
+    [categories, locale],
   );
 
   const getAccountName = (accountId: string): string => accountMap.get(accountId) ?? '';

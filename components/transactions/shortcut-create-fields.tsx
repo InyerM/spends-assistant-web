@@ -1,6 +1,6 @@
 'use client';
 
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { Checkbox } from '@/components/ui/checkbox';
 import { DatePicker } from '@/components/ui/date-picker';
 import { Input } from '@/components/ui/input';
@@ -16,6 +16,8 @@ import {
 import { SearchableSelect } from '@/components/shared/searchable-select';
 import type { Account, Category } from '@/types';
 import type { ForwardedEmailDraft } from '@/lib/shortcut-inbox/create-draft';
+import { getCategoryName } from '@/lib/i18n/get-category-name';
+import type { Locale } from '@/i18n/config';
 
 export interface ShortcutCreateDraft extends ForwardedEmailDraft {
   accountId: string;
@@ -34,6 +36,7 @@ export function ShortcutCreateFields({
   onChange: (patch: Partial<ShortcutCreateDraft>) => void;
 }): React.ReactElement {
   const t = useTranslations('shortcutInbox');
+  const locale = useLocale() as Locale;
   return (
     <div className='grid gap-3 sm:grid-cols-2'>
       <div className='space-y-1'>
@@ -84,7 +87,7 @@ export function ShortcutCreateFields({
           searchPlaceholder={t('searchCategories')}
           items={categories
             .filter((category) => category.type === draft.type && category.is_active)
-            .map((category) => ({ value: category.id, label: category.name }))}
+            .map((category) => ({ value: category.id, label: getCategoryName(category, locale) }))}
         />
       </div>
       <label className='space-y-1'>

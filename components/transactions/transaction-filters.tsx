@@ -1,6 +1,6 @@
 'use client';
 
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { SearchInput } from '@/components/shared/search-input';
 import { Badge } from '@/components/ui/badge';
@@ -21,6 +21,8 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import { useState } from 'react';
+import { getCategoryName } from '@/lib/i18n/get-category-name';
+import type { Locale } from '@/i18n/config';
 
 type ListFilters = Omit<TransactionFilters, 'page' | 'limit'>;
 
@@ -34,6 +36,7 @@ export function TransactionFiltersBar({
   onFiltersChange,
 }: TransactionFiltersBarProps): React.ReactElement {
   const t = useTranslations('transactions');
+  const locale = useLocale() as Locale;
   const tCommon = useTranslations('common');
   const { data: accounts } = useAccounts();
   const { data: categories } = useCategories();
@@ -214,7 +217,7 @@ export function TransactionFiltersBar({
                       />
                       <span className='truncate text-sm'>
                         {cat.icon ? `${cat.icon} ` : ''}
-                        {cat.name}
+                        {getCategoryName(cat, locale)}
                       </span>
                     </label>
                   </div>
@@ -230,7 +233,7 @@ export function TransactionFiltersBar({
                           />
                           <span className='truncate'>
                             {sub.icon ? `${sub.icon} ` : ''}
-                            {sub.name}
+                            {getCategoryName(sub, locale)}
                           </span>
                         </label>
                       ))}

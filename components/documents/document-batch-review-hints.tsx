@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { inferAccountFromEvidence, type suggestDocumentReview } from '@/lib/document-review';
@@ -12,6 +12,8 @@ import type {
   ReviewDraft,
   UseDocumentBatchReviewResult,
 } from '@/hooks/use-document-batch-review';
+import { getCategoryName } from '@/lib/i18n/get-category-name';
+import type { Locale } from '@/i18n/config';
 
 interface Props {
   row: DocumentReviewRow;
@@ -31,6 +33,7 @@ export function DocumentBatchReviewHints({
   review,
 }: Props): React.ReactElement {
   const t = useTranslations('documents');
+  const locale = useLocale() as Locale;
   const {
     selected,
     drafts,
@@ -60,6 +63,9 @@ export function DocumentBatchReviewHints({
   const evidencedAccountName = accounts.find(
     (account) => account.id === accountEvidence?.accountId,
   )?.name;
+  const historicalCategoryRecord = categories.find(
+    (category) => category.id === historicalCategory?.categoryId,
+  );
   return (
     <>
       {suggestion.currency && (
@@ -108,9 +114,9 @@ export function DocumentBatchReviewHints({
         <div className='mt-2 flex flex-wrap items-center gap-2'>
           <p className='text-muted-foreground text-xs'>
             {t('categoryHistoryHint', {
-              name:
-                categories.find((category) => category.id === historicalCategory.categoryId)
-                  ?.name ?? t('selectCategory'),
+              name: historicalCategoryRecord
+                ? getCategoryName(historicalCategoryRecord, locale)
+                : t('selectCategory'),
               count: historicalCategory.evidenceCount,
             })}
           </p>

@@ -3,6 +3,7 @@ import type { AutomationRule } from '@/types/automation-rule';
 import { inferCategoryFromHistory } from '@/lib/document-review';
 import { decodeEmailEntities } from './email-text';
 import type { LuloNoticePreview } from './lulo-preview';
+import type { BancolombiaNoticePreview } from './bancolombia-preview';
 import { matchesAccountSuffix } from '@/lib/accounts/identifiers';
 
 export interface ForwardedEmailDraft {
@@ -24,6 +25,7 @@ type MatchableAccount = Pick<
 export function buildForwardedEmailDraft(
   preview: LuloNoticePreview | null,
   receivedAt: string,
+  bancolombia: BancolombiaNoticePreview | null = null,
 ): ForwardedEmailDraft {
   const receiptDate = new Intl.DateTimeFormat('en-US', {
     timeZone: 'America/Bogota',
@@ -32,17 +34,18 @@ export function buildForwardedEmailDraft(
     day: '2-digit',
   }).formatToParts(new Date(receivedAt));
   const part = (kind: string): string => receiptDate.find(({ type }) => type === kind)?.value ?? '';
-  const parsed = preview?.kind === 'card_purchase' && preview.confidence === 'structured';
+  const purchaseEvidence = preview?.merchant && preview.amountDecimal ? preview : null;
   return {
-    type: 'expense',
-    amount: parsed ? (preview.amountDecimal ?? '') : '',
+    type: bancolombia?.kind === 'income' ? 'income' : 'expense',
+    amount: purchaseEvidence?.amountDecimal ?? bancolombia?.amountDecimal ?? '',
     date:
-      parsed && preview.bankEventAt
+      bancolombia?.date ??
+      (preview?.bankEventAt
         ? preview.bankEventAt.slice(0, 10)
-        : `${part('year')}-${part('month')}-${part('day')}`,
-    eventTime: parsed && preview.bankEventAt ? preview.bankEventAt.slice(11, 16) : '',
+        : `${part('year')}-${part('month')}-${part('day')}`),
+    eventTime: bancolombia?.time ?? (preview?.bankEventAt ? preview.bankEventAt.slice(11, 16) : ''),
     eventTimeConfirmed: false,
-    description: parsed ? (preview.merchant ?? '') : '',
+    description: purchaseEvidence?.merchant ?? bancolombia?.merchant ?? '',
     notes: '',
   };
 }
@@ -117,6 +120,10 @@ function sourceAccountReference(
       suffix: match[1],
     })),
     ...[...evidence.matchAll(/\ben tu cuenta\s*\*+\s*(\d{4})\b/giu)].map((match) => ({
+      kind: 'debit' as const,
+      suffix: match[1],
+    })),
+    ...[...evidence.matchAll(/\bdesde tu producto\s+(\d{4})\b/giu)].map((match) => ({
       kind: 'debit' as const,
       suffix: match[1],
     })),

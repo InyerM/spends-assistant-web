@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState, type Dispatch, type SetStateAction } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import {
   decideDocumentObservation,
   recoverDocumentTransaction,
@@ -21,6 +21,8 @@ import type { Account, Category, Transaction } from '@/types';
 import type { ReconciliationCandidate } from '@/lib/document-reconciliation';
 import { merchantSuggestionQuery } from '@/lib/api/queries/merchant-suggestion.queries';
 import { AiConsentRequiredError } from '@/lib/ai-consent';
+import { getCategoryName } from '@/lib/i18n/get-category-name';
+import type { Locale } from '@/i18n/config';
 
 export interface DocumentReviewRow extends ReviewHistoryObservation {
   ordinal: number;
@@ -99,6 +101,7 @@ export function useDocumentBatchReview({
   suggestions = [],
 }: UseDocumentBatchReviewProps): UseDocumentBatchReviewResult {
   const t = useTranslations('documents');
+  const locale = useLocale() as Locale;
   const queryClient = useQueryClient();
   const [selected, setSelected] = useState<string[]>([]);
   const [drafts, setDrafts] = useState<Record<string, ReviewDraft>>({});
@@ -246,7 +249,7 @@ export function useDocumentBatchReview({
           if (!Object.hasOwn(current, row.id) || current[row.id].categoryId) return current;
           return { ...current, [row.id]: { ...current[row.id], categoryId: category.id } };
         });
-        setAiHints((current) => ({ ...current, [row.id]: category.name }));
+        setAiHints((current) => ({ ...current, [row.id]: getCategoryName(category, locale) }));
       })
       .catch((cause: unknown) => {
         if (cause instanceof AiConsentRequiredError) {
@@ -300,7 +303,7 @@ export function useDocumentBatchReview({
         return;
       }
       updateDraft(row.id, { categoryId: category.id });
-      setAiHints((current) => ({ ...current, [row.id]: category.name }));
+      setAiHints((current) => ({ ...current, [row.id]: getCategoryName(category, locale) }));
     } catch (cause) {
       setErrors((current) => ({
         ...current,

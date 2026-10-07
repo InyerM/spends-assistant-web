@@ -17,6 +17,11 @@ function notice(purchase: string, extra = ''): string {
 }
 
 describe('Lulo Gmail notice preview', () => {
+  it('does not label a Bancolombia alert as a possible Lulo notice', () => {
+    const rawText =
+      'From (unverified): alerts@an.notificacionesbancolombia.com\n\nAlertas\n\nBancolombia: Compraste $15.000 en Demo Store.';
+    expect(previewLuloNotice('forwarded_email', rawText, receivedAt)).toBeNull();
+  });
   it('holds a zero-amount card notice separately from a card purchase', () => {
     const rawText = notice('Realizaste una compra en Demo Store por $0');
     expect(previewLuloNotice('lulo-email-backfill', rawText, receivedAt)).toMatchObject({

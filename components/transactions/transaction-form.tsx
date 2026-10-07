@@ -47,7 +47,9 @@ import {
 } from '@/lib/api/mutations/transaction.mutations';
 import { DuplicateWarningDialog } from '@/components/transactions/duplicate-warning-dialog';
 import { getCurrentColombiaTimes } from '@/lib/utils/date';
-import { findNameById, findById } from '@/lib/utils/lookup';
+import { findById } from '@/lib/utils/lookup';
+import { getCategoryName } from '@/lib/i18n/get-category-name';
+import type { Locale } from '@/i18n/config';
 import { UsageIndicator } from '@/components/shared/usage-indicator';
 import { useUsage } from '@/hooks/use-usage';
 import { useSubscription } from '@/hooks/use-subscription';
@@ -369,8 +371,11 @@ export function TransactionForm({
   // --- AI result display helpers ---
   const hasRules = parseResult && parseResult.applied_rules.length > 0;
   const resolvedType = parseResult?.resolved.type ?? parseResult?.parsed.type;
-  const resolvedCategoryName = parseResult?.resolved.category_id
-    ? findNameById(categories ?? [], parseResult.resolved.category_id)
+  const resolvedCategory = parseResult?.resolved.category_id
+    ? findById(categories ?? [], parseResult.resolved.category_id)
+    : null;
+  const resolvedCategoryName = resolvedCategory
+    ? getCategoryName(resolvedCategory, locale as Locale)
     : null;
   const resolvedAccountName = parseResult?.resolved.transfer_to_account_id
     ? findById(accounts ?? [], parseResult.resolved.transfer_to_account_id)?.name
@@ -637,7 +642,8 @@ export function TransactionForm({
                       const details: string[] = [];
                       if (actions.set_type) details.push(`type: ${actions.set_type}`);
                       if (actions.set_category) {
-                        const name = findNameById(categories ?? [], actions.set_category);
+                        const category = findById(categories ?? [], actions.set_category);
+                        const name = category ? getCategoryName(category, locale as Locale) : null;
                         details.push(`category: ${name || actions.set_category}`);
                       }
                       if (actions.set_account) {

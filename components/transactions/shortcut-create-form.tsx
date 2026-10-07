@@ -22,6 +22,7 @@ import {
   suggestForwardedCategory,
 } from '@/lib/shortcut-inbox/create-draft';
 import type { LuloNoticePreview } from '@/lib/shortcut-inbox/lulo-preview';
+import { previewBancolombiaNotice } from '@/lib/shortcut-inbox/bancolombia-preview';
 
 export function ShortcutCreateForm({
   inboxId,
@@ -48,8 +49,9 @@ export function ShortcutCreateForm({
     { enabled: preview?.kind === 'card_purchase' && !!preview.merchant },
   );
   const createMutation = useCreateInboxTransaction();
+  const bancolombia = previewBancolombiaNotice('forwarded_email', rawText);
   const [fieldDraft, setFieldDraft] = useState(() => {
-    const base = buildForwardedEmailDraft(preview, receivedAt);
+    const base = buildForwardedEmailDraft(preview, receivedAt, bancolombia);
     return {
       ...base,
       type: analysis?.suggested_type ?? base.type,
