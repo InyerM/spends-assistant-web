@@ -36,13 +36,13 @@ describe('help center', () => {
       'href',
       '/documents',
     );
-    expect(screen.getByRole('link', { name: 'Política de privacidad' })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: 'Política de privacidad (borrador)' })).toHaveAttribute(
       'href',
-      'https://anotto.app/privacy/',
+      'https://anotto-landing.vercel.app/privacy/',
     );
-    expect(screen.getByRole('link', { name: 'Términos de uso' })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: 'Términos de uso (borrador)' })).toHaveAttribute(
       'href',
-      'https://anotto.app/terms/',
+      'https://anotto-landing.vercel.app/terms/',
     );
     expect(screen.queryByRole('link', { name: 'Escribir a soporte' })).not.toBeInTheDocument();
   });
