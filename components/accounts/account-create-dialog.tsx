@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { z } from 'zod';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -78,6 +78,7 @@ export function AccountCreateDialog({
       icon: '',
     },
   });
+  const accountType = useWatch({ control: form.control, name: 'type' });
 
   useEffect(() => {
     if (open) {
@@ -166,7 +167,11 @@ export function AccountCreateDialog({
                 </FormItem>
               )}
             />
-            <AccountIdentifierEditor value={identifiers} onChange={setIdentifiers} />
+            <AccountIdentifierEditor
+              value={identifiers}
+              onChange={setIdentifiers}
+              accountType={accountType}
+            />
             <div className='grid grid-cols-2 gap-4'>
               <FormField
                 control={form.control}

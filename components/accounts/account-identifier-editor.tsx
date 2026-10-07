@@ -12,15 +12,22 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import type { AccountIdentifier } from '@/types/account';
+import { defaultIdentifierKind } from '@/lib/accounts/identifiers';
 
 interface Props {
   value: AccountIdentifier[];
   onChange: (value: AccountIdentifier[]) => void;
+  accountType: string;
 }
 
-export function AccountIdentifierEditor({ value, onChange }: Props): React.ReactElement {
+export function AccountIdentifierEditor({
+  value,
+  onChange,
+  accountType,
+}: Props): React.ReactElement {
   const t = useTranslations('accounts.identifiers');
-  const [kind, setKind] = useState<AccountIdentifier['kind']>('bank_account');
+  const [chosenKind, setChosenKind] = useState<AccountIdentifier['kind'] | null>(null);
+  const kind = chosenKind ?? defaultIdentifierKind(accountType);
   const [suffix, setSuffix] = useState('');
 
   function add(): void {
@@ -83,7 +90,9 @@ export function AccountIdentifierEditor({ value, onChange }: Props): React.React
         </div>
       ))}
       <div className='flex flex-wrap gap-2'>
-        <Select value={kind} onValueChange={(next) => setKind(next as AccountIdentifier['kind'])}>
+        <Select
+          value={kind}
+          onValueChange={(next) => setChosenKind(next as AccountIdentifier['kind'])}>
           <SelectTrigger className='w-40' aria-label={t('kind')}>
             <SelectValue />
           </SelectTrigger>

@@ -1,11 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import {
   accountIdentifiers,
+  defaultIdentifierKind,
   matchesAccountSuffix,
   primarySuffix,
 } from '@/lib/accounts/identifiers';
 
 describe('account identifiers', () => {
+  it('defaults a credit card to a credit card reference', () => {
+    expect(defaultIdentifierKind('credit_card')).toBe('credit_card');
+    expect(defaultIdentifierKind('savings')).toBe('bank_account');
+  });
   const account = {
     type: 'savings' as const,
     last_four: '2651',

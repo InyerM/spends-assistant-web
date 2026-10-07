@@ -1,5 +1,9 @@
 import type { Account, AccountIdentifier } from '@/types/account';
 
+export function defaultIdentifierKind(type: string): AccountIdentifier['kind'] {
+  return type === 'credit_card' ? 'credit_card' : 'bank_account';
+}
+
 type AccountReference = Pick<Account, 'type' | 'last_four'> &
   Partial<Pick<Account, 'bank_account_last_four' | 'identifiers'>>;
 
