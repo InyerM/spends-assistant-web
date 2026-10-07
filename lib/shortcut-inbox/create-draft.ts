@@ -116,6 +116,10 @@ function sourceAccountReference(
       kind: 'debit' as const,
       suffix: match[1],
     })),
+    ...[...evidence.matchAll(/\ben tu cuenta\s*\*+\s*(\d{4})\b/giu)].map((match) => ({
+      kind: 'debit' as const,
+      suffix: match[1],
+    })),
   ];
   const unique = [
     ...new Map(references.map((item) => [`${item.kind}:${item.suffix}`, item])).values(),

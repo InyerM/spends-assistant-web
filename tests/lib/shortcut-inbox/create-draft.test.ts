@@ -257,6 +257,25 @@ describe('forwarded email creation draft', () => {
     expect(inferForwardedBancolombiaAccount(raw.replace('2651', '0000'), [source])).toBe('');
   });
 
+  it('recognizes the owner savings account on an incoming transfer notice', () => {
+    const raw =
+      'From (unverified): alerts@an.notificacionesbancolombia.com\n\nBancolombia: recibiste $100.000 en tu cuenta *2651';
+    const account = {
+      id: 'savings',
+      name: 'Bancolombia',
+      institution: 'bancolombia',
+      type: 'savings' as const,
+      last_four: '2651',
+      currency: 'COP',
+      is_active: true,
+      deleted_at: null,
+    };
+    expect(inferForwardedBancolombiaAccount(raw, [account])).toBe('savings');
+    expect(inferForwardedBancolombiaAccount(raw.replace('tu cuenta', 'la cuenta'), [account])).toBe(
+      '',
+    );
+  });
+
   it('proposes a category only from recurring merchant history and an active expense category', () => {
     const history = [
       { description: 'Demo Store', type: 'expense' as const, category_id: 'food' },
