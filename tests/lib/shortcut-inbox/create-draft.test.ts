@@ -3,6 +3,7 @@ import {
   buildForwardedEmailDraft,
   inferForwardedAccount,
   inferForwardedBancolombiaAccount,
+  inferForwardedAccountFromRules,
   suggestForwardedCategory,
 } from '@/lib/shortcut-inbox/create-draft';
 import { previewLuloNotice } from '@/lib/shortcut-inbox/lulo-preview';
@@ -144,6 +145,93 @@ describe('forwarded email creation draft', () => {
     };
     expect(inferForwardedBancolombiaAccount(raw, [debit])).toBe('savings');
     expect(inferForwardedBancolombiaAccount(raw, [{ ...debit, is_active: false }])).toBe('');
+  });
+
+  it('uses an owner account rule for a Bancolombia debit alias with two masking stars', () => {
+    const raw =
+      'From (unverified): alerts@ayn.notificacionesbancolombia.com\n\nBancolombia: Compraste $15.000 en CODA.CO con tu T.Deb **9989';
+    const account = {
+      id: 'savings',
+      name: 'Bancolombia',
+      institution: 'bancolombia',
+      type: 'savings' as const,
+      last_four: '7799',
+      bank_account_last_four: '2651',
+      currency: 'COP',
+      is_active: true,
+      deleted_at: null,
+    };
+    const rules = [
+      {
+        id: 'rule',
+        user_id: 'owner',
+        name: 'Account: Bancolombia',
+        is_active: true,
+        priority: 100,
+        rule_type: 'account_detection' as const,
+        condition_logic: 'or' as const,
+        conditions: { raw_text_contains: ['7799', '2651', '9989'] },
+        actions: { set_account: account.id },
+        prompt_text: null,
+        match_phone: null,
+        transfer_to_account_id: null,
+        created_at: '',
+        updated_at: '',
+      },
+    ];
+    expect(inferForwardedAccountFromRules(raw, [account], rules)).toBe(account.id);
+    expect(inferForwardedAccountFromRules(raw.replace('**9989', '**0000'), [account], rules)).toBe(
+      '',
+    );
+  });
+
+  it('does not use an institution-only rule to assign a Lulo credit-card purchase to savings', () => {
+    const account = {
+      id: 'savings',
+      name: 'Banco Lulobank',
+      institution: 'lulobank',
+      type: 'savings' as const,
+      last_four: '',
+      bank_account_last_four: null,
+      currency: 'COP',
+      is_active: true,
+      deleted_at: null,
+    };
+    const rule = {
+      id: 'rule',
+      user_id: 'owner',
+      name: 'Account: Lulo',
+      is_active: true,
+      priority: 100,
+      rule_type: 'account_detection' as const,
+      condition_logic: 'and' as const,
+      conditions: { raw_text_contains: ['lulobank'] },
+      actions: { set_account: account.id },
+      prompt_text: null,
+      match_phone: null,
+      transfer_to_account_id: null,
+      created_at: '',
+      updated_at: '',
+    };
+    expect(inferForwardedAccountFromRules(rawText, [account], [rule])).toBe('');
+  });
+
+  it('infers the source account of a Bancolombia transfer, never the destination', () => {
+    const raw =
+      'From (unverified): alerts@an.notificacionesbancolombia.com\n\nTransferiste $200.000 desde tu cuenta *2651 a la cuenta *1234';
+    const source = {
+      id: 'source',
+      name: 'Bancolombia',
+      institution: 'bancolombia',
+      type: 'savings' as const,
+      last_four: '7799',
+      bank_account_last_four: '2651',
+      currency: 'COP',
+      is_active: true,
+      deleted_at: null,
+    };
+    expect(inferForwardedBancolombiaAccount(raw, [source])).toBe(source.id);
+    expect(inferForwardedBancolombiaAccount(raw.replace('2651', '0000'), [source])).toBe('');
   });
 
   it('proposes a category only from recurring merchant history and an active expense category', () => {

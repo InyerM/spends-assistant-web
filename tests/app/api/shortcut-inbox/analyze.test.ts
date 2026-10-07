@@ -41,6 +41,8 @@ function fakeDb(
     inbox?: typeof inbox | null;
     verified?: boolean;
     cached?: Record<string, unknown>;
+    accounts?: Record<string, unknown>[];
+    rules?: Record<string, unknown>[];
   } = {},
 ) {
   const rows: Record<string, unknown> = {
@@ -71,6 +73,10 @@ function fakeDb(
           filters.push([field, value]);
           return query;
         },
+        is: (field: string, value: unknown) => {
+          filters.push([field, value]);
+          return query;
+        },
         insert: (value: Record<string, unknown>) => {
           inserts.push(value);
           rows.forwarded_email_analyses = value;
@@ -88,7 +94,7 @@ function fakeDb(
         then(resolve: (value: unknown) => unknown) {
           const data =
             table === 'accounts'
-              ? [
+              ? (options.accounts ?? [
                   {
                     id: accountId,
                     name: 'Lulo card',
@@ -99,10 +105,12 @@ function fakeDb(
                     is_active: true,
                     deleted_at: null,
                   },
-                ]
-              : table === 'categories'
-                ? [{ id: categoryId, slug: 'education', type: 'expense', is_active: true }]
-                : rows[table];
+                ])
+              : table === 'automation_rules'
+                ? (options.rules ?? [])
+                : table === 'categories'
+                  ? [{ id: categoryId, slug: 'education', type: 'expense', is_active: true }]
+                  : rows[table];
           return Promise.resolve(resolve({ data, error: null }));
         },
       };
@@ -166,6 +174,45 @@ describe('POST forwarded email analysis', () => {
     });
     expect(db.inserts).toHaveLength(0);
     expect(db.updates).toHaveLength(1);
+  });
+
+  it('repairs a cached account proposal using an active suffix rule without another AI call', async () => {
+    const db = fakeDb({
+      inbox: {
+        ...inbox,
+        raw_text:
+          'From (unverified): alertas@ayn.notificacionesbancolombia.com\n\nBancolombia: Compraste $15.000 en CODA.CO con tu T.Deb **9989',
+      },
+      cached: { inbox_item_id: id, user_id: 'owner-a', analysis_version: 2, account_id: null },
+      accounts: [
+        {
+          id: accountId,
+          name: 'Bancolombia',
+          institution: 'bancolombia',
+          type: 'savings',
+          last_four: '7799',
+          bank_account_last_four: '2651',
+          currency: 'COP',
+          is_active: true,
+          deleted_at: null,
+        },
+      ],
+      rules: [
+        {
+          rule_type: 'account_detection',
+          is_active: true,
+          condition_logic: 'or',
+          conditions: { raw_text_contains: ['7799', '2651', '9989'] },
+          actions: { set_account: accountId },
+        },
+      ],
+    });
+    getUserClient.mockResolvedValue({ userId: 'owner-a', accessToken: 'test-jwt', supabase: db });
+    const response = await POST(request(), context);
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({ account_id: accountId });
+    expect(db.updates).toContainEqual({ account_id: accountId });
+    expect(fetch).not.toHaveBeenCalled();
   });
 
   it('rejects a foreign item or unverified forwarding before provider calls', async () => {

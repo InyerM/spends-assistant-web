@@ -3,9 +3,11 @@ import { workerConfig } from '@/lib/config';
 import {
   inferForwardedAccount,
   inferForwardedBancolombiaAccount,
+  inferForwardedAccountFromRules,
 } from '@/lib/shortcut-inbox/create-draft';
 import { previewLuloNotice } from '@/lib/shortcut-inbox/lulo-preview';
 import type { Account } from '@/types';
+import type { AutomationRule } from '@/types/automation-rule';
 import { forwardAiConsentError } from '@/lib/ai-consent';
 
 interface Context {
@@ -68,7 +70,9 @@ export async function POST(request: Request, context: Context): Promise<Response
       .eq('user_id', userId)
       .maybeSingle();
     if (cacheError) return errorResponse('Email analysis lookup failed');
-    if (cached?.analysis_version === 2) return Response.json(cached, { headers: privateHeaders });
+    if (cached?.analysis_version === 2 && (cached.account_id || inbox.status !== 'pending')) {
+      return Response.json(cached, { headers: privateHeaders });
+    }
     if (inbox.status !== 'pending') return errorResponse('Inbox item is not pending', 409);
 
     const inboxFields: Record<string, unknown> = inbox;
@@ -89,18 +93,46 @@ export async function POST(request: Request, context: Context): Promise<Response
     let categoryId: string | null = null;
     let categorySource: 'ai' | 'catalog' | null = null;
 
-    const { data: accounts, error: accountsError } = await supabase
-      .from('accounts')
-      .select(
-        'id,name,institution,type,last_four,bank_account_last_four,currency,is_active,deleted_at',
-      )
-      .eq('user_id', userId);
-    if (accountsError) return errorResponse('Email account analysis failed');
+    const [{ data: accounts, error: accountsError }, { data: rules, error: rulesError }] =
+      await Promise.all([
+        supabase
+          .from('accounts')
+          .select(
+            'id,name,institution,type,last_four,bank_account_last_four,currency,is_active,deleted_at',
+          )
+          .eq('user_id', userId),
+        supabase
+          .from('automation_rules')
+          .select('rule_type,is_active,condition_logic,conditions,actions')
+          .eq('user_id', userId)
+          .eq('rule_type', 'account_detection')
+          .eq('is_active', true)
+          .is('deleted_at', null),
+      ]);
+    if (accountsError || rulesError) return errorResponse('Email account analysis failed');
     const ownedAccounts = Array.isArray(accounts) ? (accounts as Account[]) : [];
     accountId =
       inferForwardedAccount(preview, ownedAccounts) ||
       inferForwardedBancolombiaAccount(inboxFields.raw_text, ownedAccounts) ||
+      inferForwardedAccountFromRules(
+        inboxFields.raw_text,
+        ownedAccounts,
+        Array.isArray(rules) ? (rules as AutomationRule[]) : [],
+      ) ||
       null;
+
+    if (cached?.analysis_version === 2) {
+      if (!accountId) return Response.json(cached, { headers: privateHeaders });
+      const { data: updated, error: updateError } = await supabase
+        .from('forwarded_email_analyses')
+        .update({ account_id: accountId })
+        .eq('inbox_item_id', id)
+        .eq('user_id', userId)
+        .select('*')
+        .maybeSingle();
+      if (updateError || !updated) return errorResponse('Email analysis failed');
+      return Response.json(updated, { headers: privateHeaders });
+    }
 
     if (!workerConfig.url) return errorResponse('Email suggestion unavailable', 503);
     const token = accessToken ?? (await supabase.auth.getSession()).data.session?.access_token;

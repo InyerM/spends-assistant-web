@@ -180,4 +180,60 @@ describe('ShortcutCreateForm', () => {
     );
     expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith('/create'))).toBe(false);
   });
+
+  it('prefills an owner-validated account from an alias rule even when local inference has no alias', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockImplementation((url: string) => {
+        if (url === '/api/accounts')
+          return Promise.resolve(
+            Response.json([
+              {
+                id: 'savings',
+                name: 'Bancolombia',
+                institution: 'bancolombia',
+                type: 'savings',
+                last_four: '7799',
+                bank_account_last_four: '2651',
+                currency: 'COP',
+                is_active: true,
+                deleted_at: null,
+              },
+            ]),
+          );
+        if (url === '/api/categories') return Promise.resolve(Response.json([]));
+        if (url === '/api/settings/user-settings')
+          return Promise.resolve(Response.json({ hour_format: '24h' }));
+        throw new Error(`Unexpected request: ${url}`);
+      }),
+    );
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <ShortcutCreateForm
+          rawText={
+            'From (unverified): alerts@ayn.notificacionesbancolombia.com\n\nCompraste $15.000 en CODA.CO con tu T.Deb **9989'
+          }
+          inboxId='item-alias'
+          receivedAt={receivedAt}
+          analysis={{
+            status: 'needs_review',
+            account_id: 'savings',
+            category_id: null,
+            category_source: null,
+            suggested_type: 'expense',
+            description: 'Compra en CODA.CO',
+            notes: null,
+          }}
+          onCreated={vi.fn()}
+          onCancel={vi.fn()}
+        />
+      </QueryClientProvider>,
+    );
+    await waitFor(() =>
+      expect(screen.getByRole('combobox', { name: 'createAccount' })).toHaveTextContent(
+        'Bancolombia',
+      ),
+    );
+  });
 });

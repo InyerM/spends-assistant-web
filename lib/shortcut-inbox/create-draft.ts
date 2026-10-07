@@ -1,4 +1,5 @@
 import type { Account, Category, Transaction } from '@/types';
+import type { AutomationRule } from '@/types/automation-rule';
 import { inferCategoryFromHistory } from '@/lib/document-review';
 import { decodeEmailEntities } from './email-text';
 import type { LuloNoticePreview } from './lulo-preview';
@@ -83,10 +84,10 @@ export function inferForwardedBancolombiaAccount(
   const evidence = decodeEmailEntities(rawText)
     .normalize('NFKD')
     .replace(/[\u0300-\u036f]/gu, '');
-  const cards = [...evidence.matchAll(/\bT\.\s*(Cred(?:ito)?|Deb(?:ito)?)\s*\*\s*(\d{4})\b/giu)];
-  if (cards.length !== 1) return '';
-  const credit = cards[0][1].toLowerCase().startsWith('cred');
-  const suffix = cards[0][2];
+  const source = sourceAccountReference(evidence);
+  if (!source) return '';
+  const credit = source.kind === 'credit';
+  const suffix = source.suffix;
   const matched = accounts.filter(
     (account) =>
       account.is_active &&
@@ -99,6 +100,83 @@ export function inferForwardedBancolombiaAccount(
       (account.last_four === suffix || account.bank_account_last_four === suffix),
   );
   return matched.length === 1 ? matched[0].id : '';
+}
+
+function sourceAccountReference(
+  rawText: string,
+): { kind: 'credit' | 'debit'; suffix: string } | null {
+  const evidence = decodeEmailEntities(rawText)
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/gu, '');
+  const references = [
+    ...[...evidence.matchAll(/\bT\.\s*(Cred(?:ito)?|Deb(?:ito)?)\s*\*+\s*(\d{4})\b/giu)].map(
+      (match) => ({
+        kind: match[1].toLowerCase().startsWith('cred') ? ('credit' as const) : ('debit' as const),
+        suffix: match[2],
+      }),
+    ),
+    ...[...evidence.matchAll(/\bOrigen tarjeta de credito\s*[•*]+\s*(\d{4})\b/giu)].map(
+      (match) => ({ kind: 'credit' as const, suffix: match[1] }),
+    ),
+    ...[...evidence.matchAll(/\bdesde tu cuenta\s*\*+\s*(\d{4})\b/giu)].map((match) => ({
+      kind: 'debit' as const,
+      suffix: match[1],
+    })),
+  ];
+  const unique = [
+    ...new Map(references.map((item) => [`${item.kind}:${item.suffix}`, item])).values(),
+  ];
+  return unique.length === 1 ? unique[0] : null;
+}
+
+export function inferForwardedAccountFromRules(
+  rawText: string,
+  accounts: Pick<
+    Account,
+    | 'id'
+    | 'name'
+    | 'institution'
+    | 'type'
+    | 'last_four'
+    | 'bank_account_last_four'
+    | 'currency'
+    | 'is_active'
+    | 'deleted_at'
+  >[],
+  rules: Pick<
+    AutomationRule,
+    'rule_type' | 'is_active' | 'condition_logic' | 'conditions' | 'actions'
+  >[],
+): string {
+  const source = sourceAccountReference(rawText);
+  if (!source) return '';
+  const evidence = decodeEmailEntities(rawText).toLowerCase();
+  const sender = evidence.split('\n', 1)[0] ?? '';
+  const matches = new Set<string>();
+  for (const rule of rules) {
+    if (!rule.is_active || rule.rule_type !== 'account_detection' || !rule.actions.set_account)
+      continue;
+    const keywords = rule.conditions.raw_text_contains ?? [];
+    if (!keywords.some((keyword) => keyword === source.suffix)) continue;
+    const conditionMatches =
+      rule.condition_logic === 'and'
+        ? keywords.every((keyword) => evidence.includes(keyword.toLowerCase()))
+        : keywords.some((keyword) => evidence.includes(keyword.toLowerCase()));
+    if (!conditionMatches) continue;
+    const account = accounts.find((item) => item.id === rule.actions.set_account);
+    if (!account || !account.is_active || account.deleted_at || account.currency !== 'COP')
+      continue;
+    if (source.kind === 'credit' && account.type !== 'credit_card') continue;
+    if (source.kind === 'debit' && account.type !== 'savings' && account.type !== 'checking')
+      continue;
+    const institution = `${account.institution ?? ''} ${account.name}`.toLowerCase();
+    if (/bancolombia/u.test(institution) && !/notificacionesbancolombia\.com/u.test(sender))
+      continue;
+    if (/lulo/u.test(institution) && !/@lulobank\.com/u.test(sender)) continue;
+    if (/falabella/u.test(institution) && !/falabella/u.test(sender)) continue;
+    matches.add(account.id);
+  }
+  return matches.size === 1 ? [...matches][0] : '';
 }
 
 export function suggestForwardedCategory(

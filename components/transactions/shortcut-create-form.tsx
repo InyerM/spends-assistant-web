@@ -65,8 +65,16 @@ export function ShortcutCreateForm({
   const inferredAccountId =
     inferForwardedAccount(preview, accountsQuery.data ?? []) ||
     inferForwardedBancolombiaAccount(rawText, accountsQuery.data ?? []);
-  const suggestedAccountId =
-    analysis?.account_id === inferredAccountId ? analysis.account_id : inferredAccountId;
+  const persistedAccountId = (accountsQuery.data ?? []).some(
+    (account) =>
+      account.id === analysis?.account_id &&
+      account.is_active &&
+      !account.deleted_at &&
+      account.currency === 'COP',
+  )
+    ? (analysis?.account_id ?? '')
+    : '';
+  const suggestedAccountId = persistedAccountId || inferredAccountId;
   const localSuggestedCategoryId = suggestForwardedCategory(
     preview,
     historyQuery.data?.data ?? [],
