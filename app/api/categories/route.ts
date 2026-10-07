@@ -31,11 +31,12 @@ export async function POST(request: NextRequest): Promise<Response> {
     // Check category limit for free plan
     const [{ data: subscription }, categoryCountResult, { data: limitSetting }] = await Promise.all(
       [
-        supabase.from('subscriptions').select('plan').eq('user_id', userId).maybeSingle(),
+        supabase.from('subscriptions').select('plan, status').eq('user_id', userId).maybeSingle(),
         supabase
           .from('categories')
           .select('id', { count: 'exact', head: true })
           .eq('is_active', true)
+          .eq('is_default', false)
           .is('deleted_at', null),
         supabase
           .from('app_settings')
@@ -45,9 +46,8 @@ export async function POST(request: NextRequest): Promise<Response> {
       ],
     );
 
-    const plan = (subscription?.plan as string | undefined) ?? 'free';
-    if (plan === 'free') {
-      const limit = (limitSetting?.value as number | undefined) ?? 10;
+    if (subscription?.plan !== 'pro' || subscription.status !== 'active') {
+      const limit = (limitSetting?.value as number | undefined) ?? 15;
       const count = categoryCountResult.count ?? 0;
       if (count >= limit) {
         return errorResponse(`Category limit reached (${limit} for free plan)`, 403);

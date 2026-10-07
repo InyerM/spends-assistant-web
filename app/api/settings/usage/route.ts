@@ -80,9 +80,9 @@ export async function GET(): Promise<Response> {
       accounts_count: accountsCountResult.count ?? 0,
       accounts_limit: accountsLimitVal ?? 4,
       categories_count: categoriesCountResult.count ?? 0,
-      categories_limit: categoriesLimitVal ?? 10,
+      categories_limit: categoriesLimitVal ?? 15,
       automations_count: automationsCountResult.count ?? 0,
-      automations_limit: automationsLimitVal ?? 10,
+      automations_limit: automationsLimitVal ?? 5,
     });
   } catch (error) {
     if (error instanceof AuthError) return errorResponse('Unauthorized', 401);

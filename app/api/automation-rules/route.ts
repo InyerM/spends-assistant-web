@@ -44,7 +44,7 @@ export async function POST(request: NextRequest): Promise<Response> {
     // Check automation rule limit for free plan
     const [{ data: subscription }, automationCountResult, { data: limitSetting }] =
       await Promise.all([
-        supabase.from('subscriptions').select('plan').eq('user_id', userId).maybeSingle(),
+        supabase.from('subscriptions').select('plan, status').eq('user_id', userId).maybeSingle(),
         supabase
           .from('automation_rules')
           .select('id', { count: 'exact', head: true })
@@ -56,9 +56,8 @@ export async function POST(request: NextRequest): Promise<Response> {
           .maybeSingle(),
       ]);
 
-    const plan = (subscription?.plan as string | undefined) ?? 'free';
-    if (plan === 'free') {
-      const limit = (limitSetting?.value as number | undefined) ?? 10;
+    if (subscription?.plan !== 'pro' || subscription.status !== 'active') {
+      const limit = (limitSetting?.value as number | undefined) ?? 5;
       const currentCount = automationCountResult.count ?? 0;
       const newCount = Array.isArray(body) ? body.length : 1;
       if (currentCount + newCount > limit) {
