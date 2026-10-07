@@ -421,7 +421,7 @@ export function TransactionForm({
                   <a
                     href='/settings?tab=subscription'
                     className='text-brand text-xs font-medium whitespace-nowrap hover:underline'>
-                    {tCommon('upgrade')} &rarr;
+                    {t('viewUsage')} &rarr;
                   </a>
                 </div>
                 <Button
@@ -455,7 +455,7 @@ export function TransactionForm({
                         {t('orCreateManually')}
                       </Button>
                       <a href='/settings?tab=subscription' className='flex-1'>
-                        <Button className='w-full cursor-pointer'>{t('viewSubscription')}</Button>
+                        <Button className='w-full cursor-pointer'>{t('viewUsage')}</Button>
                       </a>
                     </div>
                   </div>
@@ -733,7 +733,7 @@ export function TransactionForm({
                   <a
                     href='/settings?tab=subscription'
                     className='text-brand text-xs font-medium whitespace-nowrap hover:underline'>
-                    {tCommon('upgrade')} &rarr;
+                    {t('viewUsage')} &rarr;
                   </a>
                 </div>
               )}

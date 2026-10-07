@@ -1,15 +1,13 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useSubscription } from '@/hooks/use-subscription';
 import { useUsage } from '@/hooks/use-usage';
-import { Check, Sparkles } from 'lucide-react';
+import { Check } from 'lucide-react';
 
 export function SubscriptionTab(): React.ReactElement {
   const t = useTranslations('settings');
@@ -132,87 +130,19 @@ export function SubscriptionTab(): React.ReactElement {
             </div>
           ) : (
             <div className='space-y-3'>
-              <div className='flex items-center justify-between text-sm'>
-                <span className='text-muted-foreground'>{t('status')}</span>
-                <Badge variant='default'>
-                  {subscription?.status === 'active'
-                    ? t('active')
-                    : subscription?.status === 'canceled'
-                      ? t('canceled')
-                      : t('pastDue')}
-                </Badge>
-              </div>
-              {subscription?.current_period_start && (
-                <div className='flex items-center justify-between text-sm'>
-                  <span className='text-muted-foreground'>{t('currentPeriod')}</span>
-                  <span className='font-medium'>
-                    {new Date(subscription.current_period_start).toLocaleDateString('en-US', {
-                      month: 'short',
-                      day: 'numeric',
-                    })}
-                    {' — '}
-                    {subscription.current_period_end
-                      ? new Date(subscription.current_period_end).toLocaleDateString('en-US', {
-                          month: 'short',
-                          day: 'numeric',
-                          year: 'numeric',
-                        })
-                      : t('ongoing')}
-                  </span>
-                </div>
-              )}
-              <div className='border-border border-t pt-3'>
-                <p className='text-muted-foreground mb-2 text-xs font-medium'>
-                  {t('includedInPlan')}
-                </p>
-                <ul className='space-y-1.5'>
-                  {proFeatures.map((feature) => (
-                    <li key={feature} className='flex items-center gap-2 text-sm'>
-                      <Check className='text-brand h-3.5 w-3.5 shrink-0' />
-                      <span>{feature}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
+              <p className='text-muted-foreground text-xs font-medium'>{t('includedInPlan')}</p>
+              <ul className='space-y-1.5'>
+                {proFeatures.map((feature) => (
+                  <li key={feature} className='flex items-center gap-2 text-sm'>
+                    <Check className='text-brand h-3.5 w-3.5 shrink-0' />
+                    <span>{feature}</span>
+                  </li>
+                ))}
+              </ul>
             </div>
           )}
         </CardContent>
       </Card>
-
-      {plan === 'free' && (
-        <Card>
-          <CardHeader>
-            <div className='flex items-center gap-2'>
-              <Sparkles className='text-brand h-5 w-5' />
-              <CardTitle>{t('proPlan')}</CardTitle>
-            </div>
-            <CardDescription>{t('unlockDescription')}</CardDescription>
-          </CardHeader>
-          <CardContent className='space-y-4'>
-            <ul className='space-y-2'>
-              {proFeatures.map((feature) => (
-                <li key={feature} className='flex items-center gap-2 text-sm'>
-                  <Check className='text-brand h-4 w-4 shrink-0' />
-                  <span>{feature}</span>
-                </li>
-              ))}
-            </ul>
-
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <span className='inline-block'>
-                    <Button disabled className='w-full'>
-                      {t('upgradeToPro')}
-                    </Button>
-                  </span>
-                </TooltipTrigger>
-                <TooltipContent>{t('comingSoon')}</TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </CardContent>
-        </Card>
-      )}
     </div>
   );
 }

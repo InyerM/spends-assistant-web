@@ -14,7 +14,7 @@ import { DangerZoneSection } from '@/components/settings/danger-zone-section';
 import { EmailForwardingTab } from '@/components/settings/email-forwarding-tab';
 import { AiConsentTab } from '@/components/settings/ai-consent-tab';
 import { useUserSettings } from '@/hooks/use-user-settings';
-import { User, Shield, CreditCard, Key, LifeBuoy, Mail, Sparkles } from 'lucide-react';
+import { User, Shield, Gauge, Key, LifeBuoy, Mail, Sparkles } from 'lucide-react';
 
 const VALID_TABS = [
   'profile',
@@ -63,7 +63,7 @@ export default function SettingsPage(): React.ReactElement {
             <span className='hidden sm:inline'>{t('security')}</span>
           </TabsTrigger>
           <TabsTrigger value='subscription' aria-label={t('subscription')}>
-            <CreditCard className='h-4 w-4' />
+            <Gauge className='h-4 w-4' />
             <span className='hidden sm:inline'>{t('subscription')}</span>
           </TabsTrigger>
           <TabsTrigger value='email-forwarding' aria-label={emailT('tab')}>

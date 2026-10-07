@@ -91,7 +91,7 @@ export function UsageCard(): React.ReactElement | null {
           <a
             href='/settings?tab=subscription'
             className='text-brand text-xs font-medium hover:underline'>
-            {t('upgradeLink')} &rarr;
+            {t('viewUsageLink')} &rarr;
           </a>
         </div>
 

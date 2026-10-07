@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { UsageData } from '@/types';
@@ -21,6 +22,7 @@ export function UsageIndicator({
   showTransactions = false,
   className,
 }: UsageIndicatorProps): React.ReactElement {
+  const t = useTranslations('usage');
   const aiPercentage = Math.round((usage.ai_parses_used / usage.ai_parses_limit) * 100);
   const aiColor = getUsageColor(aiPercentage);
 
@@ -33,18 +35,18 @@ export function UsageIndicator({
       <span className='flex items-center gap-1.5'>
         <Sparkles className='h-3 w-3 text-purple-400' />
         <span className={aiColor}>
-          AI Parses: {usage.ai_parses_used}/{usage.ai_parses_limit}
+          {t('aiParses')}: {usage.ai_parses_used}/{usage.ai_parses_limit}
         </span>
         {showTransactions && (
           <span className='text-muted-foreground'>
             {' '}
-            · Transactions: {usage.transactions_count}/{usage.transactions_limit}
+            · {t('transactions')}: {usage.transactions_count}/{usage.transactions_limit}
           </span>
         )}
       </span>
       {aiPercentage >= 80 && (
         <a href='/settings?tab=subscription' className='text-brand font-medium hover:underline'>
-          Upgrade
+          {t('viewLimits')}
         </a>
       )}
     </div>
