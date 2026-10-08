@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { useAuth } from '@/hooks/use-auth';
 import { Loader } from '@/components/shared/loader';
 
@@ -11,6 +12,7 @@ interface AuthGuardProps {
 
 export function AuthGuard({ children }: AuthGuardProps): React.ReactNode {
   const { isAuthenticated, isLoading } = useAuth();
+  const t = useTranslations('common');
   const router = useRouter();
 
   useEffect(() => {
@@ -22,7 +24,7 @@ export function AuthGuard({ children }: AuthGuardProps): React.ReactNode {
   if (isLoading) {
     return (
       <div className='bg-background flex min-h-screen items-center justify-center'>
-        <Loader text='Loading...' />
+        <Loader text={t('loading')} />
       </div>
     );
   }
