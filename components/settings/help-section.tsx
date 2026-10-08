@@ -54,19 +54,13 @@ export function HelpSection(): React.ReactElement {
         </CardHeader>
         <CardContent className='flex flex-wrap gap-3'>
           <Button variant='outline' size='sm' asChild>
-            <a
-              href='https://anotto-landing.vercel.app/privacy/'
-              target='_blank'
-              rel='noopener noreferrer'>
+            <a href='https://anotto.app/privacy/' target='_blank' rel='noopener noreferrer'>
               {t('privacyAction')}
               <ExternalLink className='h-4 w-4' />
             </a>
           </Button>
           <Button variant='outline' size='sm' asChild>
-            <a
-              href='https://anotto-landing.vercel.app/terms/'
-              target='_blank'
-              rel='noopener noreferrer'>
+            <a href='https://anotto.app/terms/' target='_blank' rel='noopener noreferrer'>
               {t('termsAction')}
               <ExternalLink className='h-4 w-4' />
             </a>
