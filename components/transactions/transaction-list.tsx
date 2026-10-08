@@ -417,7 +417,7 @@ export function TransactionList({
 
       <div ref={bottomRef} className='flex justify-center py-4'>
         {isFetchingNextPage ? (
-          <InlineLoader className='text-muted-foreground h-5 w-5' />
+          <InlineLoader className='h-5 w-5' />
         ) : hasNextPage ? (
           <Button variant='ghost' size='sm' onClick={(): void => void fetchNextPage()}>
             {tCommon('loadMore')}
