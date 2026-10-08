@@ -23,6 +23,7 @@ import {
   HandCoins,
   HeartHandshake,
   LifeBuoy,
+  Target,
 } from 'lucide-react';
 import { AnottoWordmark } from '@/components/layout/anotto-wordmark';
 import { Button } from '@/components/ui/button';
@@ -44,6 +45,7 @@ interface NavItem {
 const navItems: NavItem[] = [
   { titleKey: 'dashboard', href: '/dashboard', icon: LayoutDashboard },
   { titleKey: 'transactions', href: '/transactions', icon: ArrowRightLeft },
+  { titleKey: 'budgets', href: '/budgets', icon: Target },
   { titleKey: 'documents', href: '/documents', icon: Files },
   { titleKey: 'emailInbox', href: '/inbox', icon: Mail },
   { titleKey: 'accounts', href: '/accounts', icon: Wallet },

@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { transactionKeys } from '@/lib/api/queries/transaction.queries';
 import { accountKeys } from '@/lib/api/queries/account.queries';
 import { usageKeys } from '@/hooks/use-usage';
+import { budgetKeys } from '@/lib/api/queries/budget.queries';
 import type { DuplicateReview, ImportDuplicate } from '@/types/import';
 import type {
   Transaction,
@@ -168,6 +169,7 @@ export function useCreateTransaction(): ReturnType<
       void queryClient.invalidateQueries({ queryKey: transactionKeys.all });
       void queryClient.invalidateQueries({ queryKey: accountKeys.all });
       void queryClient.invalidateQueries({ queryKey: usageKeys.all });
+      void queryClient.invalidateQueries({ queryKey: budgetKeys.all });
     },
   });
 }
@@ -183,6 +185,7 @@ export function useUpdateTransaction(): ReturnType<
       void queryClient.invalidateQueries({ queryKey: transactionKeys.all });
       void queryClient.invalidateQueries({ queryKey: accountKeys.all });
       void queryClient.invalidateQueries({ queryKey: usageKeys.all });
+      void queryClient.invalidateQueries({ queryKey: budgetKeys.all });
     },
   });
 }
@@ -213,6 +216,7 @@ export function useBulkUpdateTransactions(): ReturnType<
       void queryClient.invalidateQueries({ queryKey: transactionKeys.all });
       void queryClient.invalidateQueries({ queryKey: accountKeys.all });
       void queryClient.invalidateQueries({ queryKey: usageKeys.all });
+      void queryClient.invalidateQueries({ queryKey: budgetKeys.all });
     },
   });
 }
@@ -241,6 +245,7 @@ export function useBulkDeleteTransactions(): ReturnType<
       void queryClient.invalidateQueries({ queryKey: transactionKeys.all });
       void queryClient.invalidateQueries({ queryKey: accountKeys.all });
       void queryClient.invalidateQueries({ queryKey: usageKeys.all });
+      void queryClient.invalidateQueries({ queryKey: budgetKeys.all });
     },
   });
 }
@@ -254,6 +259,7 @@ export function useDeleteTransaction(): ReturnType<typeof useMutation<void, Erro
       void queryClient.invalidateQueries({ queryKey: transactionKeys.all });
       void queryClient.invalidateQueries({ queryKey: accountKeys.all });
       void queryClient.invalidateQueries({ queryKey: usageKeys.all });
+      void queryClient.invalidateQueries({ queryKey: budgetKeys.all });
     },
   });
 }
@@ -282,6 +288,7 @@ export function useResolveDuplicate(): ReturnType<
       void queryClient.invalidateQueries({ queryKey: transactionKeys.all });
       void queryClient.invalidateQueries({ queryKey: accountKeys.all });
       void queryClient.invalidateQueries({ queryKey: usageKeys.all });
+      void queryClient.invalidateQueries({ queryKey: budgetKeys.all });
     },
   });
 }
@@ -353,6 +360,7 @@ export function useImportTransactions(): ReturnType<
       void queryClient.invalidateQueries({ queryKey: transactionKeys.all });
       void queryClient.invalidateQueries({ queryKey: accountKeys.all });
       void queryClient.invalidateQueries({ queryKey: usageKeys.all });
+      void queryClient.invalidateQueries({ queryKey: budgetKeys.all });
       void queryClient.invalidateQueries({ queryKey: ['imports'] });
     },
   });

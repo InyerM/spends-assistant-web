@@ -19,6 +19,7 @@ import {
   HandCoins,
   HeartHandshake,
   LifeBuoy,
+  Target,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -43,6 +44,7 @@ const mainItems: NavItem[] = [
 
 const moreItems: NavItem[] = [
   { titleKey: 'documents', href: '/documents', icon: Files },
+  { titleKey: 'budgets', href: '/budgets', icon: Target },
   { titleKey: 'emailInbox', href: '/inbox', icon: Mail },
   { titleKey: 'investments', href: '/investments', icon: TrendingUp },
   { titleKey: 'loans', href: '/loans', icon: Landmark },
