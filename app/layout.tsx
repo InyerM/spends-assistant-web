@@ -12,6 +12,7 @@ export const metadata: Metadata = {
     template: '%s | Anotto',
   },
   description: 'Anotto — personal expense tracking and financial management',
+  robots: { index: false, follow: false },
 };
 
 const manrope = Manrope({

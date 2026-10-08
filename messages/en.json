@@ -105,9 +105,9 @@
       "link": "Go to settings"
     },
     "legalTitle": "Privacy and terms",
-    "legalDescription": "Read the public drafts about how Anotto handles your data and use of the service; they are not yet in effect.",
-    "privacyAction": "Privacy policy (draft)",
-    "termsAction": "Terms of use (draft)",
+    "legalDescription": "Read how Anotto handles your data and the terms for using the service.",
+    "privacyAction": "Privacy policy",
+    "termsAction": "Terms of use",
     "contactTitle": "Need more help?",
     "contactDescription": "If a support email is configured, you can contact us. Do not include passwords, full account numbers, or unredacted statements.",
     "contactAction": "Email support",
