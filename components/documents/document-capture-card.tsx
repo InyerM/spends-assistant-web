@@ -2,10 +2,11 @@
 
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { FileImage, LoaderCircle, ScanText } from 'lucide-react';
+import { FileImage, ScanText } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { InlineLoader } from '@/components/shared/loader';
 import { DocumentBatchReview } from '@/components/documents/document-batch-review';
 import { DocumentReviewedList } from '@/components/documents/document-reviewed-list';
 import type { ReviewHistoryObservation } from '@/lib/document-review';
@@ -99,7 +100,7 @@ export function DocumentCaptureCard({
             {canExtract && (
               <Button size='sm' variant='ai' disabled={busy !== null} onClick={onExtract}>
                 {busy === document.id ? (
-                  <LoaderCircle className='size-4 animate-spin' aria-hidden='true' />
+                  <InlineLoader />
                 ) : (
                   <ScanText className='size-4' aria-hidden='true' />
                 )}

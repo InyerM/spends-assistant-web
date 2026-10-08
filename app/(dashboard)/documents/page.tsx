@@ -4,8 +4,9 @@ import { useCallback, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { useQueryClient } from '@tanstack/react-query';
-import { FileImage, LoaderCircle, MailPlus, Upload } from 'lucide-react';
+import { FileImage, MailPlus, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { InlineLoader } from '@/components/shared/loader';
 import { Card, CardContent } from '@/components/ui/card';
 import { DocumentCaptureCard } from '@/components/documents/document-capture-card';
 import { AiConsentNotice } from '@/components/ai-consent-notice';
@@ -151,7 +152,7 @@ export default function DocumentsPage(): React.ReactElement {
         />
         <Button variant='ai' disabled={busy !== null} onClick={() => inputRef.current?.click()}>
           {busy === 'upload' ? (
-            <LoaderCircle className='mr-2 h-4 w-4 animate-spin' />
+            <InlineLoader className='mr-2' />
           ) : (
             <Upload className='mr-2 h-4 w-4' />
           )}
