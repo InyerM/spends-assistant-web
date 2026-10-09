@@ -95,7 +95,10 @@ export async function GET(request: NextRequest): Promise<Response> {
     const from = (page - 1) * limit;
     let query = supabase
       .from('shortcut_inbox_items')
-      .select('id,source,external_id,received_at,raw_text,status,created_at', { count: 'exact' })
+      .select(
+        'id,source,external_id,received_at,raw_text,status,created_at,attachments:documents!documents_email_source_owner_fk(id,file_name,status)',
+        { count: 'exact' },
+      )
       .eq('user_id', userId);
     const status = params.get('status');
     if (source === 'forwarded_email') query = query.eq('source', source);

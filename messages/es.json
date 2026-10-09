@@ -232,6 +232,7 @@
     "cancel": "Cancelar"
   },
   "shortcutInbox": {
+    "pdfReviewHint": "El PDF se guarda en Documentos. Revisa sus movimientos antes de registrarlos.",
     "subject": "Asunto",
     "showFullMessage": "Ver mensaje completo",
     "hideFullMessage": "Ocultar mensaje completo",
@@ -915,16 +916,30 @@
     "description": "Comienza creando tu primer elemento."
   },
   "documents": {
+    "pdfSupportHint": "Imágenes o PDF de hasta 5 MB. Los PDF deben contener texto y tener hasta 10 páginas. Revisa los movimientos y sus coincidencias antes de confirmar la conciliación.",
+    "pdfPasswordTitle": "Desbloquear extracto PDF",
+    "pdfPasswordDescription": "Usaremos la clave solo para abrir este PDF en el servidor de Anotto. No se guarda ni se envía a la IA.",
+    "pdfPasswordLabel": "Clave del PDF",
+    "pdfUnlock": "Desbloquear y analizar",
+    "pdfErrors": {
+      "PDF_PASSWORD_REQUIRED": "Este PDF requiere una clave para abrirse.",
+      "PDF_PASSWORD_INCORRECT": "La clave no es correcta. Inténtalo de nuevo.",
+      "PDF_NO_TEXT": "Este PDF contiene páginas sin texto legible. Sube capturas de esas páginas para analizarlas como imágenes.",
+      "PDF_TOO_LARGE": "El PDF debe pesar hasta 5 MB.",
+      "PDF_LIMIT_EXCEEDED": "Este PDF supera el límite seguro de páginas o texto. Divídelo en archivos más pequeños e inténtalo de nuevo.",
+      "PDF_UNSUPPORTED": "No pudimos leer este PDF. Exporta otra copia o sube capturas de sus páginas.",
+      "PDF_TIMEOUT": "Este PDF tardó demasiado en abrirse. Divide el archivo o sube capturas de sus páginas."
+    },
     "title": "Documentos",
     "subtitle": "Revisa los movimientos de tus capturas antes de registrarlos.",
     "chooseImage": "Elegir imagen",
-    "upload": "Subir imagen",
+    "upload": "Subir documento",
     "connectEmail": "Conectar correo",
     "uploading": "Subiendo…",
     "loading": "Cargando documentos…",
     "empty": "Aún no hay documentos",
     "emptyHint": "PNG, JPEG o WebP · hasta 5 MB",
-    "invalidFile": "Elige una imagen PNG, JPEG o WebP de hasta 5 MB.",
+    "invalidFile": "Elige una imagen PNG, JPEG o WebP, o un PDF, de hasta 5 MB.",
     "loadFailed": "No se pudieron cargar los documentos",
     "uploadFailed": "No se pudo subir la imagen",
     "extractFailed": "No se pudieron extraer los datos",

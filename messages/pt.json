@@ -206,6 +206,7 @@
     "viewBudgets": "Ver orçamentos"
   },
   "shortcutInbox": {
+    "pdfReviewHint": "O PDF fica salvo em Documentos. Revise os movimentos antes de registrá-los.",
     "subject": "Assunto",
     "showFullMessage": "Ver mensagem completa",
     "hideFullMessage": "Ocultar mensagem completa",
@@ -935,15 +936,29 @@
     "description": "Comece criando seu primeiro item."
   },
   "documents": {
+    "pdfSupportHint": "Imagens ou PDFs de até 5 MB. Os PDFs devem conter texto e ter até 10 páginas. Revise os movimentos e as correspondências antes de confirmar a conciliação.",
+    "pdfPasswordTitle": "Desbloquear extrato PDF",
+    "pdfPasswordDescription": "A senha será usada apenas para abrir este PDF no servidor do Anotto. Ela não é salva nem enviada à IA.",
+    "pdfPasswordLabel": "Senha do PDF",
+    "pdfUnlock": "Desbloquear e analisar",
+    "pdfErrors": {
+      "PDF_PASSWORD_REQUIRED": "Este PDF precisa de uma senha.",
+      "PDF_PASSWORD_INCORRECT": "A senha está incorreta. Tente novamente.",
+      "PDF_NO_TEXT": "Este PDF tem páginas sem texto legível. Envie capturas dessas páginas para analisá-las como imagens.",
+      "PDF_TOO_LARGE": "O PDF deve ter até 5 MB.",
+      "PDF_LIMIT_EXCEEDED": "Este PDF excede o limite seguro de páginas ou texto. Divida-o em arquivos menores e tente novamente.",
+      "PDF_UNSUPPORTED": "Não foi possível ler este PDF. Exporte outra cópia ou envie capturas de suas páginas.",
+      "PDF_TIMEOUT": "Este PDF demorou demais para abrir. Divida o arquivo ou envie capturas de suas páginas."
+    },
     "title": "Documentos",
     "subtitle": "Envie recibos e capturas para revisar os dados extraídos antes de registrar algo.",
     "chooseImage": "Escolher imagem",
-    "upload": "Enviar imagem",
+    "upload": "Enviar documento",
     "uploading": "Enviando…",
     "loading": "Carregando documentos…",
     "empty": "Nenhum documento ainda",
     "emptyHint": "PNG, JPEG ou WebP · até 5 MB",
-    "invalidFile": "Escolha uma imagem PNG, JPEG ou WebP de até 5 MB.",
+    "invalidFile": "Escolha uma imagem PNG, JPEG ou WebP, ou um PDF, de até 5 MB.",
     "loadFailed": "Não foi possível carregar os documentos",
     "uploadFailed": "Não foi possível enviar a imagem",
     "extractFailed": "Não foi possível extrair os dados",

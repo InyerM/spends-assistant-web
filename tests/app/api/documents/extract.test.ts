@@ -1,3 +1,4 @@
+import { readPdfText, PdfTextError } from '@/lib/pdf-text';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { POST } from '@/app/api/documents/[id]/extract/route';
 
@@ -18,6 +19,14 @@ vi.mock('@/lib/api/server', () => ({
   AuthError: class AuthError extends Error {},
   jsonResponse: (data: unknown, status = 200) => Response.json(data, { status }),
   errorResponse: (error: string, status = 500) => Response.json({ error }, { status }),
+}));
+vi.mock('@/lib/pdf-text', () => ({
+  readPdfText: vi.fn(),
+  PdfTextError: class PdfTextError extends Error {
+    constructor(public code: string) {
+      super(code);
+    }
+  },
 }));
 vi.mock('@/lib/config', () => ({ workerConfig: { url: 'https://worker.test' } }));
 
@@ -60,6 +69,64 @@ describe('POST /api/documents/[id]/extract', () => {
     });
   });
 
+  it('parses the owner PDF locally and forwards only extracted text to the Worker', async () => {
+    documentQuery.mockResolvedValueOnce({
+      data: {
+        id: 'doc-1',
+        file_path: 'user-1/statement.pdf',
+        mime_type: 'application/pdf',
+        status: 'uploaded',
+      },
+      error: null,
+    });
+    vi.mocked(readPdfText).mockResolvedValueOnce({ pages: ['Bancolombia COP 42000'] });
+    fetchMock.mockResolvedValueOnce(
+      Response.json({
+        draft: { document_type: 'statement', observations: [] },
+        model: 'nano',
+        usage: null,
+      }),
+    );
+    const response = await POST(
+      new Request('http://localhost', {
+        method: 'POST',
+        body: JSON.stringify({ password: 'synthetic-test-password' }),
+      }) as never,
+      { params: Promise.resolve({ id: 'doc-1' }) },
+    );
+    expect(response.status).toBe(200);
+    expect(readPdfText).toHaveBeenCalledWith(expect.any(Buffer), 'synthetic-test-password');
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe('https://worker.test/documents/extract-text');
+    expect(JSON.parse(String(init.body))).toEqual({ pages: ['Bancolombia COP 42000'] });
+    expect(String(init.body)).not.toContain('password');
+    expect(adminRpc).toHaveBeenCalledWith(
+      'complete_document_extraction_server',
+      expect.objectContaining({ p_document_type: 'statement' }),
+    );
+  });
+  it('returns a password-required code without any upstream AI request', async () => {
+    documentQuery.mockResolvedValueOnce({
+      data: {
+        id: 'doc-1',
+        file_path: 'user-1/statement.pdf',
+        mime_type: 'application/pdf',
+        status: 'uploaded',
+      },
+      error: null,
+    });
+    vi.mocked(readPdfText).mockRejectedValueOnce(new PdfTextError('PDF_PASSWORD_REQUIRED'));
+    const response = await POST(new Request('http://localhost') as never, {
+      params: Promise.resolve({ id: 'doc-1' }),
+    });
+    expect(response.status).toBe(422);
+    expect(await response.json()).toMatchObject({ code: 'PDF_PASSWORD_REQUIRED' });
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(adminRpc).toHaveBeenCalledWith(
+      'fail_document_extraction_server',
+      expect.objectContaining({ p_error_code: 'PDF_PASSWORD_REQUIRED' }),
+    );
+  });
   it('passes the JWT and saves observations as pending drafts', async () => {
     fetchMock.mockResolvedValue(
       Response.json({

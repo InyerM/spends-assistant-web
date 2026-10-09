@@ -1,11 +1,23 @@
 import type { StoredDocument } from '@/lib/api/queries/document.queries';
 import { aiConsentErrorFromResponse } from '@/lib/ai-consent';
 
+export class DocumentExtractionError extends Error {
+  public constructor(
+    public readonly code: string,
+    message: string,
+  ) {
+    super(message);
+    this.name = 'DocumentExtractionError';
+  }
+}
+
 async function check(response: Response): Promise<Response> {
   if (response.ok) return response;
   const consentError = await aiConsentErrorFromResponse(response);
   if (consentError) throw consentError;
-  const body = (await response.json().catch(() => ({}))) as { error?: string };
+  const body = (await response.json().catch(() => ({}))) as { error?: string; code?: string };
+  if (body.code?.startsWith('PDF_'))
+    throw new DocumentExtractionError(body.code, body.error ?? body.code);
   throw new Error(body.error ?? 'Document request failed');
 }
 
@@ -17,8 +29,15 @@ export async function uploadDocument(file: File): Promise<StoredDocument> {
   ).json() as Promise<StoredDocument>;
 }
 
-export async function extractDocument(id: string): Promise<void> {
-  await check(await fetch(`/api/documents/${id}/extract`, { method: 'POST' }));
+export async function extractDocument(id: string, password?: string): Promise<void> {
+  await check(
+    await fetch(`/api/documents/${id}/extract`, {
+      method: 'POST',
+      ...(password !== undefined
+        ? { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password }) }
+        : {}),
+    }),
+  );
 }
 
 export async function setDocumentArchived(id: string, archived: boolean): Promise<void> {

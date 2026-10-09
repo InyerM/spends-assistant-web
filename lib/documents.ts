@@ -22,6 +22,21 @@ export function validateDocumentImage(
   return null;
 }
 
+export function validateDocumentFile(
+  name: string,
+  mimeType: string,
+  bytes: Uint8Array,
+): string | null {
+  if (mimeType !== 'application/pdf') return validateDocumentImage(name, mimeType, bytes);
+  if (!name.trim() || name.length > 255 || !name.toLowerCase().endsWith('.pdf'))
+    return 'Choose a valid PDF document';
+  if (bytes.length === 0 || bytes.length > MAX_DOCUMENT_BYTES)
+    return 'Document must be 5 MB or less';
+  if (String.fromCharCode(...bytes.slice(0, 5)) !== '%PDF-')
+    return 'PDF content does not match its type';
+  return null;
+}
+
 const observationSchema = z.object({
   amount: z.number().nullable(),
   currency: z.string().nullable(),
@@ -36,7 +51,7 @@ const observationSchema = z.object({
 const extractionSchema = z.object({
   draft: z.object({
     document_type: z.enum(['receipt', 'bank_screenshot', 'sms_screenshot', 'statement', 'other']),
-    observations: z.array(observationSchema),
+    observations: z.array(observationSchema).max(500),
   }),
   model: z.string(),
   usage: z.unknown(),

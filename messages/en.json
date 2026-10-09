@@ -232,6 +232,7 @@
     "cancel": "Cancel"
   },
   "shortcutInbox": {
+    "pdfReviewHint": "The PDF is saved in Documents. Review its movements before recording them.",
     "subject": "Subject",
     "showFullMessage": "Show full message",
     "hideFullMessage": "Hide full message",
@@ -969,16 +970,30 @@
     "description": "Get started by creating your first item."
   },
   "documents": {
+    "pdfSupportHint": "Images or PDFs up to 5 MB. PDFs must contain text and have no more than 10 pages. Review movements and matches before confirming reconciliation.",
+    "pdfPasswordTitle": "Unlock PDF statement",
+    "pdfPasswordDescription": "Your password is used only to open this PDF on the Anotto server. It is never saved or sent to AI.",
+    "pdfPasswordLabel": "PDF password",
+    "pdfUnlock": "Unlock and analyze",
+    "pdfErrors": {
+      "PDF_PASSWORD_REQUIRED": "This PDF requires a password.",
+      "PDF_PASSWORD_INCORRECT": "That password is incorrect. Try again.",
+      "PDF_NO_TEXT": "This PDF has pages without readable text. Upload screenshots of those pages to analyze them as images.",
+      "PDF_TOO_LARGE": "The PDF must be 5 MB or less.",
+      "PDF_LIMIT_EXCEEDED": "This PDF exceeds the safe page or text limit. Split it into smaller files and try again.",
+      "PDF_UNSUPPORTED": "We could not read this PDF. Export another copy or upload screenshots of its pages.",
+      "PDF_TIMEOUT": "This PDF took too long to open. Split the file or upload screenshots of its pages."
+    },
     "title": "Documents",
     "subtitle": "Review movements from your captures before recording them.",
     "chooseImage": "Choose an image",
-    "upload": "Upload image",
+    "upload": "Upload document",
     "connectEmail": "Connect email",
     "uploading": "Uploading…",
     "loading": "Loading documents…",
     "empty": "No documents yet",
     "emptyHint": "PNG, JPEG, or WebP · up to 5 MB",
-    "invalidFile": "Choose a PNG, JPEG, or WebP image up to 5 MB.",
+    "invalidFile": "Choose a PNG, JPEG, WebP image or PDF up to 5 MB.",
     "loadFailed": "Could not load documents",
     "uploadFailed": "Could not upload image",
     "extractFailed": "Could not extract details",

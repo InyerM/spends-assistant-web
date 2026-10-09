@@ -19,7 +19,8 @@ export function TermsAcceptanceGate({ children }: { children: React.ReactNode })
   const { user, signOut } = useAuth();
   const t = useTranslations('legalAcceptance');
   const mutation = useAcceptCurrentTerms();
-  const [accepted, setAccepted] = useState(false);
+  const [acceptedOwner, setAcceptedOwner] = useState<string | null>(null);
+  const accepted = Boolean(user && acceptedOwner === user.id);
   if (!user || !needsTermsAcceptance(user)) return children;
   return (
     <Dialog open>
@@ -50,7 +51,7 @@ export function TermsAcceptanceGate({ children }: { children: React.ReactNode })
         <label className='flex min-h-11 cursor-pointer items-start gap-3 py-2 text-sm'>
           <Checkbox
             checked={accepted}
-            onCheckedChange={(value): void => setAccepted(value === true)}
+            onCheckedChange={(value): void => setAcceptedOwner(value === true ? user.id : null)}
           />
           <span>{t('checkbox')}</span>
         </label>

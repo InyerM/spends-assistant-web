@@ -91,6 +91,38 @@ describe('Shortcut inbox review page', () => {
     vi.unstubAllGlobals();
   });
 
+  it('opens a private PDF from mail without offering body-only transaction creation', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        Response.json({
+          data: [
+            {
+              id: 'pdf-mail',
+              source: 'forwarded_email',
+              external_id: 'pdf-id',
+              received_at: '2026-10-08T12:00:00Z',
+              created_at: '2026-10-08T12:00:00Z',
+              raw_text: 'Bank statement',
+              status: 'pending',
+              attachments: [{ id: 'doc-id', file_name: 'statement.pdf', status: 'uploaded' }],
+            },
+          ],
+          count: 1,
+        }),
+      ),
+    );
+    renderPage('forwarded_email');
+    expect(await screen.findByRole('link', { name: /statement.pdf/ })).toHaveAttribute(
+      'href',
+      '/documents#document-doc-id',
+    );
+    expect(
+      screen.queryByRole('button', { name: 'Analyze and review transaction' }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Show possible matches' })).not.toBeInTheDocument();
+  });
+
   it('previews a zero-amount Lulo notice without offering transaction creation', async () => {
     const rawText = [
       'From: Lulo alerts <notificaciones@lulobank.com>',

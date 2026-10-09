@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useShortcutInbox } from '@/lib/api/queries/shortcut-inbox.queries';
 import { SearchInput } from '@/components/shared/search-input';
-import { ArrowLeft, ChevronLeft, ChevronRight, Download, Inbox } from 'lucide-react';
+import { ArrowLeft, ChevronLeft, ChevronRight, Download, FileText, Inbox } from 'lucide-react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { Badge } from '@/components/ui/badge';
@@ -343,6 +343,7 @@ export default function ShortcutInboxPage({
           {items.map((item) => {
             const candidateResult = candidateById[item.id];
             const luloPreview = previewLuloNotice(item.source, item.raw_text, item.received_at);
+            const hasAttachments = Boolean(item.attachments?.length);
             const historicalLulo = item.source === 'lulo-email-backfill';
             return (
               <Card key={item.id}>
@@ -367,6 +368,21 @@ export default function ShortcutInboxPage({
                     </time>
                   </div>
                   <ForwardedEmailEvidence source={item.source} rawText={item.raw_text} />
+                  {hasAttachments && (
+                    <div className='space-y-2 rounded-lg border p-3'>
+                      <p className='text-muted-foreground text-sm'>{t('pdfReviewHint')}</p>
+                      <div className='flex flex-wrap gap-2'>
+                        {item.attachments?.map((attachment) => (
+                          <Button key={attachment.id} variant='outline' size='sm' asChild>
+                            <Link href={`/documents#document-${attachment.id}`}>
+                              <FileText className='size-4' />
+                              {attachment.file_name}
+                            </Link>
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                   {luloPreview && <LuloPreview preview={luloPreview} />}
                   {(item.status === 'matched' || item.status === 'created') && item.match && (
                     <p className='text-muted-foreground text-xs'>
@@ -388,7 +404,7 @@ export default function ShortcutInboxPage({
                         {t('reviewReversal')}
                       </Button>
                     )}
-                    {item.status === 'pending' && (
+                    {item.status === 'pending' && !hasAttachments && (
                       <Button
                         size='sm'
                         variant='outline'
@@ -396,7 +412,7 @@ export default function ShortcutInboxPage({
                         {openCandidateId === item.id ? t('hideCandidates') : t('showCandidates')}
                       </Button>
                     )}
-                    {item.status === 'pending' && !historicalLulo && (
+                    {item.status === 'pending' && !historicalLulo && !hasAttachments && (
                       <Button
                         size='sm'
                         disabled={analysisBusyId === item.id}

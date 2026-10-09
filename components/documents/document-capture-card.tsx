@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { FileImage, ScanText } from 'lucide-react';
+import { FileImage, FileText, ScanText } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -65,7 +65,11 @@ export function DocumentCaptureCard({
         <div className='flex flex-wrap items-start justify-between gap-3'>
           <div className='flex min-w-0 items-start gap-3'>
             <span className='bg-card-overlay text-muted-foreground rounded-lg p-2'>
-              <FileImage className='h-5 w-5' aria-hidden='true' />
+              {document.mime_type === 'application/pdf' ? (
+                <FileText className='h-5 w-5' aria-hidden='true' />
+              ) : (
+                <FileImage className='h-5 w-5' aria-hidden='true' />
+              )}
             </span>
             <div className='min-w-0'>
               <h3 className='truncate font-medium'>{document.file_name}</h3>

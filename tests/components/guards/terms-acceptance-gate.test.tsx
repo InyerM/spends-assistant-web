@@ -2,7 +2,10 @@ import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { TermsAcceptanceGate } from '@/components/guards/terms-acceptance-gate';
 const mocks = vi.hoisted(() => ({
-  user: { app_metadata: {} } as { app_metadata: Record<string, unknown> },
+  user: { id: 'owner-1', app_metadata: {} } as {
+    id: string;
+    app_metadata: Record<string, unknown>;
+  },
   mutate: vi.fn(),
   signOut: vi.fn(),
 }));
@@ -15,7 +18,7 @@ vi.mock('@/lib/api/mutations/legal-acceptance.mutations', () => ({
 vi.mock('next-intl', () => ({ useTranslations: () => (key: string) => key }));
 afterEach(cleanup);
 beforeEach(() => {
-  mocks.user = { app_metadata: {} };
+  mocks.user = { id: 'owner-1', app_metadata: {} };
   mocks.mutate.mockClear();
 });
 it('preserves existing accounts without recording an implied acceptance', () => {
@@ -28,7 +31,7 @@ it('preserves existing accounts without recording an implied acceptance', () => 
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
 });
 it('blocks application children until explicit acceptance and cannot close with Escape', () => {
-  mocks.user = { app_metadata: { anotto_terms_required: true } };
+  mocks.user = { id: 'owner-1', app_metadata: { anotto_terms_required: true } };
   render(
     <TermsAcceptanceGate>
       <button>Private action</button>
@@ -41,4 +44,23 @@ it('blocks application children until explicit acceptance and cannot close with 
   fireEvent.click(screen.getByRole('checkbox'));
   fireEvent.click(screen.getByRole('button', { name: 'continue' }));
   expect(mocks.mutate).toHaveBeenCalledOnce();
+});
+
+it('requires a fresh acknowledgement when the authenticated owner changes', () => {
+  mocks.user = { id: 'owner-1', app_metadata: { anotto_terms_required: true } };
+  const view = render(
+    <TermsAcceptanceGate>
+      <p>Private</p>
+    </TermsAcceptanceGate>,
+  );
+  fireEvent.click(screen.getByRole('checkbox'));
+  expect(screen.getByRole('button', { name: 'continue' })).toBeEnabled();
+  mocks.user = { id: 'owner-2', app_metadata: { anotto_terms_required: true } };
+  view.rerender(
+    <TermsAcceptanceGate>
+      <p>Private</p>
+    </TermsAcceptanceGate>,
+  );
+  expect(screen.getByRole('checkbox')).not.toBeChecked();
+  expect(screen.getByRole('button', { name: 'continue' })).toBeDisabled();
 });

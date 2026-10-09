@@ -1,6 +1,6 @@
 import type { NextRequest } from 'next/server';
 import { AuthError, errorResponse, getUserClient } from '@/lib/api/server';
-import { validateDocumentImage } from '@/lib/documents';
+import { validateDocumentFile } from '@/lib/documents';
 
 const privateHeaders = { 'Cache-Control': 'private, no-store' };
 
@@ -28,13 +28,18 @@ export async function POST(request: NextRequest): Promise<Response> {
     const { supabase, userId } = await getUserClient(request);
     const formData = await request.formData();
     const file = formData.get('file');
-    if (!file || typeof file === 'string') return errorResponse('Image is required', 400);
+    if (!file || typeof file === 'string') return errorResponse('Document is required', 400);
 
     const bytes = new Uint8Array(await file.arrayBuffer());
-    const invalid = validateDocumentImage(file.name, file.type, bytes);
+    const invalid = validateDocumentFile(file.name, file.type, bytes);
     if (invalid) return errorResponse(invalid, 400);
 
-    const extension = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp' }[file.type];
+    const extension = {
+      'image/png': 'png',
+      'image/jpeg': 'jpg',
+      'image/webp': 'webp',
+      'application/pdf': 'pdf',
+    }[file.type];
     const filePath = `${userId}/${crypto.randomUUID()}.${extension}`;
     const digest = await crypto.subtle.digest('SHA-256', bytes);
     const sha256 = Array.from(new Uint8Array(digest), (value) =>

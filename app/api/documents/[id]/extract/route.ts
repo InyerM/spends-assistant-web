@@ -1,8 +1,11 @@
+import { readPdfText, PdfTextError } from '@/lib/pdf-text';
 import type { NextRequest } from 'next/server';
 import { AuthError, errorResponse, getAdminClient, getUserClient } from '@/lib/api/server';
 import { workerConfig } from '@/lib/config';
 import { parseExtraction } from '@/lib/documents';
 import { forwardAiConsentError } from '@/lib/ai-consent';
+
+export const maxDuration = 240;
 
 const privateHeaders = { 'Cache-Control': 'private, no-store' };
 
@@ -12,6 +15,13 @@ export async function POST(
 ): Promise<Response> {
   try {
     const { supabase, userId, accessToken } = await getUserClient(request);
+    const body: unknown = await request.json().catch(() => null);
+    const password =
+      body && typeof body === 'object' && 'password' in body
+        ? (body as { password: unknown }).password
+        : undefined;
+    if (password !== undefined && (typeof password !== 'string' || password.length > 128))
+      return errorResponse('Invalid PDF password', 400);
     if (!workerConfig.url) return errorResponse('Worker not configured', 503);
     const { id } = await params;
     const { data: rawDocument } = await supabase
@@ -61,17 +71,26 @@ export async function POST(
       }
 
       const bytes = Buffer.from(await image.arrayBuffer());
-      const response = await fetch(`${workerConfig.url}/vision/extract`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${sessionToken}`,
+      const isPdf = document.mime_type === 'application/pdf';
+      const pdf = isPdf
+        ? await readPdfText(bytes, typeof password === 'string' ? password : undefined)
+        : null;
+      const response = await fetch(
+        `${workerConfig.url}${isPdf ? '/documents/extract-text' : '/vision/extract'}`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${sessionToken}`,
+          },
+          signal: AbortSignal.timeout(isPdf ? 210_000 : 90_000),
+          body: JSON.stringify(
+            pdf
+              ? { pages: pdf.pages }
+              : { image_data_url: `data:${document.mime_type};base64,${bytes.toString('base64')}` },
+          ),
         },
-        signal: AbortSignal.timeout(90_000),
-        body: JSON.stringify({
-          image_data_url: `data:${document.mime_type};base64,${bytes.toString('base64')}`,
-        }),
-      });
+      );
       if (!response.ok) {
         const consentError = await forwardAiConsentError(response);
         if (consentError) {
@@ -79,7 +98,10 @@ export async function POST(
           return consentError;
         }
         await markFailed(`WORKER_${response.status}`);
-        return errorResponse('Image extraction failed', response.status);
+        return errorResponse(
+          isPdf ? 'Statement extraction failed' : 'Image extraction failed',
+          response.status,
+        );
       }
       const extraction = parseExtraction(await response.json().catch(() => null));
       if (!extraction) {
@@ -117,7 +139,14 @@ export async function POST(
         { document_id: id, document_type: extraction.draft.document_type, observations },
         { headers: privateHeaders },
       );
-    } catch {
+    } catch (error) {
+      if (error instanceof PdfTextError) {
+        await markFailed(error.code);
+        return Response.json(
+          { code: error.code, error: 'PDF could not be read' },
+          { status: 422, headers: privateHeaders },
+        );
+      }
       await markFailed('EXTRACTION_FAILED');
       return errorResponse('Failed to extract document');
     }

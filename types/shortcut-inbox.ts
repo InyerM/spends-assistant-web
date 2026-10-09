@@ -6,6 +6,7 @@ export interface InboxItem {
   raw_text: string;
   status: 'pending' | 'non_transaction' | 'dismissed' | 'matched' | 'created';
   created_at: string;
+  attachments?: Array<{ id: string; file_name: string; status: string }>;
   match?: { decision_id: string; transaction_id: string };
 }
 

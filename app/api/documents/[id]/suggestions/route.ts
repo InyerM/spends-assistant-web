@@ -8,6 +8,8 @@ import {
 } from '@/lib/document-reconciliation';
 import { inferCategoryFromHistory, inferDocumentTransactionType } from '@/lib/document-review';
 
+export const maxDuration = 60;
+
 const SEARCH_LIMIT = 100;
 const DISPLAY_LIMIT = 5;
 
@@ -60,6 +62,14 @@ export async function GET(
     }
     const transactionCache = new Map<string, StoredTransaction[]>();
     const limitedKeys = new Set<string>();
+    const searches = new Map<
+      string,
+      {
+        amount: number;
+        window: ReturnType<typeof dateWindow>;
+        direction: ReturnType<typeof inferDocumentTransactionType>;
+      }
+    >();
 
     for (const observation of observations) {
       if (
@@ -76,25 +86,32 @@ export async function GET(
         observation.source_excerpt ?? '',
       );
       const key = `${observation.amount}:${window?.from ?? 'any'}:${direction}`;
-      if (transactionCache.has(key)) continue;
-
-      let query = supabase
-        .from('transactions')
-        .select('id, amount, currency, date, description, account_id, type, raw_text')
-        .eq('user_id', userId)
-        .is('deleted_at', null)
-        .eq('amount', Math.abs(observation.amount));
-      query =
-        direction === 'income'
-          ? query.eq('type', 'income')
-          : query.in('type', ['expense', 'transfer']);
-      if (window) query = query.gte('date', window.from).lte('date', window.to);
-      const { data, error } = await query.order('date', { ascending: false }).limit(SEARCH_LIMIT);
-      if (error) return errorResponse('Failed to search transactions');
-      const rows = (data as StoredTransaction[] | null) ?? [];
-      transactionCache.set(key, rows);
-      if (rows.length === SEARCH_LIMIT) limitedKeys.add(key);
+      if (!searches.has(key)) searches.set(key, { amount: observation.amount, window, direction });
     }
+    const tasks = [...searches.entries()];
+    let nextSearch = 0;
+    const search = async (): Promise<void> => {
+      while (nextSearch < tasks.length) {
+        const [key, { amount, window, direction }] = tasks[nextSearch++];
+        let query = supabase
+          .from('transactions')
+          .select('id, amount, currency, date, description, account_id, type, raw_text')
+          .eq('user_id', userId)
+          .is('deleted_at', null)
+          .eq('amount', Math.abs(amount));
+        query =
+          direction === 'income'
+            ? query.eq('type', 'income')
+            : query.in('type', ['expense', 'transfer']);
+        if (window) query = query.gte('date', window.from).lte('date', window.to);
+        const { data, error } = await query.order('date', { ascending: false }).limit(SEARCH_LIMIT);
+        if (error) throw new Error('Failed to search transactions');
+        const rows = (data as StoredTransaction[] | null) ?? [];
+        transactionCache.set(key, rows);
+        if (rows.length === SEARCH_LIMIT) limitedKeys.add(key);
+      }
+    };
+    await Promise.all(Array.from({ length: Math.min(4, tasks.length) }, search));
 
     const accountIds = [
       ...new Set(

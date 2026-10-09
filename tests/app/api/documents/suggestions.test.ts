@@ -126,6 +126,36 @@ describe('GET document reconciliation suggestions', () => {
   const request = () =>
     GET(new Request('http://localhost') as never, { params: Promise.resolve({ id: 'doc-1' }) });
 
+  it('bounds independent statement searches to four concurrent reads and preserves row order', async () => {
+    observationQuery.mockResolvedValueOnce({
+      data: Array.from({ length: 7 }, (_, index) => ({
+        ...observation,
+        id: `obs-${index}`,
+        amount: index + 1,
+      })),
+      error: null,
+    });
+    let active = 0;
+    let maximum = 0;
+    transactionQuery.mockImplementation(async () => {
+      active++;
+      maximum = Math.max(maximum, active);
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      active--;
+      return { data: [], error: null };
+    });
+    const response = await request();
+    expect(response.status).toBe(200);
+    expect(maximum).toBe(4);
+    expect(transactionQuery).toHaveBeenCalledTimes(7);
+    expect(transactionQuery.mock.calls.every(([limit]) => limit === 100)).toBe(true);
+    expect(
+      transactionEq.mock.calls.every(([field, owner]) => field === 'user_id' && owner === 'user-1'),
+    ).toBe(true);
+    expect(
+      (await response.json()).data.map((row: { observation_id: string }) => row.observation_id),
+    ).toEqual(Array.from({ length: 7 }, (_, index) => `obs-${index}`));
+  });
   it('returns owner-scoped, read-only candidates without exposing raw transaction text', async () => {
     const response = await request();
     expect(response.status).toBe(200);

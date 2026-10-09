@@ -42,6 +42,64 @@ describe('document inbox', () => {
     vi.unstubAllGlobals();
   });
 
+  it.each([
+    {
+      status: 428,
+      body: { code: 'AI_CONSENT_REQUIRED', scope: 'financial_text', version: 'external-ai-v1' },
+      visible: 'requiredFinancialText',
+    },
+    {
+      status: 429,
+      body: { error: 'Monthly AI limit reached' },
+      visible: 'Monthly AI limit reached',
+    },
+  ])(
+    'closes the password dialog so an extraction failure can be resolved ($status)',
+    async ({ status, body, visible }) => {
+      let attempts = 0;
+      vi.stubGlobal(
+        'fetch',
+        vi.fn((url: string) => {
+          if (url.endsWith('/extract')) {
+            attempts++;
+            return Promise.resolve(
+              attempts === 1
+                ? Response.json(
+                    { code: 'PDF_PASSWORD_REQUIRED', error: 'PDF could not be read' },
+                    { status: 422 },
+                  )
+                : Response.json(body, { status }),
+            );
+          }
+          return Promise.resolve(
+            Response.json({
+              data: [
+                {
+                  id: 'doc-1',
+                  file_name: 'statement.pdf',
+                  mime_type: 'application/pdf',
+                  status: 'uploaded',
+                  document_type: null,
+                  created_at: '2026-10-08',
+                  updated_at: '2026-10-08',
+                  document_observations: [],
+                },
+              ],
+            }),
+          );
+        }),
+      );
+      renderDocuments();
+      fireEvent.click(await screen.findByRole('button', { name: 'extract' }));
+      await screen.findByRole('dialog');
+      fireEvent.change(screen.getByLabelText('pdfPasswordLabel'), {
+        target: { value: 'synthetic-test-password' },
+      });
+      fireEvent.click(screen.getByRole('button', { name: 'pdfUnlock' }));
+      await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+      expect(await screen.findByText(visible)).toBeVisible();
+    },
+  );
   it('offers reviewed transaction creation from a pending observation', async () => {
     vi.stubGlobal(
       'fetch',

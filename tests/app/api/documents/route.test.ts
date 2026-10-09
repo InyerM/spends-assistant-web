@@ -48,6 +48,20 @@ describe('/api/documents', () => {
     expect(upload).not.toHaveBeenCalled();
   });
 
+  it('stores a matching PDF under the owner in the private documents bucket', async () => {
+    const file = {
+      name: 'statement.pdf',
+      type: 'application/pdf',
+      arrayBuffer: async () => new TextEncoder().encode('%PDF-1.7 synthetic').buffer,
+    };
+    const response = await POST({ formData: async () => ({ get: () => file }) } as never);
+    expect(response.status).toBe(201);
+    expect(upload.mock.calls[0][0]).toMatch(/^user-1\/.+\.pdf$/);
+    expect(insert.mock.calls[0][0]).toMatchObject({
+      mime_type: 'application/pdf',
+      status: 'uploaded',
+    });
+  });
   it('uploads an image under the user ID and creates a document row', async () => {
     const file = {
       name: 'receipt.png',

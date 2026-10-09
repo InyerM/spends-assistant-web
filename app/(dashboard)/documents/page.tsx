@@ -8,6 +8,7 @@ import { FileImage, MailPlus, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { InlineLoader } from '@/components/shared/loader';
 import { Card, CardContent } from '@/components/ui/card';
+import { PdfPasswordDialog } from '@/components/documents/pdf-password-dialog';
 import { DocumentCaptureCard } from '@/components/documents/document-capture-card';
 import { AiConsentNotice } from '@/components/ai-consent-notice';
 import { AiConsentRequiredError } from '@/lib/ai-consent';
@@ -15,6 +16,7 @@ import { MAX_DOCUMENT_BYTES } from '@/lib/documents';
 import { useAccounts } from '@/lib/api/queries/account.queries';
 import { useCategories } from '@/lib/api/queries/category.queries';
 import {
+  DocumentExtractionError,
   extractDocument,
   restoreDocumentObservation,
   setDocumentArchived,
@@ -38,6 +40,8 @@ export default function DocumentsPage(): React.ReactElement {
   const { data: accounts } = useAccounts();
   const { data: categories } = useCategories();
   const inputRef = useRef<HTMLInputElement>(null);
+  const [protectedPdfId, setProtectedPdfId] = useState<string | null>(null);
+  const [incorrectPassword, setIncorrectPassword] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | AiConsentRequiredError | null>(null);
@@ -52,7 +56,7 @@ export default function DocumentsPage(): React.ReactElement {
 
   const upload = async (file: File): Promise<void> => {
     if (
-      !['image/png', 'image/jpeg', 'image/webp'].includes(file.type) ||
+      !['image/png', 'image/jpeg', 'image/webp', 'application/pdf'].includes(file.type) ||
       file.size > MAX_DOCUMENT_BYTES ||
       file.size === 0
     ) {
@@ -72,13 +76,28 @@ export default function DocumentsPage(): React.ReactElement {
     }
   };
 
-  const extract = async (id: string): Promise<void> => {
+  const extract = async (id: string, password?: string): Promise<void> => {
     setBusy(id);
     setError(null);
     try {
-      await extractDocument(id);
+      await extractDocument(id, password);
+      setProtectedPdfId(null);
+      setIncorrectPassword(false);
       await load();
     } catch (cause) {
+      if (cause instanceof DocumentExtractionError) {
+        if (['PDF_PASSWORD_REQUIRED', 'PDF_PASSWORD_INCORRECT'].includes(cause.code)) {
+          setProtectedPdfId(id);
+          setIncorrectPassword(cause.code === 'PDF_PASSWORD_INCORRECT');
+        } else {
+          setProtectedPdfId(null);
+          setIncorrectPassword(false);
+          setError(t(`pdfErrors.${cause.code}`));
+        }
+        return;
+      }
+      setProtectedPdfId(null);
+      setIncorrectPassword(false);
       setError(
         cause instanceof AiConsentRequiredError
           ? cause
@@ -144,7 +163,7 @@ export default function DocumentsPage(): React.ReactElement {
             ref={inputRef}
             className='sr-only'
             type='file'
-            accept='image/png,image/jpeg,image/webp'
+            accept='image/png,image/jpeg,image/webp,application/pdf'
             aria-label={t('chooseImage')}
             onChange={(event) => {
               const file = event.target.files?.[0];
@@ -173,6 +192,18 @@ export default function DocumentsPage(): React.ReactElement {
         </div>
       </header>
 
+      <p className='text-muted-foreground text-xs leading-5'>{t('pdfSupportHint')}</p>
+      {protectedPdfId ? (
+        <PdfPasswordDialog
+          busy={busy === protectedPdfId}
+          incorrect={incorrectPassword}
+          onClose={() => {
+            setProtectedPdfId(null);
+            setIncorrectPassword(false);
+          }}
+          onSubmit={(password) => void extract(protectedPdfId, password)}
+        />
+      ) : null}
       {error instanceof AiConsentRequiredError && <AiConsentNotice scope={error.scope} />}
       {(typeof error === 'string' || documentQuery.error) && (
         <p
