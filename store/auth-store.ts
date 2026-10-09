@@ -28,7 +28,7 @@ const initialState: AuthState = {
   isAuthenticated: false,
 };
 
-export const useAuthStore = create<AuthStore>((set) => ({
+export const useAuthStore = create<AuthStore>((set, get) => ({
   ...initialState,
 
   setSupabaseUser: (user): void =>
@@ -49,7 +49,12 @@ export const useAuthStore = create<AuthStore>((set) => ({
       });
       if (error) throw error;
 
-      const signedInUser = data.session?.user ?? null;
+      let signedInUser = data.session?.user ?? null;
+      if (signedInUser) {
+        const verified = await supabaseClient.auth.getUser();
+        if (verified.error) throw verified.error;
+        signedInUser = verified.data.user;
+      }
       set({
         supabaseUser: signedInUser,
         isAuthenticated: !!signedInUser,
@@ -135,6 +140,9 @@ export const useAuthStore = create<AuthStore>((set) => ({
 
       supabaseClient.auth.onAuthStateChange((_event, session) => {
         const newUser = session?.user ?? null;
+        // getUser verified metadata may be newer than the locally persisted session.
+        if (_event === 'INITIAL_SESSION' && newUser && get().supabaseUser?.id === newUser.id)
+          return;
 
         set({
           supabaseUser: newUser,

@@ -109,10 +109,12 @@ describe('useAuthStore', () => {
       error: null,
     });
 
+    const verified = { ...user, app_metadata: { anotto_terms_required: true } };
+    mockGetUser.mockResolvedValue({ data: { user: verified }, error: null });
     await useAuthStore.getState().signUp('confirmed@example.com', 'secure-password');
 
     expect(useAuthStore.getState()).toMatchObject({
-      supabaseUser: user,
+      supabaseUser: verified,
       isAuthenticated: true,
       isLoading: false,
     });
@@ -296,5 +298,18 @@ describe('useAuthStore', () => {
 
     // Test that the selector is defined (it's a hook, needs React context to actually run)
     expect(useAuthUser).toBeDefined();
+  });
+  it('does not replace verified metadata with a stale initial session', async () => {
+    const { useAuthStore } = await import('@/store/auth-store');
+    const canonical = { id: 'new-owner', app_metadata: { anotto_terms_required: true } };
+    let callback: (event: string, session: unknown) => void = () => {};
+    mockGetUser.mockResolvedValue({ data: { user: canonical } });
+    mockOnAuthStateChange.mockImplementation((cb: typeof callback) => {
+      callback = cb;
+      return { data: { subscription: { unsubscribe: vi.fn() } } };
+    });
+    await useAuthStore.getState().initialize();
+    callback('INITIAL_SESSION', { user: { id: 'new-owner', app_metadata: {} } });
+    expect(useAuthStore.getState().supabaseUser).toEqual(canonical);
   });
 });
