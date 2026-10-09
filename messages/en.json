@@ -1113,5 +1113,40 @@
     "bulkReconcileWarning": "Check these links before confirming. This only reconciles evidence with existing transactions; balances and transactions are unchanged.",
     "bulkReconcileResult": "{completed} linked · {failed} failed",
     "bulkReconcileRefreshError": "Links were saved, but the document list could not refresh. Reload to check their status."
+  },
+  "financialChat": {
+    "title": "Financial chat",
+    "description": "Ask about the recorded data for a month. Answers are read-only and this conversation is not saved.",
+    "month": "Month",
+    "question": "Your question",
+    "acknowledgement": "I agree to send my question and a bounded snapshot of my transactions, current account balances and document metadata to external AI through OpenRouter. Document contents are excluded. I can revoke AI permission in Settings.",
+    "send": "Ask",
+    "sending": "Reviewing records…",
+    "answer": "Answer",
+    "sources": "Recorded sources",
+    "coverage": "Coverage: up to 100 transactions, 50 current accounts and 20 document metadata records. Original currencies are kept separate. Unreconciled records and missing historical balances may affect answers. Budget, loan and investment details are not included. Verify numerical claims against the sources.",
+    "truncated": "The snapshot is incomplete. This answer cannot establish full monthly totals.",
+    "error": "The answer could not be verified or the service is unavailable. Check AI permissions and try again.",
+    "quotaError": "Your monthly AI request limit has been reached.",
+    "clear": "Clear answer",
+    "fields": {
+      "date": "Date",
+      "amount": "Amount",
+      "currency": "Currency",
+      "type": "Type",
+      "description": "Description",
+      "account_id": "Account",
+      "category_id": "Category",
+      "name": "Name",
+      "balance": "Current balance",
+      "document_type": "Document type",
+      "status": "Status",
+      "created_at": "Created"
+    },
+    "sourceTypes": {
+      "transaction": "Transaction",
+      "account": "Account",
+      "document": "Document"
+    }
   }
 }

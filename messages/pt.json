@@ -996,5 +996,40 @@
     "bulkReconcileWarning": "Revise estes vínculos antes de confirmar. Apenas as evidências são conciliadas com transações existentes; saldos e transações não mudam.",
     "bulkReconcileResult": "{completed} vinculados · {failed} falharam",
     "bulkReconcileRefreshError": "Os vínculos foram salvos, mas a lista não pôde ser atualizada. Recarregue para verificar o estado."
+  },
+  "financialChat": {
+    "title": "Chat financeiro",
+    "description": "Pergunte sobre os registros de um mês. As respostas são apenas para consulta e esta conversa não é salva.",
+    "month": "Mês",
+    "question": "Sua pergunta",
+    "acknowledgement": "Concordo em enviar minha pergunta e uma amostra limitada das minhas transações, saldos atuais e metadados de documentos para IA externa pelo OpenRouter. O conteúdo dos documentos é excluído. Posso revogar a permissão de IA nas Configurações.",
+    "send": "Perguntar",
+    "sending": "Analisando registros…",
+    "answer": "Resposta",
+    "sources": "Registros de referência",
+    "coverage": "Cobertura: até 100 transações, 50 contas atuais e 20 registros de metadados de documentos. As moedas originais são mantidas separadamente. Registros não conciliados e saldos históricos incompletos podem afetar as respostas. Detalhes de orçamentos, empréstimos e investimentos não estão incluídos. Confira os números nos registros.",
+    "truncated": "A amostra está incompleta. Esta resposta não permite estabelecer totais mensais completos.",
+    "error": "Não foi possível verificar a resposta ou o serviço está indisponível. Confira as permissões de IA e tente novamente.",
+    "quotaError": "Seu limite mensal de solicitações de IA foi atingido.",
+    "clear": "Limpar resposta",
+    "fields": {
+      "date": "Data",
+      "amount": "Valor",
+      "currency": "Moeda",
+      "type": "Tipo",
+      "description": "Descrição",
+      "account_id": "Conta",
+      "category_id": "Categoria",
+      "name": "Nome",
+      "balance": "Saldo atual",
+      "document_type": "Tipo de documento",
+      "status": "Estado",
+      "created_at": "Criado"
+    },
+    "sourceTypes": {
+      "transaction": "Transação",
+      "account": "Conta",
+      "document": "Documento"
+    }
   }
 }

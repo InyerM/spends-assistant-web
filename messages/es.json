@@ -1110,5 +1110,40 @@
     "eligibilityContinue": "Continuar a Anotto",
     "eligibilitySaving": "Guardando…",
     "eligibilitySaveFailed": "No pudimos guardar tu confirmación. Inténtalo de nuevo."
+  },
+  "financialChat": {
+    "title": "Chat financiero",
+    "description": "Pregunta por los registros de un mes. Las respuestas son de consulta y esta conversación no se guarda.",
+    "month": "Mes",
+    "question": "Tu pregunta",
+    "acknowledgement": "Acepto enviar mi pregunta y una muestra limitada de mis transacciones, saldos actuales y metadatos de documentos a IA externa mediante OpenRouter. Se excluye el contenido de los documentos. Puedo revocar el permiso de IA en Ajustes.",
+    "send": "Preguntar",
+    "sending": "Revisando registros…",
+    "answer": "Respuesta",
+    "sources": "Registros de respaldo",
+    "coverage": "Cobertura: hasta 100 transacciones, 50 cuentas actuales y 20 metadatos de documentos. Se mantienen las monedas originales por separado. Los registros sin conciliar y saldos históricos incompletos pueden afectar las respuestas. No se incluyen detalles de presupuestos, préstamos ni inversiones. Verifica las cifras con los registros.",
+    "truncated": "La muestra está incompleta. Esta respuesta no permite establecer totales mensuales completos.",
+    "error": "No se pudo verificar la respuesta o el servicio no está disponible. Revisa los permisos de IA e inténtalo de nuevo.",
+    "quotaError": "Alcanzaste el límite mensual de solicitudes de IA.",
+    "clear": "Borrar respuesta",
+    "fields": {
+      "date": "Fecha",
+      "amount": "Importe",
+      "currency": "Moneda",
+      "type": "Tipo",
+      "description": "Descripción",
+      "account_id": "Cuenta",
+      "category_id": "Categoría",
+      "name": "Nombre",
+      "balance": "Saldo actual",
+      "document_type": "Tipo de documento",
+      "status": "Estado",
+      "created_at": "Creado"
+    },
+    "sourceTypes": {
+      "transaction": "Transacción",
+      "account": "Cuenta",
+      "document": "Documento"
+    }
   }
 }
