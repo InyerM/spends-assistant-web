@@ -220,9 +220,17 @@ export function ShortcutCreateForm({
       {(analyzing || analysis) && (
         <div
           role='status'
-          className='flex items-center gap-2 rounded-lg border border-[var(--ai-gradient-start)]/30 bg-[var(--ai-gradient-start)]/5 p-3 text-[var(--ai-gradient-start)]'>
+          className={`flex items-center gap-2 rounded-lg border p-3 ${!analyzing && analysis?.analysis_source === 'automation' ? 'border-brand-secondary/30 bg-brand-secondary/5 text-brand-secondary' : !analyzing && analysis?.analysis_source === 'history' ? 'border-primary/30 bg-primary/5 text-primary' : 'border-[var(--ai-gradient-start)]/30 bg-[var(--ai-gradient-start)]/5 text-[var(--ai-gradient-start)]'}`}>
           {analyzing ? <InlineLoader /> : <Check className='size-4 shrink-0' aria-hidden='true' />}
-          <span>{t(analyzing ? 'analysisRunning' : 'analysisReady')}</span>
+          <span>
+            {t(
+              analyzing
+                ? 'analysisRunning'
+                : analysis?.category_source === 'automation'
+                  ? 'automationReady'
+                  : 'analysisReady',
+            )}
+          </span>
         </div>
       )}
       {optionsError && (
@@ -240,7 +248,8 @@ export function ShortcutCreateForm({
             selectedAccountId === null
               ? analyzing
                 ? 'analyzing'
-                : persistedAccountId
+                : persistedAccountId &&
+                    (!analysis?.analysis_source || analysis.analysis_source === 'ai')
                   ? 'suggested'
                   : undefined
               : undefined,
@@ -249,14 +258,20 @@ export function ShortcutCreateForm({
               ? analyzing
                 ? 'analyzing'
                 : persistedCategoryId
-                  ? 'suggested'
+                  ? analysis?.automation_fields?.includes('categoryId') ||
+                    analysis?.category_source === 'automation'
+                    ? 'automation'
+                    : analysis?.history_fields?.includes('categoryId')
+                      ? 'history'
+                      : 'suggested'
                   : undefined
               : undefined,
           type:
             fieldDraft.type === undefined
               ? analyzing
                 ? 'analyzing'
-                : analysis?.suggested_type
+                : analysis?.suggested_type &&
+                    (!analysis.analysis_source || analysis.analysis_source === 'ai')
                   ? 'suggested'
                   : undefined
               : undefined,
@@ -265,7 +280,11 @@ export function ShortcutCreateForm({
               ? analyzing
                 ? 'analyzing'
                 : analysis?.description
-                  ? 'suggested'
+                  ? analysis.automation_fields?.includes('description')
+                    ? 'automation'
+                    : analysis.history_fields?.includes('description')
+                      ? 'history'
+                      : 'suggested'
                   : undefined
               : undefined,
           notes:
@@ -273,7 +292,11 @@ export function ShortcutCreateForm({
               ? analyzing
                 ? 'analyzing'
                 : analysis?.notes
-                  ? 'suggested'
+                  ? analysis.automation_fields?.includes('notes')
+                    ? 'automation'
+                    : analysis.history_fields?.includes('notes')
+                      ? 'history'
+                      : 'suggested'
                   : undefined
               : undefined,
         }}

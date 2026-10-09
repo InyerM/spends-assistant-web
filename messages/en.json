@@ -358,7 +358,10 @@
     "reviewHelpTitle": "What do the review actions do?",
     "duplicateTitle": "This transaction may already exist",
     "duplicateConfirmation": "We found similar transactions. Save another transaction anyway? Continue only if this is a separate payment.",
-    "duplicateGoBack": "Review again"
+    "duplicateGoBack": "Review again",
+    "fieldAutomation": "Rule applied",
+    "automationReady": "Automation applied. Review the details before saving.",
+    "fieldHistory": "From your history"
   },
   "transactions": {
     "originalEvidence": "Original evidence",

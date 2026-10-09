@@ -33,7 +33,9 @@ export function ShortcutCreateFields({
   onChange,
   analysisStates = {},
 }: {
-  analysisStates?: Partial<Record<keyof ShortcutCreateDraft, 'analyzing' | 'suggested'>>;
+  analysisStates?: Partial<
+    Record<keyof ShortcutCreateDraft, 'analyzing' | 'suggested' | 'automation' | 'history'>
+  >;
   draft: ShortcutCreateDraft;
   accounts: Account[];
   categories: Category[];

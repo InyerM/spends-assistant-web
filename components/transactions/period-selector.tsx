@@ -105,7 +105,7 @@ export function PeriodSelector({
   };
 
   return (
-    <div className='flex items-center gap-1'>
+    <div className='flex min-w-0 items-center gap-1'>
       {!empty && period.mode !== 'custom' && (
         <Button
           variant='ghost'
@@ -119,9 +119,9 @@ export function PeriodSelector({
         <PopoverTrigger asChild>
           <Button
             variant='ghost'
-            className='cursor-pointer gap-1.5 text-sm font-medium sm:h-8 sm:px-2'>
+            className='min-w-0 cursor-pointer gap-1.5 text-sm font-medium sm:h-8 sm:px-2'>
             <Calendar className='text-muted-foreground h-3.5 w-3.5' />
-            {empty ? emptyLabel : label}
+            <span className='truncate'>{empty ? emptyLabel : label}</span>
           </Button>
         </PopoverTrigger>
         <PopoverContent className='w-auto min-w-[280px] p-3' align='start'>

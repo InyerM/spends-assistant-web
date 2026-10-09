@@ -5,7 +5,10 @@ export interface ForwardedEmailAnalysis {
   status: 'parsed' | 'needs_review';
   account_id: string | null;
   category_id: string | null;
-  category_source: 'ai' | 'catalog' | 'review_context' | null;
+  category_source: 'ai' | 'catalog' | 'automation' | 'review_context' | null;
+  analysis_source?: 'automation' | 'history' | 'ai';
+  automation_fields?: string[];
+  history_fields?: string[];
   suggested_type: 'expense' | 'income' | null;
   description: string | null;
   notes: string | null;

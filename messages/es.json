@@ -358,7 +358,10 @@
     "reviewHelpTitle": "¿Qué hace cada acción?",
     "duplicateTitle": "Este movimiento podría estar repetido",
     "duplicateConfirmation": "Encontramos transacciones similares. ¿Quieres guardar otro movimiento de todas formas? Solo continúa si es una operación diferente.",
-    "duplicateGoBack": "Volver a revisar"
+    "duplicateGoBack": "Volver a revisar",
+    "fieldAutomation": "Regla aplicada",
+    "automationReady": "Automatización aplicada. Revisa los datos antes de guardar.",
+    "fieldHistory": "Según tu historial"
   },
   "transactions": {
     "originalEvidence": "Origen de la transacción",

@@ -5,6 +5,7 @@ import {
   inferForwardedBancolombiaAccount,
   inferForwardedAccountFromRules,
 } from '@/lib/shortcut-inbox/create-draft';
+import { previewBancolombiaNotice } from '@/lib/shortcut-inbox/bancolombia-preview';
 import { previewLuloNotice } from '@/lib/shortcut-inbox/lulo-preview';
 import {
   categoryFromCurrentRules,
@@ -12,6 +13,11 @@ import {
 } from '@/lib/shortcut-inbox/updated-rules';
 import type { Account } from '@/types';
 import type { AutomationRule } from '@/types/automation-rule';
+import {
+  recipientFromEmail,
+  suggestRecipientHistory,
+  type RecipientHistoryRow,
+} from '@/lib/shortcut-inbox/recipient-history';
 import { forwardAiConsentError } from '@/lib/ai-consent';
 
 interface Context {
@@ -28,7 +34,7 @@ interface EmailAnalysis {
   card_last_four: string | null;
   account_id: string | null;
   category_id: string | null;
-  category_source: 'ai' | 'catalog' | 'automation' | null;
+  category_source: 'ai' | 'catalog' | 'automation' | 'review_context' | null;
   analysis_version: 2;
   suggested_type: 'expense' | 'income' | null;
   description: string | null;
@@ -87,6 +93,7 @@ export async function POST(request: Request, context: Context): Promise<Response
     ) {
       return errorResponse('Inbox item has invalid email data', 422);
     }
+    const rawText = inboxFields.raw_text;
     const preview = previewLuloNotice(
       inboxFields.source,
       inboxFields.raw_text,
@@ -95,7 +102,7 @@ export async function POST(request: Request, context: Context): Promise<Response
     const parsed = preview?.kind === 'card_purchase' && preview.confidence === 'structured';
     let accountId: string | null = null;
     let categoryId: string | null = null;
-    let categorySource: 'ai' | 'catalog' | 'automation' | null = null;
+    let categorySource: 'ai' | 'catalog' | 'automation' | 'review_context' | null = null;
 
     const [{ data: accounts, error: accountsError }, { data: rules, error: rulesError }] =
       await Promise.all([
@@ -107,7 +114,7 @@ export async function POST(request: Request, context: Context): Promise<Response
           .eq('user_id', userId),
         supabase
           .from('automation_rules')
-          .select('rule_type,is_active,priority,condition_logic,conditions,actions')
+          .select('name,rule_type,is_active,priority,condition_logic,conditions,actions')
           .eq('user_id', userId)
           .eq('is_active', true)
           .is('deleted_at', null),
@@ -126,21 +133,33 @@ export async function POST(request: Request, context: Context): Promise<Response
 
     const currentRules = Array.isArray(rules) ? (rules as AutomationRule[]) : [];
     const cachedFields = cached as Record<string, unknown> | null;
+    const bank = previewBancolombiaNotice(inboxFields.source, inboxFields.raw_text);
     const ruleCategoryId = categoryFromCurrentRules(
       preview?.merchant ||
-        merchantFromForwardedEvidence(inboxFields.raw_text) ||
+        merchantFromForwardedEvidence(rawText) ||
         (typeof cachedFields?.description === 'string' ? cachedFields.description : ''),
       inboxFields.raw_text,
       preview?.amountDecimal
         ? Number(preview.amountDecimal)
-        : typeof cachedFields?.amount === 'number'
-          ? cachedFields.amount
-          : null,
+        : bank?.amountDecimal
+          ? Number(bank.amountDecimal)
+          : typeof cachedFields?.amount === 'number'
+            ? cachedFields.amount
+            : null,
       accountId,
       currentRules,
     );
     let validRuleCategory: string | null = null;
-    const cachedType = cached?.suggested_type;
+    const bankPreview = previewBancolombiaNotice(inboxFields.source, inboxFields.raw_text);
+    const cachedType =
+      cached?.suggested_type ??
+      (bankPreview
+        ? bankPreview.kind === 'income'
+          ? 'income'
+          : 'expense'
+        : /\b(?:Transferiste|Compraste|Pagaste|Retiraste)\b/iu.test(inboxFields.raw_text)
+          ? 'expense'
+          : null);
     if (
       ruleCategoryId &&
       uuid.test(ruleCategoryId) &&
@@ -158,53 +177,157 @@ export async function POST(request: Request, context: Context): Promise<Response
       validRuleCategory = category?.id ?? null;
     }
 
+    let recipientHistory: RecipientHistoryRow | null = null;
+    const recipient = recipientFromEmail(rawText);
+    if (!validRuleCategory && recipient && accountId && cachedType === 'expense') {
+      const { data: historyRows, error: historyError } = await supabase
+        .from('transactions')
+        .select('category_id,description,notes,raw_text')
+        .eq('user_id', userId)
+        .eq('account_id', accountId)
+        .eq('type', 'expense')
+        .is('deleted_at', null)
+        .ilike('raw_text', `%*${recipient}%`)
+        .order('date', { ascending: false })
+        .limit(21);
+      if (historyError) return errorResponse('Email history lookup failed');
+      if (Array.isArray(historyRows) && historyRows.length < 21) {
+        const proposedHistory = suggestRecipientHistory(
+          recipient,
+          historyRows as RecipientHistoryRow[],
+        );
+        if (proposedHistory?.category_id && uuid.test(proposedHistory.category_id)) {
+          const { data: category, error: categoryError } = await supabase
+            .from('categories')
+            .select('id')
+            .eq('user_id', userId)
+            .eq('id', proposedHistory.category_id)
+            .eq('type', 'expense')
+            .eq('is_active', true)
+            .maybeSingle();
+          if (categoryError) return errorResponse('Email history category lookup failed');
+          if (category) {
+            validRuleCategory = category.id;
+            recipientHistory = proposedHistory;
+          }
+        }
+      }
+    }
+
+    const matchedRule = validRuleCategory
+      ? [...currentRules]
+          .sort((a, b) => b.priority - a.priority)
+          .find(
+            (rule) =>
+              categoryFromCurrentRules(
+                preview?.merchant ||
+                  merchantFromForwardedEvidence(rawText) ||
+                  (typeof cachedFields?.description === 'string' ? cachedFields.description : ''),
+                rawText,
+                preview?.amountDecimal
+                  ? Number(preview.amountDecimal)
+                  : bankPreview?.amountDecimal
+                    ? Number(bankPreview.amountDecimal)
+                    : typeof cachedFields?.amount === 'number'
+                      ? cachedFields.amount
+                      : null,
+                accountId,
+                [rule],
+              ) === validRuleCategory,
+          )
+      : undefined;
+    const ruleNote = (matchedRule?.actions.add_note ?? recipientHistory?.notes)
+      ?.trim()
+      .slice(0, 500);
+    const ruleDescription = (matchedRule?.name ?? recipientHistory?.description)
+      ?.trim()
+      .slice(0, 150);
+    const automationFields = matchedRule
+      ? ['categoryId', ...(ruleDescription ? ['description'] : []), ...(ruleNote ? ['notes'] : [])]
+      : [];
+
     if (cached?.analysis_version === 2) {
       const nextCategory =
-        cached.category_source === 'review_context'
-          ? cached.category_id
-          : (validRuleCategory ??
-            (cached.category_source === 'automation' ? null : cached.category_id));
-      const nextSource =
-        cached.category_source === 'review_context'
-          ? cached.category_source
-          : validRuleCategory
-            ? 'automation'
-            : cached.category_source === 'automation'
-              ? null
-              : cached.category_source;
+        validRuleCategory ?? (cached.category_source === 'automation' ? null : cached.category_id);
+      const nextSource = validRuleCategory
+        ? matchedRule
+          ? 'automation'
+          : 'review_context'
+        : cached.category_source === 'automation'
+          ? null
+          : cached.category_source;
       if (
+        (!ruleNote || cached.notes === ruleNote) &&
+        (!ruleDescription || cached.description === ruleDescription) &&
         cached.account_id === accountId &&
         cached.category_id === nextCategory &&
         cached.category_source === nextSource
       )
-        return Response.json(cached, { headers: privateHeaders });
+        return Response.json(
+          {
+            ...cached,
+            analysis_source: matchedRule ? 'automation' : recipientHistory ? 'history' : 'ai',
+            automation_fields: automationFields,
+            history_fields: recipientHistory
+              ? ['categoryId', 'description', ...(ruleNote ? ['notes'] : [])]
+              : [],
+          },
+          { headers: privateHeaders },
+        );
       const { data: updated, error: updateError } = await supabase
         .from('forwarded_email_analyses')
-        .update({ account_id: accountId, category_id: nextCategory, category_source: nextSource })
+        .update({
+          account_id: accountId,
+          category_id: nextCategory,
+          category_source: nextSource,
+          ...(ruleNote ? { notes: ruleNote } : {}),
+          ...(ruleDescription ? { description: ruleDescription } : {}),
+        })
         .eq('inbox_item_id', id)
         .eq('user_id', userId)
         .select('*')
         .maybeSingle();
       if (updateError || !updated) return errorResponse('Email analysis failed');
-      return Response.json(updated, { headers: privateHeaders });
+      return Response.json(
+        {
+          ...updated,
+          analysis_source: matchedRule ? 'automation' : recipientHistory ? 'history' : 'ai',
+          automation_fields: automationFields,
+          history_fields: recipientHistory
+            ? ['categoryId', 'description', ...(ruleNote ? ['notes'] : [])]
+            : [],
+        },
+        { headers: privateHeaders },
+      );
     }
 
-    if (!workerConfig.url) return errorResponse('Email suggestion unavailable', 503);
-    const token = accessToken ?? (await supabase.auth.getSession()).data.session?.access_token;
-    if (!token) return errorResponse('Unauthorized', 401);
-    const suggestionResponse = await fetch(
-      `${workerConfig.url.replace(/\/$/u, '')}/forwarded-email/suggest`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ message: inboxFields.raw_text }),
-      },
-    );
-    if (!suggestionResponse.ok) {
-      const consentError = await forwardAiConsentError(suggestionResponse);
-      return consentError ?? errorResponse('Email suggestion unavailable', 503);
+    let suggestion: Record<string, unknown>;
+    if ((matchedRule || recipientHistory) && cachedType) {
+      suggestion = {
+        type: cachedType,
+        category_id: validRuleCategory,
+        category_source: 'automation',
+        description: ruleDescription ?? ruleNote ?? null,
+        notes: ruleNote ?? null,
+      };
+    } else {
+      if (!workerConfig.url) return errorResponse('Email suggestion unavailable', 503);
+      const token = accessToken ?? (await supabase.auth.getSession()).data.session?.access_token;
+      if (!token) return errorResponse('Unauthorized', 401);
+      const suggestionResponse = await fetch(
+        `${workerConfig.url.replace(/\/$/u, '')}/forwarded-email/suggest`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ message: inboxFields.raw_text }),
+        },
+      );
+      if (!suggestionResponse.ok) {
+        const consentError = await forwardAiConsentError(suggestionResponse);
+        return consentError ?? errorResponse('Email suggestion unavailable', 503);
+      }
+      suggestion = (await suggestionResponse.json()) as Record<string, unknown>;
     }
-    const suggestion = (await suggestionResponse.json()) as Record<string, unknown>;
     const suggestedType = parsed
       ? 'expense'
       : suggestion.type === 'expense' || suggestion.type === 'income'
@@ -229,11 +352,11 @@ export async function POST(request: Request, context: Context): Promise<Response
         categorySource = suggestion.category_source === 'catalog' ? 'catalog' : 'ai';
       }
     }
-    if (ruleCategoryId && uuid.test(ruleCategoryId) && suggestedType) {
+    if (validRuleCategory && uuid.test(validRuleCategory) && suggestedType) {
       const { data: category, error: categoryError } = await supabase
         .from('categories')
         .select('id')
-        .eq('id', ruleCategoryId)
+        .eq('id', validRuleCategory)
         .eq('user_id', userId)
         .eq('type', suggestedType)
         .eq('is_active', true)
@@ -241,7 +364,7 @@ export async function POST(request: Request, context: Context): Promise<Response
       if (categoryError) return errorResponse('Email category analysis failed');
       if (category) {
         categoryId = category.id;
-        categorySource = 'automation';
+        categorySource = matchedRule ? 'automation' : 'review_context';
       }
     }
 
@@ -284,7 +407,17 @@ export async function POST(request: Request, context: Context): Promise<Response
         .select('*')
         .maybeSingle();
       if (updateError || !updated) return errorResponse('Email analysis failed');
-      return Response.json(updated, { headers: privateHeaders });
+      return Response.json(
+        {
+          ...updated,
+          analysis_source: matchedRule ? 'automation' : recipientHistory ? 'history' : 'ai',
+          automation_fields: automationFields,
+          history_fields: recipientHistory
+            ? ['categoryId', 'description', ...(ruleNote ? ['notes'] : [])]
+            : [],
+        },
+        { headers: privateHeaders },
+      );
     }
     const { data: inserted, error: insertError } = await supabase
       .from('forwarded_email_analyses')
@@ -302,7 +435,17 @@ export async function POST(request: Request, context: Context): Promise<Response
       return Response.json(replay, { headers: privateHeaders });
     }
     if (insertError || !inserted) return errorResponse('Email analysis failed');
-    return Response.json(inserted, { status: 201, headers: privateHeaders });
+    return Response.json(
+      {
+        ...inserted,
+        analysis_source: matchedRule ? 'automation' : recipientHistory ? 'history' : 'ai',
+        automation_fields: automationFields,
+        history_fields: recipientHistory
+          ? ['categoryId', 'description', ...(ruleNote ? ['notes'] : [])]
+          : [],
+      },
+      { status: 201, headers: privateHeaders },
+    );
   } catch (error) {
     return error instanceof AuthError
       ? errorResponse('Unauthorized', 401)

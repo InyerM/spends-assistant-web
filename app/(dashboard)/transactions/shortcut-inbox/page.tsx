@@ -290,7 +290,7 @@ export default function ShortcutInboxPage({
   const totalPages = Math.max(1, Math.ceil(count / PAGE_SIZE));
 
   return (
-    <div className='mx-auto max-w-5xl space-y-6 p-4 sm:space-y-8 sm:p-6 lg:p-8'>
+    <div className='mx-auto max-w-5xl space-y-4 p-4 sm:space-y-5 sm:p-6 lg:p-8'>
       <div className='flex flex-wrap items-start justify-between gap-4'>
         <div className='space-y-2'>
           <Button asChild variant='ghost' size='sm' className='-ml-2'>
@@ -346,7 +346,7 @@ export default function ShortcutInboxPage({
           </Button>
         </form>
         <div className='min-w-0 space-y-2'>
-          <label className='text-sm font-medium'>{t('statusFilter')}</label>
+          <label className='block text-sm font-medium'>{t('statusFilter')}</label>
           <Select
             value={filter}
             onValueChange={(value): void => {
@@ -370,7 +370,7 @@ export default function ShortcutInboxPage({
           <div className='flex min-w-0 flex-wrap items-start gap-2'>
             <div className='w-full space-y-2 text-sm'>
               <p className='font-medium'>{t('receivedPeriod')}</p>
-              <div className='border-border rounded-md border [&_button]:min-h-9 [&_button]:w-full [&_button]:justify-start'>
+              <div className='border-border flex h-9 min-w-0 items-center rounded-md border [&>div]:w-full'>
                 <PeriodSelector
                   dateFrom={dateFrom}
                   dateTo={dateTo}
@@ -410,7 +410,7 @@ export default function ShortcutInboxPage({
         </details>
       ) : null}
       {consentRequired && <AiConsentNotice scope={consentRequired} />}
-      <div className='text-muted-foreground min-h-5 text-xs' role='status' aria-live='polite'>
+      <div className='sr-only' role='status' aria-live='polite'>
         {inbox.isFetching && !loading ? t('refreshing') : null}
       </div>
       {loading ? (

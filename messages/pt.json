@@ -329,7 +329,10 @@
     "reviewHelpTitle": "O que cada ação faz?",
     "duplicateTitle": "Esta transação pode já existir",
     "duplicateConfirmation": "Encontramos transações semelhantes. Salvar outra mesmo assim? Continue apenas se for uma operação diferente.",
-    "duplicateGoBack": "Revisar novamente"
+    "duplicateGoBack": "Revisar novamente",
+    "fieldAutomation": "Regra aplicada",
+    "automationReady": "Automação aplicada. Revise os dados antes de salvar.",
+    "fieldHistory": "Do seu histórico"
   },
   "transactions": {
     "originalEvidence": "Origem da transação",

@@ -317,3 +317,19 @@ body {
     animation: none;
   }
 }
+
+.ai-field[data-ai-state='automation'] {
+  border-color: hsl(var(--brand-secondary) / 0.35);
+  background: hsl(var(--brand-secondary) / 0.04);
+}
+.ai-field-status[data-ai-state='automation'] {
+  color: hsl(var(--brand-secondary));
+}
+
+.ai-field[data-ai-state='history'] {
+  border-color: hsl(var(--primary) / 0.3);
+  background: hsl(var(--primary) / 0.04);
+}
+.ai-field-status[data-ai-state='history'] {
+  color: hsl(var(--primary));
+}

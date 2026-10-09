@@ -43,6 +43,7 @@ function fakeDb(
     cached?: Record<string, unknown>;
     accounts?: Record<string, unknown>[];
     rules?: Record<string, unknown>[];
+    history?: Record<string, unknown>[];
   } = {},
 ) {
   const rows: Record<string, unknown> = {
@@ -77,6 +78,9 @@ function fakeDb(
           filters.push([field, value]);
           return query;
         },
+        ilike: () => query,
+        order: () => query,
+        limit: () => query,
         insert: (value: Record<string, unknown>) => {
           inserts.push(value);
           rows.forwarded_email_analyses = value;
@@ -93,24 +97,26 @@ function fakeDb(
         maybeSingle: async () => ({ data: rows[table] ?? null, error: null }),
         then(resolve: (value: unknown) => unknown) {
           const data =
-            table === 'accounts'
-              ? (options.accounts ?? [
-                  {
-                    id: accountId,
-                    name: 'Lulo card',
-                    institution: 'Lulobank',
-                    type: 'credit_card',
-                    last_four: '8456',
-                    currency: 'COP',
-                    is_active: true,
-                    deleted_at: null,
-                  },
-                ])
-              : table === 'automation_rules'
-                ? (options.rules ?? [])
-                : table === 'categories'
-                  ? [{ id: categoryId, slug: 'education', type: 'expense', is_active: true }]
-                  : rows[table];
+            table === 'transactions'
+              ? (options.history ?? [])
+              : table === 'accounts'
+                ? (options.accounts ?? [
+                    {
+                      id: accountId,
+                      name: 'Lulo card',
+                      institution: 'Lulobank',
+                      type: 'credit_card',
+                      last_four: '8456',
+                      currency: 'COP',
+                      is_active: true,
+                      deleted_at: null,
+                    },
+                  ])
+                : table === 'automation_rules'
+                  ? (options.rules ?? [])
+                  : table === 'categories'
+                    ? [{ id: categoryId, slug: 'education', type: 'expense', is_active: true }]
+                    : rows[table];
           return Promise.resolve(resolve({ data, error: null }));
         },
       };
@@ -384,4 +390,78 @@ describe('POST forwarded email analysis', () => {
     });
     expect(fetch).toHaveBeenCalledTimes(1);
   });
+});
+
+it('applies an active transfer recipient rule and note without requiring an AI call', async () => {
+  vi.mocked(fetch).mockClear();
+  const db = fakeDb({
+    inbox: {
+      ...inbox,
+      raw_text:
+        'From (unverified): alerts@notificacionesbancolombia.com\n\nBancolombia: Transferiste $36,000.00 desde tu cuenta *2651 a la cuenta *3248292427 el 01/10/26 a las 12:46.',
+    },
+    rules: [
+      {
+        name: 'Domicilio Almuerzos Liliana',
+        rule_type: 'general',
+        is_active: true,
+        priority: 50,
+        condition_logic: 'or',
+        conditions: { raw_text_contains: ['*3248292427'] },
+        actions: { set_category: categoryId, add_note: 'Domicilio de almuerzos Liliana' },
+      },
+    ],
+  });
+  getUserClient.mockResolvedValue({ userId: 'owner-a', accessToken: 'test-jwt', supabase: db });
+  const response = await POST(request(), context);
+  expect(await response.json()).toMatchObject({
+    category_id: categoryId,
+    category_source: 'automation',
+    notes: 'Domicilio de almuerzos Liliana',
+    automation_fields: ['categoryId', 'description', 'notes'],
+  });
+  expect(fetch).not.toHaveBeenCalled();
+});
+
+it('suggests consistent recipient history when no rule matches and scopes it to the owner and account', async () => {
+  vi.mocked(fetch).mockClear();
+  const raw =
+    'From (unverified): alerts@notificacionesbancolombia.com\n\nBancolombia: Transferiste $36,000.00 desde tu cuenta *2651 a la cuenta *3248292427 el 01/10/26 a las 12:46.';
+  const payment = {
+    raw_text: raw,
+    category_id: categoryId,
+    description: 'Almuerzo Liliana',
+    notes: 'Domicilio',
+  };
+  const db = fakeDb({
+    inbox: { ...inbox, raw_text: raw },
+    accounts: [
+      {
+        id: accountId,
+        institution: 'Bancolombia',
+        name: 'Bancolombia',
+        type: 'savings',
+        currency: 'COP',
+        is_active: true,
+        last_four: '2651',
+        deleted_at: null,
+      },
+    ],
+    history: [payment, payment],
+  });
+  getUserClient.mockResolvedValue({ userId: 'owner-a', accessToken: 'test-jwt', supabase: db });
+  const response = await POST(request(), context);
+  expect(await response.json()).toMatchObject({
+    category_id: categoryId,
+    category_source: 'review_context',
+    description: 'Almuerzo Liliana',
+    history_fields: ['categoryId', 'description', 'notes'],
+  });
+  expect(db.calls.find((call) => call.table === 'transactions')?.filters).toEqual(
+    expect.arrayContaining([
+      ['user_id', 'owner-a'],
+      ['account_id', accountId],
+    ]),
+  );
+  expect(fetch).not.toHaveBeenCalled();
 });
