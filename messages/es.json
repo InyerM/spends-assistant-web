@@ -349,7 +349,10 @@
     "analysisRunning": "Analizando sugerencias. Ya puedes revisar y editar los datos originales.",
     "analysisReady": "Sugerencias listas. Revísalas antes de guardar.",
     "fieldAnalyzing": "Analizando con IA",
-    "fieldSuggested": "Sugerido por IA"
+    "fieldSuggested": "Sugerido por IA",
+    "receivedPeriod": "Fecha de recepción",
+    "allDates": "Todas las fechas",
+    "refreshing": "Actualizando resultados…"
   },
   "transactions": {
     "originalEvidence": "Origen de la transacción",

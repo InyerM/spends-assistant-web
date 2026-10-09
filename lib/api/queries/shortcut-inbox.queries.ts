@@ -34,6 +34,8 @@ export function useShortcutInbox(filters: InboxFilters): ReturnType<typeof useQu
   return useQuery({
     queryKey: ['shortcut-inbox', userId ?? null, filters],
     queryFn: ({ signal }) => fetchShortcutInbox(filters, signal),
+    placeholderData: (previous, previousQuery) =>
+      previousQuery?.queryKey[1] === (userId ?? null) ? previous : undefined,
     staleTime: 0,
   });
 }

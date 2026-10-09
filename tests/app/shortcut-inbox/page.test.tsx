@@ -78,6 +78,24 @@ vi.mock('@/components/ui/date-picker', () => ({
   ),
 }));
 
+vi.mock('@/components/transactions/period-selector', () => ({
+  PeriodSelector: ({
+    dateFrom,
+    dateTo,
+    onChange,
+    emptyLabel,
+  }: {
+    dateFrom: string;
+    dateTo: string;
+    onChange: (from: string, to: string) => void;
+    emptyLabel?: string;
+  }) => (
+    <button onClick={() => onChange('2026-10-01', '2026-10-09')}>
+      {dateFrom && dateTo ? `${dateFrom} – ${dateTo}` : emptyLabel}
+    </button>
+  ),
+}));
+
 function renderPage(source?: 'forwarded_email'): void {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(
@@ -933,8 +951,7 @@ it('filters forwarded messages by received dates and clears the range', async ()
     .mockImplementation(() => Promise.resolve(Response.json({ data: [], count: 0 })));
   vi.stubGlobal('fetch', fetchMock);
   renderPage('forwarded_email');
-  fireEvent.change(screen.getByLabelText('receivedFrom'), { target: { value: '2026-10-01' } });
-  fireEvent.change(screen.getByLabelText('receivedTo'), { target: { value: '2026-10-09' } });
+  fireEvent.click(screen.getByRole('button', { name: 'allDates' }));
   await waitFor(() =>
     expect(
       fetchMock.mock.calls.some(
@@ -945,8 +962,60 @@ it('filters forwarded messages by received dates and clears the range', async ()
     ).toBe(true),
   );
   fireEvent.click(screen.getByRole('button', { name: 'clearDates' }));
-  expect(screen.getByLabelText('receivedFrom')).toHaveValue('');
-  expect(screen.getByLabelText('receivedTo')).toHaveValue('');
+  expect(screen.getByRole('button', { name: 'allDates' })).toBeInTheDocument();
+  cleanup();
+  vi.unstubAllGlobals();
+});
+
+it('searches as the owner types without requiring submission', async () => {
+  const fetcher = vi.fn().mockResolvedValue(Response.json({ data: [], count: 0 }));
+  vi.stubGlobal('fetch', fetcher);
+  renderPage('forwarded_email');
+  fireEvent.change(screen.getByRole('textbox', { name: 'searchPlaceholder' }), {
+    target: { value: 'Lulo' },
+  });
+  await waitFor(() =>
+    expect(fetcher.mock.calls.some(([url]) => String(url).includes('q=Lulo'))).toBe(true),
+  );
+  cleanup();
+  vi.unstubAllGlobals();
+});
+
+it('keeps other message controls mounted during the refresh after a review action', async () => {
+  let finishRefresh!: (response: Response) => void;
+  const refresh = new Promise<Response>((resolve) => {
+    finishRefresh = resolve;
+  });
+  const messages = ['first', 'second'].map((id) => ({
+    id,
+    source: 'sms-shortcut',
+    raw_text: `Synthetic ${id} message`,
+    status: 'pending',
+    received_at: '2026-10-08T12:00:00Z',
+    created_at: '2026-10-08T12:00:00Z',
+    external_id: null,
+  }));
+  let reads = 0;
+  vi.stubGlobal(
+    'fetch',
+    vi.fn().mockImplementation((_url: string, init?: RequestInit) => {
+      if (init?.method === 'PATCH')
+        return Promise.resolve(Response.json({ id: 'first', status: 'non_transaction' }));
+      reads += 1;
+      return reads === 1 ? Promise.resolve(Response.json({ data: messages, count: 2 })) : refresh;
+    }),
+  );
+  renderPage();
+  const second = await screen.findByText('Synthetic second message');
+  fireEvent.click(screen.getAllByRole('button', { name: 'Mark non-transaction' })[0]);
+  await waitFor(() => expect(reads).toBe(2));
+  expect(second).toBeInTheDocument();
+  expect(screen.getAllByRole('button', { name: 'Mark non-transaction' })).toHaveLength(2);
+  finishRefresh(Response.json({ data: [messages[1]], count: 1 }));
+  await waitFor(() =>
+    expect(screen.queryByText('Synthetic first message')).not.toBeInTheDocument(),
+  );
+  expect(second).toBeInTheDocument();
   cleanup();
   vi.unstubAllGlobals();
 });

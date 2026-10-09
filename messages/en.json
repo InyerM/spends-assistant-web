@@ -349,7 +349,10 @@
     "analysisRunning": "Analyzing suggestions. You can review and edit the original details now.",
     "analysisReady": "Suggestions ready. Review them before saving.",
     "fieldAnalyzing": "Analyzing with AI",
-    "fieldSuggested": "Suggested by AI"
+    "fieldSuggested": "Suggested by AI",
+    "receivedPeriod": "Received period",
+    "allDates": "All dates",
+    "refreshing": "Updating results…"
   },
   "transactions": {
     "originalEvidence": "Original evidence",

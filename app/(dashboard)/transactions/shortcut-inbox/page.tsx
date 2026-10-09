@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useShortcutInbox } from '@/lib/api/queries/shortcut-inbox.queries';
-import { DatePicker } from '@/components/ui/date-picker';
+import { PeriodSelector } from '@/components/transactions/period-selector';
 import { SearchInput } from '@/components/shared/search-input';
 import { ArrowLeft, ChevronLeft, ChevronRight, Download, FileText, Inbox } from 'lucide-react';
 import Link from 'next/link';
@@ -126,6 +126,14 @@ export default function ShortcutInboxPage({
   const [search, setSearch] = useState('');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
+  useEffect(() => {
+    if (searchText.trim() === search) return;
+    const timeout = setTimeout(() => {
+      setSearch(searchText.trim());
+      setPage(1);
+    }, 300);
+    return (): void => clearTimeout(timeout);
+  }, [searchText, search]);
   const inbox = useShortcutInbox({
     page,
     status: filter,
@@ -136,7 +144,7 @@ export default function ShortcutInboxPage({
   });
   const items = inbox.data?.data ?? [];
   const count = inbox.data?.count ?? 0;
-  const loading = inbox.isFetching;
+  const loading = inbox.isPending;
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [consentRequired, setConsentRequired] = useState<AiConsentScope | null>(null);
@@ -338,32 +346,19 @@ export default function ShortcutInboxPage({
 
       {source === 'forwarded_email' && (
         <div className='flex flex-wrap items-end gap-3'>
-          <label className='min-w-40 space-y-1 text-sm'>
-            <span>{t('receivedFrom')}</span>
-            <DatePicker
-              value={dateFrom}
-              ariaLabel={t('receivedFrom')}
-              placeholder={t('receivedFrom')}
-              onChange={(value): void => {
-                setDateFrom(value);
-                if (dateTo && value > dateTo) setDateTo(value);
+          <div className='space-y-1 text-sm'>
+            <p className='font-medium'>{t('receivedPeriod')}</p>
+            <PeriodSelector
+              dateFrom={dateFrom}
+              dateTo={dateTo}
+              emptyLabel={t('allDates')}
+              onChange={(from, to): void => {
+                setDateFrom(from);
+                setDateTo(to);
                 setPage(1);
               }}
             />
-          </label>
-          <label className='min-w-40 space-y-1 text-sm'>
-            <span>{t('receivedTo')}</span>
-            <DatePicker
-              value={dateTo}
-              ariaLabel={t('receivedTo')}
-              placeholder={t('receivedTo')}
-              onChange={(value): void => {
-                setDateTo(value);
-                if (dateFrom && value < dateFrom) setDateFrom(value);
-                setPage(1);
-              }}
-            />
-          </label>
+          </div>
           {(dateFrom || dateTo) && (
             <Button
               variant='outline'
@@ -385,6 +380,9 @@ export default function ShortcutInboxPage({
         </p>
       )}
       {consentRequired && <AiConsentNotice scope={consentRequired} />}
+      <div className='text-muted-foreground min-h-5 text-xs' role='status' aria-live='polite'>
+        {inbox.isFetching && !loading ? t('refreshing') : null}
+      </div>
       {loading ? (
         <p className='text-muted-foreground text-sm'>{t('loading')}</p>
       ) : items.length === 0 ? (
@@ -396,7 +394,10 @@ export default function ShortcutInboxPage({
           </CardContent>
         </Card>
       ) : (
-        <div className='space-y-3'>
+        <fieldset
+          className='min-w-0 space-y-3'
+          disabled={inbox.isPlaceholderData}
+          aria-busy={inbox.isFetching}>
           {items.map((item) => {
             const candidateResult = candidateById[item.id];
             const luloPreview = previewLuloNotice(item.source, item.raw_text, item.received_at);
@@ -628,7 +629,7 @@ export default function ShortcutInboxPage({
               </Card>
             );
           })}
-        </div>
+        </fieldset>
       )}
 
       <div className='flex items-center justify-between gap-3 text-sm'>

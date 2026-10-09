@@ -2,7 +2,7 @@
 
 import { Fragment, useState, useMemo } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
-import { startOfMonth, startOfWeek, addMonths, subMonths, isSameMonth } from 'date-fns';
+import { startOfMonth, endOfMonth, startOfWeek, addMonths, subMonths, isSameMonth } from 'date-fns';
 import { ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DatePicker } from '@/components/ui/date-picker';
@@ -21,6 +21,7 @@ import {
 interface PeriodSelectorProps {
   dateFrom: string;
   dateTo: string;
+  emptyLabel?: string;
   onChange: (dateFrom: string, dateTo: string) => void;
 }
 
@@ -28,6 +29,7 @@ export function PeriodSelector({
   dateFrom,
   dateTo,
   onChange,
+  emptyLabel,
 }: PeriodSelectorProps): React.ReactElement {
   const t = useTranslations('transactions');
   const tCommon = useTranslations('common');
@@ -39,7 +41,14 @@ export function PeriodSelector({
   const localeMonthShort = useMemo(() => getMonthShortUtil(locale), [locale]);
   const localeDayHeaders = useMemo(() => getDayHeadersUtil(locale), [locale]);
 
-  const period = usePeriodSelector({ dateFrom, dateTo, onChange, locale });
+  const empty = Boolean(emptyLabel) && !dateFrom && !dateTo;
+  const now = new Date();
+  const period = usePeriodSelector({
+    dateFrom: empty ? toStr(startOfMonth(now)) : dateFrom,
+    dateTo: empty ? toStr(endOfMonth(now)) : dateTo,
+    onChange,
+    locale,
+  });
 
   // Override label with localized "this month/week/year" when applicable
   const label = useMemo((): string => {
@@ -97,7 +106,7 @@ export function PeriodSelector({
 
   return (
     <div className='flex items-center gap-1'>
-      {period.mode !== 'custom' && (
+      {!empty && period.mode !== 'custom' && (
         <Button
           variant='ghost'
           size='icon'
@@ -112,7 +121,7 @@ export function PeriodSelector({
             variant='ghost'
             className='cursor-pointer gap-1.5 text-sm font-medium sm:h-8 sm:px-2'>
             <Calendar className='text-muted-foreground h-3.5 w-3.5' />
-            {label}
+            {empty ? emptyLabel : label}
           </Button>
         </PopoverTrigger>
         <PopoverContent className='w-auto min-w-[280px] p-3' align='start'>
@@ -319,7 +328,7 @@ export function PeriodSelector({
           </div>
         </PopoverContent>
       </Popover>
-      {period.mode !== 'custom' && (
+      {!empty && period.mode !== 'custom' && (
         <Button
           variant='ghost'
           size='icon'
