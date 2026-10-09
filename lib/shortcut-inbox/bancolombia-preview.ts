@@ -63,13 +63,17 @@ export function previewBancolombiaNotice(
   const decoded = decodeEmailEntities(rawText).replace(/\s+/gu, ' ');
   const matches = [
     ...decoded.matchAll(
-      /\bBancolombia:\s*(Compraste|Transferiste|Pagaste|Retiraste|Recibiste|Consignaste)\b/giu,
+      /\bBancolombia:\s*(?:[\p{L}][\p{L} .'-]{0,139}?\s+)?(Compraste|Transferiste|Pagaste|Retiraste|Recibiste|Consignaste)\b(?=\s+(?:COP|USD|\$))/giu,
     ),
   ];
   if (matches.length !== 1) return null;
-  const alert = decoded
-    .slice(matches[0].index, matches[0].index + 550)
-    .split(/\b(?:Si tienes dudas|¿Dudas\?|Estamos cerca|Controla tu dinero)\b/iu, 1)[0];
+  // Personalized notices place the customer's name before the transaction verb.
+  // Normalize that prefix while retaining the same bounded bank sentence.
+  const verbStart = matches[0].index! + matches[0][0].length - matches[0][1].length;
+  const alert = `Bancolombia: ${decoded.slice(verbStart, matches[0].index! + 550)}`.split(
+    /\b(?:Si tienes dudas|¿Dudas\?|Estamos cerca|Controla tu dinero)\b/iu,
+    1,
+  )[0];
   const verb = matches[0][1].toLowerCase() as keyof typeof kindByVerb;
   const amountMatch = new RegExp(
     `^Bancolombia:\\s*${verb}\\s+(COP|USD|\\$)\\s*([0-9][0-9.,]*)`,

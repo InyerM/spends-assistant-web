@@ -251,6 +251,27 @@ describe('POST forwarded email analysis', () => {
     expect(db.calls.some(({ table }) => table === 'transactions')).toBe(false);
   });
 
+  it('returns the original QR payment time when a personalized bank notice is reviewed', async () => {
+    const db = fakeDb({
+      inbox: {
+        ...inbox,
+        raw_text:
+          'From (unverified): alertas@notificacionesbancolombia.com\n\nBancolombia: ANA MARÍA\nPÉREZ pagaste $15,800.00 por codigo QR desde tu cuenta *1234 a la llave 0001112223 el 02/10/2026 a las 16:31.',
+      },
+    });
+    getUserClient.mockResolvedValue({ userId: 'owner-a', accessToken: 'test-jwt', supabase: db });
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('', { status: 503 })));
+    const response = await POST(request(), context);
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({
+      amount: 15800,
+      bank_event_at: '2026-10-02T16:31:00-05:00',
+      card_last_four: '1234',
+      category_id: null,
+      ai_status: 'unavailable',
+    });
+  });
+
   it('persists a reviewed proposal once and replays it without another provider call', async () => {
     const db = fakeDb();
     getUserClient.mockResolvedValue({ userId: 'owner-a', accessToken: 'test-jwt', supabase: db });

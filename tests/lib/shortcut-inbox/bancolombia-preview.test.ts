@@ -5,6 +5,28 @@ const sender =
   'From (unverified): alerts@ayn.notificacionesbancolombia.com\n\nAlertas y Notificaciones\n\n';
 
 describe('Bancolombia forwarded notice preview', () => {
+  it.each(['ANA MARIA PEREZ', 'ANA MARÍA\nPÉREZ', 'Demo User'])(
+    'reads personalized QR payments addressed to %s',
+    (name) => {
+      const notice = `${sender}Logo Bancolombia [https://example.test/logo.png] ¡Listo! Todo salió bien con tus movimientos Bancolombia: ${name} pagaste $15,800.00 por codigo QR desde tu cuenta *1234 a la llave\n0001112223 el 02/10/2026 a las 16:31. Con codigo QR es facil y de una.`;
+      expect(previewBancolombiaNotice('forwarded_email', notice)).toMatchObject({
+        kind: 'payment',
+        amountDecimal: '15800.00',
+        date: '2026-10-02',
+        time: '16:31',
+        sourceLastFour: '1234',
+        sourceKind: 'debit',
+        merchant: null,
+        destinationLastFour: null,
+      });
+    },
+  );
+
+  it('rejects multiple personalized alerts rather than mixing their fields', () => {
+    const notice = `${sender}Bancolombia: ANA PEREZ pagaste $15,800 desde tu cuenta *1234 el 02/10/2026 a las 16:31. Bancolombia: Demo User pagaste $20,000 desde tu cuenta *5678 el 03/10/2026 a las 17:00.`;
+    expect(previewBancolombiaNotice('forwarded_email', notice)).toBeNull();
+  });
+
   it('extracts purchase fields and bank time from a debit card alert', () => {
     const notice = `${sender}Bancolombia: Compraste $15.000 en CODA.CO con tu T.Deb *9989, el 05/10/2026 a las 11:46. Si tienes dudas, llama.`;
     expect(previewBancolombiaNotice('forwarded_email', notice)).toMatchObject({
