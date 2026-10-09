@@ -77,7 +77,8 @@
     "aiUsage": "AI analyses this month",
     "viewUsage": "View plan and usage",
     "addTransaction": "Add transaction",
-    "unlimitedAi": "Unlimited AI analyses"
+    "unlimitedAi": "Unlimited AI analyses",
+    "financialChat": "AI assistant"
   },
   "budgets": {
     "eyebrow": "Monthly plan",
@@ -857,7 +858,7 @@
     "showApiKeys": "Show API Keys tab",
     "deleteAccountHelp": "Contact support for help with account deletion",
     "accountOptions": "Account options",
-    "aiUsageExplanation": "Text analysis and document scans share the AI allowance. Each scan request counts once, even when it detects several movements. Pro has no request limit.",
+    "aiUsageExplanation": "Text analysis, chat and document scans share the AI allowance. Each scan request counts once, even when it detects several movements. Pro has no request limit.",
     "usageUnavailable": "We could not load your plan and usage. Please try again.",
     "retryUsage": "Try again"
   },
@@ -1147,6 +1148,7 @@
       "transaction": "Transaction",
       "account": "Account",
       "document": "Document"
-    }
+    },
+    "insufficientContext": "There is not enough verified context to answer this question. Try asking about your transactions or accounts in the selected month."
   }
 }

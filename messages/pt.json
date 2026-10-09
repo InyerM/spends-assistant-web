@@ -77,7 +77,8 @@
     "aiUsage": "Análises de IA neste mês",
     "viewUsage": "Ver plano e uso",
     "addTransaction": "Adicionar transação",
-    "unlimitedAi": "Análises de IA sem limite"
+    "unlimitedAi": "Análises de IA sem limite",
+    "financialChat": "Assistente IA"
   },
   "budgets": {
     "eyebrow": "Plano mensal",
@@ -823,7 +824,7 @@
     "showApiKeys": "Mostrar aba de API Keys",
     "deleteAccountHelp": "Entre em contato com o suporte para ajuda com a exclusão da conta",
     "accountOptions": "Opções da conta",
-    "aiUsageExplanation": "A análise de texto e a digitalização de documentos compartilham a cota de IA. Cada solicitação conta uma vez, mesmo quando detecta vários movimentos. Pro não tem limite de solicitações.",
+    "aiUsageExplanation": "A análise de texto, o chat e a digitalização de documentos compartilham a cota de IA. Cada solicitação conta uma vez, mesmo quando detecta vários movimentos. Pro não tem limite de solicitações.",
     "usageUnavailable": "Não foi possível carregar seu plano e uso. Tente novamente.",
     "retryUsage": "Tentar novamente"
   },
@@ -1030,6 +1031,7 @@
       "transaction": "Transação",
       "account": "Conta",
       "document": "Documento"
-    }
+    },
+    "insufficientContext": "Não há informações verificadas suficientes para responder a esta pergunta. Tente perguntar sobre seus movimentos ou contas no mês selecionado."
   }
 }

@@ -7,6 +7,7 @@ export interface FinancialChatRequest {
 }
 export interface FinancialChatResponse {
   answer: string;
+  insufficientContext?: boolean;
   citations: Array<{ id: string; href: string; record: Record<string, unknown> }>;
   coverage: {
     month: string;

@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { AiConsentNotice } from '@/components/ai-consent-notice';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Input } from '@/components/ui/input';
+import { MonthSelector } from '@/components/dashboard/month-selector';
 import { Textarea } from '@/components/ui/textarea';
 import { useAiConsent } from '@/lib/api/queries/ai-consent.queries';
 import { useFinancialChat } from '@/lib/api/mutations/financial-chat.mutations';
@@ -37,16 +37,16 @@ export default function ChatPage(): React.ReactElement {
           <label htmlFor='chat-month' className='text-sm font-medium'>
             {t('month')}
           </label>
-          <Input
-            id='chat-month'
-            type='month'
-            value={month}
-            required
-            onChange={(event) => {
-              setMonth(event.target.value);
-              chat.reset();
-            }}
-          />
+          <div id='chat-month' role='group' aria-label={t('month')}>
+            <MonthSelector
+              year={Number(month.slice(0, 4))}
+              month={Number(month.slice(5, 7)) - 1}
+              onChange={(year, selectedMonth) => {
+                setMonth(`${year}-${String(selectedMonth + 1).padStart(2, '0')}`);
+                chat.reset();
+              }}
+            />
+          </div>
         </div>
         <label className='flex items-start gap-3 text-sm leading-6'>
           <Checkbox
@@ -70,6 +70,7 @@ export default function ChatPage(): React.ReactElement {
           />
         </div>
         <Button
+          variant='ai'
           type='submit'
           disabled={!allowed || !acknowledged || !question.trim() || !month || chat.isPending}>
           {chat.isPending ? t('sending') : t('send')}
@@ -85,7 +86,9 @@ export default function ChatPage(): React.ReactElement {
           aria-live='polite'
           className='border-border bg-card space-y-4 rounded-xl border p-5'>
           <h2 className='font-semibold'>{t('answer')}</h2>
-          <p className='text-sm leading-7 whitespace-pre-wrap'>{chat.data.answer}</p>
+          <p className='text-sm leading-7 whitespace-pre-wrap'>
+            {chat.data.insufficientContext ? t('insufficientContext') : chat.data.answer}
+          </p>
           <p className='text-muted-foreground text-sm'>{t('coverage')}</p>
           {chat.data.coverage.truncated ? (
             <p role='status' className='text-sm font-medium'>

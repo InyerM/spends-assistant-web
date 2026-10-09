@@ -60,7 +60,7 @@ export function DocumentCaptureCard({
       (document.status === 'processing' && staleProcessingTimestamp === document.updated_at));
 
   return (
-    <Card className='gap-0 py-0'>
+    <Card id={`document-${document.id}`} className='scroll-mt-6 gap-0 py-0'>
       <CardContent className='space-y-4 p-4 sm:p-5'>
         <div className='flex flex-wrap items-start justify-between gap-3'>
           <div className='flex min-w-0 items-start gap-3'>

@@ -25,6 +25,7 @@ import {
   HeartHandshake,
   Target,
   ChevronDown,
+  MessageCircle,
 } from 'lucide-react';
 import { AnottoWordmark } from '@/components/layout/anotto-wordmark';
 import { Button } from '@/components/ui/button';
@@ -49,6 +50,7 @@ interface NavItem {
 const quickLinks: NavItem[] = [
   { titleKey: 'dashboard', href: '/dashboard', icon: LayoutDashboard },
   { titleKey: 'transactions', href: '/transactions', icon: ArrowRightLeft },
+  { titleKey: 'financialChat', href: '/chat', icon: MessageCircle },
 ];
 
 const navGroups: { titleKey: string; items: NavItem[] }[] = [
