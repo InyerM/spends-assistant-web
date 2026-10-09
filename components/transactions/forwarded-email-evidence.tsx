@@ -4,6 +4,10 @@ import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { decodeEmailEntities } from '@/lib/shortcut-inbox/email-text';
+import { detectEmailBank } from '@/lib/email-forwarding/detected-bank';
+import { Badge } from '@/components/ui/badge';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import Link from 'next/link';
 
 export function ForwardedEmailEvidence({
   source,
@@ -41,12 +45,30 @@ export function ForwardedEmailEvidence({
     .filter((line, index) => index !== 0 || line !== subject);
   const securityNotice = content === '[security_notice]';
   const visible = expanded ? body : body.slice(0, 4);
+  const bank = detectEmailBank(rawText);
 
   return (
     <div className='space-y-4'>
-      <div className='bg-muted/50 flex flex-wrap items-baseline gap-x-2 rounded-md px-3 py-2 text-xs'>
-        <span className='text-muted-foreground'>{t('senderUnverified')}</span>
-        <span className='font-medium break-all'>{match[1]}</span>
+      <div className='bg-muted/50 flex flex-wrap items-center gap-2 rounded-lg px-3 py-2 text-xs'>
+        {bank && <Badge variant='secondary'>{t('bankDetected', { bank })}</Badge>}
+        <span className='min-w-0 font-medium break-all'>{match[1]}</span>
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              variant='ghost'
+              size='sm'
+              className='text-muted-foreground h-auto px-2 py-1 text-xs'>
+              {t('senderUnverified')}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className='max-w-[calc(100vw-2rem)] space-y-3 text-sm' align='start'>
+            <p className='font-medium'>{t('reviewSender')}</p>
+            <p className='text-muted-foreground'>{t('bankDetectionHint')}</p>
+            <Button asChild variant='outline' size='sm'>
+              <Link href='/settings?tab=email-forwarding'>{t('reviewSenderSettings')}</Link>
+            </Button>
+          </PopoverContent>
+        </Popover>
       </div>
       {securityNotice ? (
         <p className='text-foreground text-sm leading-relaxed'>{t('securityNoticeOmitted')}</p>

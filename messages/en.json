@@ -363,7 +363,21 @@
     "automationReady": "Automation applied. Review the details before saving.",
     "fieldHistory": "From your history",
     "cardPaymentDescription": "Bancolombia card payment · {lastFour}",
-    "cardPaymentNotes": "Payment from account ending in {source} to card ending in {destination}."
+    "cardPaymentNotes": "Payment from account ending in {source} to card ending in {destination}.",
+    "sortLabel": "Date order",
+    "newestFirst": "Newest first",
+    "oldestFirst": "Oldest first",
+    "viewCreatedTransaction": "Transaction created · View transaction",
+    "viewMatchedTransaction": "Transaction linked · View transaction",
+    "actionInfo": "Help: {action}",
+    "matchesHelp": "Find existing transactions with a similar amount, date, or account. You confirm whether they belong to this email.",
+    "analyzeHelp": "Prepare a draft using the email, your rules, and AI suggestions. Review the details before saving.",
+    "nonTransactionHelp": "Mark this email as informational. It stays available and can be returned to pending.",
+    "dismissHelp": "Remove this email from pending and archive its attached documents. You can return it to pending.",
+    "bankDetected": "Bank detected: {bank}",
+    "reviewSender": "Review sender",
+    "bankDetectionHint": "The sender and email text identify the bank. This does not confirm that the bank sent the email. Check the address with the bank before trusting it.",
+    "reviewSenderSettings": "Review email senders"
   },
   "transactions": {
     "originalEvidence": "Original evidence",

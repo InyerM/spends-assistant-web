@@ -64,7 +64,9 @@ export interface CreateInboxTransactionInput {
 export async function createInboxTransaction({
   inboxId,
   ...body
-}: CreateInboxTransactionInput): Promise<CandidateReview | { status: 'created' }> {
+}: CreateInboxTransactionInput): Promise<
+  CandidateReview | { status: 'created'; transaction_id?: string; decision_id?: string }
+> {
   const response = await fetch(`/api/shortcut-inbox/${inboxId}/create`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -77,11 +79,20 @@ export async function createInboxTransaction({
   )
     return result as CandidateReview;
   if (!response.ok) throw new Error('Creation failed');
-  return { status: 'created' };
+  const created = result as { transaction_id?: string; decision_id?: string };
+  return {
+    status: 'created',
+    transaction_id: created.transaction_id,
+    decision_id: created.decision_id,
+  };
 }
 
 export function useCreateInboxTransaction(): ReturnType<
-  typeof useMutation<CandidateReview | { status: 'created' }, Error, CreateInboxTransactionInput>
+  typeof useMutation<
+    CandidateReview | { status: 'created'; transaction_id?: string; decision_id?: string },
+    Error,
+    CreateInboxTransactionInput
+  >
 > {
   return useMutation({ mutationFn: createInboxTransaction });
 }

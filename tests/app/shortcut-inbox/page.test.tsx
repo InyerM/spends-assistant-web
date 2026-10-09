@@ -645,7 +645,7 @@ describe('Shortcut inbox review page', () => {
         body: JSON.stringify({ transaction_id: 'tx-1' }),
       }),
     );
-    expect(await screen.findByText('Linked transaction: tx-1')).toBeInTheDocument();
+    expect(await screen.findByRole('link', { name: 'viewMatchedTransaction' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Mark non-transaction' })).not.toBeInTheDocument();
   });
 
@@ -681,7 +681,7 @@ describe('Shortcut inbox review page', () => {
     vi.stubGlobal('fetch', fetchMock);
     renderPage();
     await selectOption('statusFilter', 'Matched existing transaction');
-    expect(await screen.findByText('Linked transaction: tx-1')).toBeInTheDocument();
+    expect(await screen.findByRole('link', { name: 'viewMatchedTransaction' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Review incorrect match' }));
     expect(
       screen.getByText(
@@ -802,6 +802,14 @@ describe('Shortcut inbox review page', () => {
       confirm_distinct: true,
       reviewed_candidate_hash: 'a'.repeat(32),
     });
+    expect(await screen.findByRole('link', { name: 'viewCreatedTransaction' })).toHaveAttribute(
+      'href',
+      '/transactions/tx-2',
+    );
+    expect(screen.getByRole('combobox', { name: 'statusFilter' })).toHaveTextContent('pending');
+    expect(screen.getByText('created', { selector: '[data-slot="badge"]' })).toHaveClass(
+      'text-success',
+    );
   });
 
   it('requires explicit time confirmation and sends the original instant for a delayed SMS', async () => {

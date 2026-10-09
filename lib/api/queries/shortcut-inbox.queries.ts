@@ -10,6 +10,7 @@ interface InboxFilters {
   search: string;
   date_from?: string;
   date_to?: string;
+  sort?: 'newest' | 'oldest';
 }
 
 export async function fetchShortcutInbox(
@@ -21,6 +22,7 @@ export async function fetchShortcutInbox(
     limit: '20',
     status: filters.status,
   });
+  if (filters.sort) params.set('sort', filters.sort);
   if (filters.item_id) params.set('item_id', filters.item_id);
   if (filters.source) params.set('source', filters.source);
   if (filters.search) params.set('q', filters.search);

@@ -410,6 +410,8 @@ describe('/api/shortcut-inbox', () => {
     );
     expect(response.status).toBe(200);
     expect(query.eq).toHaveBeenCalledWith('user_id', 'owner-a');
+    expect(query.order).toHaveBeenNthCalledWith(1, 'received_at', { ascending: false });
+    expect(query.order).toHaveBeenNthCalledWith(2, 'id', { ascending: false });
     expect(query.ilike).toHaveBeenCalledWith('raw_text', '%100\\%\\_sale%');
     expect(query.ilike.mock.invocationCallOrder[0]).toBeLessThan(
       query.range.mock.invocationCallOrder[0],
@@ -470,4 +472,13 @@ it('opens an owned email by ID even if it is no longer pending', async () => {
   expect((await response.json()).data).toHaveLength(1);
   expect(db.filters).toContainEqual(['id', id]);
   expect(db.filters).not.toContainEqual(['status', 'pending']);
+});
+
+it('rejects unsupported ordering instead of silently choosing an order', async () => {
+  const db = fakeDatabase();
+  getUserClient.mockResolvedValue({ supabase: db.supabase, userId: 'owner-a' });
+  expect(
+    (await GET(new Request('https://example.test/api/shortcut-inbox?sort=invalid') as never))
+      .status,
+  ).toBe(400);
 });

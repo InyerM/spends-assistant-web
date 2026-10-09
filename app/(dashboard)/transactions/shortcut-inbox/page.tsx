@@ -28,6 +28,7 @@ import {
   type ForwardedEmailAnalysis,
 } from '@/lib/api/mutations/shortcut-inbox.mutations';
 
+import { InboxAction } from '@/components/transactions/inbox-action';
 import type { InboxItem } from '@/types/shortcut-inbox';
 
 interface Candidate {
@@ -78,7 +79,7 @@ function LuloPreview({ preview }: { preview: LuloNoticePreview }): React.ReactEl
           {t(preview.confidence === 'structured' ? 'luloStructured' : 'luloLow')}
         </span>
       </div>
-      <dl className='grid gap-x-4 gap-y-2 sm:grid-cols-2'>
+      <dl className='grid gap-x-4 gap-y-2 sm:grid-cols-2 lg:grid-cols-3'>
         <div>
           <dt className='text-muted-foreground'>{t('luloEmailTime')}</dt>
           <dd>{formatBogotaDate(preview.messageReceivedAt)}</dd>
@@ -126,6 +127,10 @@ export default function ShortcutInboxPage({
   const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const [filter, setFilter] = useState('pending');
+  const [sort, setSort] = useState<'newest' | 'oldest'>('newest');
+  const [completedById, setCompletedById] = useState<
+    Partial<Record<string, { item: InboxItem; viewKey: string }>>
+  >({});
   const [searchText, setSearchText] = useState('');
   const [search, setSearch] = useState('');
   const [dateFrom, setDateFrom] = useState('');
@@ -140,6 +145,7 @@ export default function ShortcutInboxPage({
   }, [searchText, search]);
   const inbox = useShortcutInbox({
     page,
+    sort,
     item_id: itemId,
     status: filter,
     source,
@@ -147,7 +153,22 @@ export default function ShortcutInboxPage({
     date_from: dateFrom || undefined,
     date_to: dateTo || undefined,
   });
-  const items = inbox.data?.data ?? [];
+  const viewKey = JSON.stringify([page, filter, sort, search, dateFrom, dateTo, itemId, source]);
+  const rows = inbox.data?.data ?? [];
+  const retained = Object.values(completedById).filter(
+    (entry): entry is { item: InboxItem; viewKey: string } =>
+      Boolean(entry && entry.viewKey === viewKey),
+  );
+  const items = [
+    ...rows.map((item) => completedById[item.id]?.item ?? item),
+    ...retained
+      .filter((entry) => !rows.some((item) => item.id === entry.item.id))
+      .map((entry) => entry.item),
+  ].sort((left, right) =>
+    sort === 'oldest'
+      ? left.received_at.localeCompare(right.received_at)
+      : right.received_at.localeCompare(left.received_at),
+  );
   const count = inbox.data?.count ?? 0;
   const loading = inbox.isPending;
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -319,10 +340,10 @@ export default function ShortcutInboxPage({
         className={
           itemId
             ? 'hidden'
-            : 'border-border bg-card grid gap-4 rounded-xl border p-4 sm:grid-cols-2'
+            : 'border-border bg-card grid gap-4 rounded-xl border p-4 sm:grid-cols-2 lg:grid-cols-3'
         }>
         <form
-          className='flex min-w-0 items-center gap-2 sm:col-span-2'
+          className='flex min-w-0 items-center gap-2 sm:col-span-2 lg:col-span-3'
           onSubmit={(event): void => {
             event.preventDefault();
             setPage(1);
@@ -366,6 +387,24 @@ export default function ShortcutInboxPage({
           </Select>
         </div>
 
+        <div className='min-w-0 space-y-2'>
+          <label className='block text-sm font-medium'>{t('sortLabel')}</label>
+          <Select
+            value={sort}
+            onValueChange={(value): void => {
+              setSort(value as 'newest' | 'oldest');
+              setPage(1);
+            }}>
+            <SelectTrigger className='w-full' aria-label={t('sortLabel')}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value='newest'>{t('newestFirst')}</SelectItem>
+              <SelectItem value='oldest'>{t('oldestFirst')}</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
         {source === 'forwarded_email' && (
           <div className='flex min-w-0 flex-wrap items-start gap-2'>
             <div className='w-full space-y-2 text-sm'>
@@ -403,12 +442,6 @@ export default function ShortcutInboxPage({
           {error ?? t('loadFailed')}
         </p>
       )}
-      {source === 'forwarded_email' ? (
-        <details className='text-muted-foreground text-xs leading-5'>
-          <summary className='cursor-pointer'>{t('reviewHelpTitle')}</summary>
-          <p className='mt-2 max-w-3xl'>{t('reviewStatusHelp')}</p>
-        </details>
-      ) : null}
       {consentRequired && <AiConsentNotice scope={consentRequired} />}
       <div className='sr-only' role='status' aria-live='polite'>
         {inbox.isFetching && !loading ? t('refreshing') : null}
@@ -447,7 +480,7 @@ export default function ShortcutInboxPage({
                           item.status === 'pending'
                             ? 'border-brand-secondary/30 bg-brand-secondary/15 text-brand-secondary'
                             : item.status === 'created' || item.status === 'matched'
-                              ? 'border-primary/30 bg-primary/10 text-primary'
+                              ? 'border-success/30 bg-success/10 text-success'
                               : item.status === 'dismissed'
                                 ? 'border-destructive/30 bg-destructive/10 text-destructive'
                                 : 'border-border bg-muted text-muted-foreground'
@@ -477,12 +510,19 @@ export default function ShortcutInboxPage({
                   )}
                   {luloPreview && <LuloPreview preview={luloPreview} />}
                   {(item.status === 'matched' || item.status === 'created') && item.match && (
-                    <p className='text-primary text-xs'>
-                      {item.status === 'created'
-                        ? t('createdTransaction')
-                        : t('matchedTransaction')}
-                      : {item.match.transaction_id}
-                    </p>
+                    <Button
+                      asChild
+                      variant='ghost'
+                      size='sm'
+                      className='text-success hover:text-success -ml-2'>
+                      <Link href={`/transactions/${item.match.transaction_id}`}>
+                        {t(
+                          item.status === 'created'
+                            ? 'viewCreatedTransaction'
+                            : 'viewMatchedTransaction',
+                        )}
+                      </Link>
+                    </Button>
                   )}
                   <div className='border-border flex flex-wrap gap-2 border-t pt-3'>
                     {item.status === 'matched' && item.match && (
@@ -497,20 +537,24 @@ export default function ShortcutInboxPage({
                       </Button>
                     )}
                     {item.status === 'pending' && !hasAttachments && (
-                      <Button
-                        size='sm'
-                        variant='outline'
-                        onClick={(): void => void showCandidates(item.id)}>
-                        {openCandidateId === item.id ? t('hideCandidates') : t('showCandidates')}
-                      </Button>
+                      <InboxAction help={t('matchesHelp')}>
+                        <Button
+                          size='sm'
+                          variant='outline'
+                          onClick={(): void => void showCandidates(item.id)}>
+                          {openCandidateId === item.id ? t('hideCandidates') : t('showCandidates')}
+                        </Button>
+                      </InboxAction>
                     )}
                     {item.status === 'pending' && !historicalLulo && !hasAttachments && (
-                      <Button
-                        size='sm'
-                        disabled={analysisBusyIds.has(item.id)}
-                        onClick={(): void => void openCreateReview(item)}>
-                        {t(item.source === 'forwarded_email' ? 'reanalyzeEmail' : 'createNew')}
-                      </Button>
+                      <InboxAction help={t('analyzeHelp')}>
+                        <Button
+                          size='sm'
+                          disabled={analysisBusyIds.has(item.id)}
+                          onClick={(): void => void openCreateReview(item)}>
+                          {t(item.source === 'forwarded_email' ? 'reanalyzeEmail' : 'createNew')}
+                        </Button>
+                      </InboxAction>
                     )}
                     {item.status !== 'pending' &&
                       item.status !== 'matched' &&
@@ -526,24 +570,28 @@ export default function ShortcutInboxPage({
                     {item.status !== 'non_transaction' &&
                       item.status !== 'matched' &&
                       item.status !== 'created' && (
-                        <Button
-                          size='sm'
-                          variant='outline'
-                          disabled={busyId === item.id}
-                          onClick={(): void => void review(item.id, 'non_transaction')}>
-                          {t('markNonTransaction')}
-                        </Button>
+                        <InboxAction help={t('nonTransactionHelp')}>
+                          <Button
+                            size='sm'
+                            variant='outline'
+                            disabled={busyId === item.id}
+                            onClick={(): void => void review(item.id, 'non_transaction')}>
+                            {t('markNonTransaction')}
+                          </Button>
+                        </InboxAction>
                       )}
                     {item.status !== 'dismissed' &&
                       item.status !== 'matched' &&
                       item.status !== 'created' && (
-                        <Button
-                          size='sm'
-                          variant='destructive'
-                          disabled={busyId === item.id}
-                          onClick={(): void => void review(item.id, 'dismissed')}>
-                          {t('dismiss')}
-                        </Button>
+                        <InboxAction help={t('dismissHelp')}>
+                          <Button
+                            size='sm'
+                            variant='destructive'
+                            disabled={busyId === item.id}
+                            onClick={(): void => void review(item.id, 'dismissed')}>
+                            {t('dismiss')}
+                          </Button>
+                        </InboxAction>
                       )}
                   </div>
                   {item.status === 'matched' && item.match && reverseInboxId === item.id && (
@@ -576,10 +624,32 @@ export default function ShortcutInboxPage({
                       analysis={analysisById[item.id]}
                       analyzing={analysisBusyIds.has(item.id)}
                       onCancel={(): void => setCreateInboxId(null)}
-                      onCreated={(): void => {
+                      onCreated={(transactionId, decisionId): void => {
                         setCreateInboxId(null);
-                        setPage(1);
-                        setFilter('created');
+                        setOpenCandidateId(null);
+                        setCompletedById((current) => ({
+                          ...current,
+                          [item.id]: {
+                            viewKey,
+                            item: {
+                              ...item,
+                              status: 'created',
+                              ...(transactionId
+                                ? {
+                                    match: {
+                                      transaction_id: transactionId,
+                                      decision_id: decisionId ?? '',
+                                    },
+                                  }
+                                : {}),
+                            },
+                          },
+                        }));
+                        void queryClient.invalidateQueries({ queryKey: ['notifications'] });
+                        void queryClient.invalidateQueries({ queryKey: ['transactions'] });
+                        void queryClient.invalidateQueries({ queryKey: ['accounts'] });
+                        void queryClient.invalidateQueries({ queryKey: ['budgets'] });
+                        void queryClient.invalidateQueries({ queryKey: ['documents'] });
                       }}
                     />
                   )}

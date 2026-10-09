@@ -52,7 +52,7 @@ export function ShortcutCreateForm({
   preview?: LuloNoticePreview | null;
   analysis?: ForwardedEmailAnalysis;
   analyzing?: boolean;
-  onCreated: () => void;
+  onCreated: (transactionId?: string, decisionId?: string) => void;
   onCancel: () => void;
 }): React.ReactElement {
   const t = useTranslations('shortcutInbox');
@@ -218,7 +218,7 @@ export function ShortcutCreateForm({
           ? { reviewed_candidate_hash: review.candidate_hash, confirm_distinct: true as const }
           : {}),
       });
-      if (result.status === 'created') onCreated();
+      if (result.status === 'created') onCreated(result.transaction_id, result.decision_id);
       else {
         setReview(result);
         setDuplicateDialogOpen(result.status === 'review_required');

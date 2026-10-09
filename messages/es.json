@@ -363,7 +363,21 @@
     "automationReady": "Automatización aplicada. Revisa los datos antes de guardar.",
     "fieldHistory": "Según tu historial",
     "cardPaymentDescription": "Pago de tarjeta Bancolombia · {lastFour}",
-    "cardPaymentNotes": "Pago desde la cuenta terminada en {source} a la tarjeta terminada en {destination}."
+    "cardPaymentNotes": "Pago desde la cuenta terminada en {source} a la tarjeta terminada en {destination}.",
+    "sortLabel": "Orden por fecha",
+    "newestFirst": "Más recientes primero",
+    "oldestFirst": "Más antiguos primero",
+    "viewCreatedTransaction": "Transacción creada · Ver movimiento",
+    "viewMatchedTransaction": "Transacción vinculada · Ver movimiento",
+    "actionInfo": "Ayuda: {action}",
+    "matchesHelp": "Busca movimientos existentes con un importe, fecha o cuenta similares. Tú confirmas si corresponden a este correo.",
+    "analyzeHelp": "Completa una propuesta con el correo, tus reglas y las sugerencias de IA. Revisa los datos antes de guardar.",
+    "nonTransactionHelp": "Clasifica este correo como informativo. Se conserva y puedes devolverlo a pendientes.",
+    "dismissHelp": "Aparta el correo de los pendientes y archiva sus documentos asociados. Puedes devolverlo a pendientes.",
+    "bankDetected": "Banco detectado: {bank}",
+    "reviewSender": "Revisar remitente",
+    "bankDetectionHint": "El banco se identifica por el remitente y el texto del correo. Esto no confirma que el banco lo haya enviado. Comprueba la dirección con el banco antes de confiar en ella.",
+    "reviewSenderSettings": "Revisar remitentes de correo"
   },
   "transactions": {
     "originalEvidence": "Origen de la transacción",

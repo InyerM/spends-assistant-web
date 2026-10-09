@@ -39,3 +39,12 @@ it('sends an optional received date range to the server before pagination', asyn
   expect(url.searchParams.get('date_from')).toBe('2026-10-01');
   expect(url.searchParams.get('date_to')).toBe('2026-10-09');
 });
+
+it('sends oldest-first received ordering before pagination', async () => {
+  const fetcher = vi.fn().mockResolvedValue(Response.json({ data: [], count: 0 }));
+  vi.stubGlobal('fetch', fetcher);
+  await fetchShortcutInbox({ page: 2, status: 'pending', search: '', sort: 'oldest' });
+  expect(
+    new URL(fetcher.mock.calls[0][0] as string, 'https://example.test').searchParams.get('sort'),
+  ).toBe('oldest');
+});

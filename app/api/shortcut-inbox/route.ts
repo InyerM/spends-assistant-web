@@ -73,6 +73,8 @@ export async function GET(request: NextRequest): Promise<Response> {
     const { supabase, userId } = await getUserClient(request);
     const params = new URL(request.url).searchParams;
     const source = params.get('source');
+    const sort = params.get('sort') ?? 'newest';
+    if (!['newest', 'oldest'].includes(sort)) return errorResponse('Invalid inbox sort', 400);
     const itemId = params.get('item_id');
     if (itemId && !z.uuid().safeParse(itemId).success)
       return errorResponse('Invalid inbox item ID', 400);
@@ -133,7 +135,8 @@ export async function GET(request: NextRequest): Promise<Response> {
     }
     if (search) query = query.ilike('raw_text', `%${search.replace(/[\\%_]/gu, '\\$&')}%`);
     const { data, count, error } = await query
-      .order('created_at', { ascending: false })
+      .order('received_at', { ascending: sort === 'oldest' })
+      .order('id', { ascending: sort === 'oldest' })
       .range(from, from + limit - 1);
     if (error) return errorResponse('Inbox list failed');
     const inboxRows = data as Array<Record<string, unknown> & { id: string; status: string }>;
