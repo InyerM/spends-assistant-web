@@ -144,7 +144,7 @@
     },
     "deletion": {
       "question": "Onde encontro a exclusão da minha conta?",
-      "answer": "Em Configurações, abra Perfil e procure a Zona de perigo. Você pode excluir sua conta e os dados associados após confirmar seu e-mail.",
+      "answer": "Em Configurações, abra Conta e procure a Zona de perigo. Você pode excluir sua conta e os dados associados após confirmar seu e-mail.",
       "link": "Ir para configurações"
     },
     "legalTitle": "Privacidade e termos",

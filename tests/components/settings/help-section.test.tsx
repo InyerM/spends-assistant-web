@@ -36,6 +36,10 @@ describe('help center', () => {
       'href',
       '/documents',
     );
+    expect(screen.getByRole('link', { name: 'Ir a configuración' })).toHaveAttribute(
+      'href',
+      '/settings?tab=account',
+    );
     expect(screen.getByRole('link', { name: 'Política de privacidad' })).toHaveAttribute(
       'href',
       'https://anotto.app/privacy/',

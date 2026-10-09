@@ -4,5 +4,5 @@ export const HELP_TOPICS = [
   { key: 'duplicates', href: '/inbox' },
   { key: 'receipts', href: '/documents' },
   { key: 'balances', href: '/accounts' },
-  { key: 'deletion', href: '/settings?tab=profile' },
+  { key: 'deletion', href: '/settings?tab=account' },
 ] as const;

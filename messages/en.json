@@ -144,7 +144,7 @@
     },
     "deletion": {
       "question": "Where can I find account deletion?",
-      "answer": "In Settings, open Profile and find Danger Zone. You can delete your account and associated data after confirming your email.",
+      "answer": "In Settings, open Account and find Danger Zone. You can delete your account and associated data after confirming your email.",
       "link": "Go to settings"
     },
     "legalTitle": "Privacy and terms",

@@ -144,7 +144,7 @@
     },
     "deletion": {
       "question": "¿Dónde consulto la eliminación de mi cuenta?",
-      "answer": "En Configuración, abre Perfil y busca Zona de peligro. Allí puedes eliminar tu cuenta y los datos asociados después de confirmar tu correo.",
+      "answer": "En Configuración, abre Cuenta y busca Zona de peligro. Allí puedes eliminar tu cuenta y los datos asociados después de confirmar tu correo.",
       "link": "Ir a configuración"
     },
     "legalTitle": "Privacidad y condiciones",
