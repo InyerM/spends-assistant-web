@@ -49,3 +49,13 @@ full formatting checks passed. The sender SQL suite passed three tests. A tempor
 check at 1440px and 390px confirmed the real RPC persisted the association across reloads, with no
 browser errors or horizontal overflow; the temporary account was deleted afterward. Migration 37 was
 applied to production before the web release.
+
+Production browser validation on October 9 passed at both widths after deployment `95cab6c`: manual
+confirmation persisted across reloads, no horizontal overflow or browser errors occurred, and the
+temporary account was deleted. A subsequent email analysis integration check identified an existing
+proxy mismatch: native clients send a bearer session token without browser cookies, but the analysis
+path was not admitted to handler-level authentication. The follow-up proxy change allows only POST
+to a UUID inbox analysis path with an Authorization header; the handler continues to verify the
+token, accepted terms, verified forwarding, and inbox ownership. Other inbox writes, invalid paths,
+GET requests, and missing headers keep browser authentication. The focused proxy, analysis, and
+mobile-auth tests and typecheck/lint gates run before that follow-up release.

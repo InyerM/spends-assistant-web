@@ -44,6 +44,17 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
     return NextResponse.next({ request });
   }
 
+  // Email review authenticates native sessions and scopes the inbox owner in its handler.
+  if (
+    /^\/api\/shortcut-inbox\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/analyze$/iu.test(
+      pathname,
+    ) &&
+    request.method === 'POST' &&
+    request.headers.has('authorization')
+  ) {
+    return NextResponse.next({ request });
+  }
+
   // The Shortcut inbox handler validates bearer API keys without a browser session.
   if (
     pathname === '/api/shortcut-inbox' &&

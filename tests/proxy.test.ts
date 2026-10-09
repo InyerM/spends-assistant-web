@@ -43,6 +43,26 @@ describe('authentication proxy', () => {
     expect(unrelatedPost.status).toBe(307);
   });
 
+  it('lets the email analysis handler verify an iPhone session token without browser cookies', async () => {
+    const path = '/api/shortcut-inbox/11111111-1111-4111-8111-111111111111/analyze';
+    const response = await proxy(request(path, 'POST', 'Bearer mobile-jwt'));
+    expect(response.status).toBe(200);
+    expect(response.headers.get('location')).toBeNull();
+    expect(getUser).not.toHaveBeenCalled();
+  });
+
+  it('does not bypass browser authentication for other inbox operations or missing tokens', async () => {
+    const path = '/api/shortcut-inbox/11111111-1111-4111-8111-111111111111';
+    for (const item of [
+      request(path + '/analyze', 'POST'),
+      request(path + '/analyze', 'GET', 'Bearer mobile-jwt'),
+      request(path + '/create', 'POST', 'Bearer mobile-jwt'),
+      request('/api/shortcut-inbox/invalid/analyze', 'POST', 'Bearer mobile-jwt'),
+    ]) {
+      expect((await proxy(item)).status).toBe(307);
+    }
+  });
+
   it('lets document routes verify mobile bearer tokens without a browser cookie', async () => {
     const list = await proxy(request('/api/documents', 'GET', 'Bearer mobile-jwt'));
     const upload = await proxy(request('/api/documents', 'POST', 'Bearer mobile-jwt'));
