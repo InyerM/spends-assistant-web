@@ -318,15 +318,18 @@
     "searchAction": "Buscar",
     "clearSearch": "Limpar busca",
     "analysisRunning": "Analisando sugestões. Você já pode revisar e editar os dados originais.",
-    "analysisReady": "Sugestões prontas. Revise antes de salvar.",
+    "analysisReady": "Análise concluída. Revise as sugestões antes de salvar.",
     "fieldAnalyzing": "Analisando com IA",
-    "fieldSuggested": "Sugerido por IA",
+    "fieldSuggested": "IA · pronto",
     "receivedPeriod": "Período de recebimento",
     "allDates": "Todas as datas",
     "refreshing": "Atualizando resultados…",
     "reviewStatusHelp": "Não é transação classifica um e-mail informativo e mantém seus anexos disponíveis. Descartar remove-o dos pendentes e arquiva os anexos; ao devolvê-lo aos pendentes, os anexos arquivados por essa ação são restaurados. Nenhuma opção exclui movimentações.",
     "backToInbox": "Voltar à caixa de entrada",
-    "reviewHelpTitle": "O que cada ação faz?"
+    "reviewHelpTitle": "O que cada ação faz?",
+    "duplicateTitle": "Esta transação pode já existir",
+    "duplicateConfirmation": "Encontramos transações semelhantes. Salvar outra mesmo assim? Continue apenas se for uma operação diferente.",
+    "duplicateGoBack": "Revisar novamente"
   },
   "transactions": {
     "originalEvidence": "Origem da transação",

@@ -103,8 +103,10 @@ export function DocumentCaptureCard({
               variant='outline'
               className={
                 document.status === 'extracted'
-                  ? 'border-brand-secondary/25 bg-brand-secondary/10 text-brand-secondary'
-                  : undefined
+                  ? 'border-primary/30 bg-primary/10 text-primary'
+                  : document.status === 'failed'
+                    ? 'border-destructive/30 bg-destructive/10 text-destructive'
+                    : 'border-brand-secondary/30 bg-brand-secondary/10 text-brand-secondary'
               }>
               {t(`status.${document.status}`)}
             </Badge>

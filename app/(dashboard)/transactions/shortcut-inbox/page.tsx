@@ -315,9 +315,14 @@ export default function ShortcutInboxPage({
         )}
       </div>
 
-      <div className={itemId ? 'hidden' : 'contents'}>
+      <div
+        className={
+          itemId
+            ? 'hidden'
+            : 'border-border bg-card grid gap-4 rounded-xl border p-4 sm:grid-cols-2'
+        }>
         <form
-          className='flex flex-wrap items-center gap-3'
+          className='flex min-w-0 items-center gap-2 sm:col-span-2'
           onSubmit={(event): void => {
             event.preventDefault();
             setPage(1);
@@ -340,7 +345,7 @@ export default function ShortcutInboxPage({
             {t('searchAction')}
           </Button>
         </form>
-        <div className='border-border flex flex-wrap items-center justify-between gap-3 border-b pb-5'>
+        <div className='min-w-0 space-y-2'>
           <label className='text-sm font-medium'>{t('statusFilter')}</label>
           <Select
             value={filter}
@@ -348,7 +353,7 @@ export default function ShortcutInboxPage({
               setFilter(value);
               setPage(1);
             }}>
-            <SelectTrigger aria-label={t('statusFilter')}>
+            <SelectTrigger className='w-full' aria-label={t('statusFilter')}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -362,19 +367,21 @@ export default function ShortcutInboxPage({
         </div>
 
         {source === 'forwarded_email' && (
-          <div className='flex flex-wrap items-end gap-3'>
-            <div className='space-y-1 text-sm'>
+          <div className='flex min-w-0 flex-wrap items-start gap-2'>
+            <div className='w-full space-y-2 text-sm'>
               <p className='font-medium'>{t('receivedPeriod')}</p>
-              <PeriodSelector
-                dateFrom={dateFrom}
-                dateTo={dateTo}
-                emptyLabel={t('allDates')}
-                onChange={(from, to): void => {
-                  setDateFrom(from);
-                  setDateTo(to);
-                  setPage(1);
-                }}
-              />
+              <div className='border-border rounded-md border [&_button]:min-h-9 [&_button]:w-full [&_button]:justify-start'>
+                <PeriodSelector
+                  dateFrom={dateFrom}
+                  dateTo={dateTo}
+                  emptyLabel={t('allDates')}
+                  onChange={(from, to): void => {
+                    setDateFrom(from);
+                    setDateTo(to);
+                    setPage(1);
+                  }}
+                />
+              </div>
             </div>
             {(dateFrom || dateTo) && (
               <Button
@@ -438,8 +445,12 @@ export default function ShortcutInboxPage({
                         variant={item.status === 'pending' ? 'secondary' : 'outline'}
                         className={
                           item.status === 'pending'
-                            ? 'bg-brand-secondary/15 text-brand-secondary'
-                            : undefined
+                            ? 'border-brand-secondary/30 bg-brand-secondary/15 text-brand-secondary'
+                            : item.status === 'created' || item.status === 'matched'
+                              ? 'border-primary/30 bg-primary/10 text-primary'
+                              : item.status === 'dismissed'
+                                ? 'border-destructive/30 bg-destructive/10 text-destructive'
+                                : 'border-border bg-muted text-muted-foreground'
                         }>
                         {item.status === 'non_transaction' ? t('nonTransaction') : t(item.status)}
                       </Badge>
@@ -466,7 +477,7 @@ export default function ShortcutInboxPage({
                   )}
                   {luloPreview && <LuloPreview preview={luloPreview} />}
                   {(item.status === 'matched' || item.status === 'created') && item.match && (
-                    <p className='text-muted-foreground text-xs'>
+                    <p className='text-primary text-xs'>
                       {item.status === 'created'
                         ? t('createdTransaction')
                         : t('matchedTransaction')}
@@ -573,7 +584,7 @@ export default function ShortcutInboxPage({
                     />
                   )}
                   {openCandidateId === item.id && (
-                    <div className='border-border space-y-3 rounded-md border p-3 text-sm'>
+                    <div className='border-border bg-muted/20 space-y-3 rounded-lg border p-4 text-sm'>
                       {candidateBusyId === item.id && <p>{t('candidateLoading')}</p>}
                       {candidateErrorId === item.id && <p role='alert'>{t('candidateFailed')}</p>}
                       {candidateResult && (
@@ -583,17 +594,24 @@ export default function ShortcutInboxPage({
                           {candidateResult.candidates.map((candidate) => (
                             <div
                               key={candidate.id}
-                              className='border-border space-y-1 border-t pt-3'>
-                              <div className='flex flex-wrap items-center gap-2'>
+                              className='border-border space-y-2 border-t pt-3'>
+                              <div className='flex min-w-0 flex-wrap items-center gap-2'>
                                 <Badge variant='outline'>
                                   {candidate.strength === 'strong'
                                     ? t('strongSignal')
                                     : t('possibleMatch')}
                                 </Badge>
-                                <span>{candidate.description}</span>
+                                <span className='min-w-0 font-medium break-words'>
+                                  {candidate.description}
+                                </span>
                               </div>
                               <p className='text-muted-foreground'>
-                                {candidate.date} · {candidate.amount} · {candidate.source}
+                                {candidate.date} ·{' '}
+                                {new Intl.NumberFormat(undefined, {
+                                  style: 'currency',
+                                  currency: 'COP',
+                                  maximumFractionDigits: 2,
+                                }).format(candidate.amount)}
                               </p>
                               {item.status === 'pending' &&
                                 (reviewCandidate?.inboxId === item.id &&

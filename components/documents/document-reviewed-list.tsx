@@ -26,11 +26,12 @@ export function DocumentReviewedList({
 
   return (
     <details className='border-border border-t pt-3'>
-      <summary className='text-muted-foreground cursor-pointer text-sm focus-visible:outline-2 focus-visible:outline-offset-2'>
+      <summary
+        className={`cursor-pointer text-sm focus-visible:outline-2 focus-visible:outline-offset-2 ${status === 'confirmed' ? 'text-primary' : 'text-destructive'}`}>
         {t(status === 'confirmed' ? 'confirmedObservations' : 'rejectedObservations')} ·{' '}
         {reviewed.length}
       </summary>
-      <div className='mt-3 divide-y rounded-lg border'>
+      <div className='border-border divide-border mt-3 divide-y rounded-lg border'>
         {reviewed.map((observation) => (
           <div
             key={observation.id}

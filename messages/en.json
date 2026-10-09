@@ -347,15 +347,18 @@
     "searchAction": "Search",
     "clearSearch": "Clear search",
     "analysisRunning": "Analyzing suggestions. You can review and edit the original details now.",
-    "analysisReady": "Suggestions ready. Review them before saving.",
+    "analysisReady": "Analysis complete. Review the suggestions before saving.",
     "fieldAnalyzing": "Analyzing with AI",
-    "fieldSuggested": "Suggested by AI",
+    "fieldSuggested": "AI · ready",
     "receivedPeriod": "Received period",
     "allDates": "All dates",
     "refreshing": "Updating results…",
     "reviewStatusHelp": "Not a transaction classifies an informational email and keeps its attachments available. Dismiss removes it from pending review and archives its attachments; returning it to pending restores attachments archived by this action. Neither action deletes financial records.",
     "backToInbox": "Back to inbox",
-    "reviewHelpTitle": "What do the review actions do?"
+    "reviewHelpTitle": "What do the review actions do?",
+    "duplicateTitle": "This transaction may already exist",
+    "duplicateConfirmation": "We found similar transactions. Save another transaction anyway? Continue only if this is a separate payment.",
+    "duplicateGoBack": "Review again"
   },
   "transactions": {
     "originalEvidence": "Original evidence",

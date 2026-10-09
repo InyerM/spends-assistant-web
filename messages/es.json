@@ -347,15 +347,18 @@
     "searchAction": "Buscar",
     "clearSearch": "Limpiar búsqueda",
     "analysisRunning": "Analizando sugerencias. Ya puedes revisar y editar los datos originales.",
-    "analysisReady": "Sugerencias listas. Revísalas antes de guardar.",
+    "analysisReady": "Análisis terminado. Revisa las sugerencias antes de guardar.",
     "fieldAnalyzing": "Analizando con IA",
-    "fieldSuggested": "Sugerido por IA",
+    "fieldSuggested": "IA · listo",
     "receivedPeriod": "Fecha de recepción",
     "allDates": "Todas las fechas",
     "refreshing": "Actualizando resultados…",
     "reviewStatusHelp": "No es transacción clasifica un correo informativo y conserva sus adjuntos disponibles. Descartar lo retira de pendientes y archiva sus adjuntos; al devolverlo a pendientes se restauran los que archivó esta acción. Ninguna opción elimina movimientos.",
     "backToInbox": "Volver a bandeja de correo",
-    "reviewHelpTitle": "¿Qué hace cada acción?"
+    "reviewHelpTitle": "¿Qué hace cada acción?",
+    "duplicateTitle": "Este movimiento podría estar repetido",
+    "duplicateConfirmation": "Encontramos transacciones similares. ¿Quieres guardar otro movimiento de todas formas? Solo continúa si es una operación diferente.",
+    "duplicateGoBack": "Volver a revisar"
   },
   "transactions": {
     "originalEvidence": "Origen de la transacción",

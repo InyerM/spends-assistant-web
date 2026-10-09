@@ -53,8 +53,10 @@ export function ShortcutCreateFields({
   return (
     <div className='grid gap-3 sm:grid-cols-2'>
       <div className={fieldClass('accountId')} data-ai-state={analysisStates['accountId']}>
-        <label>{t('createAccount')}</label>
-        {fieldStatus('accountId')}
+        <div className='flex flex-wrap items-center justify-between gap-x-2 gap-y-1'>
+          <label>{t('createAccount')}</label>
+          {fieldStatus('accountId')}
+        </div>
         <SearchableSelect
           value={draft.accountId}
           onValueChange={(accountId) => onChange({ accountId, destinationAccountId: '' })}
@@ -65,8 +67,10 @@ export function ShortcutCreateFields({
         />
       </div>
       <div className={fieldClass('type')} data-ai-state={analysisStates['type']}>
-        <label>{t('createType')}</label>
-        {fieldStatus('type')}
+        <div className='flex flex-wrap items-center justify-between gap-x-2 gap-y-1'>
+          <label>{t('createType')}</label>
+          {fieldStatus('type')}
+        </div>
         <Select
           value={draft.type}
           onValueChange={(type) =>
@@ -102,8 +106,10 @@ export function ShortcutCreateFields({
         </div>
       ) : (
         <div className={fieldClass('categoryId')} data-ai-state={analysisStates['categoryId']}>
-          <label>{t('createCategory')}</label>
-          {fieldStatus('categoryId')}
+          <div className='flex flex-wrap items-center justify-between gap-x-2 gap-y-1'>
+            <label>{t('createCategory')}</label>
+            {fieldStatus('categoryId')}
+          </div>
           <SearchableSelect
             value={draft.categoryId}
             onValueChange={(categoryId) => onChange({ categoryId })}
@@ -156,8 +162,10 @@ export function ShortcutCreateFields({
       <label
         className={`${fieldClass('description')} sm:col-span-2`}
         data-ai-state={analysisStates.description}>
-        {t('createDescription')}
-        {fieldStatus('description')}
+        <span className='flex flex-wrap items-center justify-between gap-2'>
+          {t('createDescription')}
+          {fieldStatus('description')}
+        </span>
         <Input
           type='text'
           aria-label={t('createDescription')}
@@ -169,8 +177,10 @@ export function ShortcutCreateFields({
       <label
         className={`${fieldClass('notes')} sm:col-span-2`}
         data-ai-state={analysisStates.notes}>
-        {t('createNotes')}
-        {fieldStatus('notes')}
+        <span className='flex flex-wrap items-center justify-between gap-2'>
+          {t('createNotes')}
+          {fieldStatus('notes')}
+        </span>
         <Textarea
           aria-label={t('createNotes')}
           maxLength={2000}

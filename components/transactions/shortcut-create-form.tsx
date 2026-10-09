@@ -3,6 +3,16 @@
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { InlineLoader } from '@/components/shared/loader';
+import { Check } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogCancel,
+} from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { ShortcutCreateFields, type ShortcutCreateDraft } from './shortcut-create-fields';
 import { useAccounts } from '@/lib/api/queries/account.queries';
@@ -67,6 +77,7 @@ export function ShortcutCreateForm({
   const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [review, setReview] = useState<CandidateReview | null>(null);
+  const [duplicateDialogOpen, setDuplicateDialogOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const inferredAccountId =
@@ -186,7 +197,10 @@ export function ShortcutCreateForm({
           : {}),
       });
       if (result.status === 'created') onCreated();
-      else setReview(result);
+      else {
+        setReview(result);
+        setDuplicateDialogOpen(result.status === 'review_required');
+      }
     } catch {
       setError(t('createFailed'));
     }
@@ -207,7 +221,7 @@ export function ShortcutCreateForm({
         <div
           role='status'
           className='flex items-center gap-2 rounded-lg border border-[var(--ai-gradient-start)]/30 bg-[var(--ai-gradient-start)]/5 p-3 text-[var(--ai-gradient-start)]'>
-          {analyzing && <InlineLoader />}
+          {analyzing ? <InlineLoader /> : <Check className='size-4 shrink-0' aria-hidden='true' />}
           <span>{t(analyzing ? 'analysisRunning' : 'analysisReady')}</span>
         </div>
       )}
@@ -288,21 +302,51 @@ export function ShortcutCreateForm({
               ? t('overflowCaution')
               : t('distinctCaution', { count: review.candidate_count })}
           </p>
-          {review.candidates.map((candidate) => (
-            <p key={candidate.id}>
-              {candidate.date} · {candidate.amount} · {candidate.description} · {candidate.source}
-            </p>
-          ))}
+          {review.status === 'review_overflow' &&
+            review.candidates.map((candidate) => (
+              <p key={candidate.id}>
+                {candidate.date} · {candidate.amount} · {candidate.description} · {candidate.source}
+              </p>
+            ))}
           {review.status === 'review_required' && (
+            <Button
+              type='button'
+              disabled={analyzing || createMutation.isPending}
+              onClick={(): void => setDuplicateDialogOpen(true)}>
+              {t('confirmDistinct')}
+            </Button>
+          )}
+        </div>
+      )}
+      <AlertDialog open={duplicateDialogOpen} onOpenChange={setDuplicateDialogOpen}>
+        <AlertDialogContent className='border-border'>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('duplicateTitle')}</AlertDialogTitle>
+            <AlertDialogDescription>{t('duplicateConfirmation')}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className='divide-border max-h-60 divide-y overflow-y-auto'>
+            {review?.candidates.map((candidate) => (
+              <div key={candidate.id} className='py-3 text-sm'>
+                <p className='font-medium'>{candidate.description}</p>
+                <p className='text-muted-foreground'>
+                  {candidate.date} · {candidate.amount}
+                </p>
+              </div>
+            ))}
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={createMutation.isPending}>
+              {t('duplicateGoBack')}
+            </AlertDialogCancel>
             <Button
               type='button'
               disabled={analyzing || createMutation.isPending}
               onClick={(): void => void submit(true)}>
               {t('confirmDistinct')}
             </Button>
-          )}
-        </div>
-      )}
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       <div className='flex gap-2'>
         {!review && (
           <Button

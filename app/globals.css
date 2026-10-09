@@ -270,7 +270,7 @@ body {
 .ai-field {
   border: 1px solid transparent;
   border-radius: 12px;
-  padding: 8px;
+  padding: 6px;
   background:
     linear-gradient(110deg, #211c2d, #15232b 55%, #172923) padding-box,
     linear-gradient(
@@ -282,8 +282,12 @@ body {
       )
       border-box;
 }
+.ai-field[data-ai-state='suggested'] {
+  border-color: color-mix(in srgb, var(--ai-gradient-start) 35%, transparent);
+  background: color-mix(in srgb, var(--ai-gradient-start) 4%, hsl(var(--card)));
+}
 .ai-field-status {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 4px;
   color: var(--ai-gradient-start);

@@ -782,7 +782,8 @@ describe('Shortcut inbox review page', () => {
       target: { value: 'Reviewed market expense' },
     });
     fireEvent.click(screen.getByRole('button', { name: 'Save reviewed transaction' }));
-    expect(await screen.findByText(/Existing payment/u)).toBeInTheDocument();
+    expect(await screen.findByRole('alertdialog')).toBeVisible();
+    expect(screen.getByText(/Existing payment/u)).toBeInTheDocument();
     expect(
       fetchMock.mock.calls.filter(([url]) => typeof url === 'string' && url.endsWith('/create')),
     ).toHaveLength(1);
