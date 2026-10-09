@@ -45,6 +45,9 @@ vi.mock('@/lib/api/mutations/automation.mutations', () => ({
   useGenerateAccountRules: () => ({ mutateAsync: vi.fn() }),
 }));
 vi.mock('@/hooks/use-infinite-scroll', () => ({ useInfiniteScroll: () => null }));
+vi.mock('@/components/automation/automation-rule-explanation', () => ({
+  AutomationRuleExplanation: () => null,
+}));
 vi.mock('@/components/automation/automation-form', () => ({ AutomationForm: () => null }));
 vi.mock('@/components/automation/ai-automation-dialog', () => ({ AiAutomationDialog: () => null }));
 vi.mock('@/components/shared/confirm-delete-dialog', () => ({ ConfirmDeleteDialog: () => null }));

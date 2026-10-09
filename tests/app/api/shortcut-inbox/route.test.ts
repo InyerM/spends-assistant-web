@@ -102,6 +102,14 @@ function fakeDatabase() {
                 error: null,
               };
             },
+            gte(column: string, value: string) {
+              filters.push([`gte:${column}`, value]);
+              return query;
+            },
+            lt(column: string, value: string) {
+              filters.push([`lt:${column}`, value]);
+              return query;
+            },
             order() {
               return query;
             },
@@ -420,3 +428,25 @@ describe('/api/shortcut-inbox', () => {
     ).toBe(400);
   });
 });
+
+it('filters received dates inclusively in Bogota before pagination', async () => {
+  const db = fakeDatabase();
+  getUserClient.mockResolvedValue({ supabase: db.supabase, userId: 'owner' });
+  const response = await GET(
+    new Request(
+      'https://example.test/api/shortcut-inbox?date_from=2026-10-01&date_to=2026-10-09',
+    ) as never,
+  );
+  expect(response.status).toBe(200);
+  expect(db.filters).toContainEqual(['gte:received_at', '2026-10-01T00:00:00-05:00']);
+  expect(db.filters).toContainEqual(['lt:received_at', '2026-10-10T00:00:00-05:00']);
+});
+it.each(['date_from=2026-02-30', 'date_from=2026-10-09&date_to=2026-10-01'])(
+  'rejects invalid received date range: %s',
+  async (query) => {
+    getUserClient.mockResolvedValue({ supabase: fakeDatabase().supabase, userId: 'owner' });
+    expect(
+      (await GET(new Request(`https://example.test/api/shortcut-inbox?${query}`) as never)).status,
+    ).toBe(400);
+  },
+);

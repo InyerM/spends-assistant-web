@@ -265,3 +265,51 @@ body {
     transform: none;
   }
 }
+
+/* Suggested fields share the assistant palette; user edits remove this treatment. */
+.ai-field {
+  border: 1px solid transparent;
+  border-radius: 12px;
+  padding: 8px;
+  background:
+    linear-gradient(110deg, #211c2d, #15232b 55%, #172923) padding-box,
+    linear-gradient(
+        110deg,
+        var(--ai-gradient-start),
+        var(--ai-gradient-middle) 35%,
+        var(--ai-gradient-end) 72%,
+        var(--ai-gradient-warm)
+      )
+      border-box;
+}
+.ai-field-status {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--ai-gradient-start);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.ai-field[data-ai-state='analyzing'] {
+  background-size:
+    100% 100%,
+    200% 100%;
+  animation: ai-field-progress 3s linear infinite;
+}
+@keyframes ai-field-progress {
+  0% {
+    background-position:
+      0 0,
+      0% 50%;
+  }
+  100% {
+    background-position:
+      0 0,
+      200% 50%;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ai-field[data-ai-state='analyzing'] {
+    animation: none;
+  }
+}

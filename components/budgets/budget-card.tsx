@@ -43,7 +43,7 @@ export function BudgetCard({
   const movementsId = `budget-movements-${budget.budget_id}`;
 
   return (
-    <Card className='border-border bg-card'>
+    <Card className='border-border bg-card min-w-0 self-start'>
       <CardContent className='space-y-5 p-5'>
         <div className='flex items-start justify-between gap-4'>
           <div className='min-w-0 space-y-1'>
@@ -127,7 +127,7 @@ export function BudgetCard({
               />
             </Button>
             {showMovements && (
-              <ul id={movementsId} className='mt-2 max-h-64 space-y-1 overflow-y-auto'>
+              <ul id={movementsId} className='mt-2 space-y-1'>
                 {budget.contributing_transactions.map((transaction) => (
                   <li key={transaction.id}>
                     <Link

@@ -7,6 +7,8 @@ interface InboxFilters {
   status: string;
   source?: 'forwarded_email';
   search: string;
+  date_from?: string;
+  date_to?: string;
 }
 
 export async function fetchShortcutInbox(
@@ -20,6 +22,8 @@ export async function fetchShortcutInbox(
   });
   if (filters.source) params.set('source', filters.source);
   if (filters.search) params.set('q', filters.search);
+  if (filters.date_from) params.set('date_from', filters.date_from);
+  if (filters.date_to) params.set('date_to', filters.date_to);
   const response = await fetch(`/api/shortcut-inbox?${params}`, { cache: 'no-store', signal });
   if (!response.ok) throw new Error('Could not load inbox');
   return response.json() as Promise<InboxList>;

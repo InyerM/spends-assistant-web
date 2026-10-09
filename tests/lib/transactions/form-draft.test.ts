@@ -90,3 +90,24 @@ describe('transaction form draft', () => {
     expect(patch).not.toHaveProperty('source');
   });
 });
+
+it('sends only changed notes without resubmitting legacy time values or financial fields', () => {
+  const original = {
+    ...draft,
+    time: '14:30:00.123456',
+    notes: 'Old note',
+    category_id: null,
+    transfer_to_account_id: null,
+  };
+  expect(
+    toTransactionPatch(
+      {
+        ...original,
+        notes: 'Updated note',
+        category_id: undefined,
+        transfer_to_account_id: undefined,
+      },
+      original,
+    ),
+  ).toEqual({ notes: 'Updated note' });
+});

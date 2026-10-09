@@ -239,6 +239,10 @@
     "cancel": "Cancel"
   },
   "shortcutInbox": {
+    "receivedFrom": "Received from",
+    "receivedTo": "Received through",
+    "clearDates": "Clear dates",
+    "receivedDateHint": "Filters message receipt dates in Colombia time.",
     "pdfReviewHint": "The PDF is saved in Documents. Review its movements before recording them.",
     "subject": "Subject",
     "showFullMessage": "Show full message",
@@ -731,7 +735,14 @@
     "noResultsDescription": "Try another search or clear your filters.",
     "loadError": "Your rules could not load. Try again.",
     "managedRule": "Account rule",
-    "managedRuleDescription": "Updated from account identifiers. Edit the account to change this rule."
+    "managedRuleDescription": "Updated from account identifiers. Edit the account to change this rule.",
+    "explanationTitle": "How this rule works",
+    "explainRule": "Explain with AI",
+    "refreshExplanation": "Update explanation",
+    "explanationLoading": "Explaining this rule…",
+    "explanationChanged": "The rule changed. Update the explanation to match your edits.",
+    "explanationUnavailable": "The explanation is unavailable. You can still edit and save the rule.",
+    "explanationOptional": "This explanation is a guide. Review the conditions and actions before saving."
   },
   "aiConsent": {
     "tab": "AI permissions",

@@ -23,3 +23,19 @@ describe('inbox search query', () => {
     );
   });
 });
+
+it('sends an optional received date range to the server before pagination', async () => {
+  const fetcher = vi.fn().mockResolvedValue(Response.json({ data: [], count: 0 }));
+  vi.stubGlobal('fetch', fetcher);
+  await fetchShortcutInbox({
+    page: 2,
+    status: 'pending',
+    source: 'forwarded_email',
+    search: '',
+    date_from: '2026-10-01',
+    date_to: '2026-10-09',
+  });
+  const url = new URL(fetcher.mock.calls[0][0] as string, 'https://example.test');
+  expect(url.searchParams.get('date_from')).toBe('2026-10-01');
+  expect(url.searchParams.get('date_to')).toBe('2026-10-09');
+});

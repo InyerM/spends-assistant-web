@@ -60,6 +60,24 @@ vi.mock('@/hooks/use-user-settings', () => ({
   useUserSettings: () => ({ data: { hour_format: '24h' } }),
 }));
 
+vi.mock('@/components/ui/date-picker', () => ({
+  DatePicker: ({
+    value,
+    onChange,
+    ariaLabel,
+  }: {
+    value: string;
+    onChange: (value: string) => void;
+    ariaLabel: string;
+  }) => (
+    <input
+      aria-label={ariaLabel}
+      value={value}
+      onChange={(event) => onChange(event.target.value)}
+    />
+  ),
+}));
+
 function renderPage(source?: 'forwarded_email'): void {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(
@@ -907,4 +925,28 @@ describe('Shortcut inbox review page', () => {
       screen.queryByRole('button', { name: 'Create distinct payment' }),
     ).not.toBeInTheDocument();
   });
+});
+
+it('filters forwarded messages by received dates and clears the range', async () => {
+  const fetchMock = vi
+    .fn()
+    .mockImplementation(() => Promise.resolve(Response.json({ data: [], count: 0 })));
+  vi.stubGlobal('fetch', fetchMock);
+  renderPage('forwarded_email');
+  fireEvent.change(screen.getByLabelText('receivedFrom'), { target: { value: '2026-10-01' } });
+  fireEvent.change(screen.getByLabelText('receivedTo'), { target: { value: '2026-10-09' } });
+  await waitFor(() =>
+    expect(
+      fetchMock.mock.calls.some(
+        ([url]) =>
+          String(url).includes('date_from=2026-10-01') &&
+          String(url).includes('date_to=2026-10-09'),
+      ),
+    ).toBe(true),
+  );
+  fireEvent.click(screen.getByRole('button', { name: 'clearDates' }));
+  expect(screen.getByLabelText('receivedFrom')).toHaveValue('');
+  expect(screen.getByLabelText('receivedTo')).toHaveValue('');
+  cleanup();
+  vi.unstubAllGlobals();
 });

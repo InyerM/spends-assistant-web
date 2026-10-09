@@ -69,6 +69,8 @@ describe('BudgetCard', () => {
     const card = within(container);
     await userEvent.click(card.getByRole('button', { name: /viewMovements/ }));
     expect(card.getByText('Lunch')).toBeInTheDocument();
+    expect(card.getByRole('list')).not.toHaveClass('max-h-64', 'overflow-y-auto');
+    expect(container.querySelector('[data-slot=card]')).toHaveClass('self-start');
     expect(card.getByRole('link', { name: /Lunch/ })).toHaveAttribute(
       'href',
       '/transactions/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',

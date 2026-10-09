@@ -36,7 +36,7 @@ export function ActionValueInput({
   if (row.type === 'set_type') {
     return (
       <Select value={row.value || undefined} onValueChange={onChange}>
-        <SelectTrigger className='h-9 flex-1'>
+        <SelectTrigger className='h-9 min-w-0 flex-1'>
           <SelectValue placeholder={tTx('selectType')} />
         </SelectTrigger>
         <SelectContent>
@@ -49,7 +49,7 @@ export function ActionValueInput({
   }
   if (row.type === 'set_category') {
     return (
-      <div className='flex-1'>
+      <div className='min-w-0 flex-1'>
         <SearchableSelect
           value={row.value || undefined}
           onValueChange={onChange}
@@ -65,7 +65,7 @@ export function ActionValueInput({
   }
   if (row.type === 'set_account' || row.type === 'transfer_to_account') {
     return (
-      <div className='flex-1'>
+      <div className='min-w-0 flex-1'>
         <SearchableSelect
           value={row.value || undefined}
           onValueChange={onChange}
@@ -93,7 +93,7 @@ export function ActionValueInput({
   return (
     <Input
       placeholder={t('notePlaceholder')}
-      className='h-9 flex-1'
+      className='h-9 min-w-0 flex-1'
       value={row.value}
       onChange={(e): void => onChange(e.target.value)}
     />

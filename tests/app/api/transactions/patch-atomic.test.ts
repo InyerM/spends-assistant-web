@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { NextRequest } from 'next/server';
+import { toTransactionPatch } from '@/lib/transactions/form-draft';
 import { PATCH } from '@/app/api/transactions/[id]/route';
 import { applyTransactionBalance, getUserClient } from '@/lib/api/server';
 
@@ -44,6 +45,35 @@ describe('atomic transaction PATCH route', () => {
     });
     expect(from).not.toHaveBeenCalled();
     expect(applyTransactionBalance).not.toHaveBeenCalled();
+  });
+
+  it('edits notes without resubmitting unchanged legacy time or financial values', async () => {
+    rpc.mockResolvedValue({ data: { id, notes: 'Updated note' }, error: null });
+    const original = {
+      date: '2026-10-09',
+      time: '14:30:00.123456',
+      amount: 150,
+      account_id: account,
+      type: 'expense' as const,
+      description: 'Lunch',
+      notes: 'Old note',
+      category_id: null,
+      transfer_to_account_id: null,
+    };
+    const patch = toTransactionPatch(
+      {
+        ...original,
+        notes: 'Updated note',
+        category_id: undefined,
+        transfer_to_account_id: undefined,
+      },
+      original,
+    );
+    expect((await PATCH(request(patch), context)).status).toBe(200);
+    expect(rpc).toHaveBeenCalledWith('patch_reviewed_transaction', {
+      p_transaction_id: id,
+      p_patch: { notes: 'Updated note' },
+    });
   });
 
   it('rejects arbitrary provenance fields before touching the database', async () => {

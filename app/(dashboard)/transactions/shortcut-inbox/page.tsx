@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useShortcutInbox } from '@/lib/api/queries/shortcut-inbox.queries';
+import { DatePicker } from '@/components/ui/date-picker';
 import { SearchInput } from '@/components/shared/search-input';
 import { ArrowLeft, ChevronLeft, ChevronRight, Download, FileText, Inbox } from 'lucide-react';
 import Link from 'next/link';
@@ -123,7 +124,16 @@ export default function ShortcutInboxPage({
   const [filter, setFilter] = useState('pending');
   const [searchText, setSearchText] = useState('');
   const [search, setSearch] = useState('');
-  const inbox = useShortcutInbox({ page, status: filter, source, search });
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+  const inbox = useShortcutInbox({
+    page,
+    status: filter,
+    source,
+    search,
+    date_from: dateFrom || undefined,
+    date_to: dateTo || undefined,
+  });
   const items = inbox.data?.data ?? [];
   const count = inbox.data?.count ?? 0;
   const loading = inbox.isFetching;
@@ -325,6 +335,49 @@ export default function ShortcutInboxPage({
           </SelectContent>
         </Select>
       </div>
+
+      {source === 'forwarded_email' && (
+        <div className='flex flex-wrap items-end gap-3'>
+          <label className='min-w-40 space-y-1 text-sm'>
+            <span>{t('receivedFrom')}</span>
+            <DatePicker
+              value={dateFrom}
+              ariaLabel={t('receivedFrom')}
+              placeholder={t('receivedFrom')}
+              onChange={(value): void => {
+                setDateFrom(value);
+                if (dateTo && value > dateTo) setDateTo(value);
+                setPage(1);
+              }}
+            />
+          </label>
+          <label className='min-w-40 space-y-1 text-sm'>
+            <span>{t('receivedTo')}</span>
+            <DatePicker
+              value={dateTo}
+              ariaLabel={t('receivedTo')}
+              placeholder={t('receivedTo')}
+              onChange={(value): void => {
+                setDateTo(value);
+                if (dateFrom && value < dateFrom) setDateFrom(value);
+                setPage(1);
+              }}
+            />
+          </label>
+          {(dateFrom || dateTo) && (
+            <Button
+              variant='outline'
+              onClick={(): void => {
+                setDateFrom('');
+                setDateTo('');
+                setPage(1);
+              }}>
+              {t('clearDates')}
+            </Button>
+          )}
+          <p className='text-muted-foreground w-full text-xs'>{t('receivedDateHint')}</p>
+        </div>
+      )}
 
       {(error || inbox.isError) && (
         <p role='alert' className='text-destructive text-sm'>

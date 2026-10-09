@@ -26,6 +26,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { ConfirmDeleteDialog } from '@/components/shared/confirm-delete-dialog';
+import { AutomationRuleExplanation } from '@/components/automation/automation-rule-explanation';
 import { AutomationForm } from '@/components/automation/automation-form';
 import { AiAutomationDialog } from '@/components/automation/ai-automation-dialog';
 import { useInfiniteAutomationRules } from '@/lib/api/queries/automation.queries';
@@ -380,6 +381,7 @@ export default function AutomationPage(): React.ReactElement {
                   </div>
                 </CardHeader>
                 <CardContent className='border-border grid gap-4 border-t pt-4 sm:grid-cols-2'>
+                  <AutomationRuleExplanation rule={rule} autoLoad />
                   {rule.managed_account_id ? (
                     <p className='text-muted-foreground text-sm sm:col-span-2'>
                       {t('managedRuleDescription')}

@@ -26,7 +26,7 @@ export function ConditionValueInput({
   if (row.type === 'type') {
     return (
       <Select value={row.value || undefined} onValueChange={onChange}>
-        <SelectTrigger className='h-9 flex-1'>
+        <SelectTrigger className='h-9 min-w-0 flex-1'>
           <SelectValue placeholder={tTx('selectType')} />
         </SelectTrigger>
         <SelectContent>
@@ -42,7 +42,7 @@ export function ConditionValueInput({
       <Input
         type='number'
         placeholder='0'
-        className='h-9 flex-1'
+        className='h-9 min-w-0 flex-1'
         value={row.value}
         onChange={(e): void => onChange(e.target.value)}
       />
@@ -52,7 +52,7 @@ export function ConditionValueInput({
     return (
       <Input
         placeholder={t('sourcePlaceholder')}
-        className='h-9 flex-1'
+        className='h-9 min-w-0 flex-1'
         value={row.value}
         onChange={(e): void => onChange(e.target.value)}
       />
@@ -62,7 +62,7 @@ export function ConditionValueInput({
   return (
     <Input
       placeholder={t('rawTextPlaceholder')}
-      className='h-9 flex-1'
+      className='h-9 min-w-0 flex-1'
       value={row.value}
       onChange={(e): void => onChange(e.target.value)}
     />

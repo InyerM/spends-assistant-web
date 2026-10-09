@@ -1,3 +1,4 @@
+import { z } from 'zod';
 import type { NextRequest } from 'next/server';
 import { AuthError, errorResponse, getUserClient } from '@/lib/api/server';
 import { getShortcutPostClient } from '@/lib/shortcut-inbox/auth';
@@ -72,6 +73,16 @@ export async function GET(request: NextRequest): Promise<Response> {
     const { supabase, userId } = await getUserClient(request);
     const params = new URL(request.url).searchParams;
     const source = params.get('source');
+    const dateFrom = params.get('date_from');
+    const dateTo = params.get('date_to');
+    if (
+      (dateFrom !== null && !z.iso.date().safeParse(dateFrom).success) ||
+      (dateTo !== null && !z.iso.date().safeParse(dateTo).success) ||
+      (dateFrom && dateTo && dateFrom > dateTo)
+    ) {
+      return errorResponse('Invalid received date range', 400);
+    }
+
     const search = (params.get('q') ?? '').trim();
     if (search.length > 200) return errorResponse('Search text too long', 400);
     if (source === 'forwarded_email') {
@@ -108,6 +119,12 @@ export async function GET(request: NextRequest): Promise<Response> {
       ['pending', 'non_transaction', 'dismissed', 'matched', 'created'].includes(status)
     ) {
       query = query.eq('status', status);
+    }
+    if (dateFrom) query = query.gte('received_at', `${dateFrom}T00:00:00-05:00`);
+    if (dateTo) {
+      const nextDay = new Date(`${dateTo}T00:00:00Z`);
+      nextDay.setUTCDate(nextDay.getUTCDate() + 1);
+      query = query.lt('received_at', `${nextDay.toISOString().slice(0, 10)}T00:00:00-05:00`);
     }
     if (search) query = query.ilike('raw_text', `%${search.replace(/[\\%_]/gu, '\\$&')}%`);
     const { data, count, error } = await query

@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { z } from 'zod';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -50,6 +50,7 @@ import {
 import { ConditionValueInput } from '@/components/automation/condition-value-input';
 import { ActionValueInput } from '@/components/automation/action-value-input';
 import type { AutomationRule, ConditionLogic, CreateAutomationRuleInput, RuleType } from '@/types';
+import { AutomationRuleExplanation } from '@/components/automation/automation-rule-explanation';
 import { RULE_TYPE_KEYS } from '@/lib/constants/automation';
 
 // ── Helpers ───────────────────────────────────────────────────────────────
@@ -140,6 +141,8 @@ export function AutomationForm({
     resolver: zodResolver(formSchema),
     defaultValues: getDefaults(rule),
   });
+
+  const currentValues = useWatch({ control: form.control });
 
   // Reset local state when dialog opens (set state during render pattern)
   const [prevOpen, setPrevOpen] = useState(false);
@@ -250,7 +253,7 @@ export function AutomationForm({
 
         <TooltipProvider>
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className='space-y-4'>
+            <form onSubmit={form.handleSubmit(onSubmit)} className='min-w-0 space-y-4'>
               {/* ── Name + Priority ─────────────────────────────────── */}
               <div className='grid grid-cols-2 gap-4'>
                 <FormField
@@ -391,8 +394,12 @@ export function AutomationForm({
                 {conditionRows.length > 0 && (
                   <div className='space-y-2'>
                     {conditionRows.map((row) => (
-                      <div key={row.id} className='flex items-center gap-2'>
-                        <Badge variant='secondary' className='shrink-0 text-xs'>
+                      <div
+                        key={row.id}
+                        className='grid min-w-0 grid-cols-[minmax(0,1fr)_2rem] items-center gap-2 sm:flex'>
+                        <Badge
+                          variant='secondary'
+                          className='col-span-2 shrink-0 justify-self-start text-xs'>
                           {t(CONDITION_TYPE_KEYS[row.type])}
                         </Badge>
                         <ConditionValueInput
@@ -459,8 +466,12 @@ export function AutomationForm({
                 {actionRows.length > 0 && (
                   <div className='space-y-2'>
                     {actionRows.map((row) => (
-                      <div key={row.id} className='flex items-center gap-2'>
-                        <Badge variant='default' className='shrink-0 text-xs'>
+                      <div
+                        key={row.id}
+                        className='grid min-w-0 grid-cols-[minmax(0,1fr)_2rem] items-center gap-2 sm:flex'>
+                        <Badge
+                          variant='default'
+                          className='col-span-2 shrink-0 justify-self-start text-xs'>
                           {t(ACTION_TYPE_KEYS[row.type])}
                         </Badge>
                         <ActionValueInput
@@ -519,6 +530,19 @@ export function AutomationForm({
                   )
                 )}
               </div>
+
+              <AutomationRuleExplanation
+                key={rule?.id ?? initialData?.name ?? 'new-rule'}
+                rule={{
+                  ...rule,
+                  ...buildPayload(
+                    { ...getDefaults(rule), ...currentValues },
+                    conditionRows,
+                    actionRows,
+                  ),
+                }}
+                initialRule={rule ?? undefined}
+              />
 
               {/* ── FAQ link ─────────────────────────────────────────── */}
               {appSettings?.automation_faq_url && (

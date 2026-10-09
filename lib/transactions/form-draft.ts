@@ -17,12 +17,26 @@ export type TransactionFormValues = z.infer<typeof baseSchema>;
 
 export function toTransactionPatch(
   values: TransactionFormValues,
+  original?: Partial<Omit<UpdateTransactionInput, 'id'>>,
 ): Omit<UpdateTransactionInput, 'id'> {
-  return {
-    ...values,
+  const patch = {
+    date: values.date,
+    time: values.time,
+    amount: values.amount,
+    description: values.description,
+    notes: values.notes,
+    type: values.type,
+    account_id: values.account_id,
     category_id: values.category_id || null,
     transfer_to_account_id: values.transfer_to_account_id || null,
   };
+  if (!original) return patch;
+  return Object.fromEntries(
+    Object.entries(patch).filter(([key, value]) => {
+      const previous = original[key as keyof typeof original];
+      return key === 'notes' ? (value ?? '') !== (previous ?? '') : value !== previous;
+    }),
+  ) as Omit<UpdateTransactionInput, 'id'>;
 }
 
 interface FormMessages {

@@ -1,6 +1,7 @@
 'use client';
 
 import { useLocale, useTranslations } from 'next-intl';
+import { AiFieldStatus } from '@/components/shared/ai-field-status';
 import { Checkbox } from '@/components/ui/checkbox';
 import { DatePicker } from '@/components/ui/date-picker';
 import { Input } from '@/components/ui/input';
@@ -43,24 +44,15 @@ export function ShortcutCreateFields({
   const transactionT = useTranslations('transactions');
   const commonT = useTranslations('common');
   const fieldClass = (key: keyof ShortcutCreateDraft): string =>
-    analysisStates[key]
-      ? analysisStates[key] === 'analyzing'
-        ? 'space-y-1 rounded-lg border border-[var(--ai-gradient-start)]/40 bg-[var(--ai-gradient-start)]/5 p-2'
-        : 'space-y-1 rounded-lg border border-primary/40 bg-primary/5 p-2'
-      : 'space-y-1';
+    analysisStates[key] ? 'ai-field space-y-1' : 'space-y-1';
   const fieldStatus = (key: keyof ShortcutCreateDraft): React.ReactNode =>
-    analysisStates[key] ? (
-      <span
-        className={`block text-xs ${analysisStates[key] === 'analyzing' ? 'text-[var(--ai-gradient-start)]' : 'text-primary'}`}>
-        {t(analysisStates[key] === 'analyzing' ? 'fieldAnalyzing' : 'fieldSuggested')}
-      </span>
-    ) : null;
+    analysisStates[key] ? <AiFieldStatus state={analysisStates[key]} /> : null;
   const activeAccounts = accounts.filter(
     (account) => account.is_active && !account.deleted_at && account.currency === 'COP',
   );
   return (
     <div className='grid gap-3 sm:grid-cols-2'>
-      <div className={fieldClass('accountId')}>
+      <div className={fieldClass('accountId')} data-ai-state={analysisStates['accountId']}>
         <label>{t('createAccount')}</label>
         {fieldStatus('accountId')}
         <SearchableSelect
@@ -72,7 +64,7 @@ export function ShortcutCreateFields({
           items={buildAccountItems(activeAccounts)}
         />
       </div>
-      <div className={fieldClass('type')}>
+      <div className={fieldClass('type')} data-ai-state={analysisStates['type']}>
         <label>{t('createType')}</label>
         {fieldStatus('type')}
         <Select
@@ -109,7 +101,7 @@ export function ShortcutCreateFields({
           />
         </div>
       ) : (
-        <div className={fieldClass('categoryId')}>
+        <div className={fieldClass('categoryId')} data-ai-state={analysisStates['categoryId']}>
           <label>{t('createCategory')}</label>
           {fieldStatus('categoryId')}
           <SearchableSelect
@@ -161,7 +153,9 @@ export function ShortcutCreateFields({
           {t('confirmEventTime')}
         </label>
       )}
-      <label className={`${fieldClass('description')} sm:col-span-2`}>
+      <label
+        className={`${fieldClass('description')} sm:col-span-2`}
+        data-ai-state={analysisStates.description}>
         {t('createDescription')}
         {fieldStatus('description')}
         <Input
@@ -172,7 +166,9 @@ export function ShortcutCreateFields({
           onChange={(event) => onChange({ description: event.target.value })}
         />
       </label>
-      <label className={`${fieldClass('notes')} sm:col-span-2`}>
+      <label
+        className={`${fieldClass('notes')} sm:col-span-2`}
+        data-ai-state={analysisStates.notes}>
         {t('createNotes')}
         {fieldStatus('notes')}
         <Textarea

@@ -213,6 +213,10 @@
     "viewBudgets": "Ver orçamentos"
   },
   "shortcutInbox": {
+    "receivedFrom": "Recebidos desde",
+    "receivedTo": "Recebidos até",
+    "clearDates": "Limpar datas",
+    "receivedDateHint": "Filtra a data de recebimento da mensagem no horário da Colômbia.",
     "pdfReviewHint": "O PDF fica salvo em Documentos. Revise os movimentos antes de registrá-los.",
     "subject": "Assunto",
     "showFullMessage": "Ver mensagem completa",
@@ -697,7 +701,14 @@
     "noResultsDescription": "Tente outra busca ou limpe os filtros.",
     "loadError": "Não foi possível carregar suas regras. Tente novamente.",
     "managedRule": "Regra da conta",
-    "managedRuleDescription": "Atualizada pelos identificadores da conta. Edite a conta para alterar esta regra."
+    "managedRuleDescription": "Atualizada pelos identificadores da conta. Edite a conta para alterar esta regra.",
+    "explanationTitle": "Como esta regra funciona",
+    "explainRule": "Explicar com IA",
+    "refreshExplanation": "Atualizar explicação",
+    "explanationLoading": "Explicando esta regra…",
+    "explanationChanged": "A regra mudou. Atualize a explicação para incluir suas alterações.",
+    "explanationUnavailable": "A explicação está indisponível. Você ainda pode editar e salvar a regra.",
+    "explanationOptional": "Esta explicação é um guia. Revise as condições e ações antes de salvar."
   },
   "aiConsent": {
     "tab": "Permissões de IA",

@@ -23,6 +23,7 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
+import { AiFieldStatus } from '@/components/shared/ai-field-status';
 import { DatePicker } from '@/components/ui/date-picker';
 import { TimePicker } from '@/components/ui/time-picker';
 import { Textarea } from '@/components/ui/textarea';
@@ -289,15 +290,24 @@ export function TransactionForm({
     if (fields) form.reset(fields);
   }
 
+  const isAiSuggested = (name: keyof FormValues): boolean => {
+    if (!ai.aiSource || form.formState.dirtyFields[name]) return false;
+    if (name === 'date') return Boolean(ai.aiSource.parsed_data.original_date);
+    if (name === 'time') return Boolean(ai.aiSource.parsed_data.original_time);
+    if (name === 'type')
+      return Boolean(ai.parseResult?.resolved.type || ai.aiSource.parsed_data.type);
+    return Boolean(form.getValues(name));
+  };
+
   // --- Form submit ---
 
   async function onSubmit(values: FormValues): Promise<void> {
     try {
       if (isEditing) {
-        await updateMutation.mutateAsync({
-          id: transaction.id,
-          ...toTransactionPatch(values),
-        });
+        const patch = toTransactionPatch(values, transaction);
+        if (Object.keys(patch).length > 0) {
+          await updateMutation.mutateAsync({ id: transaction.id, ...patch });
+        }
         toast.success(t('transactionUpdated'));
         onOpenChange(false);
       } else {
@@ -804,7 +814,10 @@ export function TransactionForm({
                     control={form.control}
                     name='date'
                     render={({ field }): React.ReactElement => (
-                      <FormItem>
+                      <FormItem
+                        className={isAiSuggested(field.name) ? 'ai-field' : undefined}
+                        data-ai-state={isAiSuggested(field.name) ? 'suggested' : undefined}>
+                        {isAiSuggested(field.name) && <AiFieldStatus />}
                         <FormLabel>{t('date')}</FormLabel>
                         <FormControl>
                           <DatePicker value={field.value} onChange={field.onChange} />
@@ -817,7 +830,10 @@ export function TransactionForm({
                     control={form.control}
                     name='time'
                     render={({ field }): React.ReactElement => (
-                      <FormItem>
+                      <FormItem
+                        className={isAiSuggested(field.name) ? 'ai-field' : undefined}
+                        data-ai-state={isAiSuggested(field.name) ? 'suggested' : undefined}>
+                        {isAiSuggested(field.name) && <AiFieldStatus />}
                         <FormLabel>{t('time')}</FormLabel>
                         <FormControl>
                           <TimePicker value={field.value} onChange={field.onChange} />
@@ -832,7 +848,10 @@ export function TransactionForm({
                   control={form.control}
                   name='type'
                   render={({ field }): React.ReactElement => (
-                    <FormItem>
+                    <FormItem
+                      className={isAiSuggested(field.name) ? 'ai-field' : undefined}
+                      data-ai-state={isAiSuggested(field.name) ? 'suggested' : undefined}>
+                      {isAiSuggested(field.name) && <AiFieldStatus />}
                       <FormLabel>{t('type')}</FormLabel>
                       <Select
                         onValueChange={(value): void => {
@@ -866,7 +885,10 @@ export function TransactionForm({
                   control={form.control}
                   name='amount'
                   render={({ field }): React.ReactElement => (
-                    <FormItem>
+                    <FormItem
+                      className={isAiSuggested(field.name) ? 'ai-field' : undefined}
+                      data-ai-state={isAiSuggested(field.name) ? 'suggested' : undefined}>
+                      {isAiSuggested(field.name) && <AiFieldStatus />}
                       <FormLabel>{t('amountCop')}</FormLabel>
                       <FormControl>
                         <Input
@@ -888,7 +910,10 @@ export function TransactionForm({
                   control={form.control}
                   name='description'
                   render={({ field }): React.ReactElement => (
-                    <FormItem>
+                    <FormItem
+                      className={isAiSuggested(field.name) ? 'ai-field' : undefined}
+                      data-ai-state={isAiSuggested(field.name) ? 'suggested' : undefined}>
+                      {isAiSuggested(field.name) && <AiFieldStatus />}
                       <FormLabel>{t('description')}</FormLabel>
                       <FormControl>
                         <Textarea
@@ -907,7 +932,10 @@ export function TransactionForm({
                   control={form.control}
                   name='account_id'
                   render={({ field }): React.ReactElement => (
-                    <FormItem>
+                    <FormItem
+                      className={isAiSuggested(field.name) ? 'ai-field' : undefined}
+                      data-ai-state={isAiSuggested(field.name) ? 'suggested' : undefined}>
+                      {isAiSuggested(field.name) && <AiFieldStatus />}
                       <FormLabel>{t('account')}</FormLabel>
                       <FormControl>
                         <SearchableSelect
@@ -928,7 +956,10 @@ export function TransactionForm({
                     control={form.control}
                     name='transfer_to_account_id'
                     render={({ field }): React.ReactElement => (
-                      <FormItem>
+                      <FormItem
+                        className={isAiSuggested(field.name) ? 'ai-field' : undefined}
+                        data-ai-state={isAiSuggested(field.name) ? 'suggested' : undefined}>
+                        {isAiSuggested(field.name) && <AiFieldStatus />}
                         <FormLabel>{t('transferTo')}</FormLabel>
                         <FormControl>
                           <SearchableSelect
@@ -949,7 +980,10 @@ export function TransactionForm({
                   control={form.control}
                   name='category_id'
                   render={({ field }): React.ReactElement => (
-                    <FormItem>
+                    <FormItem
+                      className={isAiSuggested(field.name) ? 'ai-field' : undefined}
+                      data-ai-state={isAiSuggested(field.name) ? 'suggested' : undefined}>
+                      {isAiSuggested(field.name) && <AiFieldStatus />}
                       <FormLabel>{t('category')}</FormLabel>
                       <FormControl>
                         <SearchableSelect
@@ -973,7 +1007,10 @@ export function TransactionForm({
                   control={form.control}
                   name='notes'
                   render={({ field }): React.ReactElement => (
-                    <FormItem>
+                    <FormItem
+                      className={isAiSuggested(field.name) ? 'ai-field' : undefined}
+                      data-ai-state={isAiSuggested(field.name) ? 'suggested' : undefined}>
+                      {isAiSuggested(field.name) && <AiFieldStatus />}
                       <FormLabel>{t('notes')}</FormLabel>
                       <FormControl>
                         <Textarea placeholder={t('notesPlaceholder')} {...field} />

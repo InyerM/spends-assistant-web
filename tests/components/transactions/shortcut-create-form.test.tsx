@@ -67,6 +67,9 @@ describe('ShortcutCreateForm', () => {
     );
     expect(screen.getByDisplayValue('121000.00')).toBeVisible();
     expect(screen.getByText('analysisRunning')).toBeVisible();
+    expect(
+      screen.getByRole('textbox', { name: 'createDescription' }).closest('.ai-field'),
+    ).toHaveAttribute('data-ai-state', 'analyzing');
     expect(screen.getByRole('button', { name: 'saveReviewed' })).toBeDisabled();
     fireEvent.change(screen.getByRole('textbox', { name: 'createDescription' }), {
       target: { value: 'My own description' },
@@ -91,6 +94,11 @@ describe('ShortcutCreateForm', () => {
     expect(screen.getByDisplayValue('AI notes')).toBeVisible();
     expect(screen.queryByText('analysisRunning')).not.toBeInTheDocument();
     expect(screen.getByText('analysisReady')).toBeVisible();
+    expect(screen.getByDisplayValue('AI notes').closest('.ai-field')).toHaveAttribute(
+      'data-ai-state',
+      'suggested',
+    );
+    expect(screen.getByDisplayValue('My own description').closest('.ai-field')).toBeNull();
   });
 
   it('prefills parsed evidence and historical proposals in shared controls without posting', async () => {

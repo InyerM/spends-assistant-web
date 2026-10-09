@@ -138,6 +138,13 @@ export function DocumentBatchReviewRow({
             <div className='border-border bg-muted/20 mt-4 space-y-3 rounded-lg border p-3 sm:p-4'>
               <DocumentReviewFields
                 draft={draft}
+                suggestedFields={[
+                  ...(draft.description === row.description ? ['description' as const] : []),
+                  ...(row.amount !== null && Number(draft.amount) === Math.abs(row.amount)
+                    ? ['amount' as const]
+                    : []),
+                  ...(row.occurred_at_text?.includes(draft.date) ? ['date' as const] : []),
+                ]}
                 accounts={accounts}
                 categories={categories}
                 disabled={busy || hasCreatedTransaction(row.id)}

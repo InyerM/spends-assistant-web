@@ -1,5 +1,7 @@
 'use client';
 
+import { useState } from 'react';
+import { AiFieldStatus } from '@/components/shared/ai-field-status';
 import { useLocale, useTranslations } from 'next-intl';
 import { DatePicker } from '@/components/ui/date-picker';
 import { TimePicker } from '@/components/ui/time-picker';
@@ -26,6 +28,7 @@ interface Props {
   accounts: Account[];
   categories: Category[];
   disabled: boolean;
+  suggestedFields?: readonly (keyof DocumentReviewFieldsDraft)[];
   onChange: (patch: Partial<DocumentReviewFieldsDraft>) => void;
 }
 
@@ -34,9 +37,18 @@ export function DocumentReviewFields({
   accounts,
   categories,
   disabled,
-  onChange,
+  onChange: updateDraft,
+  suggestedFields = [],
 }: Props): React.ReactElement {
   const t = useTranslations('documents');
+  const [editedFields, setEditedFields] = useState<Set<string>>(() => new Set());
+  const onChange = (patch: Partial<DocumentReviewFieldsDraft>): void => {
+    setEditedFields((current) => new Set([...current, ...Object.keys(patch)]));
+    updateDraft(patch);
+  };
+  const isSuggested = (field: keyof DocumentReviewFieldsDraft): boolean =>
+    suggestedFields.includes(field) && !editedFields.has(field);
+
   const transactionT = useTranslations('transactions');
   const commonT = useTranslations('common');
   const locale = useLocale();
@@ -45,7 +57,10 @@ export function DocumentReviewFields({
   );
   return (
     <div className='grid gap-3 sm:grid-cols-2'>
-      <div className='space-y-1 text-sm'>
+      <div
+        className={isSuggested('date') ? 'ai-field space-y-1 text-sm' : 'space-y-1 text-sm'}
+        data-ai-state={isSuggested('date') ? 'suggested' : undefined}>
+        {isSuggested('date') && <AiFieldStatus />}
         <label>{t('transactionDate')}</label>
         <DatePicker
           value={draft.date}
@@ -60,7 +75,10 @@ export function DocumentReviewFields({
         <TimePicker value={draft.time} onChange={(time) => onChange({ time })} />
         <span className='text-muted-foreground block text-xs'>{t('timeOptional')}</span>
       </fieldset>
-      <label className='space-y-1 text-sm'>
+      <label
+        className={isSuggested('amount') ? 'ai-field space-y-1 text-sm' : 'space-y-1 text-sm'}
+        data-ai-state={isSuggested('amount') ? 'suggested' : undefined}>
+        {isSuggested('amount') && <AiFieldStatus />}
         {t('transactionAmount')}
         <Input
           type='number'
@@ -153,7 +171,14 @@ export function DocumentReviewFields({
           />
         </div>
       )}
-      <label className='space-y-1 text-sm sm:col-span-2'>
+      <label
+        className={
+          isSuggested('description')
+            ? 'ai-field space-y-1 text-sm sm:col-span-2'
+            : 'space-y-1 text-sm sm:col-span-2'
+        }
+        data-ai-state={isSuggested('description') ? 'suggested' : undefined}>
+        {isSuggested('description') && <AiFieldStatus />}
         {t('transactionDescription')}
         <Input
           aria-label={t('transactionDescription')}

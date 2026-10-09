@@ -239,6 +239,10 @@
     "cancel": "Cancelar"
   },
   "shortcutInbox": {
+    "receivedFrom": "Recibidos desde",
+    "receivedTo": "Recibidos hasta",
+    "clearDates": "Limpiar fechas",
+    "receivedDateHint": "Filtra la fecha de recepción del mensaje en hora de Colombia.",
     "pdfReviewHint": "El PDF se guarda en Documentos. Revisa sus movimientos antes de registrarlos.",
     "subject": "Asunto",
     "showFullMessage": "Ver mensaje completo",
@@ -731,7 +735,14 @@
     "noResultsDescription": "Prueba otra búsqueda o limpia los filtros.",
     "loadError": "No se pudieron cargar tus reglas. Inténtalo de nuevo.",
     "managedRule": "Regla de cuenta",
-    "managedRuleDescription": "Se actualiza con los identificadores de la cuenta. Edita la cuenta para cambiar esta regla."
+    "managedRuleDescription": "Se actualiza con los identificadores de la cuenta. Edita la cuenta para cambiar esta regla.",
+    "explanationTitle": "Cómo funciona esta regla",
+    "explainRule": "Explicar con IA",
+    "refreshExplanation": "Actualizar explicación",
+    "explanationLoading": "Explicando esta regla…",
+    "explanationChanged": "La regla cambió. Actualiza la explicación para incluir tus cambios.",
+    "explanationUnavailable": "La explicación no está disponible. Puedes editar y guardar la regla.",
+    "explanationOptional": "Esta explicación es una guía. Revisa las condiciones y acciones antes de guardar."
   },
   "aiConsent": {
     "tab": "Permisos de IA",
