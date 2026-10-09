@@ -99,6 +99,28 @@ describe('ShortcutCreateForm', () => {
       'suggested',
     );
     expect(screen.getByDisplayValue('My own description').closest('.ai-field')).toBeNull();
+    view.rerender(
+      <QueryClientProvider client={client}>
+        <ShortcutCreateForm
+          {...props}
+          analysis={{
+            status: 'parsed',
+            account_id: null,
+            category_id: null,
+            category_source: null,
+            suggested_type: 'expense',
+            description: 'Demo Store',
+            notes: null,
+            ai_status: 'unavailable',
+            analysis_source: 'evidence',
+          }}
+        />
+      </QueryClientProvider>,
+    );
+    expect(screen.getByText('analysisUnavailable')).toBeVisible();
+    expect(screen.queryByText('analysisReady')).not.toBeInTheDocument();
+    expect(screen.getByDisplayValue('121000.00')).toBeVisible();
+    expect(screen.getByDisplayValue('My own description')).toBeVisible();
   });
 
   it('prefills parsed evidence and historical proposals in shared controls without posting', async () => {

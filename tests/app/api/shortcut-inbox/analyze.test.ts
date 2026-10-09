@@ -142,6 +142,50 @@ describe('POST forwarded email analysis', () => {
     );
   });
 
+  it.each(['upstream', 'network', 'invalid-json'])(
+    'preserves receipt evidence during %s failure without caching incomplete AI output',
+    async (failure) => {
+      const db = fakeDb({
+        inbox: {
+          ...inbox,
+          raw_text: inbox.raw_text.replace('CEA PRACTICAR DEL EJE', 'EXAMPLE SERVICE'),
+        },
+      });
+      getUserClient.mockResolvedValue({ userId: 'owner-a', accessToken: 'test-jwt', supabase: db });
+      vi.stubGlobal(
+        'fetch',
+        failure === 'network'
+          ? vi.fn().mockRejectedValue(new Error('network'))
+          : vi
+              .fn()
+              .mockResolvedValue(
+                failure === 'invalid-json'
+                  ? new Response('broken', { status: 200 })
+                  : new Response('', { status: 503 }),
+              ),
+      );
+      const response = await POST(request(), context);
+      expect(response.status).toBe(200);
+      expect(await response.json()).toMatchObject({
+        ai_status: 'unavailable',
+        analysis_source: 'evidence',
+        merchant: 'EXAMPLE SERVICE',
+        amount: 1550000,
+        account_id: accountId,
+        bank_event_at: '2026-10-06T15:42:00-05:00',
+        category_id: null,
+      });
+      expect(db.inserts).toHaveLength(0);
+      expect(db.updates).toHaveLength(0);
+      vi.stubGlobal(
+        'fetch',
+        vi.fn().mockResolvedValue(Response.json({ type: 'expense', category_id: categoryId })),
+      );
+      expect((await POST(request(), context)).status).toBe(201);
+      expect(db.inserts).toHaveLength(1);
+    },
+  );
+
   it('persists a reviewed proposal once and replays it without another provider call', async () => {
     const db = fakeDb();
     getUserClient.mockResolvedValue({ userId: 'owner-a', accessToken: 'test-jwt', supabase: db });

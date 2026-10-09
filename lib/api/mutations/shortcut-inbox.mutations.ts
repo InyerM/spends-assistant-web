@@ -6,6 +6,7 @@ export interface ForwardedEmailAnalysis {
   account_id: string | null;
   category_id: string | null;
   category_source: 'ai' | 'catalog' | 'automation' | 'review_context' | null;
+  ai_status?: 'unavailable';
   analysis_source?: 'automation' | 'history' | 'ai' | 'evidence';
   automation_fields?: string[];
   history_fields?: string[];

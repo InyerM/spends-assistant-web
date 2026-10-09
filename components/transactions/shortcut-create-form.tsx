@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { InlineLoader } from '@/components/shared/loader';
-import { Check } from 'lucide-react';
+import { AlertTriangle, Check } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogContent,
@@ -242,15 +242,23 @@ export function ShortcutCreateForm({
       {(analyzing || analysis) && (
         <div
           role='status'
-          className={`flex items-center gap-2 rounded-lg border p-3 ${!analyzing && analysis?.analysis_source === 'automation' ? 'border-brand-secondary/30 bg-brand-secondary/5 text-brand-secondary' : !analyzing && analysis?.analysis_source === 'history' ? 'border-primary/30 bg-primary/5 text-primary' : 'border-[var(--ai-gradient-start)]/30 bg-[var(--ai-gradient-start)]/5 text-[var(--ai-gradient-start)]'}`}>
-          {analyzing ? <InlineLoader /> : <Check className='size-4 shrink-0' aria-hidden='true' />}
+          className={`flex items-center gap-2 rounded-lg border p-3 ${!analyzing && analysis?.ai_status === 'unavailable' ? 'border-brand-secondary/30 bg-brand-secondary/5 text-brand-secondary' : !analyzing && analysis?.analysis_source === 'automation' ? 'border-brand-secondary/30 bg-brand-secondary/5 text-brand-secondary' : !analyzing && analysis?.analysis_source === 'history' ? 'border-primary/30 bg-primary/5 text-primary' : 'border-[var(--ai-gradient-start)]/30 bg-[var(--ai-gradient-start)]/5 text-[var(--ai-gradient-start)]'}`}>
+          {analyzing ? (
+            <InlineLoader />
+          ) : analysis?.ai_status === 'unavailable' ? (
+            <AlertTriangle className='size-4 shrink-0' aria-hidden='true' />
+          ) : (
+            <Check className='size-4 shrink-0' aria-hidden='true' />
+          )}
           <span>
             {t(
               analyzing
                 ? 'analysisRunning'
-                : analysis?.category_source === 'automation'
-                  ? 'automationReady'
-                  : 'analysisReady',
+                : analysis?.ai_status === 'unavailable'
+                  ? 'analysisUnavailable'
+                  : analysis?.category_source === 'automation'
+                    ? 'automationReady'
+                    : 'analysisReady',
             )}
           </span>
         </div>
@@ -301,7 +309,7 @@ export function ShortcutCreateForm({
             fieldDraft.description === undefined
               ? analyzing
                 ? 'analyzing'
-                : analysis?.description
+                : analysis?.description && analysis.ai_status !== 'unavailable'
                   ? analysis.automation_fields?.includes('description')
                     ? 'automation'
                     : analysis.history_fields?.includes('description')

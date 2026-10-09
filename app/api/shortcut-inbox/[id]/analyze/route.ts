@@ -322,6 +322,7 @@ export async function POST(request: Request, context: Context): Promise<Response
         bankPreview.date,
       );
     let suggestion: Record<string, unknown>;
+    let aiUnavailable = false;
     if ((matchedRule || recipientHistory) && cachedType) {
       suggestion = {
         type: cachedType,
@@ -333,22 +334,56 @@ export async function POST(request: Request, context: Context): Promise<Response
     } else if (cardRepayment) {
       suggestion = { type: null, category_id: null, description: null, notes: null };
     } else {
-      if (!workerConfig.url) return errorResponse('Email suggestion unavailable', 503);
       const token = accessToken ?? (await supabase.auth.getSession()).data.session?.access_token;
       if (!token) return errorResponse('Unauthorized', 401);
-      const suggestionResponse = await fetch(
-        `${workerConfig.url.replace(/\/$/u, '')}/forwarded-email/suggest`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ message: inboxFields.raw_text }),
-        },
-      );
-      if (!suggestionResponse.ok) {
-        const consentError = await forwardAiConsentError(suggestionResponse);
-        return consentError ?? errorResponse('Email suggestion unavailable', 503);
+      let suggestionResponse: Response | null = null;
+      let payload: unknown;
+      try {
+        if (workerConfig.url) {
+          suggestionResponse = await fetch(
+            `${workerConfig.url.replace(/\/$/u, '')}/forwarded-email/suggest`,
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+              body: JSON.stringify({ message: inboxFields.raw_text }),
+              signal: AbortSignal.timeout(50_000),
+            },
+          );
+          if (suggestionResponse.ok) payload = await suggestionResponse.json();
+        }
+      } catch {
+        // Source evidence remains reviewable during network or provider failures.
       }
-      suggestion = (await suggestionResponse.json()) as Record<string, unknown>;
+      if (suggestionResponse && !suggestionResponse.ok) {
+        const consentError = await forwardAiConsentError(suggestionResponse);
+        if (consentError) return consentError;
+        if ([401, 403, 428, 429].includes(suggestionResponse.status))
+          return errorResponse('Email suggestion unavailable', suggestionResponse.status);
+      }
+      if (
+        suggestionResponse?.ok &&
+        payload &&
+        typeof payload === 'object' &&
+        !Array.isArray(payload) &&
+        'type' in payload &&
+        (payload.type === null || payload.type === 'expense' || payload.type === 'income')
+      ) {
+        suggestion = payload as Record<string, unknown>;
+      } else {
+        aiUnavailable = true;
+        suggestion = {
+          type: parsed
+            ? 'expense'
+            : bankPreview?.kind === 'income'
+              ? 'income'
+              : bankPreview
+                ? 'expense'
+                : null,
+          category_id: null,
+          description: parsed ? preview.merchant : (bankPreview?.merchant ?? null),
+          notes: null,
+        };
+      }
     }
     const suggestedType = parsed
       ? 'expense'
@@ -422,6 +457,19 @@ export async function POST(request: Request, context: Context): Promise<Response
           ? suggestion.notes.trim() || null
           : null,
     };
+    if (aiUnavailable) {
+      // Do not cache degraded proposals: the next analysis must retry enrichment.
+      return Response.json(
+        {
+          ...analysis,
+          analysis_source: 'evidence',
+          ai_status: 'unavailable',
+          automation_fields: [],
+          history_fields: [],
+        },
+        { headers: privateHeaders },
+      );
+    }
     if (cached) {
       const { data: updated, error: updateError } = await supabase
         .from('forwarded_email_analyses')

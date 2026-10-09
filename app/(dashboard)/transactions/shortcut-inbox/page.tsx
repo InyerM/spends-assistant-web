@@ -492,7 +492,11 @@ export default function ShortcutInboxPage({
                       {formatDate(item.received_at)}
                     </time>
                   </div>
-                  <ForwardedEmailEvidence source={item.source} rawText={item.raw_text} />
+                  <ForwardedEmailEvidence
+                    source={item.source}
+                    rawText={item.raw_text}
+                    inboxId={item.id}
+                  />
                   {hasAttachments && (
                     <div className='border-border space-y-2 rounded-lg border p-3'>
                       <p className='text-muted-foreground text-sm'>{t('pdfReviewHint')}</p>

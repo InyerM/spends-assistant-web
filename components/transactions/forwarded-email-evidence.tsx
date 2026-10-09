@@ -6,15 +6,16 @@ import { Button } from '@/components/ui/button';
 import { decodeEmailEntities } from '@/lib/shortcut-inbox/email-text';
 import { detectEmailBank } from '@/lib/email-forwarding/detected-bank';
 import { Badge } from '@/components/ui/badge';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import Link from 'next/link';
+import { EmailSenderReview } from '@/components/transactions/email-sender-review';
 
 export function ForwardedEmailEvidence({
   source,
   rawText,
+  inboxId,
 }: {
   source: string;
   rawText: string;
+  inboxId?: string;
 }): React.ReactElement {
   const t = useTranslations('shortcutInbox');
   const [expanded, setExpanded] = useState(false);
@@ -50,25 +51,15 @@ export function ForwardedEmailEvidence({
   return (
     <div className='space-y-4'>
       <div className='bg-muted/50 flex flex-wrap items-center gap-2 rounded-lg px-3 py-2 text-xs'>
-        {bank && <Badge variant='secondary'>{t('bankDetected', { bank })}</Badge>}
-        <span className='min-w-0 font-medium break-all'>{match[1]}</span>
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button
-              variant='ghost'
-              size='sm'
-              className='text-muted-foreground h-auto px-2 py-1 text-xs'>
-              {t('senderUnverified')}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className='max-w-[calc(100vw-2rem)] space-y-3 text-sm' align='start'>
-            <p className='font-medium'>{t('reviewSender')}</p>
-            <p className='text-muted-foreground'>{t('bankDetectionHint')}</p>
-            <Button asChild variant='outline' size='sm'>
-              <Link href='/settings?tab=email-forwarding'>{t('reviewSenderSettings')}</Link>
-            </Button>
-          </PopoverContent>
-        </Popover>
+        {inboxId ? (
+          <EmailSenderReview inboxId={inboxId} sender={match[1]} detectedBank={bank} />
+        ) : (
+          <>
+            {bank && <Badge variant='secondary'>{t('bankDetected', { bank })}</Badge>}
+            <span className='text-muted-foreground'>{t('senderUnverified')}</span>
+            <span className='font-medium break-all'>{match[1]}</span>
+          </>
+        )}
       </div>
       {securityNotice ? (
         <p className='text-foreground text-sm leading-relaxed'>{t('securityNoticeOmitted')}</p>
