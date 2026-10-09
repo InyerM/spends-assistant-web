@@ -77,8 +77,18 @@ export function ShortcutCreateForm({
   const ownCardPayment = Boolean(
     paymentDestination && paymentSource && paymentDestination !== paymentSource,
   );
+  const analyzedEventAt = analysis?.bank_event_at;
+  const fallbackEventAt =
+    !base.eventTime &&
+    analyzedEventAt &&
+    /^\d{4}-\d{2}-\d{2}T(?:[01]\d|2[0-3]):[0-5]\d:00-05:00$/u.test(analyzedEventAt)
+      ? analyzedEventAt
+      : null;
   const proposedDraft = {
     ...base,
+    ...(fallbackEventAt
+      ? { date: fallbackEventAt.slice(0, 10), eventTime: fallbackEventAt.slice(11, 16) }
+      : {}),
     destinationAccountId: ownCardPayment ? paymentDestination : '',
     type: ownCardPayment ? ('transfer' as const) : (analysis?.suggested_type ?? base.type),
     description:
@@ -274,6 +284,14 @@ export function ShortcutCreateForm({
         categories={categoriesQuery.data ?? []}
         onChange={changeDraft}
         analysisStates={{
+          eventTime:
+            fieldDraft.eventTime === undefined && fieldDraft.date === undefined && !base.eventTime
+              ? analyzing
+                ? 'analyzing'
+                : fallbackEventAt
+                  ? 'suggested'
+                  : undefined
+              : undefined,
           accountId:
             selectedAccountId === null
               ? analyzing

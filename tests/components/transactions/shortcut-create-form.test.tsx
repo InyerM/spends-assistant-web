@@ -38,6 +38,58 @@ describe('ShortcutCreateForm', () => {
     vi.unstubAllGlobals();
   });
 
+  it('shows the AI time fallback while preserving a manual time edit', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockImplementation((url: string) => {
+        if (url === '/api/accounts' || url === '/api/categories')
+          return Promise.resolve(Response.json([]));
+        if (url === '/api/settings/user-settings')
+          return Promise.resolve(Response.json({ hour_format: '24h' }));
+        throw new Error(`Unexpected request: ${url}`);
+      }),
+    );
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const props = {
+      inboxId: 'item-1',
+      rawText: 'Pago QR de $15,800 el 02/10/2026 a las 16:31.',
+      receivedAt,
+      onCreated: vi.fn(),
+      onCancel: vi.fn(),
+    };
+    const analysis = {
+      status: 'needs_review' as const,
+      account_id: null,
+      category_id: null,
+      category_source: null,
+      suggested_type: 'expense' as const,
+      description: null,
+      notes: null,
+      bank_event_at: '2026-10-02T16:31:00-05:00',
+    };
+    const view = render(
+      <QueryClientProvider client={client}>
+        <ShortcutCreateForm {...props} analysis={analysis} />
+      </QueryClientProvider>,
+    );
+    const hours = await screen.findByDisplayValue('16');
+    expect(screen.getByDisplayValue('31')).toBeVisible();
+    expect(hours.closest('.ai-field')).toHaveAttribute('data-ai-state', 'suggested');
+    fireEvent.change(hours, { target: { value: '17' } });
+    fireEvent.blur(hours);
+    view.rerender(
+      <QueryClientProvider client={client}>
+        <ShortcutCreateForm
+          {...props}
+          analysis={{ ...analysis, bank_event_at: '2026-10-02T18:40:00-05:00' }}
+        />
+      </QueryClientProvider>,
+    );
+    expect(screen.getByDisplayValue('17')).toBeVisible();
+    expect(screen.getByDisplayValue('31')).toBeVisible();
+    expect(screen.getByDisplayValue('17').closest('.ai-field')).toBeNull();
+  });
+
   it('shows local evidence while AI runs, then applies suggestions without replacing manual edits', async () => {
     vi.stubGlobal(
       'fetch',

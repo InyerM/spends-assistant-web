@@ -145,8 +145,9 @@ export function ShortcutCreateFields({
           ariaLabel={t('createDate')}
         />
       </div>
-      <fieldset className='space-y-1'>
+      <fieldset className={fieldClass('eventTime')} data-ai-state={analysisStates.eventTime}>
         <legend>{t('createEventTime')}</legend>
+        {fieldStatus('eventTime')}
         <TimePicker
           value={draft.eventTime}
           onChange={(eventTime) => onChange({ eventTime, eventTimeConfirmed: false })}
