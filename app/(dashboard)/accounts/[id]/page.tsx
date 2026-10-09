@@ -139,6 +139,7 @@ export default function AccountDetailPage({
           <Button
             variant='outline'
             className='cursor-pointer'
+            aria-label={tCommon('edit')}
             onClick={(): void => setEditOpen(true)}>
             <Pencil className='h-4 w-4 sm:mr-2' />
             <span className='hidden sm:inline'>{tCommon('edit')}</span>
