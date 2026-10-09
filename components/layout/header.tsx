@@ -9,6 +9,7 @@ const routeToKey: Record<string, string> = {
   '/notifications': 'notifications',
   '/transactions': 'transactions',
   '/documents': 'documents',
+  '/inbox': 'emailInbox',
   '/accounts': 'accounts',
   '/investments': 'investments',
   '/loans': 'loans',
