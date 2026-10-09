@@ -60,7 +60,16 @@ export function inferForwardedAccount(
   preview: LuloNoticePreview | null,
   accounts: MatchableAccount[],
 ): string {
-  if (preview?.kind !== 'card_purchase' || !preview.cardLastFour) return '';
+  if (
+    !preview?.cardLastFour ||
+    !preview.merchant ||
+    !preview.amountDecimal ||
+    Number(preview.amountDecimal) <= 0 ||
+    !/^From:[ \t]*(?:[^<>\n]*<)?notificaciones@lulobank\.com>?[ \t]*$/iu.test(
+      preview.excerpts.sender ?? '',
+    )
+  )
+    return '';
   const cardLastFour = preview.cardLastFour;
   const matched = accounts.filter(
     (account) =>

@@ -246,6 +246,34 @@ export async function POST(request: Request, context: Context): Promise<Response
       ? ['categoryId', ...(ruleDescription ? ['description'] : []), ...(ruleNote ? ['notes'] : [])]
       : [];
 
+    const sourceEvidence = {
+      merchant: preview?.merchant ?? bankPreview?.merchant ?? null,
+      amount: preview?.amountDecimal
+        ? Number(preview.amountDecimal)
+        : bankPreview?.amountDecimal
+          ? Number(bankPreview.amountDecimal)
+          : null,
+      bank_event_at:
+        preview?.bankEventAt ??
+        (bankPreview?.date && bankPreview.time
+          ? `${bankPreview.date}T${bankPreview.time}:00-05:00`
+          : null),
+      card_last_four:
+        preview?.cardLastFour ??
+        bankPreview?.destinationLastFour ??
+        bankPreview?.sourceLastFour ??
+        null,
+    };
+    const evidencePatch = Object.fromEntries(
+      Object.entries(sourceEvidence).filter(([key, value]) => {
+        if (value === null) return false;
+        const previous = cachedFields?.[key];
+        return key === 'bank_event_at' && typeof previous === 'string' && typeof value === 'string'
+          ? Date.parse(previous) !== Date.parse(value)
+          : previous !== value;
+      }),
+    );
+
     if (cached?.analysis_version === 2) {
       const nextCategory =
         validRuleCategory ?? (cached.category_source === 'automation' ? null : cached.category_id);
@@ -257,6 +285,7 @@ export async function POST(request: Request, context: Context): Promise<Response
           ? null
           : cached.category_source;
       if (
+        Object.keys(evidencePatch).length === 0 &&
         (!ruleNote || cached.notes === ruleNote) &&
         (!ruleDescription || cached.description === ruleDescription) &&
         cached.account_id === accountId &&
@@ -283,6 +312,7 @@ export async function POST(request: Request, context: Context): Promise<Response
       const { data: updated, error: updateError } = await supabase
         .from('forwarded_email_analyses')
         .update({
+          ...evidencePatch,
           account_id: accountId,
           category_id: nextCategory,
           category_source: nextSource,
@@ -380,7 +410,7 @@ export async function POST(request: Request, context: Context): Promise<Response
                 ? 'expense'
                 : null,
           category_id: null,
-          description: parsed ? preview.merchant : (bankPreview?.merchant ?? null),
+          description: sourceEvidence.merchant,
           notes: null,
         };
       }
@@ -429,20 +459,7 @@ export async function POST(request: Request, context: Context): Promise<Response
       inbox_item_id: id,
       user_id: userId,
       status: parsed ? 'parsed' : 'needs_review',
-      merchant: parsed ? preview.merchant : (bankPreview?.merchant ?? null),
-      amount: parsed
-        ? Number(preview.amountDecimal)
-        : bankPreview?.amountDecimal
-          ? Number(bankPreview.amountDecimal)
-          : null,
-      bank_event_at: parsed
-        ? preview.bankEventAt
-        : bankPreview?.date && bankPreview.time
-          ? `${bankPreview.date}T${bankPreview.time}:00-05:00`
-          : null,
-      card_last_four: parsed
-        ? preview.cardLastFour
-        : (bankPreview?.destinationLastFour ?? bankPreview?.sourceLastFour ?? null),
+      ...sourceEvidence,
       account_id: accountId,
       category_id: categoryId,
       category_source: categorySource,
@@ -474,6 +491,8 @@ export async function POST(request: Request, context: Context): Promise<Response
       const { data: updated, error: updateError } = await supabase
         .from('forwarded_email_analyses')
         .update({
+          ...sourceEvidence,
+          status: analysis.status,
           analysis_version: 2,
           suggested_type: analysis.suggested_type,
           description: analysis.description,

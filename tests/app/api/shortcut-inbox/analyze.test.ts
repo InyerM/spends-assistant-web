@@ -186,6 +186,56 @@ describe('POST forwarded email analysis', () => {
     },
   );
 
+  it.each([true, false])(
+    'keeps individually parsed evidence when the notice has no original time (AI available: %s)',
+    async (available) => {
+      const db = fakeDb({
+        inbox: { ...inbox, raw_text: inbox.raw_text.replace('Hora 3:42 p.m.', '') },
+      });
+      getUserClient.mockResolvedValue({ userId: 'owner-a', accessToken: 'test-jwt', supabase: db });
+      if (!available)
+        vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('', { status: 503 })));
+      const response = await POST(request(), context);
+      expect(response.status).toBe(available ? 201 : 200);
+      expect(await response.json()).toMatchObject({
+        status: 'needs_review',
+        merchant: 'CEA PRACTICAR DEL EJE',
+        amount: 1550000,
+        card_last_four: '8456',
+        bank_event_at: null,
+        account_id: accountId,
+      });
+    },
+  );
+
+  it('repairs missing cached source fields without another AI call or financial posting', async () => {
+    const db = fakeDb({
+      cached: {
+        inbox_item_id: id,
+        user_id: 'owner-a',
+        analysis_version: 2,
+        account_id: accountId,
+        amount: null,
+        merchant: null,
+        bank_event_at: null,
+        card_last_four: null,
+      },
+    });
+    getUserClient.mockResolvedValue({ userId: 'owner-a', accessToken: 'test-jwt', supabase: db });
+    const response = await POST(request(), context);
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({
+      amount: 1550000,
+      card_last_four: '8456',
+      bank_event_at: '2026-10-06T15:42:00-05:00',
+    });
+    expect(fetch).not.toHaveBeenCalled();
+    expect(db.updates).toContainEqual(
+      expect.objectContaining({ amount: 1550000, card_last_four: '8456' }),
+    );
+    expect(db.calls.some(({ table }) => table === 'transactions')).toBe(false);
+  });
+
   it('persists a reviewed proposal once and replays it without another provider call', async () => {
     const db = fakeDb();
     getUserClient.mockResolvedValue({ userId: 'owner-a', accessToken: 'test-jwt', supabase: db });
@@ -261,7 +311,7 @@ describe('POST forwarded email analysis', () => {
     const response = await POST(request(), context);
     expect(response.status).toBe(200);
     expect(await response.json()).toMatchObject({ account_id: accountId });
-    expect(db.updates).toContainEqual({ account_id: accountId });
+    expect(db.updates).toContainEqual(expect.objectContaining({ account_id: accountId }));
     expect(fetch).not.toHaveBeenCalled();
   });
 
@@ -299,7 +349,7 @@ describe('POST forwarded email analysis', () => {
     const response = await POST(request(), context);
     expect(response.status).toBe(200);
     expect(await response.json()).toMatchObject({ account_id: accountId });
-    expect(db.updates).toContainEqual({ account_id: accountId });
+    expect(db.updates).toContainEqual(expect.objectContaining({ account_id: accountId }));
     expect(fetch).not.toHaveBeenCalled();
   });
 

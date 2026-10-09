@@ -59,3 +59,17 @@ to a UUID inbox analysis path with an Authorization header; the handler continue
 token, accepted terms, verified forwarding, and inbox ownership. Other inbox writes, invalid paths,
 GET requests, and missing headers keep browser authentication. The focused proxy, analysis, and
 mobile-auth tests and typecheck/lint gates run before that follow-up release.
+
+Additional source-evidence checks found that an incomplete Lulo notice lost valid amount and card
+fields when its original time was absent. The analysis now uses each independently validated field
+and repairs missing pending cached fields without another provider call. Account suggestions still
+require a recognized sender template, positive purchase evidence, and exactly one active matching
+COP credit card; unknown senders and ambiguous matches remain unassigned. No original timestamp is
+invented when the notice lacks one. The focused parser, account matching, API, review UI, and proxy
+suites passed 74 tests in five files.
+
+The production bearer-session integration check on October 9 returned HTTP 201 with successful AI
+usage, preserved synthetic amount, card suffix, original event instant, and matching owned account.
+No financial transactions were posted, and the temporary account was deleted. A separate read-only
+parser check confirmed that the original reported Hostinger notice has structured merchant, amount,
+time, and card evidence. Its private contents were not exported into the repo.

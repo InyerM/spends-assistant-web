@@ -24,6 +24,40 @@ const rawText = [
 const preview = previewLuloNotice('forwarded_email', rawText, receivedAt)!;
 
 describe('forwarded email creation draft', () => {
+  it('uses unique active card evidence despite a missing time and rejects unknown senders', () => {
+    const accounts = [
+      {
+        id: 'card',
+        name: 'Lulo card',
+        institution: 'Lulobank',
+        type: 'credit_card' as const,
+        last_four: '8456',
+        currency: 'COP',
+        is_active: true,
+        deleted_at: null,
+      },
+    ];
+    const partial = previewLuloNotice(
+      'forwarded_email',
+      rawText.replace('Hora 7:18 p.m.', ''),
+      receivedAt,
+    );
+    expect(inferForwardedAccount(partial, accounts)).toBe('card');
+    expect(
+      inferForwardedAccount(partial, [...accounts, { ...accounts[0], id: 'ambiguous-card' }]),
+    ).toBe('');
+    expect(
+      inferForwardedAccount(
+        previewLuloNotice(
+          'forwarded_email',
+          rawText.replace('notificaciones@lulobank.com', 'unknown@example.test'),
+          receivedAt,
+        ),
+        accounts,
+      ),
+    ).toBe('');
+  });
+
   it('keeps independent Lulo date, time, and amount evidence when card evidence is missing', () => {
     const incomplete = rawText.replace(
       'Origen tarjeta de crédito •8456',
