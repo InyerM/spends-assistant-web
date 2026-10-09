@@ -475,3 +475,30 @@ describe('applyAutomationRules', () => {
     expect(result.type).toBe('expense');
   });
 });
+
+describe('pending terms API guard', () => {
+  beforeEach(async () => {
+    const { createClient } = await import('@/lib/supabase/server');
+    vi.mocked(createClient).mockResolvedValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: { id: 'pending-owner', app_metadata: { anotto_terms_required: true } } },
+        }),
+      },
+    } as never);
+  });
+  it('rejects a private endpoint even with a deletion-path suffix in the query', async () => {
+    await expect(
+      getUserClient(
+        new Request('https://example.test/api/accounts?bypass=/api/settings/account/delete'),
+      ),
+    ).rejects.toThrow('Terms acceptance required');
+  });
+  it('allows actual account deletion with query parameters', async () => {
+    await expect(
+      getUserClient(
+        new Request('https://example.test/api/settings/account/delete?source=settings'),
+      ),
+    ).resolves.toMatchObject({ userId: 'pending-owner' });
+  });
+});

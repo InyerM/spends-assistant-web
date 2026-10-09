@@ -159,7 +159,7 @@
     "privacyAction": "Privacy policy",
     "termsAction": "Terms of use",
     "contactTitle": "Need more help?",
-    "contactDescription": "If a support email is configured, you can contact us. Do not include passwords, full account numbers, or unredacted statements.",
+    "contactDescription": "Email support@anotto.app. Avoid sending passwords, full account numbers or unredacted documents.",
     "contactAction": "Email support",
     "externalFaq": "Open external guide"
   },
@@ -198,7 +198,12 @@
     "must": "Must",
     "need": "Need",
     "want": "Want",
-    "viewAllCategories": "View all categories"
+    "viewAllCategories": "View all categories",
+    "spendingAnalysis": "Where your spending goes",
+    "budgetOverview": "Your budgets",
+    "budgetSpentOf": "{spent} of {limit} spent",
+    "budgetCoverage": "Some transactions are pending or excluded. Open your budgets to review the coverage of each limit.",
+    "viewBudgets": "View budgets"
   },
   "accountCorrections": {
     "backToTransactions": "Transactions",
@@ -325,7 +330,10 @@
     "confirmDistinct": "Create distinct payment",
     "countPage": "{count} messages · Page {page} of {totalPages}",
     "previousPage": "Previous page",
-    "nextPage": "Next page"
+    "nextPage": "Next page",
+    "searchPlaceholder": "Search sender, merchant or email text",
+    "searchAction": "Search",
+    "clearSearch": "Clear search"
   },
   "transactions": {
     "title": "Transactions",
@@ -860,7 +868,9 @@
     "accountOptions": "Account options",
     "aiUsageExplanation": "Text analysis, chat and document scans share the AI allowance. Each scan request counts once, even when it detects several movements. Pro has no request limit.",
     "usageUnavailable": "We could not load your plan and usage. Please try again.",
-    "retryUsage": "Try again"
+    "retryUsage": "Try again",
+    "deletionRetention": "Deleting your account removes active records and associated files. Operational backups or legally required records may remain temporarily.",
+    "deletionRetentionLink": "Read how we retain and delete your data."
   },
   "security": {
     "passwordProvider": "Password",
@@ -1116,8 +1126,22 @@
     "bulkReconcileRefreshError": "Links were saved, but the document list could not refresh. Reload to check their status."
   },
   "financialChat": {
+    "history": "Your conversations",
+    "historyDescription": "Questions and answers stay in your account until you delete them. Each question is analyzed independently.",
+    "historyLoading": "Loading conversations…",
+    "historyError": "We could not load your conversations.",
+    "retry": "Try again",
+    "historyEmpty": "You have no saved conversations yet.",
+    "savedAnswerNotice": "Saved answer based on the records available at that time. Later changes may not be reflected.",
+    "deleteChat": "Delete conversation",
+    "deleteChatDescription": "This question and answer will be permanently removed from your history. Your transactions and documents stay unchanged.",
+    "deleteError": "We could not delete the conversation. Try again.",
+    "cancel": "Cancel",
+    "newer": "More recent",
+    "older": "Older",
+    "scopeError": "Ask about personal finances, accounts or transactions. Instructions to override the assistant’s rules are not allowed.",
     "title": "Financial chat",
-    "description": "Ask about the recorded data for a month. Answers are read-only and this conversation is not saved.",
+    "description": "Ask about your finances and one month of records. Revisit saved answers or delete individual conversations.",
     "month": "Month",
     "question": "Your question",
     "acknowledgement": "I agree to send my question and a bounded snapshot of my transactions, current account balances and document metadata to external AI through OpenRouter. Document contents are excluded. I can revoke AI permission in Settings.",
@@ -1129,7 +1153,7 @@
     "truncated": "The snapshot is incomplete. This answer cannot establish full monthly totals.",
     "error": "The answer could not be verified or the service is unavailable. Check AI permissions and try again.",
     "quotaError": "Your monthly AI request limit has been reached.",
-    "clear": "Clear answer",
+    "clear": "Hide answer",
     "fields": {
       "date": "Date",
       "amount": "Amount",
@@ -1150,5 +1174,17 @@
       "document": "Document"
     },
     "insufficientContext": "There is not enough verified context to answer this question. Try asking about your transactions or accounts in the selected month."
+  },
+  "legalAcceptance": {
+    "title": "Before you begin",
+    "description": "Review and accept the Anotto terms to activate your account. Our privacy policy explains how we process and retain your information.",
+    "documents": "Legal documents",
+    "terms": "Terms and conditions",
+    "privacy": "Privacy policy",
+    "checkbox": "I accept the terms and conditions and confirm that I have read the privacy policy.",
+    "continue": "Accept and continue",
+    "saving": "Saving acceptance…",
+    "error": "We could not save your acceptance. Please try again.",
+    "signOut": "Sign out"
   }
 }

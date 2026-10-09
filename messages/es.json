@@ -159,7 +159,7 @@
     "privacyAction": "Política de privacidad",
     "termsAction": "Términos de uso",
     "contactTitle": "¿Necesitas más ayuda?",
-    "contactDescription": "Si hay un correo de soporte configurado, puedes escribirnos. No incluyas claves, números de cuenta completos ni extractos sin ocultar datos sensibles.",
+    "contactDescription": "Escríbenos a support@anotto.app. Evita enviar contraseñas, números de cuenta completos o documentos sin ocultar datos sensibles.",
     "contactAction": "Escribir a soporte",
     "externalFaq": "Abrir guía externa"
   },
@@ -198,7 +198,12 @@
     "must": "Obligatorio",
     "need": "Necesario",
     "want": "Deseo",
-    "viewAllCategories": "Ver todas las categorías"
+    "viewAllCategories": "Ver todas las categorías",
+    "spendingAnalysis": "Cómo se distribuyen tus gastos",
+    "budgetOverview": "Tus presupuestos",
+    "budgetSpentOf": "{spent} de {limit} gastados",
+    "budgetCoverage": "Hay movimientos pendientes o excluidos. Revisa el detalle para conocer la cobertura de cada presupuesto.",
+    "viewBudgets": "Ver presupuestos"
   },
   "accountCorrections": {
     "backToTransactions": "Transacciones",
@@ -325,7 +330,10 @@
     "confirmDistinct": "Crear pago diferente",
     "countPage": "{count} mensajes · Página {page} de {totalPages}",
     "previousPage": "Página anterior",
-    "nextPage": "Página siguiente"
+    "nextPage": "Página siguiente",
+    "searchPlaceholder": "Buscar remitente, comercio o texto del correo",
+    "searchAction": "Buscar",
+    "clearSearch": "Limpiar búsqueda"
   },
   "transactions": {
     "title": "Transacciones",
@@ -860,7 +868,9 @@
     "accountOptions": "Opciones de cuenta",
     "aiUsageExplanation": "Los análisis de texto, el chat y el escaneo de documentos comparten el cupo de IA. Cada solicitud de escaneo cuenta una vez, aunque detecte varios movimientos. Pro tiene acceso sin límite de solicitudes.",
     "usageUnavailable": "No pudimos consultar tu plan y uso. Inténtalo de nuevo.",
-    "retryUsage": "Volver a consultar"
+    "retryUsage": "Volver a consultar",
+    "deletionRetention": "Al eliminar la cuenta se retiran tus datos activos y archivos asociados. Algunas copias operativas o registros exigidos por ley pueden conservarse temporalmente.",
+    "deletionRetentionLink": "Consulta cómo conservamos y eliminamos los datos."
   },
   "security": {
     "passwordProvider": "Contraseña",
@@ -1113,8 +1123,22 @@
     "eligibilitySaveFailed": "No pudimos guardar tu confirmación. Inténtalo de nuevo."
   },
   "financialChat": {
+    "history": "Tus conversaciones",
+    "historyDescription": "Las preguntas y respuestas se guardan en tu cuenta hasta que las elimines. Cada pregunta se analiza por separado.",
+    "historyLoading": "Cargando conversaciones…",
+    "historyError": "No pudimos cargar tus conversaciones.",
+    "retry": "Reintentar",
+    "historyEmpty": "Todavía no tienes conversaciones guardadas.",
+    "savedAnswerNotice": "Respuesta guardada con los datos disponibles en ese momento. Puede no reflejar cambios posteriores.",
+    "deleteChat": "Eliminar conversación",
+    "deleteChatDescription": "Se eliminarán esta pregunta y su respuesta de tu historial. Tus transacciones y documentos no cambian. Esta acción no se puede deshacer.",
+    "deleteError": "No pudimos eliminar la conversación. Inténtalo de nuevo.",
+    "cancel": "Cancelar",
+    "newer": "Más recientes",
+    "older": "Anteriores",
+    "scopeError": "Pregunta sobre tus finanzas, cuentas o movimientos. No se permiten instrucciones para cambiar las reglas del asistente.",
     "title": "Chat financiero",
-    "description": "Pregunta por los registros de un mes. Las respuestas son de consulta y esta conversación no se guarda.",
+    "description": "Pregunta por tus finanzas y los registros de un mes. Puedes consultar tus respuestas guardadas o eliminar cada conversación.",
     "month": "Mes",
     "question": "Tu pregunta",
     "acknowledgement": "Acepto enviar mi pregunta y una muestra limitada de mis transacciones, saldos actuales y metadatos de documentos a IA externa mediante OpenRouter. Se excluye el contenido de los documentos. Puedo revocar el permiso de IA en Ajustes.",
@@ -1126,7 +1150,7 @@
     "truncated": "La muestra está incompleta. Esta respuesta no permite establecer totales mensuales completos.",
     "error": "No se pudo verificar la respuesta o el servicio no está disponible. Revisa los permisos de IA e inténtalo de nuevo.",
     "quotaError": "Alcanzaste el límite mensual de solicitudes de IA.",
-    "clear": "Borrar respuesta",
+    "clear": "Ocultar respuesta",
     "fields": {
       "date": "Fecha",
       "amount": "Importe",
@@ -1147,5 +1171,17 @@
       "document": "Documento"
     },
     "insufficientContext": "No tengo información verificada suficiente para responder esta pregunta. Prueba con tus movimientos o cuentas del mes seleccionado."
+  },
+  "legalAcceptance": {
+    "title": "Antes de empezar",
+    "description": "Revisa y acepta los términos de Anotto para activar tu cuenta. La política de privacidad explica cómo tratamos y conservamos tu información.",
+    "documents": "Documentos legales",
+    "terms": "Términos y condiciones",
+    "privacy": "Política de privacidad",
+    "checkbox": "Acepto los términos y condiciones y confirmo que he leído la política de privacidad.",
+    "continue": "Aceptar y continuar",
+    "saving": "Guardando aceptación…",
+    "error": "No pudimos guardar tu aceptación. Inténtalo de nuevo.",
+    "signOut": "Cerrar sesión"
   }
 }

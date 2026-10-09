@@ -6,15 +6,16 @@ import { ChevronDown, ExternalLink, FileText, LifeBuoy, Mail } from 'lucide-reac
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { HELP_TOPICS } from '@/lib/constants/help-center';
+import { resolveSupportLinks } from '@/lib/utils/support-links';
 import { useAppSettings } from '@/hooks/use-app-settings';
 
 export function HelpSection(): React.ReactElement {
   const t = useTranslations('helpCenter');
   const { data: appSettings } = useAppSettings();
 
-  const settings = appSettings as Record<string, unknown> | undefined;
-  const faqUrl = settings?.faq_url as string | undefined;
-  const supportEmail = settings?.support_email as string | undefined;
+  const { supportEmail, faqUrl } = resolveSupportLinks(
+    appSettings as Record<string, unknown> | undefined,
+  );
 
   return (
     <div className='space-y-5'>

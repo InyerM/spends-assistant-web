@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { useAuth } from '@/hooks/use-auth';
+import { TermsAcceptanceGate } from '@/components/guards/terms-acceptance-gate';
 import { Loader } from '@/components/shared/loader';
 
 interface AuthGuardProps {
@@ -33,5 +34,5 @@ export function AuthGuard({ children }: AuthGuardProps): React.ReactNode {
     return null;
   }
 
-  return <>{children}</>;
+  return <TermsAcceptanceGate>{children}</TermsAcceptanceGate>;
 }

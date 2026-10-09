@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { startOfMonth, endOfMonth } from 'date-fns';
 import { BalanceOverview } from '@/components/dashboard/balance-overview';
+import { BudgetOverview } from '@/components/dashboard/budget-overview';
 import { SummaryCards } from '@/components/dashboard/summary-cards';
 import { SpendingByCategory } from '@/components/dashboard/spending-by-category';
 import { SpendingNatureCards } from '@/components/dashboard/spending-nature-cards';
@@ -38,6 +39,8 @@ export default function DashboardPage(): React.ReactElement {
   });
 
   const transactions = txResult?.data ?? [];
+  const budgetMonth =
+    dateFrom.slice(0, 7) === dateTo.slice(0, 7) ? `${dateFrom.slice(0, 7)}-01` : null;
 
   const handlePeriodChange = (newFrom: string, newTo: string): void => {
     setDateFrom(newFrom);
@@ -63,19 +66,23 @@ export default function DashboardPage(): React.ReactElement {
         />
       </section>
 
-      <div className='grid gap-4 sm:gap-6 xl:grid-cols-3'>
-        <BalanceTrendChart
-          className='xl:col-span-2'
-          transactions={transactions}
-          dateFrom={dateFrom}
-          dateTo={dateTo}
-        />
-        <SpendingByCategory transactions={transactions} isLoading={txLoading} />
-      </div>
-
-      <div className='grid gap-4 sm:gap-6 lg:grid-cols-2'>
+      <section aria-label={t('spendingAnalysis')} className='space-y-4 sm:space-y-6'>
+        <h2 className='text-muted-foreground text-sm font-medium'>{t('spendingAnalysis')}</h2>
+        <div className='grid items-start gap-4 sm:gap-6 xl:grid-cols-3'>
+          <BalanceTrendChart
+            className='xl:col-span-2'
+            transactions={transactions}
+            dateFrom={dateFrom}
+            dateTo={dateTo}
+          />
+          <SpendingByCategory transactions={transactions} isLoading={txLoading} />
+        </div>
         <SpendingNatureCards transactions={transactions} />
+      </section>
+
+      <div className='grid items-start gap-4 sm:gap-6 lg:grid-cols-[repeat(auto-fit,minmax(min(100%,24rem),1fr))]'>
         <RecentTransactions />
+        {budgetMonth && <BudgetOverview month={budgetMonth} />}
       </div>
 
       <UsageCard />

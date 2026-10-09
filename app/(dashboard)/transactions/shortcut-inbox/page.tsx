@@ -1,6 +1,8 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useState } from 'react';
+import { useShortcutInbox } from '@/lib/api/queries/shortcut-inbox.queries';
+import { SearchInput } from '@/components/shared/search-input';
 import { ArrowLeft, ChevronLeft, ChevronRight, Download, Inbox } from 'lucide-react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
@@ -24,21 +26,7 @@ import {
   type ForwardedEmailAnalysis,
 } from '@/lib/api/mutations/shortcut-inbox.mutations';
 
-interface InboxItem {
-  id: string;
-  source: string;
-  external_id: string | null;
-  received_at: string;
-  raw_text: string;
-  status: 'pending' | 'non_transaction' | 'dismissed' | 'matched' | 'created';
-  created_at: string;
-  match?: { decision_id: string; transaction_id: string };
-}
-
-interface InboxList {
-  data: InboxItem[];
-  count: number;
-}
+import type { InboxItem } from '@/types/shortcut-inbox';
 
 interface Candidate {
   id: string;
@@ -131,11 +119,14 @@ export default function ShortcutInboxPage({
   source?: 'forwarded_email';
 }): React.ReactElement {
   const t = useTranslations('shortcutInbox');
-  const [items, setItems] = useState<InboxItem[]>([]);
-  const [count, setCount] = useState(0);
   const [page, setPage] = useState(1);
   const [filter, setFilter] = useState('pending');
-  const [loading, setLoading] = useState(true);
+  const [searchText, setSearchText] = useState('');
+  const [search, setSearch] = useState('');
+  const inbox = useShortcutInbox({ page, status: filter, source, search });
+  const items = inbox.data?.data ?? [];
+  const count = inbox.data?.count ?? 0;
+  const loading = inbox.isFetching;
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [consentRequired, setConsentRequired] = useState<AiConsentScope | null>(null);
@@ -180,29 +171,6 @@ export default function ShortcutInboxPage({
     setCreateInboxId(item.id);
   };
 
-  const load = useCallback(async (): Promise<void> => {
-    setLoading(true);
-    try {
-      const response = await fetch(
-        `/api/shortcut-inbox?page=${page}&limit=${PAGE_SIZE}&status=${filter}${source ? `&source=${source}` : ''}`,
-        { cache: 'no-store' },
-      );
-      if (!response.ok) throw new Error('Could not load inbox');
-      const result = (await response.json()) as InboxList;
-      setItems(result.data);
-      setCount(result.count);
-      setError(null);
-    } catch {
-      setError(t('loadFailed'));
-    } finally {
-      setLoading(false);
-    }
-  }, [filter, page, source, t]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
-
   const review = async (id: string, status: InboxItem['status']): Promise<void> => {
     setBusyId(id);
     try {
@@ -212,7 +180,7 @@ export default function ShortcutInboxPage({
         body: JSON.stringify({ status }),
       });
       if (!response.ok) throw new Error('Review failed');
-      await load();
+      await inbox.refetch();
     } catch {
       setError(t('saveFailed'));
     } finally {
@@ -309,6 +277,30 @@ export default function ShortcutInboxPage({
         )}
       </div>
 
+      <form
+        className='flex flex-wrap items-center gap-3'
+        onSubmit={(event): void => {
+          event.preventDefault();
+          setPage(1);
+          setSearch(searchText.trim());
+        }}>
+        <SearchInput
+          value={searchText}
+          onChange={(value): void => {
+            setSearchText(value);
+            if (!value) {
+              setSearch('');
+              setPage(1);
+            }
+          }}
+          placeholder={t('searchPlaceholder')}
+          clearLabel={t('clearSearch')}
+          className='min-w-0 flex-1'
+        />
+        <Button type='submit' variant='outline'>
+          {t('searchAction')}
+        </Button>
+      </form>
       <div className='border-border flex flex-wrap items-center justify-between gap-3 border-b pb-5'>
         <label className='text-sm font-medium'>{t('statusFilter')}</label>
         <Select
@@ -330,9 +322,9 @@ export default function ShortcutInboxPage({
         </Select>
       </div>
 
-      {error && (
+      {(error || inbox.isError) && (
         <p role='alert' className='text-destructive text-sm'>
-          {error}
+          {error ?? t('loadFailed')}
         </p>
       )}
       {consentRequired && <AiConsentNotice scope={consentRequired} />}

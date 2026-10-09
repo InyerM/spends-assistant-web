@@ -14,7 +14,8 @@ import {
   Wallet,
   Tags,
   Zap,
-  Menu,
+  PanelLeftClose,
+  PanelLeftOpen,
   LogOut,
   Settings,
   Files,
@@ -157,23 +158,28 @@ export function Sidebar({ className, onClose }: SidebarProps): React.ReactElemen
         isCollapsed ? 'w-16' : 'w-66',
         className,
       )}>
-      {!onClose && (
-        <Button
-          variant='outline'
-          size='icon-sm'
-          onClick={toggleCollapsed}
-          aria-label={t(isCollapsed ? 'expandSidebar' : 'collapseSidebar')}
-          aria-expanded={!isCollapsed}
-          className='bg-sidebar-bg hover:bg-card-overlay absolute top-11 -right-4 z-50 cursor-pointer rounded-lg shadow-lg'>
-          <Menu className='text-muted-foreground h-4 w-4' />
-        </Button>
-      )}
-
-      <div className='border-border flex h-16 items-center border-b px-4'>
-        <div className={cn('flex items-center gap-3', isCollapsed && 'w-full justify-center')}>
-          <AnottoWordmark compact={isCollapsed} animated />
-        </div>
-      </div>
+      <header
+        className={cn(
+          'border-border flex shrink-0 items-center justify-between gap-2 border-b px-3',
+          isCollapsed ? 'flex-col py-3' : 'h-16',
+        )}>
+        <AnottoWordmark compact={isCollapsed} animated />
+        {!onClose && (
+          <Button
+            variant='ghost'
+            size='icon'
+            onClick={toggleCollapsed}
+            aria-label={t(isCollapsed ? 'expandSidebar' : 'collapseSidebar')}
+            aria-expanded={!isCollapsed}
+            className='text-muted-foreground hover:bg-card-overlay hover:text-foreground h-11 w-11 shrink-0 rounded-xl'>
+            {isCollapsed ? (
+              <PanelLeftOpen className='h-5 w-5' aria-hidden='true' />
+            ) : (
+              <PanelLeftClose className='h-5 w-5' aria-hidden='true' />
+            )}
+          </Button>
+        )}
+      </header>
 
       <nav
         aria-label={t('primaryNavigation')}

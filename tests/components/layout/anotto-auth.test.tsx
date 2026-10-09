@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { NextIntlClientProvider } from 'next-intl';
 import LoginPage from '@/app/(auth)/login/page';
@@ -16,7 +16,20 @@ vi.mock('@/hooks/use-auth', () => ({
   }),
 }));
 
-afterEach(cleanup);
+beforeEach(() => {
+  vi.stubGlobal(
+    'ResizeObserver',
+    class {
+      observe(): void {}
+      unobserve(): void {}
+      disconnect(): void {}
+    },
+  );
+});
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+});
 
 describe('localized Anotto authentication', () => {
   it.each([LoginPage, RegisterPage])(
@@ -53,6 +66,7 @@ describe('localized Anotto authentication', () => {
         target: { value: 'person@example.com' },
       });
       fireEvent.change(screen.getByLabelText('Contraseña'), { target: { value: 'abc' } });
+      if (Page === RegisterPage) fireEvent.click(screen.getByRole('checkbox'));
       fireEvent.click(
         screen.getByRole('button', {
           name: Page === LoginPage ? 'Iniciar sesión' : 'Crear cuenta',
@@ -78,6 +92,7 @@ describe('localized Anotto authentication', () => {
     fireEvent.change(screen.getByLabelText('Confirmar contraseña'), {
       target: { value: 'different' },
     });
+    fireEvent.click(screen.getByRole('checkbox'));
     fireEvent.click(screen.getByRole('button', { name: 'Crear cuenta' }));
     const message = await screen.findByText(es.auth.passwordMismatch);
     const password = screen.getByLabelText('Confirmar contraseña');

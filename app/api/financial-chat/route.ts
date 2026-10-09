@@ -35,7 +35,7 @@ export async function POST(request: Request): Promise<Response> {
       cache: 'no-store',
     });
     if (!response.ok) {
-      const status = [400, 401, 428, 429].includes(response.status) ? response.status : 503;
+      const status = [400, 401, 422, 428, 429].includes(response.status) ? response.status : 503;
       return Response.json({ error: 'Financial chat unavailable' }, { status, headers });
     }
     return Response.json(await response.json(), { headers });

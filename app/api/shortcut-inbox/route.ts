@@ -72,6 +72,8 @@ export async function GET(request: NextRequest): Promise<Response> {
     const { supabase, userId } = await getUserClient(request);
     const params = new URL(request.url).searchParams;
     const source = params.get('source');
+    const search = (params.get('q') ?? '').trim();
+    if (search.length > 200) return errorResponse('Search text too long', 400);
     if (source === 'forwarded_email') {
       const { data: route, error: routeError } = await supabase
         .from('email_forwarding_routes')
@@ -104,6 +106,7 @@ export async function GET(request: NextRequest): Promise<Response> {
     ) {
       query = query.eq('status', status);
     }
+    if (search) query = query.ilike('raw_text', `%${search.replace(/[\\%_]/gu, '\\$&')}%`);
     const { data, count, error } = await query
       .order('created_at', { ascending: false })
       .range(from, from + limit - 1);

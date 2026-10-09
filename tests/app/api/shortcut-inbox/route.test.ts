@@ -385,4 +385,38 @@ describe('/api/shortcut-inbox', () => {
     expect(decisionEq).toHaveBeenCalledWith('user_id', 'owner-a');
     expect(decisionIn).toHaveBeenCalledWith('inbox_item_id', ['matched-1']);
   });
+  it('searches all owner messages before pagination using a literal pattern', async () => {
+    const query = {
+      eq: vi.fn().mockReturnThis(),
+      neq: vi.fn().mockReturnThis(),
+      ilike: vi.fn().mockReturnThis(),
+      order: vi.fn().mockReturnThis(),
+      range: vi.fn().mockResolvedValue({ data: [], count: 0, error: null }),
+    };
+    getUserClient.mockResolvedValue({
+      supabase: { from: () => ({ select: () => query }) },
+      userId: 'owner-a',
+    });
+    const response = await GET(
+      new Request('https://example.test/api/shortcut-inbox?q=100%25_sale') as never,
+    );
+    expect(response.status).toBe(200);
+    expect(query.eq).toHaveBeenCalledWith('user_id', 'owner-a');
+    expect(query.ilike).toHaveBeenCalledWith('raw_text', '%100\\%\\_sale%');
+    expect(query.ilike.mock.invocationCallOrder[0]).toBeLessThan(
+      query.range.mock.invocationCallOrder[0],
+    );
+  });
+
+  it('rejects oversized search text', async () => {
+    const db = fakeDatabase();
+    getUserClient.mockResolvedValue({ supabase: db.supabase, userId: 'owner-a' });
+    expect(
+      (
+        await GET(
+          new Request('https://example.test/api/shortcut-inbox?q=' + 'a'.repeat(201)) as never,
+        )
+      ).status,
+    ).toBe(400);
+  });
 });

@@ -9,6 +9,7 @@ interface SearchInputProps {
   onChange: (value: string) => void;
   placeholder?: string;
   className?: string;
+  clearLabel?: string;
 }
 
 export function SearchInput({
@@ -16,11 +17,13 @@ export function SearchInput({
   onChange,
   placeholder,
   className,
+  clearLabel = 'Clear search',
 }: SearchInputProps): React.ReactElement {
   return (
     <div className={`relative ${className ?? ''}`}>
       <Search className='text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2' />
       <Input
+        aria-label={placeholder}
         placeholder={placeholder}
         value={value}
         onChange={(e): void => onChange(e.target.value)}
@@ -29,6 +32,7 @@ export function SearchInput({
       {value ? (
         <Button
           type='button'
+          aria-label={clearLabel}
           variant='ghost'
           size='icon-xs'
           onClick={(): void => onChange('')}

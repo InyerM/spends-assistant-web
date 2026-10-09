@@ -19,6 +19,8 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
+import { Checkbox } from '@/components/ui/checkbox';
+import { TERMS_URL, PRIVACY_URL } from '@/lib/auth/legal-acceptance';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/hooks/use-auth';
@@ -52,6 +54,8 @@ interface FormValues {
 
 export default function RegisterPage(): React.ReactElement {
   const a = useTranslations('auth');
+  const legal = useTranslations('legalAcceptance');
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
   const formSchema = z
     .object({
       email: z.email({ message: a('invalidEmail') }),
@@ -82,6 +86,7 @@ export default function RegisterPage(): React.ReactElement {
 
   async function onSubmit(values: FormValues): Promise<void> {
     setError(null);
+    if (!acceptedTerms) return;
     try {
       await signUp(values.email, values.password);
       setSentEmail(values.email);
@@ -243,10 +248,35 @@ export default function RegisterPage(): React.ReactElement {
                 )}
               />
 
+              <div className='space-y-3 text-sm'>
+                <div className='flex flex-wrap gap-4'>
+                  <a
+                    href={TERMS_URL}
+                    target='_blank'
+                    rel='noreferrer'
+                    className='text-brand underline'>
+                    {legal('terms')}
+                  </a>
+                  <a
+                    href={PRIVACY_URL}
+                    target='_blank'
+                    rel='noreferrer'
+                    className='text-brand underline'>
+                    {legal('privacy')}
+                  </a>
+                </div>
+                <label className='flex min-h-11 cursor-pointer items-start gap-3'>
+                  <Checkbox
+                    checked={acceptedTerms}
+                    onCheckedChange={(value): void => setAcceptedTerms(value === true)}
+                  />
+                  <span>{legal('checkbox')}</span>
+                </label>
+              </div>
               <Button
                 type='submit'
                 className='h-12 w-full cursor-pointer text-base'
-                disabled={isLoading}>
+                disabled={isLoading || !acceptedTerms}>
                 {isLoading ? a('creatingAccount') : a('signUp')}
               </Button>
 

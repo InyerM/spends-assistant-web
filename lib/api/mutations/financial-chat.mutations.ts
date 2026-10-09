@@ -1,4 +1,4 @@
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 export interface FinancialChatRequest {
   question: string;
@@ -31,5 +31,11 @@ export async function askFinancialChat(body: FinancialChatRequest): Promise<Fina
 export function useFinancialChat(): ReturnType<
   typeof useMutation<FinancialChatResponse, Error, FinancialChatRequest>
 > {
-  return useMutation({ mutationFn: askFinancialChat, retry: false, gcTime: 0 });
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: askFinancialChat,
+    retry: false,
+    gcTime: 0,
+    onSuccess: () => client.invalidateQueries({ queryKey: ['financial-chat-history'] }),
+  });
 }

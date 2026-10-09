@@ -48,7 +48,14 @@ describe('help center', () => {
       'href',
       'https://anotto.app/terms/',
     );
-    expect(screen.queryByRole('link', { name: 'Escribir a soporte' })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Escribir a soporte' })).toHaveAttribute(
+      'href',
+      'mailto:support@anotto.app',
+    );
+    expect(screen.getByRole('link', { name: 'Abrir guía externa' })).toHaveAttribute(
+      'href',
+      'https://anotto.app/#faq',
+    );
   });
 
   it('shows only a configured support address', () => {
@@ -64,4 +71,23 @@ describe('help center', () => {
       'mailto:verified@example.com',
     );
   });
+});
+
+it('replaces obsolete seeded links with the published Anotto destinations', () => {
+  appSettings.mockReturnValue({
+    data: { support_email: 'support@spendsapp.com', faq_url: 'https://spendsapp.com/faq' },
+  });
+  render(
+    <NextIntlClientProvider locale='es' messages={es}>
+      <HelpSection />
+    </NextIntlClientProvider>,
+  );
+  expect(screen.getByRole('link', { name: 'Escribir a soporte' })).toHaveAttribute(
+    'href',
+    'mailto:support@anotto.app',
+  );
+  expect(screen.getByRole('link', { name: 'Abrir guía externa' })).toHaveAttribute(
+    'href',
+    'https://anotto.app/#faq',
+  );
 });

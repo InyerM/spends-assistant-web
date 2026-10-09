@@ -110,7 +110,11 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
   }
 
   if (user && needsEligibilityAttestation(user) && pathname !== '/auth/callback') {
-    if (pathname !== '/eligibility' && pathname !== '/api/settings/account/delete') {
+    if (
+      pathname !== '/eligibility' &&
+      pathname !== '/api/settings/account/delete' &&
+      pathname !== '/api/legal/acceptance'
+    ) {
       if (pathname.startsWith('/api/')) {
         return NextResponse.json({ error: 'Eligibility confirmation required' }, { status: 403 });
       }

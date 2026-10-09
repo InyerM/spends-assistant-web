@@ -2,6 +2,7 @@ import { createClient, createAdminClient } from '@/lib/supabase/server';
 import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { AutomationRule, AutomationRuleConditions, AutomationRuleActions } from '@/types';
+import { needsTermsAcceptance } from '@/lib/auth/legal-acceptance';
 import { env } from '@/lib/env';
 
 export class AuthError extends Error {
@@ -32,6 +33,11 @@ export async function getUserClient(
       error,
     } = await supabase.auth.getUser(accessToken);
     if (error || !user) throw new AuthError();
+    if (
+      needsTermsAcceptance(user) &&
+      (!request || new URL(request.url).pathname !== '/api/settings/account/delete')
+    )
+      throw new AuthError('Terms acceptance required');
     return { supabase, userId: user.id, accessToken };
   }
   const supabase = await createClient();
@@ -39,6 +45,11 @@ export async function getUserClient(
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) throw new AuthError();
+  if (
+    needsTermsAcceptance(user) &&
+    (!request || new URL(request.url).pathname !== '/api/settings/account/delete')
+  )
+    throw new AuthError('Terms acceptance required');
   return { supabase, userId: user.id };
 }
 

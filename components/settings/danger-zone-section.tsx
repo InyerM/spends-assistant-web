@@ -8,6 +8,7 @@ import { AlertTriangle, Mail } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ConfirmDeleteDialog } from '@/components/shared/confirm-delete-dialog';
+import { resolveSupportLinks } from '@/lib/utils/support-links';
 import { useAppSettings } from '@/hooks/use-app-settings';
 import { useProfile } from '@/hooks/use-profile';
 import { useDeleteUserAccount } from '@/lib/api/mutations/account-deletion.mutations';
@@ -21,8 +22,7 @@ export function DangerZoneSection(): React.ReactElement {
   const deletion = useDeleteUserAccount();
   const [confirmOpen, setConfirmOpen] = useState(false);
 
-  const settings = appSettings as Record<string, unknown> | undefined;
-  const supportEmail = settings?.support_email as string | undefined;
+  const { supportEmail } = resolveSupportLinks(appSettings as Record<string, unknown> | undefined);
 
   return (
     <Card className='border-destructive/50'>
@@ -37,20 +37,33 @@ export function DangerZoneSection(): React.ReactElement {
           <p className='text-sm font-medium'>{t('deleteAccount')}</p>
           <p className='text-muted-foreground text-sm'>{t('deleteAccountDescription')}</p>
         </div>
-        <Button
-          variant='destructive'
-          disabled={!profile || deletion.isPending}
-          onClick={(): void => setConfirmOpen(true)}>
-          {t('deleteAccountButton')}
-        </Button>
-        {supportEmail && (
-          <Button variant='outline' asChild>
-            <a href={`mailto:${supportEmail}`}>
-              <Mail className='mr-2 h-4 w-4' />
-              {t('contactSupport')}
-            </a>
+        <p className='text-muted-foreground text-sm leading-6'>
+          {t('deletionRetention')}{' '}
+          <a
+            className='text-foreground underline underline-offset-4'
+            href='https://anotto.app/privacy/#conservacion'
+            target='_blank'
+            rel='noopener noreferrer'>
+            {t('deletionRetentionLink')}
+          </a>
+        </p>
+        <div className='flex flex-wrap items-center gap-3'>
+          <Button
+            variant='destructive'
+            className='min-h-11'
+            disabled={!profile || deletion.isPending}
+            onClick={(): void => setConfirmOpen(true)}>
+            {t('deleteAccountButton')}
           </Button>
-        )}
+          {supportEmail && (
+            <Button variant='outline' className='min-h-11' asChild>
+              <a href={`mailto:${supportEmail}`}>
+                <Mail className='mr-2 h-4 w-4' />
+                {t('contactSupport')}
+              </a>
+            </Button>
+          )}
+        </div>
         <ConfirmDeleteDialog
           open={confirmOpen}
           onOpenChange={setConfirmOpen}

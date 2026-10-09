@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
   mutate: vi.fn(),
   response: undefined as FinancialChatResponse | undefined,
 }));
+vi.mock('@/components/chat/chat-history', () => ({ ChatHistory: () => <div>Saved history</div> }));
 vi.mock('next-intl', () => ({
   useTranslations: () => (key: string) => key,
   useLocale: () => 'en',

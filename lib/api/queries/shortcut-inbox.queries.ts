@@ -1,0 +1,35 @@
+import { useQuery } from '@tanstack/react-query';
+import { useAuthStore } from '@/store/auth-store';
+import type { InboxList } from '@/types/shortcut-inbox';
+
+interface InboxFilters {
+  page: number;
+  status: string;
+  source?: 'forwarded_email';
+  search: string;
+}
+
+export async function fetchShortcutInbox(
+  filters: InboxFilters,
+  signal?: AbortSignal,
+): Promise<InboxList> {
+  const params = new URLSearchParams({
+    page: String(filters.page),
+    limit: '20',
+    status: filters.status,
+  });
+  if (filters.source) params.set('source', filters.source);
+  if (filters.search) params.set('q', filters.search);
+  const response = await fetch(`/api/shortcut-inbox?${params}`, { cache: 'no-store', signal });
+  if (!response.ok) throw new Error('Could not load inbox');
+  return response.json() as Promise<InboxList>;
+}
+
+export function useShortcutInbox(filters: InboxFilters): ReturnType<typeof useQuery<InboxList>> {
+  const userId = useAuthStore((state) => state.supabaseUser?.id);
+  return useQuery({
+    queryKey: ['shortcut-inbox', userId ?? null, filters],
+    queryFn: ({ signal }) => fetchShortcutInbox(filters, signal),
+    staleTime: 0,
+  });
+}

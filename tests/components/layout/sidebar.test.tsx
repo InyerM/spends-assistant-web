@@ -13,9 +13,9 @@ vi.mock('@/hooks/use-auth', () => ({
 vi.mock('@/lib/api/queries/email-forwarding.queries', () => ({
   useEmailForwardingRoute: () => ({ data: { status: 'active', user_confirmed_at: 'today' } }),
 }));
+const uiState = vi.hoisted(() => ({ sidebarCollapsed: false, toggleSidebarCollapsed: vi.fn() }));
 vi.mock('@/store/ui-store', () => ({
-  useUiStore: (selector: (state: object) => unknown) =>
-    selector({ sidebarCollapsed: false, toggleSidebarCollapsed: vi.fn() }),
+  useUiStore: (selector: (state: object) => unknown) => selector(uiState),
 }));
 const subscription = vi.hoisted(() => ({ plan: 'free' }));
 vi.mock('@/hooks/use-subscription', () => ({
@@ -29,6 +29,7 @@ describe('Sidebar navigation', () => {
   afterEach(() => {
     cleanup();
     subscription.plan = 'free';
+    uiState.sidebarCollapsed = false;
   });
   it('keeps dashboard and transactions visible while grouping the rest', () => {
     render(<Sidebar />);
@@ -47,6 +48,29 @@ describe('Sidebar navigation', () => {
       'false',
     );
     expect(screen.queryByRole('button', { name: 'accounts' })).not.toBeInTheDocument();
+  });
+
+  it('keeps the collapse control inside the brand header with a full touch target', () => {
+    render(<Sidebar />);
+    const control = screen.getByRole('button', { name: 'collapseSidebar' });
+    expect(control.closest('header')).not.toBeNull();
+    expect(control).toHaveClass('h-11', 'w-11');
+    expect(control).not.toHaveClass('absolute');
+  });
+
+  it('keeps the expand control visible when collapsed', () => {
+    uiState.sidebarCollapsed = true;
+    render(<Sidebar />);
+    const control = screen.getByRole('button', { name: 'expandSidebar' });
+    expect(control).toHaveAttribute('aria-expanded', 'false');
+    expect(control.closest('header')).not.toBeNull();
+    fireEvent.click(control);
+    expect(uiState.toggleSidebarCollapsed).toHaveBeenCalled();
+  });
+
+  it('uses the mobile drawer close flow without another collapse control', () => {
+    render(<Sidebar onClose={vi.fn()} />);
+    expect(screen.queryByRole('button', { name: 'collapseSidebar' })).not.toBeInTheDocument();
   });
 
   it('does not present a Free quota as a limit for Pro', () => {

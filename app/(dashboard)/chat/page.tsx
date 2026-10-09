@@ -1,4 +1,5 @@
 'use client';
+import { ChatHistory } from '@/components/chat/chat-history';
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
@@ -78,7 +79,13 @@ export default function ChatPage(): React.ReactElement {
       </form>
       {chat.isError ? (
         <p role='alert' className='text-destructive text-sm'>
-          {t(chat.error.message === '429' ? 'quotaError' : 'error')}
+          {t(
+            chat.error.message === '429'
+              ? 'quotaError'
+              : chat.error.message === '422'
+                ? 'scopeError'
+                : 'error',
+          )}
         </p>
       ) : null}
       {chat.data ? (
@@ -129,6 +136,7 @@ export default function ChatPage(): React.ReactElement {
           </Button>
         </section>
       ) : null}
+      <ChatHistory />
     </div>
   );
 }
