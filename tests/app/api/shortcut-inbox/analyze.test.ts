@@ -87,6 +87,21 @@ function fakeDb(
           return query;
         },
         update: (value: Record<string, unknown>) => {
+          // Migration 20261006000030 permits only review annotations, not captured facts.
+          const editable = new Set([
+            'analysis_version',
+            'suggested_type',
+            'description',
+            'notes',
+            'account_id',
+            'category_id',
+            'category_source',
+          ]);
+          if (
+            table === 'forwarded_email_analyses' &&
+            Object.keys(value).some((field) => !editable.has(field))
+          )
+            throw new Error('Stored source evidence is immutable');
           updates.push(value);
           rows.forwarded_email_analyses = {
             ...(rows.forwarded_email_analyses as object),
@@ -208,7 +223,7 @@ describe('POST forwarded email analysis', () => {
     },
   );
 
-  it('repairs missing cached source fields without another AI call or financial posting', async () => {
+  it('derives missing cached source fields without another AI call or mutating stored evidence', async () => {
     const db = fakeDb({
       cached: {
         inbox_item_id: id,
@@ -230,8 +245,8 @@ describe('POST forwarded email analysis', () => {
       bank_event_at: '2026-10-06T15:42:00-05:00',
     });
     expect(fetch).not.toHaveBeenCalled();
-    expect(db.updates).toContainEqual(
-      expect.objectContaining({ amount: 1550000, card_last_four: '8456' }),
+    expect(db.updates.every((patch) => !('amount' in patch) && !('card_last_four' in patch))).toBe(
+      true,
     );
     expect(db.calls.some(({ table }) => table === 'transactions')).toBe(false);
   });

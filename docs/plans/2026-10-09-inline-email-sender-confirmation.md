@@ -73,3 +73,10 @@ usage, preserved synthetic amount, card suffix, original event instant, and matc
 No financial transactions were posted, and the temporary account was deleted. A separate read-only
 parser check confirmed that the original reported Hostinger notice has structured merchant, amount,
 time, and card evidence. Its private contents were not exported into the repo.
+
+The live cached-proposal check exposed column restrictions on stored source evidence. Pending review
+responses derive their missing source fields directly from the immutable captured message; only
+existing permitted account/category/copy annotations are updated in the stored snapshot. No extra
+SQL write permissions were granted, and stored capture facts and audited review states remain
+unchanged. The cached-response regression verifies that amount and card evidence are returned
+without being included in database update patches.

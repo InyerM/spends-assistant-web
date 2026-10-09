@@ -285,7 +285,6 @@ export async function POST(request: Request, context: Context): Promise<Response
           ? null
           : cached.category_source;
       if (
-        Object.keys(evidencePatch).length === 0 &&
         (!ruleNote || cached.notes === ruleNote) &&
         (!ruleDescription || cached.description === ruleDescription) &&
         cached.account_id === accountId &&
@@ -295,6 +294,7 @@ export async function POST(request: Request, context: Context): Promise<Response
         return Response.json(
           {
             ...cached,
+            ...evidencePatch,
             analysis_source: matchedRule
               ? 'automation'
               : recipientHistory
@@ -312,7 +312,6 @@ export async function POST(request: Request, context: Context): Promise<Response
       const { data: updated, error: updateError } = await supabase
         .from('forwarded_email_analyses')
         .update({
-          ...evidencePatch,
           account_id: accountId,
           category_id: nextCategory,
           category_source: nextSource,
@@ -327,6 +326,7 @@ export async function POST(request: Request, context: Context): Promise<Response
       return Response.json(
         {
           ...updated,
+          ...evidencePatch,
           analysis_source: matchedRule
             ? 'automation'
             : recipientHistory
@@ -491,8 +491,6 @@ export async function POST(request: Request, context: Context): Promise<Response
       const { data: updated, error: updateError } = await supabase
         .from('forwarded_email_analyses')
         .update({
-          ...sourceEvidence,
-          status: analysis.status,
           analysis_version: 2,
           suggested_type: analysis.suggested_type,
           description: analysis.description,
@@ -509,6 +507,7 @@ export async function POST(request: Request, context: Context): Promise<Response
       return Response.json(
         {
           ...updated,
+          ...sourceEvidence,
           analysis_source: matchedRule
             ? 'automation'
             : recipientHistory
