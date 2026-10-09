@@ -266,7 +266,13 @@ export async function POST(request: Request, context: Context): Promise<Response
         return Response.json(
           {
             ...cached,
-            analysis_source: matchedRule ? 'automation' : recipientHistory ? 'history' : 'ai',
+            analysis_source: matchedRule
+              ? 'automation'
+              : recipientHistory
+                ? 'history'
+                : bankPreview?.destinationLastFour
+                  ? 'evidence'
+                  : 'ai',
             automation_fields: automationFields,
             history_fields: recipientHistory
               ? ['categoryId', 'description', ...(ruleNote ? ['notes'] : [])]
@@ -291,7 +297,13 @@ export async function POST(request: Request, context: Context): Promise<Response
       return Response.json(
         {
           ...updated,
-          analysis_source: matchedRule ? 'automation' : recipientHistory ? 'history' : 'ai',
+          analysis_source: matchedRule
+            ? 'automation'
+            : recipientHistory
+              ? 'history'
+              : bankPreview?.destinationLastFour
+                ? 'evidence'
+                : 'ai',
           automation_fields: automationFields,
           history_fields: recipientHistory
             ? ['categoryId', 'description', ...(ruleNote ? ['notes'] : [])]
@@ -301,6 +313,14 @@ export async function POST(request: Request, context: Context): Promise<Response
       );
     }
 
+    const cardRepayment =
+      bankPreview?.kind === 'payment' &&
+      Boolean(
+        bankPreview.destinationLastFour &&
+        bankPreview.sourceLastFour &&
+        bankPreview.amountDecimal &&
+        bankPreview.date,
+      );
     let suggestion: Record<string, unknown>;
     if ((matchedRule || recipientHistory) && cachedType) {
       suggestion = {
@@ -310,6 +330,8 @@ export async function POST(request: Request, context: Context): Promise<Response
         description: ruleDescription ?? ruleNote ?? null,
         notes: ruleNote ?? null,
       };
+    } else if (cardRepayment) {
+      suggestion = { type: null, category_id: null, description: null, notes: null };
     } else {
       if (!workerConfig.url) return errorResponse('Email suggestion unavailable', 503);
       const token = accessToken ?? (await supabase.auth.getSession()).data.session?.access_token;
@@ -372,10 +394,20 @@ export async function POST(request: Request, context: Context): Promise<Response
       inbox_item_id: id,
       user_id: userId,
       status: parsed ? 'parsed' : 'needs_review',
-      merchant: parsed ? preview.merchant : null,
-      amount: parsed ? Number(preview.amountDecimal) : null,
-      bank_event_at: parsed ? preview.bankEventAt : null,
-      card_last_four: parsed ? preview.cardLastFour : null,
+      merchant: parsed ? preview.merchant : (bankPreview?.merchant ?? null),
+      amount: parsed
+        ? Number(preview.amountDecimal)
+        : bankPreview?.amountDecimal
+          ? Number(bankPreview.amountDecimal)
+          : null,
+      bank_event_at: parsed
+        ? preview.bankEventAt
+        : bankPreview?.date && bankPreview.time
+          ? `${bankPreview.date}T${bankPreview.time}:00-05:00`
+          : null,
+      card_last_four: parsed
+        ? preview.cardLastFour
+        : (bankPreview?.destinationLastFour ?? bankPreview?.sourceLastFour ?? null),
       account_id: accountId,
       category_id: categoryId,
       category_source: categorySource,
@@ -410,7 +442,13 @@ export async function POST(request: Request, context: Context): Promise<Response
       return Response.json(
         {
           ...updated,
-          analysis_source: matchedRule ? 'automation' : recipientHistory ? 'history' : 'ai',
+          analysis_source: matchedRule
+            ? 'automation'
+            : recipientHistory
+              ? 'history'
+              : bankPreview?.destinationLastFour
+                ? 'evidence'
+                : 'ai',
           automation_fields: automationFields,
           history_fields: recipientHistory
             ? ['categoryId', 'description', ...(ruleNote ? ['notes'] : [])]
@@ -438,7 +476,13 @@ export async function POST(request: Request, context: Context): Promise<Response
     return Response.json(
       {
         ...inserted,
-        analysis_source: matchedRule ? 'automation' : recipientHistory ? 'history' : 'ai',
+        analysis_source: matchedRule
+          ? 'automation'
+          : recipientHistory
+            ? 'history'
+            : bankPreview?.destinationLastFour
+              ? 'evidence'
+              : 'ai',
         automation_fields: automationFields,
         history_fields: recipientHistory
           ? ['categoryId', 'description', ...(ruleNote ? ['notes'] : [])]

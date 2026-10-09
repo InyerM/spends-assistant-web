@@ -361,7 +361,9 @@
     "duplicateGoBack": "Review again",
     "fieldAutomation": "Rule applied",
     "automationReady": "Automation applied. Review the details before saving.",
-    "fieldHistory": "From your history"
+    "fieldHistory": "From your history",
+    "cardPaymentDescription": "Bancolombia card payment · {lastFour}",
+    "cardPaymentNotes": "Payment from account ending in {source} to card ending in {destination}."
   },
   "transactions": {
     "originalEvidence": "Original evidence",

@@ -299,4 +299,66 @@ describe('ShortcutCreateForm', () => {
       ),
     );
   });
+  it('prefills an owned card repayment as a transfer with amount and original bank time', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockImplementation((url: string) => {
+        if (url === '/api/accounts')
+          return Promise.resolve(
+            Response.json([
+              {
+                id: 'savings',
+                name: 'Bancolombia savings',
+                institution: 'Bancolombia',
+                type: 'savings',
+                currency: 'COP',
+                last_four: '5678',
+                is_active: true,
+                deleted_at: null,
+              },
+              {
+                id: 'card',
+                name: 'Bancolombia credit',
+                institution: 'Bancolombia',
+                type: 'credit_card',
+                currency: 'COP',
+                last_four: '1234',
+                is_active: true,
+                deleted_at: null,
+              },
+            ]),
+          );
+        if (url === '/api/categories') return Promise.resolve(Response.json([]));
+        if (url === '/api/settings/user-settings')
+          return Promise.resolve(Response.json({ hour_format: '24h' }));
+        throw new Error(`Unexpected request: ${url}`);
+      }),
+    );
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <ShortcutCreateForm
+          rawText={
+            'From (unverified): alertasynotificaciones@bancolombia.com.co\nBancolombia: Pagaste $123,456 en la tarjeta de credito *1234 desde la cuenta *5678, el 01/10/2026 18:37.'
+          }
+          receivedAt={receivedAt}
+          inboxId='payment'
+          onCreated={vi.fn()}
+          onCancel={vi.fn()}
+        />
+      </QueryClientProvider>,
+    );
+    await waitFor(() =>
+      expect(screen.getByRole('combobox', { name: 'createAccount' })).toHaveTextContent(
+        'Bancolombia savings',
+      ),
+    );
+    expect(screen.getByRole('combobox', { name: 'transferTo' })).toHaveTextContent(
+      'Bancolombia credit',
+    );
+    expect(screen.getByRole('textbox', { name: 'createAmount' })).toHaveValue('123456.00');
+    expect(screen.getByRole('textbox', { name: 'Hours' })).toHaveValue('18');
+    expect(screen.getByRole('textbox', { name: 'Minutes' })).toHaveValue('37');
+    expect(screen.queryByRole('combobox', { name: 'createCategory' })).not.toBeInTheDocument();
+  });
 });

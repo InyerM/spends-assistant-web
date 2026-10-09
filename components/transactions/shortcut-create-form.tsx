@@ -30,6 +30,7 @@ import {
   buildForwardedEmailDraft,
   inferForwardedAccount,
   inferForwardedBancolombiaAccount,
+  inferForwardedPaymentDestination,
   suggestForwardedCategory,
 } from '@/lib/shortcut-inbox/create-draft';
 import type { LuloNoticePreview } from '@/lib/shortcut-inbox/lulo-preview';
@@ -66,12 +67,33 @@ export function ShortcutCreateForm({
   const bancolombia = previewBancolombiaNotice('forwarded_email', rawText);
   const [fieldDraft, setFieldDraft] = useState<Partial<ShortcutCreateDraft>>({});
   const base = buildForwardedEmailDraft(preview, receivedAt, bancolombia);
+  const paymentDestination = inferForwardedPaymentDestination(
+    bancolombia,
+    accountsQuery.data ?? [],
+  );
+  const paymentSource = paymentDestination
+    ? inferForwardedBancolombiaAccount(rawText, accountsQuery.data ?? [])
+    : '';
+  const ownCardPayment = Boolean(
+    paymentDestination && paymentSource && paymentDestination !== paymentSource,
+  );
   const proposedDraft = {
     ...base,
-    destinationAccountId: '',
-    type: analysis?.suggested_type ?? base.type,
-    description: analysis?.description || base.description,
-    notes: analysis?.notes ?? base.notes,
+    destinationAccountId: ownCardPayment ? paymentDestination : '',
+    type: ownCardPayment ? ('transfer' as const) : (analysis?.suggested_type ?? base.type),
+    description:
+      analysis?.description ||
+      (bancolombia?.destinationLastFour
+        ? t('cardPaymentDescription', { lastFour: bancolombia.destinationLastFour })
+        : base.description),
+    notes:
+      analysis?.notes ??
+      (bancolombia?.destinationLastFour && bancolombia.sourceLastFour
+        ? t('cardPaymentNotes', {
+            source: bancolombia.sourceLastFour,
+            destination: bancolombia.destinationLastFour,
+          })
+        : base.notes),
     ...fieldDraft,
   };
   const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);

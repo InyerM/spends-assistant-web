@@ -9,6 +9,7 @@ export interface BancolombiaNoticePreview {
   merchant: string | null;
   sourceLastFour: string | null;
   sourceKind: 'credit' | 'debit' | null;
+  destinationLastFour?: string | null;
 }
 
 const kindByVerb = {
@@ -45,15 +46,20 @@ function bankDate(day: string, month: string, rawYear: string): string | null {
   return `${year}-${String(monthNumber).padStart(2, '0')}-${String(dayNumber).padStart(2, '0')}`;
 }
 
+/** Sender domains are parsing hints, not authenticity verification. */
+export function isBancolombiaSender(rawText: string): boolean {
+  return /^From \(unverified\): [^\n]*@(?:[a-z0-9-]+\.)?(?:notificacionesbancolombia\.com|bancolombia\.com\.co)\s*$/imu.test(
+    rawText,
+  );
+}
+
 /** Only the bank alert sentence is evidence; footer dates and masked values never fill fields. */
 export function previewBancolombiaNotice(
   source: string,
   rawText: string,
 ): BancolombiaNoticePreview | null {
   if (source !== 'forwarded_email') return null;
-  const sender =
-    /^From \(unverified\): [^\n]*@(?:[a-z0-9-]+\.)?notificacionesbancolombia\.com\s*$/imu;
-  if (!sender.test(rawText)) return null;
+  if (!isBancolombiaSender(rawText)) return null;
   const decoded = decodeEmailEntities(rawText).replace(/\s+/gu, ' ');
   const matches = [
     ...decoded.matchAll(
@@ -89,10 +95,12 @@ export function previewBancolombiaNotice(
         suffix: match[2],
       }),
     ),
-    ...[...alert.matchAll(/\bdesde tu (?:cuenta\s*\*+|producto\s+)(\d{4})\b/giu)].map((match) => ({
-      kind: 'debit' as const,
-      suffix: match[1],
-    })),
+    ...[...alert.matchAll(/\bdesde (?:tu|la) (?:cuenta\s*\*+|producto\s+)(\d{4})\b/giu)].map(
+      (match) => ({
+        kind: 'debit' as const,
+        suffix: match[1],
+      }),
+    ),
   ];
   const sourceReference = [
     ...new Map(
@@ -112,6 +120,10 @@ export function previewBancolombiaNotice(
     date,
     time,
     merchant,
+    destinationLastFour:
+      verb === 'pagaste'
+        ? (/\ben la tarjeta de cr[eé]dito\s*\*+\s*(\d{4})\b/iu.exec(alert)?.[1] ?? null)
+        : null,
     sourceLastFour: sourceReference.length === 1 ? sourceReference[0].suffix : null,
     sourceKind: sourceReference.length === 1 ? sourceReference[0].kind : null,
   };

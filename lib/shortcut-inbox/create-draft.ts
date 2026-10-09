@@ -3,7 +3,11 @@ import type { AutomationRule } from '@/types/automation-rule';
 import { inferCategoryFromHistory } from '@/lib/document-review';
 import { decodeEmailEntities } from './email-text';
 import type { LuloNoticePreview } from './lulo-preview';
-import { previewBancolombiaNotice, type BancolombiaNoticePreview } from './bancolombia-preview';
+import {
+  previewBancolombiaNotice,
+  isBancolombiaSender,
+  type BancolombiaNoticePreview,
+} from './bancolombia-preview';
 import { matchesAccountSuffix } from '@/lib/accounts/identifiers';
 
 export interface ForwardedEmailDraft {
@@ -75,12 +79,7 @@ export function inferForwardedBancolombiaAccount(
   accounts: MatchableAccount[],
 ): string {
   if (previewBancolombiaNotice('forwarded_email', rawText)?.currency === 'USD') return '';
-  if (
-    !/^From \(unverified\): [^\n]*@(?:[a-z0-9-]+\.)?notificacionesbancolombia\.com\s*$/imu.test(
-      rawText,
-    )
-  )
-    return '';
+  if (!isBancolombiaSender(rawText)) return '';
   const evidence = decodeEmailEntities(rawText)
     .normalize('NFKD')
     .replace(/[\u0300-\u036f]/gu, '');
@@ -118,7 +117,7 @@ function sourceAccountReference(
     ...[...evidence.matchAll(/\bOrigen tarjeta de credito\s*[•*]+\s*(\d{4})\b/giu)].map(
       (match) => ({ kind: 'credit' as const, suffix: match[1] }),
     ),
-    ...[...evidence.matchAll(/\bdesde tu cuenta\s*\*+\s*(\d{4})\b/giu)].map((match) => ({
+    ...[...evidence.matchAll(/\bdesde (?:tu|la) cuenta\s*\*+\s*(\d{4})\b/giu)].map((match) => ({
       kind: 'debit' as const,
       suffix: match[1],
     })),
@@ -204,4 +203,23 @@ export function suggestForwardedCategory(
   )
     ? suggestion.categoryId
     : '';
+}
+
+export function inferForwardedPaymentDestination(
+  preview: BancolombiaNoticePreview | null,
+  accounts: MatchableAccount[],
+): string {
+  if (preview?.kind !== 'payment' || !preview.destinationLastFour || preview.currency !== 'COP')
+    return '';
+  const destinationLastFour = preview.destinationLastFour;
+  const matches = accounts.filter(
+    (account) =>
+      account.is_active &&
+      !account.deleted_at &&
+      account.currency === 'COP' &&
+      account.type === 'credit_card' &&
+      /bancolombia/iu.test(`${account.institution ?? ''} ${account.name}`) &&
+      matchesAccountSuffix(account, destinationLastFour, 'credit'),
+  );
+  return matches.length === 1 ? matches[0].id : '';
 }

@@ -361,7 +361,9 @@
     "duplicateGoBack": "Volver a revisar",
     "fieldAutomation": "Regla aplicada",
     "automationReady": "Automatización aplicada. Revisa los datos antes de guardar.",
-    "fieldHistory": "Según tu historial"
+    "fieldHistory": "Según tu historial",
+    "cardPaymentDescription": "Pago de tarjeta Bancolombia · {lastFour}",
+    "cardPaymentNotes": "Pago desde la cuenta terminada en {source} a la tarjeta terminada en {destination}."
   },
   "transactions": {
     "originalEvidence": "Origen de la transacción",

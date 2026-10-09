@@ -332,7 +332,9 @@
     "duplicateGoBack": "Revisar novamente",
     "fieldAutomation": "Regra aplicada",
     "automationReady": "Automação aplicada. Revise os dados antes de salvar.",
-    "fieldHistory": "Do seu histórico"
+    "fieldHistory": "Do seu histórico",
+    "cardPaymentDescription": "Pagamento do cartão Bancolombia · {lastFour}",
+    "cardPaymentNotes": "Pagamento da conta com final {source} para o cartão com final {destination}."
   },
   "transactions": {
     "originalEvidence": "Origem da transação",

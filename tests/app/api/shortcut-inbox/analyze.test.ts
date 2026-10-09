@@ -465,3 +465,26 @@ it('suggests consistent recipient history when no rule matches and scopes it to 
   );
   expect(fetch).not.toHaveBeenCalled();
 });
+
+it('returns parsed card repayment evidence without relying on the unavailable AI service', async () => {
+  vi.mocked(fetch).mockClear();
+  const db = fakeDb({
+    inbox: {
+      ...inbox,
+      raw_text:
+        'From (unverified): alertasynotificaciones@bancolombia.com.co\nBancolombia: Pagaste $123,456 en la tarjeta de credito *1234 desde la cuenta *5678, el 01/10/2026 18:37.',
+    },
+  });
+  getUserClient.mockResolvedValue({ userId: 'owner-a', accessToken: 'test-jwt', supabase: db });
+  const response = await POST(request(), context);
+  expect(response.status).toBe(201);
+  expect(await response.json()).toMatchObject({
+    analysis_source: 'evidence',
+    category_id: null,
+    status: 'needs_review',
+    amount: 123456,
+    bank_event_at: '2026-10-01T18:37:00-05:00',
+    card_last_four: '1234',
+  });
+  expect(fetch).not.toHaveBeenCalled();
+});

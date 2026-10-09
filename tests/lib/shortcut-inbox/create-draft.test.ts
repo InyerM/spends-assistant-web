@@ -3,6 +3,7 @@ import {
   buildForwardedEmailDraft,
   inferForwardedAccount,
   inferForwardedBancolombiaAccount,
+  inferForwardedPaymentDestination,
   inferForwardedAccountFromRules,
   suggestForwardedCategory,
 } from '@/lib/shortcut-inbox/create-draft';
@@ -376,4 +377,31 @@ describe('forwarded email creation draft', () => {
     expect(suggestForwardedCategory(ara, [], [groceries])).toBe('groceries');
     expect(suggestForwardedCategory(ara, [], [{ ...groceries, is_active: false }])).toBe('');
   });
+});
+
+it('identifies a unique owned repayment destination without guessing unknown or ambiguous cards', () => {
+  const preview = {
+    kind: 'payment' as const,
+    amountDecimal: '123456.00',
+    currency: 'COP' as const,
+    date: '2026-10-01',
+    time: '18:37',
+    merchant: null,
+    sourceLastFour: '5678',
+    sourceKind: 'debit' as const,
+    destinationLastFour: '1234',
+  };
+  const card = {
+    id: 'card',
+    name: 'Bancolombia',
+    institution: 'Bancolombia',
+    type: 'credit_card' as const,
+    currency: 'COP',
+    last_four: '1234',
+    is_active: true,
+    deleted_at: null,
+  };
+  expect(inferForwardedPaymentDestination(preview, [card])).toBe('card');
+  expect(inferForwardedPaymentDestination(preview, [card, { ...card, id: 'other' }])).toBe('');
+  expect(inferForwardedPaymentDestination(preview, [{ ...card, last_four: '0000' }])).toBe('');
 });

@@ -81,3 +81,23 @@ it('keeps an explicit bank date when the alert omits its hour', () => {
   );
   expect(result).toMatchObject({ date: '2024-11-23', time: null });
 });
+
+it('parses a card repayment from the bancolombia.com.co sender without treating the card as the source', () => {
+  const notice =
+    'From (unverified): alertasynotificaciones@bancolombia.com.co\nFluid Grid Master -->\nBancolombia: Pagaste $123,456 en la tarjeta de credito *1234 desde la cuenta *5678, el 01/10/2026 18:37. ¿Dudas?';
+  expect(previewBancolombiaNotice('forwarded_email', notice)).toMatchObject({
+    kind: 'payment',
+    amountDecimal: '123456.00',
+    date: '2026-10-01',
+    time: '18:37',
+    sourceLastFour: '5678',
+    sourceKind: 'debit',
+    destinationLastFour: '1234',
+  });
+  expect(
+    previewBancolombiaNotice(
+      'forwarded_email',
+      notice.replace('@bancolombia.com.co', '@bancolombia.com.co.evil.test'),
+    ),
+  ).toBeNull();
+});
