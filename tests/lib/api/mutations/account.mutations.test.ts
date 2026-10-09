@@ -1,5 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createAccount, updateAccount, deleteAccount } from '@/lib/api/mutations/account.mutations';
+import {
+  createAccount,
+  updateAccount,
+  deleteAccount,
+  setAccountBalance,
+} from '@/lib/api/mutations/account.mutations';
 
 describe('createAccount', () => {
   beforeEach(() => {
@@ -125,5 +130,34 @@ describe('deleteAccount', () => {
     );
 
     await expect(deleteAccount('acc-1')).rejects.toThrow('Cannot delete');
+  });
+});
+
+describe('setAccountBalance', () => {
+  it('preserves the target and request id through the API without creating a client transaction', async () => {
+    const request = {
+      id: 'account',
+      target: 80,
+      mode: 'transaction' as const,
+      request_id: 'request',
+    };
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(Response.json({ balance: 80 })));
+    await setAccountBalance(request);
+    expect(fetch).toHaveBeenCalledWith('/api/accounts/account/balance', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ target: 80, mode: 'transaction', request_id: 'request' }),
+    });
+  });
+  it('surfaces rejected balance adjustments without claiming success', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi
+        .fn()
+        .mockResolvedValue(Response.json({ error: 'Transaction limit exceeded' }, { status: 429 })),
+    );
+    await expect(
+      setAccountBalance({ id: 'account', target: 80, mode: 'transaction', request_id: 'request' }),
+    ).rejects.toThrow('Transaction limit exceeded');
   });
 });

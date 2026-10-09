@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ShortcutCreateForm } from '@/components/transactions/shortcut-create-form';
 import { previewLuloNotice } from '@/lib/shortcut-inbox/lulo-preview';
@@ -36,6 +36,61 @@ describe('ShortcutCreateForm', () => {
   afterEach(() => {
     cleanup();
     vi.unstubAllGlobals();
+  });
+
+  it('shows local evidence while AI runs, then applies suggestions without replacing manual edits', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockImplementation((url: string) => {
+        if (url === '/api/accounts') return Promise.resolve(Response.json([]));
+        if (url === '/api/categories') return Promise.resolve(Response.json([]));
+        if (url.startsWith('/api/transactions?'))
+          return Promise.resolve(Response.json({ data: [], count: 0 }));
+        if (url === '/api/settings/user-settings')
+          return Promise.resolve(Response.json({ hour_format: '24h' }));
+        throw new Error(`Unexpected request: ${url}`);
+      }),
+    );
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const props = {
+      rawText,
+      inboxId: 'item-1',
+      receivedAt,
+      preview,
+      onCreated: vi.fn(),
+      onCancel: vi.fn(),
+    };
+    const view = render(
+      <QueryClientProvider client={client}>
+        <ShortcutCreateForm {...props} analyzing />
+      </QueryClientProvider>,
+    );
+    expect(screen.getByDisplayValue('121000.00')).toBeVisible();
+    expect(screen.getByText('analysisRunning')).toBeVisible();
+    expect(screen.getByRole('button', { name: 'saveReviewed' })).toBeDisabled();
+    fireEvent.change(screen.getByRole('textbox', { name: 'createDescription' }), {
+      target: { value: 'My own description' },
+    });
+    view.rerender(
+      <QueryClientProvider client={client}>
+        <ShortcutCreateForm
+          {...props}
+          analysis={{
+            status: 'parsed',
+            account_id: null,
+            category_id: null,
+            category_source: null,
+            suggested_type: 'expense',
+            description: 'AI description',
+            notes: 'AI notes',
+          }}
+        />
+      </QueryClientProvider>,
+    );
+    expect(screen.getByDisplayValue('My own description')).toBeVisible();
+    expect(screen.getByDisplayValue('AI notes')).toBeVisible();
+    expect(screen.queryByText('analysisRunning')).not.toBeInTheDocument();
+    expect(screen.getByText('analysisReady')).toBeVisible();
   });
 
   it('prefills parsed evidence and historical proposals in shared controls without posting', async () => {

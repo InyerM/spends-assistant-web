@@ -75,3 +75,18 @@ describe('BudgetCard', () => {
     );
   });
 });
+
+it('shows historical totals without presenting them as an alert sent in that month', () => {
+  const { container } = render(
+    <BudgetCard
+      historical
+      budget={budget}
+      category={category}
+      locale='en'
+      onEdit={vi.fn()}
+      onDeactivate={vi.fn()}
+    />,
+  );
+  expect(within(container).queryByText('alert80')).not.toBeInTheDocument();
+  expect(within(container).getByRole('progressbar')).toHaveAttribute('aria-valuenow', '85');
+});

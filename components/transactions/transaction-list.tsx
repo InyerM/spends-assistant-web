@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
 import { Badge } from '@/components/ui/badge';
+import { TransactionOrigin } from '@/components/transactions/transaction-origin';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -439,6 +440,7 @@ export function TransactionList({
           </DialogHeader>
           {metadataTx && (
             <div className='min-h-0 space-y-4 overflow-y-auto'>
+              <TransactionOrigin transactionId={metadataTx.id} />
               <div className='grid grid-cols-2 gap-4'>
                 <MetadataField label={t('source')} value={metadataTx.source} />
                 <MetadataField label={t('confidence')} value={metadataTx.confidence} />

@@ -5,6 +5,7 @@ import { useTranslations, useLocale } from 'next-intl';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
+import { TransactionOrigin } from '@/components/transactions/transaction-origin';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -407,6 +408,8 @@ export function TransactionForm({
             <p className='text-muted-foreground text-sm'>{t('aiDialogDescription')}</p>
           )}
         </DialogHeader>
+
+        {transaction && <TransactionOrigin transactionId={transaction.id} />}
 
         {/* ========== STEP: AI PROMPT ========== */}
         {ai.step === 'ai-prompt' && !isEditing && (

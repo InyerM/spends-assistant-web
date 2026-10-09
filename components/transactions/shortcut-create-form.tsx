@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
+import { InlineLoader } from '@/components/shared/loader';
 import { Button } from '@/components/ui/button';
 import { ShortcutCreateFields, type ShortcutCreateDraft } from './shortcut-create-fields';
 import { useAccounts } from '@/lib/api/queries/account.queries';
@@ -30,6 +31,7 @@ export function ShortcutCreateForm({
   receivedAt,
   preview = null,
   analysis,
+  analyzing = false,
   onCreated,
   onCancel,
 }: {
@@ -38,6 +40,7 @@ export function ShortcutCreateForm({
   receivedAt: string;
   preview?: LuloNoticePreview | null;
   analysis?: ForwardedEmailAnalysis;
+  analyzing?: boolean;
   onCreated: () => void;
   onCancel: () => void;
 }): React.ReactElement {
@@ -51,16 +54,16 @@ export function ShortcutCreateForm({
   );
   const createMutation = useCreateInboxTransaction();
   const bancolombia = previewBancolombiaNotice('forwarded_email', rawText);
-  const [fieldDraft, setFieldDraft] = useState(() => {
-    const base = buildForwardedEmailDraft(preview, receivedAt, bancolombia);
-    return {
-      ...base,
-      destinationAccountId: '',
-      type: analysis?.suggested_type ?? base.type,
-      description: analysis?.description || base.description,
-      notes: analysis?.notes ?? base.notes,
-    };
-  });
+  const [fieldDraft, setFieldDraft] = useState<Partial<ShortcutCreateDraft>>({});
+  const base = buildForwardedEmailDraft(preview, receivedAt, bancolombia);
+  const proposedDraft = {
+    ...base,
+    destinationAccountId: '',
+    type: analysis?.suggested_type ?? base.type,
+    description: analysis?.description || base.description,
+    notes: analysis?.notes ?? base.notes,
+    ...fieldDraft,
+  };
   const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [review, setReview] = useState<CandidateReview | null>(null);
@@ -87,7 +90,7 @@ export function ShortcutCreateForm({
   const persistedCategoryId = (categoriesQuery.data ?? []).some(
     (category) =>
       category.id === analysis?.category_id &&
-      category.type === fieldDraft.type &&
+      category.type === proposedDraft.type &&
       category.is_active,
   )
     ? (analysis?.category_id ?? '')
@@ -103,6 +106,7 @@ export function ShortcutCreateForm({
       categoriesQuery.isSuccess &&
       !localSuggestedCategoryId &&
       analysis === undefined &&
+      !analyzing &&
       selectedCategoryId === null,
     categoryScope,
   );
@@ -116,11 +120,11 @@ export function ShortcutCreateForm({
     : '';
   const suggestedCategoryId = persistedCategoryId || localSuggestedCategoryId || aiCategoryId;
   const draft: ShortcutCreateDraft = {
-    ...fieldDraft,
+    ...proposedDraft,
     accountId: selectedAccountId ?? suggestedAccountId,
     categoryId:
       selectedCategoryId ??
-      (fieldDraft.type === 'expense' ? suggestedCategoryId : persistedCategoryId),
+      (proposedDraft.type === 'expense' ? suggestedCategoryId : persistedCategoryId),
   };
 
   const changeDraft = (patch: Partial<ShortcutCreateDraft>): void => {
@@ -133,6 +137,7 @@ export function ShortcutCreateForm({
   };
 
   const submit = async (confirmDistinct = false): Promise<void> => {
+    if (analyzing) return;
     if (
       !draft.accountId ||
       (draft.type !== 'transfer' && !draft.categoryId) ||
@@ -190,6 +195,7 @@ export function ShortcutCreateForm({
   const optionsError = accountsQuery.isError || categoriesQuery.isError;
   return (
     <form
+      aria-busy={analyzing}
       className='border-border bg-card-overlay space-y-4 rounded-xl border p-4 text-sm'
       onSubmit={(event): void => {
         event.preventDefault();
@@ -197,6 +203,14 @@ export function ShortcutCreateForm({
       }}>
       <p className='font-medium'>{t('createTitle')}</p>
       <p className='text-muted-foreground'>{t('createCaution')}</p>
+      {(analyzing || analysis) && (
+        <div
+          role='status'
+          className='flex items-center gap-2 rounded-lg border border-[var(--ai-gradient-start)]/30 bg-[var(--ai-gradient-start)]/5 p-3 text-[var(--ai-gradient-start)]'>
+          {analyzing && <InlineLoader />}
+          <span>{t(analyzing ? 'analysisRunning' : 'analysisReady')}</span>
+        </div>
+      )}
       {optionsError && (
         <p role='alert' className='text-destructive'>
           {t('optionsFailed')}
@@ -207,6 +221,48 @@ export function ShortcutCreateForm({
         accounts={accountsQuery.data ?? []}
         categories={categoriesQuery.data ?? []}
         onChange={changeDraft}
+        analysisStates={{
+          accountId:
+            selectedAccountId === null
+              ? analyzing
+                ? 'analyzing'
+                : persistedAccountId
+                  ? 'suggested'
+                  : undefined
+              : undefined,
+          categoryId:
+            selectedCategoryId === null
+              ? analyzing
+                ? 'analyzing'
+                : persistedCategoryId
+                  ? 'suggested'
+                  : undefined
+              : undefined,
+          type:
+            fieldDraft.type === undefined
+              ? analyzing
+                ? 'analyzing'
+                : analysis?.suggested_type
+                  ? 'suggested'
+                  : undefined
+              : undefined,
+          description:
+            fieldDraft.description === undefined
+              ? analyzing
+                ? 'analyzing'
+                : analysis?.description
+                  ? 'suggested'
+                  : undefined
+              : undefined,
+          notes:
+            fieldDraft.notes === undefined
+              ? analyzing
+                ? 'analyzing'
+                : analysis?.notes
+                  ? 'suggested'
+                  : undefined
+              : undefined,
+        }}
       />
       {aiCategoryId && selectedCategoryId === null && (
         <p className='text-muted-foreground'>
@@ -240,7 +296,7 @@ export function ShortcutCreateForm({
           {review.status === 'review_required' && (
             <Button
               type='button'
-              disabled={createMutation.isPending}
+              disabled={analyzing || createMutation.isPending}
               onClick={(): void => void submit(true)}>
               {t('confirmDistinct')}
             </Button>
@@ -252,6 +308,7 @@ export function ShortcutCreateForm({
           <Button
             type='submit'
             disabled={
+              analyzing ||
               createMutation.isPending ||
               optionsError ||
               accountsQuery.isPending ||

@@ -67,6 +67,10 @@ export default function BudgetsPage(): React.ReactElement {
         />
       </div>
 
+      {month < currentBudgetMonth() && (
+        <p className='text-muted-foreground text-sm'>{t('historicalNotice')}</p>
+      )}
+
       {isLoading ? (
         <div className='flex justify-center py-20'>
           <Loader />
@@ -84,6 +88,7 @@ export default function BudgetsPage(): React.ReactElement {
             <BudgetCard
               key={budget.budget_id}
               budget={budget}
+              historical={month < currentBudgetMonth()}
               category={categoryMap.get(budget.category_id)}
               locale={locale}
               onEdit={(): void => openEdit(budget)}
@@ -108,6 +113,7 @@ export default function BudgetsPage(): React.ReactElement {
           open
           onOpenChange={setDialogOpen}
           month={month}
+          onSavedMonth={setMonth}
           editing={editing}
           categories={options}
           locale={locale}

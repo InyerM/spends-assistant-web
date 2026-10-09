@@ -118,7 +118,13 @@
     "onlyThisMonth": "Solo este mes",
     "repeatMonthly": "Repetir cada mes",
     "onceHint": "Aplica al mes seleccionado.",
-    "repeatHint": "Se renueva cada mes desde el mes seleccionado, hasta que lo detengas. El gasto empieza en cero cada mes."
+    "repeatHint": "Se renueva cada mes desde el mes seleccionado, hasta que lo detengas. El gasto empieza en cero cada mes.",
+    "comparePreviousMonth": "Comparar un mes anterior",
+    "comparisonHint": "Elige un mes pasado y compara sus gastos registrados con un límite que defines ahora.",
+    "comparisonMonth": "Mes que quieres comparar",
+    "historicalNotice": "Esta comparación usa los gastos registrados y el límite elegido. No representa una alerta enviada en ese momento ni cambia tus movimientos.",
+    "pastMonthRequired": "Elige un mes anterior al mes actual.",
+    "categoryCollision": "Esta categoría ya tiene un presupuesto para este mes. Edita ese presupuesto o elige otra categoría."
   },
   "helpCenter": {
     "title": "Centro de ayuda",
@@ -335,9 +341,18 @@
     "nextPage": "Página siguiente",
     "searchPlaceholder": "Buscar remitente, comercio o texto del correo",
     "searchAction": "Buscar",
-    "clearSearch": "Limpiar búsqueda"
+    "clearSearch": "Limpiar búsqueda",
+    "analysisRunning": "Analizando sugerencias. Ya puedes revisar y editar los datos originales.",
+    "analysisReady": "Sugerencias listas. Revísalas antes de guardar.",
+    "fieldAnalyzing": "Analizando con IA",
+    "fieldSuggested": "Sugerido por IA"
   },
   "transactions": {
+    "originalEvidence": "Origen de la transacción",
+    "viewOriginalDocument": "Ver documento original",
+    "viewOriginalEmail": "Ver correo recibido",
+    "viewOriginalMessage": "Ver mensaje original",
+    "originUnavailable": "No se pudo cargar el origen de la transacción.",
     "title": "Transacciones",
     "subtitle": "Ver y gestionar todas tus transacciones",
     "newTransaction": "Nueva Transacción",
@@ -583,6 +598,8 @@
     "noTransactionsForAccount": "Sin transacciones para esta cuenta",
     "deleteAccountConfirm": "¿Quitar {name} de tus cuentas? No se pueden eliminar cuentas con transacciones activas.",
     "adjust": "Ajustar",
+    "newBalance": "Nuevo saldo",
+    "withoutTransaction": "Sin transacción",
     "adjustmentAmount": "Importe del ajuste",
     "withTransaction": "Con transacción",
     "orCreateCustomTransaction": "O crea una transacción personalizada",

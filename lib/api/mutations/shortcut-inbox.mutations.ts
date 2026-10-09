@@ -12,7 +12,10 @@ export interface ForwardedEmailAnalysis {
 }
 
 export async function analyzeForwardedEmail(inboxId: string): Promise<ForwardedEmailAnalysis> {
-  const response = await fetch(`/api/shortcut-inbox/${inboxId}/analyze`, { method: 'POST' });
+  const response = await fetch(`/api/shortcut-inbox/${inboxId}/analyze`, {
+    method: 'POST',
+    signal: AbortSignal.timeout(60_000),
+  });
   if (!response.ok) {
     const consentError = await aiConsentErrorFromResponse(response);
     throw consentError ?? new Error('Email analysis failed');

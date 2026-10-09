@@ -91,6 +91,63 @@ describe('Shortcut inbox review page', () => {
     vi.unstubAllGlobals();
   });
 
+  it('opens prefilled review before analysis resolves and does not reopen after cancel', async () => {
+    let finishAnalysis!: (response: Response) => void;
+    const analysis = new Promise<Response>((resolve) => {
+      finishAnalysis = resolve;
+    });
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockImplementation((url: string) => {
+        if (url.endsWith('/analyze')) return analysis;
+        if (url.startsWith('/api/shortcut-inbox?'))
+          return Promise.resolve(
+            Response.json({
+              data: [
+                {
+                  id: 'pending-ai',
+                  source: 'forwarded_email',
+                  external_id: 'synthetic-ai',
+                  received_at: '2026-10-08T12:00:00Z',
+                  created_at: '2026-10-08T12:00:00Z',
+                  raw_text: 'From: Bancolombia <alerts@bancolombia.com>\nCompra por $20.000',
+                  status: 'pending',
+                },
+              ],
+              count: 1,
+            }),
+          );
+        if (url === '/api/accounts' || url === '/api/categories')
+          return Promise.resolve(Response.json([]));
+        if (url.startsWith('/api/transactions?'))
+          return Promise.resolve(Response.json({ data: [], count: 0 }));
+        throw new Error(`Unexpected request: ${url}`);
+      }),
+    );
+    renderPage('forwarded_email');
+    fireEvent.click(await screen.findByRole('button', { name: 'Analyze and review transaction' }));
+    expect(await screen.findByText('analysisRunning')).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Save reviewed transaction' })).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: 'cancelCreate' }));
+    finishAnalysis(
+      Response.json({
+        status: 'needs_review',
+        account_id: null,
+        category_id: null,
+        category_source: null,
+        suggested_type: 'expense',
+        description: 'Suggested description',
+        notes: null,
+      }),
+    );
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Analyze and review transaction' })).toBeEnabled(),
+    );
+    expect(
+      screen.queryByRole('button', { name: 'Save reviewed transaction' }),
+    ).not.toBeInTheDocument();
+  });
+
   it('opens a private PDF from mail without offering body-only transaction creation', async () => {
     vi.stubGlobal(
       'fetch',

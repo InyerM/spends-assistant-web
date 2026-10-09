@@ -108,7 +108,14 @@ export function Sidebar({ className, onClose }: SidebarProps): React.ReactElemen
   const sidebarCollapsed = useUiStore((state) => state.sidebarCollapsed);
   const toggleCollapsed = useUiStore((state) => state.toggleSidebarCollapsed);
   const isCollapsed = !onClose && sidebarCollapsed;
-  const [groupOverrides, setGroupOverrides] = useState<Record<string, boolean>>({});
+  const [groupOverrides, setGroupOverrides] = useState<Record<string, boolean>>(() =>
+    Object.fromEntries(
+      navGroups.map((group) => [
+        group.titleKey,
+        group.items.some((item) => pathname === item.href || pathname.startsWith(item.href + '/')),
+      ]),
+    ),
+  );
   const { data: subscription } = useSubscription();
   const { data: usage } = useUsage();
 
@@ -203,7 +210,7 @@ export function Sidebar({ className, onClose }: SidebarProps): React.ReactElemen
         <div className='border-border my-3 border-t' />
         {navGroups.map((group) => {
           const items = group.items.filter((item) => item.href !== '/inbox' || emailInboxReady);
-          const groupStateKey = `${pathname}:${group.titleKey}`;
+          const groupStateKey = group.titleKey;
           const isOpen =
             groupOverrides[groupStateKey] ?? items.some((item) => isActivePath(item.href));
           return (

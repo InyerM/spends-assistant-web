@@ -17,6 +17,11 @@ const upsertSchema = z.object({
 const deactivateSchema = z.object({ budget_id: z.uuid(), month: monthSchema.optional() });
 
 function rpcError(error: { code?: string; message: string }): Response {
+  if (error.code === '42501' && error.message === 'Terms acceptance required')
+    return errorResponse(error.message, 403);
+  if (error.code === '23505')
+    return errorResponse('A budget already exists for this category and month', 409);
+  if (error.code === 'P0002') return errorResponse('Budget not found', 404);
   if (error.code === '42501') return errorResponse('Budget category not found', 404);
   if (['22023', '23514', '23503'].includes(error.code ?? '')) {
     return errorResponse(error.message, 400);
@@ -48,7 +53,7 @@ export async function POST(request: NextRequest): Promise<Response> {
     if (!parsed.success) return errorResponse('A valid COP budget is required', 400);
 
     const { supabase } = await getUserClient();
-    const { data, error } = await supabase.rpc('upsert_monthly_budget', {
+    const { data, error } = await supabase.rpc('create_monthly_budget', {
       p_month: parsed.data.month,
       p_category_id: parsed.data.category_id,
       p_limit_cop: parsed.data.limit_cop,
@@ -83,5 +88,26 @@ export async function DELETE(request: NextRequest): Promise<Response> {
     return error instanceof AuthError
       ? errorResponse('Unauthorized', 401)
       : errorResponse('Could not deactivate budget');
+  }
+}
+
+export async function PATCH(request: NextRequest): Promise<Response> {
+  try {
+    const parsed = upsertSchema.extend({ budget_id: z.uuid() }).safeParse(await request.json());
+    if (!parsed.success) return errorResponse('A valid COP budget is required', 400);
+    const { supabase } = await getUserClient();
+    const { data, error } = await supabase.rpc('update_monthly_budget', {
+      p_budget_id: parsed.data.budget_id,
+      p_month: parsed.data.month,
+      p_category_id: parsed.data.category_id,
+      p_limit_cop: parsed.data.limit_cop,
+      p_repeat_monthly: parsed.data.repeat_monthly,
+    });
+    if (error) return rpcError(error);
+    return Response.json({ id: data }, { headers: privateHeaders });
+  } catch (error) {
+    return error instanceof AuthError
+      ? errorResponse('Unauthorized', 401)
+      : errorResponse('Could not save budget');
   }
 }

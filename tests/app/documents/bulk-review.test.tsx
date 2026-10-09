@@ -65,12 +65,13 @@ function mockRequests(
   candidate = false,
   positiveReceipt = false,
   duplicateOnCreate = false,
+  initiallyArchived = false,
 ): ReturnType<typeof vi.fn> {
   let rows = observations.map((item) => ({
     ...item,
     amount: positiveReceipt && item.id === 'obs-1' ? 12000 : item.amount,
   }));
-  let archived = false;
+  let archived = initiallyArchived;
   let created = 0;
   const mock = vi.fn().mockImplementation(async (url: string, options?: RequestInit) => {
     if (url.endsWith('/suggestions'))
@@ -385,6 +386,20 @@ describe('document batch review', () => {
       account_id: 'account-1',
       category_id: 'category-groceries',
     });
+  });
+
+  it('opens an archived capture linked from transaction origin and keeps the archive toggle usable', async () => {
+    window.history.replaceState(null, '', '/documents#document-doc-1');
+    mockRequests(null, false, false, false, false, true);
+    renderDocuments();
+    try {
+      expect(await screen.findByText('bank.png')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'restoreCapture' })).toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: 'activeCaptures' }));
+      await waitFor(() => expect(screen.queryByText('bank.png')).not.toBeInTheDocument());
+    } finally {
+      window.history.replaceState(null, '', '/documents');
+    }
   });
 
   it('restores a rejected observation and archives a capture reversibly', async () => {

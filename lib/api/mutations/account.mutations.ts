@@ -81,3 +81,34 @@ export function useDeleteAccount(): ReturnType<typeof useMutation<void, Error, s
     },
   });
 }
+
+export interface BalanceAdjustmentInput {
+  id: string;
+  request_id: string;
+  target: number;
+  mode: 'manual' | 'transaction';
+}
+export async function setAccountBalance({ id, ...input }: BalanceAdjustmentInput): Promise<void> {
+  const response = await fetch(`/api/accounts/${id}/balance`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input),
+  });
+  if (!response.ok) {
+    const error = (await response.json()) as { error?: string };
+    throw new Error(error.error ?? 'Failed to adjust balance');
+  }
+}
+export function useSetAccountBalance(): ReturnType<
+  typeof useMutation<void, Error, BalanceAdjustmentInput>
+> {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: setAccountBalance,
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: accountKeys.all });
+      void queryClient.invalidateQueries({ queryKey: transactionKeys.all });
+      void queryClient.invalidateQueries({ queryKey: usageKeys.all });
+    },
+  });
+}

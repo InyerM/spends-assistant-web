@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm, useWatch } from 'react-hook-form';
@@ -27,12 +27,14 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { ConfirmDeleteDialog } from '@/components/shared/confirm-delete-dialog';
-import { useUpdateAccount, useDeleteAccount } from '@/lib/api/mutations/account.mutations';
-import { useCreateTransaction } from '@/lib/api/mutations/transaction.mutations';
+import {
+  useUpdateAccount,
+  useDeleteAccount,
+  useSetAccountBalance,
+} from '@/lib/api/mutations/account.mutations';
 import { useTransactionFormStore } from '@/lib/stores/transaction-form.store';
 import { buildBalanceAdjustment } from '@/lib/accounts/adjustment';
 import { formatCurrency } from '@/lib/utils/formatting';
-import { getCurrentColombiaTimes } from '@/lib/utils/date';
 import { ACCOUNT_TYPES } from '@/lib/utils/account-translations';
 import { AccountIdentifierEditor } from './account-identifier-editor';
 import { accountIdentifiers, primarySuffix } from '@/lib/accounts/identifiers';
@@ -71,7 +73,8 @@ export function AccountEditDialog({
   const locale = useLocale();
   const updateMutation = useUpdateAccount();
   const deleteMutation = useDeleteAccount();
-  const createTxMutation = useCreateTransaction();
+  const balanceMutation = useSetAccountBalance();
+  const balanceRequest = useRef<{ key: string; id: string } | null>(null);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [adjustMode, setAdjustMode] = useState<'none' | 'transaction'>('none');
   const [adjustmentAmount, setAdjustmentAmount] = useState('');
@@ -102,13 +105,14 @@ export function AccountEditDialog({
       if (account) setIdentifiers(accountIdentifiers(account));
       setAdjustMode('none');
       setAdjustmentAmount('');
-      setBalanceSign('+');
+      setBalanceSign(account && account.balance < 0 ? '-' : '+');
     }
   }
 
   // Reset form values when dialog opens
   useEffect(() => {
     if (account && open) {
+      balanceRequest.current = null;
       form.reset({
         name: account.name,
         type: account.type,
@@ -153,29 +157,24 @@ export function AccountEditDialog({
     }
   }
 
-  async function handleTransactionAdjust(): Promise<void> {
+  async function handleBalanceAdjust(mode: 'manual' | 'transaction'): Promise<void> {
     if (!account) return;
-    const adjustment = buildBalanceAdjustment(adjustmentAmount, balanceSign);
+    const adjustment = buildBalanceAdjustment(adjustmentAmount, balanceSign, account.balance);
     if (!adjustment) {
       toast.error(t('enterValidNumber'));
       return;
     }
-    const times = getCurrentColombiaTimes();
+    const key = `${account.id}:${adjustment.target}:${mode}`;
+    if (balanceRequest.current?.key !== key)
+      balanceRequest.current = { key, id: crypto.randomUUID() };
     try {
-      await createTxMutation.mutateAsync({
-        date: times.date,
-        time: times.time,
-        amount: adjustment.amount,
-        description: t('balanceAdjustment'),
-        account_id: account.id,
-        type: adjustment.type,
-        source: 'web',
+      await balanceMutation.mutateAsync({
+        id: account.id,
+        request_id: balanceRequest.current.id,
+        target: adjustment.target,
+        mode,
       });
-      toast.success(
-        t('adjustmentCreated', {
-          amount: `${balanceSign}${formatCurrency(adjustment.amount, account.currency, locale)}`,
-        }),
-      );
+      toast.success(t('accountUpdated'));
       onOpenChange(false);
     } catch {
       toast.error(t('failedToCreateAdjustment'));
@@ -306,8 +305,10 @@ export function AccountEditDialog({
                 {adjustMode !== 'none' && (
                   <div className='space-y-3'>
                     <div>
-                      <Label className='text-muted-foreground mb-1 block text-xs'>
-                        {t('adjustmentAmount')}
+                      <Label
+                        htmlFor='balance-target'
+                        className='text-muted-foreground mb-1 block text-xs'>
+                        {t('newBalance')}
                       </Label>
                       <div className='flex min-w-0 gap-2'>
                         <Button
@@ -322,9 +323,10 @@ export function AccountEditDialog({
                           {balanceSign}
                         </Button>
                         <Input
+                          id='balance-target'
                           type='number'
-                          inputMode='numeric'
-                          step='1'
+                          inputMode='decimal'
+                          step='0.01'
                           value={adjustmentAmount}
                           onChange={(e): void => setAdjustmentAmount(e.target.value)}
                           placeholder='0'
@@ -345,9 +347,21 @@ export function AccountEditDialog({
                         type='button'
                         size='sm'
                         className='cursor-pointer'
-                        disabled={createTxMutation.isPending}
-                        onClick={handleTransactionAdjust}>
-                        {createTxMutation.isPending ? tCommon('creating') : t('withTransaction')}
+                        disabled={balanceMutation.isPending}
+                        onClick={(): void => {
+                          void handleBalanceAdjust('transaction');
+                        }}>
+                        {balanceMutation.isPending ? tCommon('saving') : t('withTransaction')}
+                      </Button>
+                      <Button
+                        type='button'
+                        size='sm'
+                        variant='outline'
+                        disabled={balanceMutation.isPending}
+                        onClick={(): void => {
+                          void handleBalanceAdjust('manual');
+                        }}>
+                        {t('withoutTransaction')}
                       </Button>
                     </div>
                     <Button

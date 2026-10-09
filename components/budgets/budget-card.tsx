@@ -15,6 +15,7 @@ import type { BudgetStatus } from '@/lib/api/queries/budget.queries';
 import type { Category } from '@/types/category';
 
 interface BudgetCardProps {
+  historical?: boolean;
   budget: BudgetStatus;
   category: Category | undefined;
   locale: string;
@@ -24,6 +25,7 @@ interface BudgetCardProps {
 
 export function BudgetCard({
   budget,
+  historical = false,
   category,
   locale,
   onEdit,
@@ -93,7 +95,7 @@ export function BudgetCard({
               ? t('remaining', { amount: formatCurrency(remaining, 'COP', locale) })
               : t('overLimit', { amount: formatCurrency(-remaining, 'COP', locale) })}
           </span>
-          {budget.threshold !== 'none' && (
+          {!historical && budget.threshold !== 'none' && (
             <Badge variant='outline' className='border-warning/60 text-warning'>
               {t(budget.threshold === '100' ? 'alert100' : 'alert80')}
             </Badge>

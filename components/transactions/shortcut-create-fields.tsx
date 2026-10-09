@@ -30,7 +30,9 @@ export function ShortcutCreateFields({
   accounts,
   categories,
   onChange,
+  analysisStates = {},
 }: {
+  analysisStates?: Partial<Record<keyof ShortcutCreateDraft, 'analyzing' | 'suggested'>>;
   draft: ShortcutCreateDraft;
   accounts: Account[];
   categories: Category[];
@@ -40,13 +42,27 @@ export function ShortcutCreateFields({
   const locale = useLocale() as Locale;
   const transactionT = useTranslations('transactions');
   const commonT = useTranslations('common');
+  const fieldClass = (key: keyof ShortcutCreateDraft): string =>
+    analysisStates[key]
+      ? analysisStates[key] === 'analyzing'
+        ? 'space-y-1 rounded-lg border border-[var(--ai-gradient-start)]/40 bg-[var(--ai-gradient-start)]/5 p-2'
+        : 'space-y-1 rounded-lg border border-primary/40 bg-primary/5 p-2'
+      : 'space-y-1';
+  const fieldStatus = (key: keyof ShortcutCreateDraft): React.ReactNode =>
+    analysisStates[key] ? (
+      <span
+        className={`block text-xs ${analysisStates[key] === 'analyzing' ? 'text-[var(--ai-gradient-start)]' : 'text-primary'}`}>
+        {t(analysisStates[key] === 'analyzing' ? 'fieldAnalyzing' : 'fieldSuggested')}
+      </span>
+    ) : null;
   const activeAccounts = accounts.filter(
     (account) => account.is_active && !account.deleted_at && account.currency === 'COP',
   );
   return (
     <div className='grid gap-3 sm:grid-cols-2'>
-      <div className='space-y-1'>
+      <div className={fieldClass('accountId')}>
         <label>{t('createAccount')}</label>
+        {fieldStatus('accountId')}
         <SearchableSelect
           value={draft.accountId}
           onValueChange={(accountId) => onChange({ accountId, destinationAccountId: '' })}
@@ -56,8 +72,9 @@ export function ShortcutCreateFields({
           items={buildAccountItems(activeAccounts)}
         />
       </div>
-      <div className='space-y-1'>
+      <div className={fieldClass('type')}>
         <label>{t('createType')}</label>
+        {fieldStatus('type')}
         <Select
           value={draft.type}
           onValueChange={(type) =>
@@ -92,8 +109,9 @@ export function ShortcutCreateFields({
           />
         </div>
       ) : (
-        <div className='space-y-1'>
+        <div className={fieldClass('categoryId')}>
           <label>{t('createCategory')}</label>
+          {fieldStatus('categoryId')}
           <SearchableSelect
             value={draft.categoryId}
             onValueChange={(categoryId) => onChange({ categoryId })}
@@ -143,18 +161,22 @@ export function ShortcutCreateFields({
           {t('confirmEventTime')}
         </label>
       )}
-      <label className='space-y-1 sm:col-span-2'>
+      <label className={`${fieldClass('description')} sm:col-span-2`}>
         {t('createDescription')}
+        {fieldStatus('description')}
         <Input
           type='text'
+          aria-label={t('createDescription')}
           maxLength={500}
           value={draft.description}
           onChange={(event) => onChange({ description: event.target.value })}
         />
       </label>
-      <label className='space-y-1 sm:col-span-2'>
+      <label className={`${fieldClass('notes')} sm:col-span-2`}>
         {t('createNotes')}
+        {fieldStatus('notes')}
         <Textarea
+          aria-label={t('createNotes')}
           maxLength={2000}
           value={draft.notes}
           onChange={(event) => onChange({ notes: event.target.value })}

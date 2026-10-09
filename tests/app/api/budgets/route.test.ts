@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { NextRequest } from 'next/server';
-import { DELETE, GET, POST } from '@/app/api/budgets/route';
+import { DELETE, GET, POST, PATCH } from '@/app/api/budgets/route';
 import { getUserClient } from '@/lib/api/server';
 
 vi.mock('@/lib/api/server', () => ({
@@ -62,7 +62,7 @@ describe('/api/budgets', () => {
       request('POST', { month: '2026-10-01', category_id: categoryId, limit_cop: 500 }),
     );
     expect(response.status).toBe(200);
-    expect(rpc).toHaveBeenCalledWith('upsert_monthly_budget', {
+    expect(rpc).toHaveBeenCalledWith('create_monthly_budget', {
       p_month: '2026-10-01',
       p_category_id: categoryId,
       p_limit_cop: 500,
@@ -79,7 +79,7 @@ describe('/api/budgets', () => {
     };
     expect((await POST(request('POST', input))).status).toBe(200);
     expect(rpc).toHaveBeenCalledWith(
-      'upsert_monthly_budget',
+      'create_monthly_budget',
       expect.objectContaining({ p_repeat_monthly: true }),
     );
     expect((await POST(request('POST', { ...input, repeat_monthly: 'forever' }))).status).toBe(400);
@@ -102,5 +102,36 @@ describe('/api/budgets', () => {
     rpc.mockResolvedValueOnce({ data: true, error: null });
     expect((await DELETE(request('DELETE', { budget_id: budgetId }))).status).toBe(200);
     expect(rpc).toHaveBeenCalledWith('deactivate_monthly_budget', { p_budget_id: budgetId });
+  });
+});
+
+describe('budget edits', () => {
+  it('passes an explicit ID to the edit RPC and returns category collision as 409', async () => {
+    const rpc = vi.fn().mockResolvedValue({ data: budgetId, error: null });
+    vi.mocked(getUserClient).mockResolvedValue({ userId: 'owner', supabase: { rpc } as never });
+    const input = {
+      budget_id: budgetId,
+      month: '2026-10-01',
+      category_id: categoryId,
+      limit_cop: 700,
+      repeat_monthly: false,
+    };
+    expect((await PATCH(request('PATCH', input))).status).toBe(200);
+    expect(rpc).toHaveBeenCalledWith('update_monthly_budget', {
+      p_budget_id: budgetId,
+      p_month: input.month,
+      p_category_id: categoryId,
+      p_limit_cop: 700,
+      p_repeat_monthly: false,
+    });
+    rpc.mockResolvedValue({ data: null, error: { code: '23505', message: 'Already exists' } });
+    expect((await PATCH(request('PATCH', input))).status).toBe(409);
+    rpc.mockResolvedValue({ data: null, error: { code: 'P0002', message: 'Budget not found' } });
+    expect((await PATCH(request('PATCH', input))).status).toBe(404);
+    rpc.mockResolvedValue({
+      data: null,
+      error: { code: '42501', message: 'Terms acceptance required' },
+    });
+    expect((await PATCH(request('PATCH', input))).status).toBe(403);
   });
 });

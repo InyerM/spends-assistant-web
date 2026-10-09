@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { budgetKeys } from '@/lib/api/queries/budget.queries';
 
 export interface SaveBudgetInput {
+  budget_id?: string;
   month: string;
   category_id: string;
   limit_cop: number;
@@ -10,11 +11,12 @@ export interface SaveBudgetInput {
 
 export async function saveMonthlyBudget(input: SaveBudgetInput): Promise<string> {
   const response = await fetch('/api/budgets', {
-    method: 'POST',
+    method: input.budget_id ? 'PATCH' : 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(input),
   });
-  if (!response.ok) throw new Error('Could not save monthly budget');
+  if (!response.ok)
+    throw new Error(response.status === 409 ? 'budget_collision' : 'Could not save monthly budget');
   const body = (await response.json()) as { id: string };
   return body.id;
 }

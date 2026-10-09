@@ -118,7 +118,13 @@
     "onlyThisMonth": "This month only",
     "repeatMonthly": "Repeat every month",
     "onceHint": "Applies to the selected month.",
-    "repeatHint": "Renews each month from the selected month until you stop it. Spending starts at zero each month."
+    "repeatHint": "Renews each month from the selected month until you stop it. Spending starts at zero each month.",
+    "comparePreviousMonth": "Compare a previous month",
+    "comparisonHint": "Choose a past month and compare its recorded expenses with a limit you set now.",
+    "comparisonMonth": "Month to compare",
+    "historicalNotice": "This comparison uses recorded expenses and the selected limit. It does not represent an alert sent at the time or change your transactions.",
+    "pastMonthRequired": "Choose a month before the current month.",
+    "categoryCollision": "This category already has a budget for this month. Edit that budget or choose another category."
   },
   "helpCenter": {
     "title": "Help center",
@@ -335,9 +341,18 @@
     "nextPage": "Next page",
     "searchPlaceholder": "Search sender, merchant or email text",
     "searchAction": "Search",
-    "clearSearch": "Clear search"
+    "clearSearch": "Clear search",
+    "analysisRunning": "Analyzing suggestions. You can review and edit the original details now.",
+    "analysisReady": "Suggestions ready. Review them before saving.",
+    "fieldAnalyzing": "Analyzing with AI",
+    "fieldSuggested": "Suggested by AI"
   },
   "transactions": {
+    "originalEvidence": "Original evidence",
+    "viewOriginalDocument": "View original document",
+    "viewOriginalEmail": "View received email",
+    "viewOriginalMessage": "View original message",
+    "originUnavailable": "Original evidence could not be loaded.",
     "title": "Transactions",
     "subtitle": "View and manage all your transactions",
     "newTransaction": "New Transaction",
@@ -583,6 +598,8 @@
     "noTransactionsForAccount": "No transactions for this account",
     "deleteAccountConfirm": "Remove {name} from your accounts? Accounts with active transactions cannot be deleted.",
     "adjust": "Adjust",
+    "newBalance": "New balance",
+    "withoutTransaction": "Without transaction",
     "adjustmentAmount": "Adjustment amount",
     "withTransaction": "With transaction",
     "orCreateCustomTransaction": "Or create a custom transaction",

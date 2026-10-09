@@ -9,8 +9,9 @@ vi.mock('@/components/notifications/notification-center', () => ({
   NotificationCenter: () => null,
 }));
 
+const navigation = vi.hoisted(() => ({ pathname: '/accounts' }));
 vi.mock('next/navigation', () => ({
-  usePathname: () => '/accounts',
+  usePathname: () => navigation.pathname,
   useRouter: () => ({ push: vi.fn() }),
 }));
 vi.mock('next-intl', () => ({ useTranslations: () => (key: string) => key }));
@@ -36,6 +37,7 @@ describe('Sidebar navigation', () => {
   afterEach(() => {
     cleanup();
     subscription.plan = 'free';
+    navigation.pathname = '/accounts';
     uiState.sidebarCollapsed = false;
   });
   it('keeps dashboard and transactions visible while grouping the rest', () => {
@@ -55,6 +57,31 @@ describe('Sidebar navigation', () => {
       'false',
     );
     expect(screen.queryByRole('button', { name: 'accounts' })).not.toBeInTheDocument();
+  });
+
+  it('preserves independently toggled groups when navigation changes', () => {
+    const view = render(<Sidebar />);
+    fireEvent.click(screen.getByRole('button', { name: 'wealthGroup' }));
+    fireEvent.click(screen.getByRole('button', { name: 'planningGroup' }));
+    navigation.pathname = '/documents';
+    view.rerender(<Sidebar />);
+    expect(screen.getByRole('button', { name: 'wealthGroup' })).toHaveAttribute(
+      'aria-expanded',
+      'false',
+    );
+    expect(screen.getByRole('button', { name: 'planningGroup' })).toHaveAttribute(
+      'aria-expanded',
+      'true',
+    );
+    expect(screen.getByRole('button', { name: 'reviewGroup' })).toHaveAttribute(
+      'aria-expanded',
+      'false',
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'reviewGroup' }));
+    expect(screen.getByRole('button', { name: 'planningGroup' })).toHaveAttribute(
+      'aria-expanded',
+      'true',
+    );
   });
 
   it('keeps the collapse control inside the brand header with a full touch target', () => {

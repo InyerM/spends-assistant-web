@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { useQueryClient } from '@tanstack/react-query';
@@ -47,6 +47,26 @@ export default function DocumentsPage(): React.ReactElement {
   const [error, setError] = useState<string | AiConsentRequiredError | null>(null);
   const [suggestions, setSuggestions] = useState<Partial<Record<string, SuggestionGroup[]>>>({});
   const [suggestionBusy, setSuggestionBusy] = useState<string | null>(null);
+
+  const openedHash = useRef<string | null>(null);
+  useEffect(() => {
+    const openLinkedCapture = (): void => {
+      const hash = window.location.hash;
+      if (!hash.startsWith('#document-') || openedHash.current === hash) return;
+      const target = documentQuery.data?.find((document) => `#document-${document.id}` === hash);
+      if (!target) return;
+      openedHash.current = hash;
+      setShowArchived(Boolean(target.archived_at));
+      window.setTimeout(() => {
+        const element = window.document.getElementById(hash.slice(1));
+        if (element && typeof element.scrollIntoView === 'function')
+          element.scrollIntoView({ block: 'start' });
+      }, 0);
+    };
+    openLinkedCapture();
+    window.addEventListener('hashchange', openLinkedCapture);
+    return (): void => window.removeEventListener('hashchange', openLinkedCapture);
+  }, [documentQuery.data]);
 
   const load = useCallback(async (): Promise<void> => {
     const result = await refetchDocuments();

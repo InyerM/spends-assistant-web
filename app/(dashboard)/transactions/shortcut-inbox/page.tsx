@@ -147,7 +147,7 @@ export default function ShortcutInboxPage({
   const [reverseErrorId, setReverseErrorId] = useState<string | null>(null);
   const [createInboxId, setCreateInboxId] = useState<string | null>(null);
   const [analysisById, setAnalysisById] = useState<Record<string, ForwardedEmailAnalysis>>({});
-  const [analysisBusyId, setAnalysisBusyId] = useState<string | null>(null);
+  const [analysisBusyIds, setAnalysisBusyIds] = useState<Set<string>>(() => new Set());
   const analysisMutation = useAnalyzeForwardedEmail();
 
   const openCreateReview = async (item: InboxItem): Promise<void> => {
@@ -155,8 +155,9 @@ export default function ShortcutInboxPage({
       setCreateInboxId(null);
       return;
     }
+    setCreateInboxId(item.id);
     if (item.source === 'forwarded_email') {
-      setAnalysisBusyId(item.id);
+      setAnalysisBusyIds((current) => new Set(current).add(item.id));
       setConsentRequired(null);
       try {
         const analysis = await analysisMutation.mutateAsync(item.id);
@@ -165,10 +166,13 @@ export default function ShortcutInboxPage({
         if (cause instanceof AiConsentRequiredError) setConsentRequired(cause.scope);
         else setError(t('reanalyzeFailed'));
       } finally {
-        setAnalysisBusyId(null);
+        setAnalysisBusyIds((current) => {
+          const next = new Set(current);
+          next.delete(item.id);
+          return next;
+        });
       }
     }
-    setCreateInboxId(item.id);
   };
 
   const review = async (id: string, status: InboxItem['status']): Promise<void> => {
@@ -415,7 +419,7 @@ export default function ShortcutInboxPage({
                     {item.status === 'pending' && !historicalLulo && !hasAttachments && (
                       <Button
                         size='sm'
-                        disabled={analysisBusyId === item.id}
+                        disabled={analysisBusyIds.has(item.id)}
                         onClick={(): void => void openCreateReview(item)}>
                         {t(item.source === 'forwarded_email' ? 'reanalyzeEmail' : 'createNew')}
                       </Button>
@@ -482,6 +486,7 @@ export default function ShortcutInboxPage({
                       receivedAt={item.received_at}
                       preview={luloPreview}
                       analysis={analysisById[item.id]}
+                      analyzing={analysisBusyIds.has(item.id)}
                       onCancel={(): void => setCreateInboxId(null)}
                       onCreated={(): void => {
                         setCreateInboxId(null);
