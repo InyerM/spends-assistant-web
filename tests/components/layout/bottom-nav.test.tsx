@@ -29,7 +29,6 @@ describe('mobile workspace navigation', () => {
     ['receivables', '/receivables'],
     ['reliefFunds', '/relief-funds'],
     ['emailInbox', '/inbox'],
-    ['help', '/help'],
   ] as const)('exposes and opens %s in the More sheet', (key, href) => {
     render(
       <NextIntlClientProvider locale='es' messages={es}>
@@ -44,6 +43,16 @@ describe('mobile workspace navigation', () => {
     expect(screen.getByRole('button', { name: es.nav.reliefFunds })).toBeVisible();
     fireEvent.click(screen.getByRole('button', { name: es.nav[key] }));
     expect(push).toHaveBeenCalledWith(href);
+  });
+  it('keeps Help under Settings', () => {
+    render(
+      <NextIntlClientProvider locale='es' messages={es}>
+        <BottomNav />
+      </NextIntlClientProvider>,
+    );
+    fireEvent.click(screen.getByRole('button', { name: es.nav.more }));
+    expect(screen.getByRole('button', { name: es.nav.settings })).toBeVisible();
+    expect(screen.queryByRole('button', { name: es.nav.help })).not.toBeInTheDocument();
   });
   it('keeps the title and close control outside the scrolling navigation area', () => {
     render(

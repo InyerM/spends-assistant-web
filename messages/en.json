@@ -48,7 +48,7 @@
     "allOf": "All {name}"
   },
   "nav": {
-    "dashboard": "Dashboard",
+    "dashboard": "Home",
     "transactions": "Transactions",
     "accounts": "Accounts",
     "categories": "Categories",
@@ -158,7 +158,7 @@
   },
   "dashboard": {
     "uncategorized": "Uncategorized",
-    "title": "Dashboard",
+    "title": "Home",
     "overview": "Overview",
     "balanceOverview": "Balance Overview",
     "totalBalance": "Total Balance",

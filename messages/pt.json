@@ -48,7 +48,7 @@
     "allOf": "Tudo {name}"
   },
   "nav": {
-    "dashboard": "Painel",
+    "dashboard": "Início",
     "transactions": "Transações",
     "accounts": "Contas",
     "categories": "Categorias",
@@ -158,7 +158,7 @@
   },
   "dashboard": {
     "uncategorized": "Sem categoria",
-    "title": "Painel",
+    "title": "Início",
     "overview": "Visão Geral",
     "balanceOverview": "Visão Geral do Saldo",
     "totalBalance": "Saldo Total",
