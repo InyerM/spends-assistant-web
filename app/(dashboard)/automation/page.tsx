@@ -28,7 +28,6 @@ import {
 import { ConfirmDeleteDialog } from '@/components/shared/confirm-delete-dialog';
 import { AutomationForm } from '@/components/automation/automation-form';
 import { AiAutomationDialog } from '@/components/automation/ai-automation-dialog';
-import { SwipeableRow } from '@/components/transactions/swipeable-row';
 import { useInfiniteAutomationRules } from '@/lib/api/queries/automation.queries';
 import { useAccounts } from '@/lib/api/queries/account.queries';
 import {
@@ -38,6 +37,8 @@ import {
 } from '@/lib/api/mutations/automation.mutations';
 import { useInfiniteScroll } from '@/hooks/use-infinite-scroll';
 import { SearchInput } from '@/components/shared/search-input';
+import { useAllCategories } from '@/lib/api/queries/category.queries';
+import { useLocale } from 'next-intl';
 import { findById } from '@/lib/utils/lookup';
 import { Plus, Pencil, Trash2, Zap, Wand2, Sparkles } from 'lucide-react';
 import { InlineLoader } from '@/components/shared/loader';
@@ -68,6 +69,8 @@ const ruleTypeBadgeVariant: Record<RuleType, 'default' | 'secondary' | 'outline'
 export default function AutomationPage(): React.ReactElement {
   const t = useTranslations('automation');
   const tCommon = useTranslations('common');
+  const locale = useLocale();
+  const { data: categories } = useAllCategories();
   const [ruleTypeFilter, setRuleTypeFilter] = useState<RuleTypeFilter>('all');
   const [activeFilter, setActiveFilter] = useState<ActiveFilter>('all');
   const [formOpen, setFormOpen] = useState(false);
@@ -84,7 +87,7 @@ export default function AutomationPage(): React.ReactElement {
     ...(activeFilter !== 'all' ? { is_active: activeFilter === 'active' } : {}),
   };
 
-  const { data, isLoading, hasNextPage, fetchNextPage, isFetchingNextPage } =
+  const { data, isLoading, isError, refetch, hasNextPage, fetchNextPage, isFetchingNextPage } =
     useInfiniteAutomationRules(filters);
   const { data: accounts } = useAccounts();
   const toggleMutation = useToggleAutomationRule();
@@ -180,111 +183,147 @@ export default function AutomationPage(): React.ReactElement {
 
   return (
     <div className='mx-auto w-full max-w-7xl space-y-6 p-4 sm:p-6 lg:p-8'>
-      <div className='space-y-3 sm:space-y-0'>
-        {/* Mobile: search full-width */}
+      <header className='flex flex-wrap items-start justify-between gap-4'>
+        <div className='space-y-2'>
+          <h1 className='text-3xl font-bold tracking-tight'>{t('title')}</h1>
+          <p className='text-muted-foreground max-w-2xl text-sm'>{t('subtitle')}</p>
+        </div>
+        <div className='flex w-full flex-wrap gap-2 sm:w-auto'>
+          <Button
+            variant='ai'
+            size='sm'
+            className='min-h-11 cursor-pointer'
+            aria-label={t('createWithAi')}
+            onClick={(): void => setAiDialogOpen(true)}>
+            <Sparkles className='h-4 w-4 sm:mr-1.5' />
+            <span className='inline'>{t('createWithAi')}</span>
+          </Button>
+          {!allActiveAccountsCovered && (
+            <Button
+              variant='outline'
+              size='sm'
+              className='min-h-11 cursor-pointer'
+              aria-label={t('autoGenerate')}
+              onClick={(): void => setGenerateConfirmOpen(true)}>
+              <Wand2 className='h-4 w-4 sm:mr-1.5' />
+              <span className='inline'>{t('autoGenerate')}</span>
+            </Button>
+          )}
+          <Button
+            className='min-h-11 cursor-pointer'
+            aria-label={t('newRule')}
+            onClick={handleCreate}>
+            <Plus className='h-4 w-4 sm:mr-2' />
+            <span className='inline'>{t('newRule')}</span>
+          </Button>
+        </div>
+      </header>
+      <div className='bg-card border-border flex flex-col gap-3 rounded-2xl border p-4 lg:flex-row lg:items-center'>
         <SearchInput
           value={search}
           onChange={setSearch}
           placeholder={`${tCommon('search')}...`}
-          className='sm:hidden'
+          clearLabel={tCommon('reset')}
+          className='w-full lg:max-w-sm'
         />
-
-        {/* Mobile: selects + actions in one row */}
-        <div className='flex items-center gap-2 sm:justify-between'>
-          <div className='flex min-w-0 flex-1 items-center gap-2'>
-            {/* Desktop: search inline with selects */}
-            <SearchInput
-              value={search}
-              onChange={setSearch}
-              placeholder={`${tCommon('search')}...`}
-              className='hidden max-w-[280px] min-w-[180px] flex-1 sm:block'
-            />
-            <Select
-              value={ruleTypeFilter}
-              onValueChange={(v): void => setRuleTypeFilter(v as RuleTypeFilter)}>
-              <SelectTrigger className='min-w-0 flex-1 sm:w-auto sm:min-w-[140px] sm:flex-none'>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {RULE_TYPE_OPTIONS.map((opt) => (
-                  <SelectItem key={opt.value} value={opt.value}>
-                    {t(opt.labelKey)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select
-              value={activeFilter}
-              onValueChange={(v): void => setActiveFilter(v as ActiveFilter)}>
-              <SelectTrigger className='min-w-0 flex-1 sm:w-auto sm:min-w-[140px] sm:flex-none'>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {ACTIVE_OPTIONS.map((opt) => (
-                  <SelectItem key={opt.value} value={opt.value}>
-                    {t(opt.labelKey)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className='flex shrink-0 gap-2'>
-            <Button
-              variant='ai'
-              size='sm'
-              className='cursor-pointer'
-              aria-label={t('createWithAi')}
-              onClick={(): void => setAiDialogOpen(true)}>
-              <Sparkles className='h-4 w-4 sm:mr-1.5' />
-              <span className='hidden sm:inline'>{t('createWithAi')}</span>
-            </Button>
-            {!allActiveAccountsCovered && (
-              <Button
-                variant='outline'
-                size='sm'
-                className='cursor-pointer'
-                aria-label={t('autoGenerate')}
-                onClick={(): void => setGenerateConfirmOpen(true)}>
-                <Wand2 className='h-4 w-4 sm:mr-1.5' />
-                <span className='hidden sm:inline'>{t('autoGenerate')}</span>
-              </Button>
-            )}
-            <Button className='cursor-pointer' aria-label={t('newRule')} onClick={handleCreate}>
-              <Plus className='h-4 w-4 sm:mr-2' />
-              <span className='hidden sm:inline'>{t('newRule')}</span>
-            </Button>
-          </div>
+        <div className='flex min-w-0 flex-1 flex-wrap gap-2'>
+          <Select
+            value={ruleTypeFilter}
+            onValueChange={(v): void => setRuleTypeFilter(v as RuleTypeFilter)}>
+            <SelectTrigger
+              aria-label={t('ruleType')}
+              className='h-11 w-full min-w-0 sm:w-auto sm:min-w-[160px] sm:flex-none'>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {RULE_TYPE_OPTIONS.map((opt) => (
+                <SelectItem key={opt.value} value={opt.value}>
+                  {t(opt.labelKey)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select
+            value={activeFilter}
+            onValueChange={(v): void => setActiveFilter(v as ActiveFilter)}>
+            <SelectTrigger
+              aria-label={t('allStatus')}
+              className='h-11 w-full min-w-0 sm:w-auto sm:min-w-[160px] sm:flex-none'>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {ACTIVE_OPTIONS.map((opt) => (
+                <SelectItem key={opt.value} value={opt.value}>
+                  {t(opt.labelKey)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
-      {isLoading ? (
+      {isError ? (
+        <div role='alert' className='bg-card border-border space-y-3 rounded-2xl border p-6'>
+          <p>{t('loadError')}</p>
+          <Button
+            variant='outline'
+            onClick={(): void => {
+              void refetch();
+            }}>
+            {tCommon('tryAgain')}
+          </Button>
+        </div>
+      ) : isLoading ? (
         <div className='space-y-4'>
           {Array.from({ length: 4 }).map((_, i) => (
             <Skeleton key={i} className='h-32 w-full' />
           ))}
         </div>
       ) : allRules.length === 0 ? (
-        <Card className='border-border bg-card'>
+        <Card className='border-border bg-card overflow-hidden rounded-2xl shadow-none'>
           <CardContent className='flex flex-col items-center justify-center py-12'>
             <Zap className='text-muted-foreground mb-4 h-12 w-12' />
-            <p className='text-muted-foreground mb-4'>{t('noRules')}</p>
-            <Button className='cursor-pointer' aria-label={t('newRule')} onClick={handleCreate}>
-              <Plus className='mr-2 h-4 w-4' />
-              {t('addFirst')}
-            </Button>
+            <h2 className='mb-2 text-lg font-semibold'>
+              {search || ruleTypeFilter !== 'all' || activeFilter !== 'all'
+                ? tCommon('noResults')
+                : t('noRules')}
+            </h2>
+            <p className='text-muted-foreground mb-4 max-w-md text-center text-sm'>
+              {search || ruleTypeFilter !== 'all' || activeFilter !== 'all'
+                ? t('noResultsDescription')
+                : t('noRulesDescription')}
+            </p>
+            {search || ruleTypeFilter !== 'all' || activeFilter !== 'all' ? (
+              <Button
+                variant='outline'
+                onClick={(): void => {
+                  setSearch('');
+                  setRuleTypeFilter('all');
+                  setActiveFilter('all');
+                }}>
+                {tCommon('reset')}
+              </Button>
+            ) : (
+              <Button className='cursor-pointer' aria-label={t('newRule')} onClick={handleCreate}>
+                <Plus className='mr-2 h-4 w-4' />
+                {t('addFirst')}
+              </Button>
+            )}
           </CardContent>
         </Card>
       ) : (
-        <div className='space-y-3'>
+        <div className='space-y-4'>
           {allRules.map((rule) => {
             const transferAccount = getAccountName(rule.transfer_to_account_id);
 
             const ruleCardContent = (
-              <Card className='border-border bg-card'>
+              <Card className='border-border bg-card overflow-hidden rounded-2xl shadow-none'>
                 <CardHeader className='flex flex-col gap-3 space-y-0 sm:flex-row sm:items-center sm:gap-4'>
                   <div className='min-w-0 flex-1'>
-                    <CardTitle className='text-base font-medium'>{rule.name}</CardTitle>
+                    <CardTitle className='text-lg font-semibold break-words'>{rule.name}</CardTitle>
+                    <p className='text-muted-foreground mt-1 text-xs'>
+                      {t(rule.is_active ? 'active' : 'inactive')}
+                    </p>
                     <div className='mt-1 flex flex-wrap items-center gap-1.5 sm:gap-2'>
                       <Badge variant={ruleTypeBadgeVariant[rule.rule_type]} className='text-xs'>
                         {rule.rule_type === 'account_detection'
@@ -293,12 +332,17 @@ export default function AutomationPage(): React.ReactElement {
                             ? t('transferRule')
                             : t('general')}
                       </Badge>
-                      <Badge variant='outline' className='font-mono text-xs'>
-                        {rule.condition_logic.toUpperCase()}
+                      <Badge variant='outline' className='text-xs'>
+                        {tCommon(rule.condition_logic === 'and' ? 'and' : 'or')}
                       </Badge>
                       <Badge variant='outline'>
                         {t('priority')}: {rule.priority}
                       </Badge>
+                      {rule.managed_account_id ? (
+                        <Badge variant='outline' className='text-brand'>
+                          {t('managedRule')}
+                        </Badge>
+                      ) : null}
                       {transferAccount && (
                         <Badge variant='secondary'>
                           <span className='hidden sm:inline'>{t('transferRule')}: </span>
@@ -307,36 +351,40 @@ export default function AutomationPage(): React.ReactElement {
                       )}
                     </div>
                   </div>
-                  {/* Desktop action buttons */}
-                  <div className='hidden items-center gap-2 sm:flex'>
+                  {/* Keep rule actions available to touch and keyboard users. */}
+                  <div className='flex items-center gap-2'>
                     <Button
+                      disabled={Boolean(rule.managed_account_id)}
                       variant='ghost'
                       size='sm'
                       onClick={(): void => handleEdit(rule)}
-                      className='h-8 w-8 cursor-pointer p-0'>
+                      aria-label={`${t('editRule')} ${rule.name}`}
+                      className='h-11 w-11 cursor-pointer p-0'>
                       <Pencil className='h-4 w-4' />
                     </Button>
                     <Button
                       variant='ghost'
                       size='sm'
+                      disabled={Boolean(rule.managed_account_id)}
                       onClick={(): void => setDeleteTarget(rule)}
-                      className='text-destructive h-8 w-8 cursor-pointer p-0'>
+                      aria-label={`${t('deleteRule')} ${rule.name}`}
+                      className='text-destructive h-11 w-11 cursor-pointer p-0'>
                       <Trash2 className='h-4 w-4' />
                     </Button>
                     <Switch
-                      checked={rule.is_active}
-                      onCheckedChange={(checked): void => handleToggle(rule, checked)}
-                    />
-                  </div>
-                  {/* Mobile: only show toggle */}
-                  <div className='flex items-center gap-2 sm:hidden'>
-                    <Switch
+                      aria-label={`${t('isActive')} ${rule.name}`}
+                      disabled={toggleMutation.isPending || Boolean(rule.managed_account_id)}
                       checked={rule.is_active}
                       onCheckedChange={(checked): void => handleToggle(rule, checked)}
                     />
                   </div>
                 </CardHeader>
-                <CardContent className='space-y-3'>
+                <CardContent className='border-border grid gap-4 border-t pt-4 sm:grid-cols-2'>
+                  {rule.managed_account_id ? (
+                    <p className='text-muted-foreground text-sm sm:col-span-2'>
+                      {t('managedRuleDescription')}
+                    </p>
+                  ) : null}
                   {Object.keys(rule.conditions).length > 0 && (
                     <div>
                       <p className='text-muted-foreground mb-1 text-xs font-medium'>
@@ -344,7 +392,10 @@ export default function AutomationPage(): React.ReactElement {
                       </p>
                       <div className='flex flex-wrap gap-1'>
                         {rule.conditions.raw_text_contains?.map((term) => (
-                          <Badge key={term} variant='outline' className='text-xs'>
+                          <Badge
+                            key={term}
+                            variant='outline'
+                            className='max-w-full text-xs break-words whitespace-normal'>
                             {t('rawTextContains').toLowerCase()}: &quot;{term}&quot;
                           </Badge>
                         ))}
@@ -371,29 +422,44 @@ export default function AutomationPage(): React.ReactElement {
                       </p>
                       <div className='flex flex-wrap gap-1'>
                         {rule.actions.set_type && (
-                          <Badge variant='default' className='text-xs'>
+                          <Badge
+                            variant='secondary'
+                            className='max-w-full text-xs break-words whitespace-normal'>
                             {t('setType').toLowerCase()}: {rule.actions.set_type}
                           </Badge>
                         )}
                         {rule.actions.set_category && (
-                          <Badge variant='default' className='text-xs'>
-                            {t('setCategory').toLowerCase()}
+                          <Badge
+                            variant='secondary'
+                            className='max-w-full text-xs break-words whitespace-normal'>
+                            {t('setCategory').toLowerCase()}:{' '}
+                            {findById(categories ?? [], rule.actions.set_category)?.translations?.[
+                              locale
+                            ] ??
+                              findById(categories ?? [], rule.actions.set_category)?.name ??
+                              tCommon('none')}
                           </Badge>
                         )}
                         {rule.actions.set_account && (
-                          <Badge variant='default' className='text-xs'>
+                          <Badge
+                            variant='secondary'
+                            className='max-w-full text-xs break-words whitespace-normal'>
                             {t('setAccount').toLowerCase()}:{' '}
-                            {getAccountName(rule.actions.set_account) ?? 'unknown'}
+                            {getAccountName(rule.actions.set_account) ?? tCommon('none')}
                           </Badge>
                         )}
                         {rule.actions.auto_reconcile && (
-                          <Badge variant='default' className='text-xs'>
+                          <Badge
+                            variant='secondary'
+                            className='max-w-full text-xs break-words whitespace-normal'>
                             {t('autoReconcile').toLowerCase()}
                           </Badge>
                         )}
                         {rule.actions.add_note && (
-                          <Badge variant='default' className='text-xs'>
-                            {t('addNote').toLowerCase()}
+                          <Badge
+                            variant='secondary'
+                            className='max-w-full text-xs break-words whitespace-normal'>
+                            {t('addNote').toLowerCase()}: {rule.actions.add_note}
                           </Badge>
                         )}
                       </div>
@@ -403,20 +469,7 @@ export default function AutomationPage(): React.ReactElement {
               </Card>
             );
 
-            return (
-              <div key={rule.id}>
-                {/* Desktop: regular card with click-to-edit */}
-                <div className='hidden sm:block'>{ruleCardContent}</div>
-                {/* Mobile: swipeable card */}
-                <div className='sm:hidden'>
-                  <SwipeableRow
-                    onEdit={(): void => handleEdit(rule)}
-                    onDelete={(): void => setDeleteTarget(rule)}>
-                    {ruleCardContent}
-                  </SwipeableRow>
-                </div>
-              </div>
-            );
+            return <div key={rule.id}>{ruleCardContent}</div>;
           })}
         </div>
       )}

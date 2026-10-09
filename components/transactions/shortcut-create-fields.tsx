@@ -16,12 +16,13 @@ import {
 import { SearchableSelect } from '@/components/shared/searchable-select';
 import type { Account, Category } from '@/types';
 import type { ForwardedEmailDraft } from '@/lib/shortcut-inbox/create-draft';
-import { getCategoryName } from '@/lib/i18n/get-category-name';
+import { buildAccountItems, buildCategoryItems } from '@/lib/utils/select-items';
 import type { Locale } from '@/i18n/config';
 
 export interface ShortcutCreateDraft extends ForwardedEmailDraft {
   accountId: string;
   categoryId: string;
+  destinationAccountId?: string;
 }
 
 export function ShortcutCreateFields({
@@ -37,36 +38,34 @@ export function ShortcutCreateFields({
 }): React.ReactElement {
   const t = useTranslations('shortcutInbox');
   const locale = useLocale() as Locale;
+  const transactionT = useTranslations('transactions');
+  const commonT = useTranslations('common');
+  const activeAccounts = accounts.filter(
+    (account) => account.is_active && !account.deleted_at && account.currency === 'COP',
+  );
   return (
     <div className='grid gap-3 sm:grid-cols-2'>
       <div className='space-y-1'>
         <label>{t('createAccount')}</label>
-        <Select
+        <SearchableSelect
           value={draft.accountId}
-          onValueChange={(accountId) => {
-            if (accountId) onChange({ accountId });
-          }}>
-          <SelectTrigger className='w-full' aria-label={t('createAccount')}>
-            <SelectValue placeholder={t('chooseAccount')} />
-          </SelectTrigger>
-          <SelectContent>
-            {accounts
-              .filter((account) => account.is_active && !account.deleted_at)
-              .map((account) => (
-                <SelectItem key={account.id} value={account.id}>
-                  {account.name}
-                  {account.last_four ? ` · ${account.last_four}` : ''}
-                </SelectItem>
-              ))}
-          </SelectContent>
-        </Select>
+          onValueChange={(accountId) => onChange({ accountId, destinationAccountId: '' })}
+          ariaLabel={t('createAccount')}
+          placeholder={t('chooseAccount')}
+          searchPlaceholder={transactionT('searchAccounts')}
+          items={buildAccountItems(activeAccounts)}
+        />
       </div>
       <div className='space-y-1'>
         <label>{t('createType')}</label>
         <Select
           value={draft.type}
           onValueChange={(type) =>
-            onChange({ type: type as ShortcutCreateDraft['type'], categoryId: '' })
+            onChange({
+              type: type as ShortcutCreateDraft['type'],
+              categoryId: '',
+              destinationAccountId: '',
+            })
           }>
           <SelectTrigger className='w-full' aria-label={t('createType')}>
             <SelectValue />
@@ -74,22 +73,42 @@ export function ShortcutCreateFields({
           <SelectContent>
             <SelectItem value='expense'>{t('expense')}</SelectItem>
             <SelectItem value='income'>{t('income')}</SelectItem>
+            <SelectItem value='transfer'>{transactionT('transfer')}</SelectItem>
           </SelectContent>
         </Select>
       </div>
-      <div className='space-y-1'>
-        <label>{t('createCategory')}</label>
-        <SearchableSelect
-          value={draft.categoryId}
-          onValueChange={(categoryId) => onChange({ categoryId })}
-          ariaLabel={t('createCategory')}
-          placeholder={t('chooseCategory')}
-          searchPlaceholder={t('searchCategories')}
-          items={categories
-            .filter((category) => category.type === draft.type && category.is_active)
-            .map((category) => ({ value: category.id, label: getCategoryName(category, locale) }))}
-        />
-      </div>
+      {draft.type === 'transfer' ? (
+        <div className='space-y-1'>
+          <label>{transactionT('transferTo')}</label>
+          <SearchableSelect
+            value={draft.destinationAccountId ?? ''}
+            onValueChange={(destinationAccountId) => onChange({ destinationAccountId })}
+            ariaLabel={transactionT('transferTo')}
+            placeholder={transactionT('selectDestAccount')}
+            searchPlaceholder={transactionT('searchAccounts')}
+            items={buildAccountItems(
+              activeAccounts.filter((account) => account.id !== draft.accountId),
+            )}
+          />
+        </div>
+      ) : (
+        <div className='space-y-1'>
+          <label>{t('createCategory')}</label>
+          <SearchableSelect
+            value={draft.categoryId}
+            onValueChange={(categoryId) => onChange({ categoryId })}
+            ariaLabel={t('createCategory')}
+            placeholder={t('chooseCategory')}
+            searchPlaceholder={t('searchCategories')}
+            items={buildCategoryItems(
+              categories.filter((category) => category.is_active),
+              draft.type,
+              { locale, allPrefix: (name) => commonT('allOf', { name }) },
+            )}
+            collapsibleGroups
+          />
+        </div>
+      )}
       <label className='space-y-1'>
         {t('createAmount')}
         <Input

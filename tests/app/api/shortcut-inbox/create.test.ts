@@ -54,6 +54,39 @@ describe('Shortcut reviewed transaction creation route', () => {
     });
   });
 
+  it('passes a transfer destination and nullable category through the audited RPC', async () => {
+    const transfer = {
+      ...reviewed,
+      type: 'transfer',
+      category_id: null,
+      transfer_to_account_id: '44444444-4444-4444-8444-444444444444',
+    };
+    expect((await POST(request(transfer) as never, context)).status).toBe(201);
+    expect(rpc).toHaveBeenCalledWith(
+      'confirm_shortcut_transaction',
+      expect.objectContaining({ p_reviewed_payload: transfer }),
+    );
+  });
+
+  it('rejects missing, identical or malformed destinations and category leakage before posting', async () => {
+    const transfer = {
+      ...reviewed,
+      type: 'transfer',
+      category_id: null,
+      transfer_to_account_id: '44444444-4444-4444-8444-444444444444',
+    };
+    for (const body of [
+      { ...transfer, transfer_to_account_id: undefined },
+      { ...transfer, transfer_to_account_id: accountId },
+      { ...transfer, transfer_to_account_id: 'invalid' },
+      { ...transfer, category_id: categoryId },
+      { ...reviewed, transfer_to_account_id: transfer.transfer_to_account_id },
+    ]) {
+      expect((await POST(request(body) as never, context)).status).toBe(400);
+    }
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
   it('rejects an owned Lulo email before the financial RPC', async () => {
     lookupInbox.mockResolvedValue({ data: { source: 'lulo-email-backfill' }, error: null });
     const response = await POST(request(reviewed) as never, context);

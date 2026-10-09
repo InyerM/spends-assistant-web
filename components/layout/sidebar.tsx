@@ -41,6 +41,8 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useSubscription } from '@/hooks/use-subscription';
 import { useUsage } from '@/hooks/use-usage';
 import { Progress } from '@/components/ui/progress';
+import { NotificationCenter } from '@/components/notifications/notification-center';
+import { useNotifications } from '@/lib/api/queries/notifications.queries';
 
 interface NavItem {
   titleKey: string;
@@ -97,6 +99,8 @@ export function Sidebar({ className, onClose }: SidebarProps): React.ReactElemen
   const router = useRouter();
   const t = useTranslations('nav');
   const tCommon = useTranslations('common');
+  const tNotifications = useTranslations('notifications');
+  const { data: notifications } = useNotifications();
   const { user, signOut } = useAuth();
   const { data: forwardingRoute } = useEmailForwardingRoute();
   const emailInboxReady =
@@ -147,6 +151,17 @@ export function Sidebar({ className, onClose }: SidebarProps): React.ReactElemen
         title={isCollapsed ? title : undefined}>
         <item.icon className='h-5 w-5 shrink-0' />
         {!isCollapsed && <span className='truncate'>{title}</span>}
+        {item.href === '/inbox' &&
+        emailInboxReady &&
+        (notifications?.pending_email_count ?? 0) > 0 ? (
+          <span
+            className='bg-brand/15 text-brand ml-auto rounded-full px-2 text-xs tabular-nums'
+            aria-label={tNotifications('pendingEmails', {
+              count: notifications?.pending_email_count ?? 0,
+            })}>
+            {notifications?.pending_email_count}
+          </span>
+        ) : null}
       </Button>
     );
   };
@@ -216,6 +231,23 @@ export function Sidebar({ className, onClose }: SidebarProps): React.ReactElemen
         })}
       </nav>
 
+      {(notifications?.budget_warning_count ?? 0) > 0 ? (
+        <Button
+          variant='ghost'
+          className='text-brand-secondary mx-3 mb-2 h-auto min-h-11 text-left text-xs whitespace-normal'
+          onClick={() => handleNavigation('/budgets')}
+          aria-label={tNotifications('budgetWarning', {
+            count: notifications?.budget_warning_count ?? 0,
+          })}>
+          <Target className='h-4 w-4 shrink-0' aria-hidden='true' />
+          {!isCollapsed
+            ? tNotifications('budgetWarning', { count: notifications?.budget_warning_count ?? 0 })
+            : null}
+        </Button>
+      ) : null}
+      <div className='mx-3 mb-2 md:hidden'>
+        <NotificationCenter />
+      </div>
       {!isCollapsed && subscription && (
         <div className='border-brand-secondary/25 bg-brand-secondary/5 mx-3 mb-3 rounded-2xl border p-3.5'>
           <p className='text-foreground text-sm font-semibold'>

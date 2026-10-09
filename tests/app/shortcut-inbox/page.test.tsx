@@ -614,7 +614,9 @@ describe('Shortcut inbox review page', () => {
     const fetchMock = vi.fn().mockImplementation((url: string, init?: RequestInit) => {
       if (url === '/api/accounts')
         return Promise.resolve(
-          Response.json([{ id: 'account-1', name: 'Cash', is_active: true, deleted_at: null }]),
+          Response.json([
+            { id: 'account-1', name: 'Cash', currency: 'COP', is_active: true, deleted_at: null },
+          ]),
         );
       if (url === '/api/categories')
         return Promise.resolve(
@@ -712,7 +714,15 @@ describe('Shortcut inbox review page', () => {
     const fetchMock = vi.fn().mockImplementation((url: string) => {
       if (url === '/api/accounts')
         return Promise.resolve(
-          Response.json([{ id: 'account-1', name: 'Savings', is_active: true, deleted_at: null }]),
+          Response.json([
+            {
+              id: 'account-1',
+              name: 'Savings',
+              currency: 'COP',
+              is_active: true,
+              deleted_at: null,
+            },
+          ]),
         );
       if (url === '/api/categories')
         return Promise.resolve(
@@ -778,7 +788,9 @@ describe('Shortcut inbox review page', () => {
     const fetchMock = vi.fn().mockImplementation((url: string) => {
       if (url === '/api/accounts')
         return Promise.resolve(
-          Response.json([{ id: 'account-1', name: 'Cash', is_active: true, deleted_at: null }]),
+          Response.json([
+            { id: 'account-1', name: 'Cash', currency: 'COP', is_active: true, deleted_at: null },
+          ]),
         );
       if (url === '/api/categories')
         return Promise.resolve(

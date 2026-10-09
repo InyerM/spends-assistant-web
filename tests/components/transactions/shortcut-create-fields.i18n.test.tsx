@@ -14,6 +14,29 @@ vi.mock('@/hooks/use-user-settings', () => ({
 afterEach(cleanup);
 
 describe('forwarded email category review', () => {
+  it('offers transfer review with a searchable destination and no expense category', () => {
+    render(
+      <ShortcutCreateFields
+        draft={{
+          type: 'transfer',
+          amount: '100',
+          date: '2026-10-05',
+          eventTime: '',
+          eventTimeConfirmed: false,
+          description: 'Own accounts',
+          notes: '',
+          accountId: 'source',
+          categoryId: '',
+          destinationAccountId: 'destination',
+        }}
+        accounts={[]}
+        categories={[]}
+        onChange={vi.fn()}
+      />,
+    );
+    expect(screen.getByRole('combobox', { name: 'transferTo' })).toBeInTheDocument();
+    expect(screen.queryByRole('combobox', { name: 'createCategory' })).not.toBeInTheDocument();
+  });
   it('shows the Spanish category label for a saved Spanish locale', () => {
     render(
       <ShortcutCreateFields

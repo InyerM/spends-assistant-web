@@ -11,7 +11,10 @@ export async function GET(request: NextRequest): Promise<Response> {
     const ruleType = searchParams.get('rule_type');
     const isActive = searchParams.get('is_active');
 
-    let query = supabase.from('automation_rules').select('*', { count: 'exact' });
+    let query = supabase
+      .from('automation_rules')
+      .select('*', { count: 'exact' })
+      .is('deleted_at', null);
 
     if (ruleType) {
       query = query.eq('rule_type', ruleType);
@@ -48,6 +51,7 @@ export async function POST(request: NextRequest): Promise<Response> {
         supabase
           .from('automation_rules')
           .select('id', { count: 'exact', head: true })
+          .is('managed_account_id', null)
           .is('deleted_at', null),
         supabase
           .from('app_settings')

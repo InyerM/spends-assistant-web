@@ -56,6 +56,7 @@ export async function GET(): Promise<Response> {
         .from('automation_rules')
         .select('id', { count: 'exact', head: true })
         .eq('user_id', userId)
+        .is('managed_account_id', null)
         .is('deleted_at', null),
     ]);
 

@@ -42,6 +42,7 @@ export function ShortcutCreateForm({
   onCancel: () => void;
 }): React.ReactElement {
   const t = useTranslations('shortcutInbox');
+  const transactionT = useTranslations('transactions');
   const accountsQuery = useAccounts();
   const categoriesQuery = useCategories();
   const historyQuery = useTransactions(
@@ -54,6 +55,7 @@ export function ShortcutCreateForm({
     const base = buildForwardedEmailDraft(preview, receivedAt, bancolombia);
     return {
       ...base,
+      destinationAccountId: '',
       type: analysis?.suggested_type ?? base.type,
       description: analysis?.description || base.description,
       notes: analysis?.notes ?? base.notes,
@@ -133,12 +135,21 @@ export function ShortcutCreateForm({
   const submit = async (confirmDistinct = false): Promise<void> => {
     if (
       !draft.accountId ||
-      !draft.categoryId ||
+      (draft.type !== 'transfer' && !draft.categoryId) ||
       !draft.amount ||
       !draft.date ||
       !draft.description.trim()
     ) {
       setError(t('completeRequired'));
+      return;
+    }
+    if (
+      draft.type === 'transfer' &&
+      (!draft.destinationAccountId || draft.destinationAccountId === draft.accountId)
+    ) {
+      setError(
+        transactionT(draft.destinationAccountId ? 'destinationDistinct' : 'destinationRequired'),
+      );
       return;
     }
     if (draft.eventTime && !draft.eventTimeConfirmed) {
@@ -150,7 +161,10 @@ export function ShortcutCreateForm({
       const result = await createMutation.mutateAsync({
         inboxId,
         account_id: draft.accountId,
-        category_id: draft.categoryId,
+        category_id: draft.type === 'transfer' ? null : draft.categoryId,
+        ...(draft.type === 'transfer'
+          ? { transfer_to_account_id: draft.destinationAccountId }
+          : {}),
         type: draft.type,
         amount: draft.amount,
         date: draft.date,

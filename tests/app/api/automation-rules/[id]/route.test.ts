@@ -30,6 +30,12 @@ function createChainableQuery(data: unknown, error: { message: string } | null =
   return { from: vi.fn().mockReturnValue(chain), _chain: chain };
 }
 
+function createMutationQuery(data: unknown, error: { message: string } | null = null) {
+  const query = createChainableQuery(data, error);
+  query._chain.single.mockResolvedValueOnce({ data: { managed_account_id: null }, error: null });
+  return query;
+}
+
 function makeParams(id: string): { params: Promise<{ id: string }> } {
   return { params: Promise.resolve({ id }) };
 }
@@ -76,7 +82,7 @@ describe('PATCH /api/automation-rules/[id]', () => {
     const { getUserClient } = await import('@/lib/api/server');
     const updated = { id: 'rule-1', name: 'Updated Rule' };
     vi.mocked(getUserClient).mockResolvedValue({
-      supabase: createChainableQuery(updated) as never,
+      supabase: createMutationQuery(updated) as never,
       userId: 'test-user-id',
     });
 
@@ -91,7 +97,7 @@ describe('PATCH /api/automation-rules/[id]', () => {
   it('returns 400 on update error', async () => {
     const { getUserClient } = await import('@/lib/api/server');
     vi.mocked(getUserClient).mockResolvedValue({
-      supabase: createChainableQuery(null, { message: 'Update failed' }) as never,
+      supabase: createMutationQuery(null, { message: 'Update failed' }) as never,
       userId: 'test-user-id',
     });
 
@@ -112,7 +118,7 @@ describe('DELETE /api/automation-rules/[id]', () => {
   it('deletes rule', async () => {
     const { getUserClient } = await import('@/lib/api/server');
     vi.mocked(getUserClient).mockResolvedValue({
-      supabase: createChainableQuery(null, null) as never,
+      supabase: createMutationQuery(null, null) as never,
       userId: 'test-user-id',
     });
 
@@ -128,7 +134,7 @@ describe('DELETE /api/automation-rules/[id]', () => {
   it('returns 400 on delete error', async () => {
     const { getUserClient } = await import('@/lib/api/server');
     vi.mocked(getUserClient).mockResolvedValue({
-      supabase: createChainableQuery(null, { message: 'Cannot delete' }) as never,
+      supabase: createMutationQuery(null, { message: 'Cannot delete' }) as never,
       userId: 'test-user-id',
     });
 

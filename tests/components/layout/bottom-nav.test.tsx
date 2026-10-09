@@ -29,6 +29,7 @@ describe('mobile workspace navigation', () => {
     ['receivables', '/receivables'],
     ['reliefFunds', '/relief-funds'],
     ['emailInbox', '/inbox'],
+    ['notifications', '/notifications'],
   ] as const)('exposes and opens %s in the More sheet', (key, href) => {
     render(
       <NextIntlClientProvider locale='es' messages={es}>
@@ -81,5 +82,6 @@ describe('mobile workspace navigation', () => {
     );
     fireEvent.click(screen.getByRole('button', { name: es.nav.more }));
     expect(screen.queryByRole('button', { name: es.nav.emailInbox })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: es.nav.notifications })).toBeVisible();
   });
 });

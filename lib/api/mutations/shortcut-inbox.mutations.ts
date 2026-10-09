@@ -42,8 +42,9 @@ export interface CandidateReview {
 export interface CreateInboxTransactionInput {
   inboxId: string;
   account_id: string;
-  category_id: string;
-  type: 'expense' | 'income';
+  category_id: string | null;
+  transfer_to_account_id?: string;
+  type: 'expense' | 'income' | 'transfer';
   amount: string;
   date: string;
   description: string;

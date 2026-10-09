@@ -7,7 +7,7 @@ import { previewBancolombiaNotice, type BancolombiaNoticePreview } from './banco
 import { matchesAccountSuffix } from '@/lib/accounts/identifiers';
 
 export interface ForwardedEmailDraft {
-  type: 'expense' | 'income';
+  type: 'expense' | 'income' | 'transfer';
   amount: string;
   date: string;
   eventTime: string;

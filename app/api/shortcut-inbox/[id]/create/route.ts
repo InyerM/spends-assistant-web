@@ -17,6 +17,7 @@ const allowedFields = new Set([
   'event_at',
   'event_time_confirmed',
   'notes',
+  'transfer_to_account_id',
 ]);
 
 function validDate(value: string): boolean {
@@ -65,9 +66,15 @@ export async function POST(request: NextRequest, context: Context): Promise<Resp
       requiredFields.some((field) => !(field in body)) ||
       typeof body.account_id !== 'string' ||
       !uuid.test(body.account_id) ||
-      typeof body.category_id !== 'string' ||
-      !uuid.test(body.category_id) ||
-      (body.type !== 'expense' && body.type !== 'income') ||
+      (body.type !== 'transfer' &&
+        (typeof body.category_id !== 'string' || !uuid.test(body.category_id))) ||
+      (body.type === 'transfer' &&
+        (body.category_id !== null ||
+          typeof body.transfer_to_account_id !== 'string' ||
+          !uuid.test(body.transfer_to_account_id) ||
+          body.transfer_to_account_id === body.account_id)) ||
+      (body.type !== 'transfer' && body.transfer_to_account_id !== undefined) ||
+      (body.type !== 'expense' && body.type !== 'income' && body.type !== 'transfer') ||
       typeof body.amount !== 'string' ||
       !amount.test(body.amount) ||
       Number(body.amount) <= 0 ||
@@ -96,6 +103,7 @@ export async function POST(request: NextRequest, context: Context): Promise<Resp
       account_id: body.account_id,
       category_id: body.category_id,
       type: body.type,
+      ...(body.type === 'transfer' ? { transfer_to_account_id: body.transfer_to_account_id } : {}),
       amount: body.amount,
       date: body.date,
       description: body.description.trim(),

@@ -28,6 +28,15 @@ export async function PATCH(request: NextRequest, { params }: RouteParams): Prom
   try {
     const { id } = await params;
     const { supabase } = await getUserClient();
+    const { data: existing, error: lookupError } = await supabase
+      .from('automation_rules')
+      .select('managed_account_id')
+      .eq('id', id)
+      .single();
+    if (lookupError) return errorResponse('Automation rule not found', 404);
+    if (existing.managed_account_id)
+      return errorResponse('Managed account rules are updated through account identifiers', 409);
+
     const body = await request.json();
 
     const { data, error } = await supabase
@@ -49,6 +58,14 @@ export async function DELETE(_request: NextRequest, { params }: RouteParams): Pr
   try {
     const { id } = await params;
     const { supabase } = await getUserClient();
+    const { data: existing, error: lookupError } = await supabase
+      .from('automation_rules')
+      .select('managed_account_id')
+      .eq('id', id)
+      .single();
+    if (lookupError) return errorResponse('Automation rule not found', 404);
+    if (existing.managed_account_id)
+      return errorResponse('Managed account rules are updated through account identifiers', 409);
 
     const { error } = await supabase.from('automation_rules').delete().eq('id', id);
 

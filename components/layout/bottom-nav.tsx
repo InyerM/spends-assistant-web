@@ -19,6 +19,7 @@ import {
   HandCoins,
   HeartHandshake,
   Target,
+  Bell,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -42,6 +43,7 @@ const mainItems: NavItem[] = [
 ];
 
 const moreItems: NavItem[] = [
+  { titleKey: 'notifications', href: '/notifications', icon: Bell },
   { titleKey: 'documents', href: '/documents', icon: Files },
   { titleKey: 'budgets', href: '/budgets', icon: Target },
   { titleKey: 'emailInbox', href: '/inbox', icon: Mail },

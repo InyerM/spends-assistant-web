@@ -1,4 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { automationKeys } from '@/lib/api/queries/automation.queries';
 import { accountKeys } from '@/lib/api/queries/account.queries';
 import { transactionKeys } from '@/lib/api/queries/transaction.queries';
 import { usageKeys } from '@/hooks/use-usage';
@@ -39,6 +40,7 @@ export function useCreateAccount(): ReturnType<
     mutationFn: createAccount,
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: accountKeys.all });
+      void queryClient.invalidateQueries({ queryKey: automationKeys.all });
       void queryClient.invalidateQueries({ queryKey: usageKeys.all });
     },
   });
@@ -53,6 +55,7 @@ export function useUpdateAccount(): ReturnType<
     mutationFn: updateAccount,
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: accountKeys.all });
+      void queryClient.invalidateQueries({ queryKey: automationKeys.all });
     },
   });
 }
@@ -72,6 +75,7 @@ export function useDeleteAccount(): ReturnType<typeof useMutation<void, Error, s
     mutationFn: deleteAccount,
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: accountKeys.all });
+      void queryClient.invalidateQueries({ queryKey: automationKeys.all });
       void queryClient.invalidateQueries({ queryKey: transactionKeys.all });
       void queryClient.invalidateQueries({ queryKey: usageKeys.all });
     },

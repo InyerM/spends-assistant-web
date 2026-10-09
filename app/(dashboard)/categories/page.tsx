@@ -18,7 +18,6 @@ import {
   useDeleteCategory,
   fetchCategoryWithCounts,
 } from '@/lib/api/mutations/category.mutations';
-import { SwipeableRow } from '@/components/transactions/swipeable-row';
 import { CategoryFormDialog } from '@/components/categories/category-form-dialog';
 import { Plus, Pencil, Trash2, ChevronDown, ChevronRight, Eye, EyeOff } from 'lucide-react';
 import { TYPE_BADGE_VARIANT, SPENDING_NATURE_BADGE_VARIANT } from '@/lib/constants/badge-variants';
@@ -42,7 +41,7 @@ export default function CategoriesPage(): React.ReactElement {
   const t = useTranslations('categories');
   const tCommon = useTranslations('common');
   const locale = useLocale();
-  const { data: categoryTree, isLoading } = useAllCategoryTree();
+  const { data: categoryTree, isLoading, isError, refetch } = useAllCategoryTree();
   const updateMutation = useUpdateCategory();
   const deleteMutation = useDeleteCategory();
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -166,65 +165,93 @@ export default function CategoriesPage(): React.ReactElement {
   return (
     <TooltipProvider>
       <div className='mx-auto w-full max-w-7xl space-y-6 p-4 sm:p-6 lg:p-8'>
-        <div className='space-y-3 sm:space-y-0'>
-          {/* Mobile: search full-width */}
+        <header className='flex flex-wrap items-start justify-between gap-4'>
+          <div className='space-y-2'>
+            <h1 className='text-3xl font-bold tracking-tight'>{t('title')}</h1>
+            <p className='text-muted-foreground max-w-2xl text-sm'>{t('subtitle')}</p>
+          </div>
+          <Button className='min-h-11' onClick={(): void => handleCreate()}>
+            <Plus className='mr-2 h-4 w-4' />
+            {t('newCategory')}
+          </Button>
+        </header>
+        <div className='bg-card border-border flex flex-col gap-4 rounded-2xl border p-4 sm:flex-row sm:items-center sm:justify-between'>
           <SearchInput
             value={search}
             onChange={setSearch}
             placeholder={`${tCommon('search')}...`}
-            className='sm:hidden'
+            clearLabel={tCommon('reset')}
+            className='w-full sm:max-w-sm'
           />
-
-          {/* Toggle + button row (mobile), search + toggle + button row (desktop) */}
-          <div className='flex items-center justify-between'>
-            <div className='flex items-center gap-3'>
-              {/* Desktop: search inline */}
-              <SearchInput
-                value={search}
-                onChange={setSearch}
-                placeholder={`${tCommon('search')}...`}
-                className='hidden max-w-[320px] min-w-[180px] flex-1 sm:block'
-              />
-              <Switch checked={showHidden} onCheckedChange={setShowHidden} id='show-hidden' />
-              <label
-                htmlFor='show-hidden'
-                className='text-muted-foreground cursor-pointer text-sm whitespace-nowrap'>
-                {t('showHidden')}
-              </label>
-            </div>
-            <Button
-              className='cursor-pointer'
-              aria-label={t('newCategory')}
-              onClick={(): void => handleCreate()}>
-              <Plus className='h-4 w-4 sm:mr-2' />
-              <span className='hidden sm:inline'>{t('newCategory')}</span>
-            </Button>
+          <div className='flex min-h-11 items-center gap-3'>
+            <Switch checked={showHidden} onCheckedChange={setShowHidden} id='show-hidden' />
+            <label htmlFor='show-hidden' className='cursor-pointer text-sm'>
+              {t('showHidden')}
+            </label>
           </div>
         </div>
 
-        {isLoading ? (
+        {isError ? (
+          <div role='alert' className='border-border bg-card space-y-3 rounded-2xl border p-6'>
+            <p>{t('loadError')}</p>
+            <Button
+              variant='outline'
+              onClick={(): void => {
+                void refetch();
+              }}>
+              {tCommon('tryAgain')}
+            </Button>
+          </div>
+        ) : isLoading ? (
           <div className='space-y-4'>
             {Array.from({ length: 6 }).map((_, i) => (
               <Skeleton key={i} className='h-16 w-full' />
             ))}
           </div>
+        ) : !filteredTree?.length ? (
+          <div className='border-border bg-card space-y-3 rounded-2xl border px-6 py-12 text-center'>
+            <h2 className='text-lg font-semibold'>
+              {search || showHidden || categoryTree?.length
+                ? tCommon('noResults')
+                : t('noCategories')}
+            </h2>
+            <p className='text-muted-foreground text-sm'>
+              {search || categoryTree?.length
+                ? t('noResultsDescription')
+                : t('noCategoriesDescription')}
+            </p>
+            {search || categoryTree?.length ? (
+              <Button
+                variant='outline'
+                onClick={(): void => {
+                  setSearch('');
+                  setShowHidden(true);
+                }}>
+                {tCommon('reset')}
+              </Button>
+            ) : (
+              <Button onClick={(): void => handleCreate()}>{t('addFirst')}</Button>
+            )}
+          </div>
         ) : (
-          <div className='space-y-2'>
-            {filteredTree?.map((parent) => {
-              const isExpanded = expandedIds.has(parent.id);
+          <div className='space-y-3'>
+            {filteredTree.map((parent) => {
+              const isExpanded = search.trim().length > 0 || expandedIds.has(parent.id);
               const hasChildren = parent.children.length > 0;
               const displayName = getCategoryDisplayName(parent, locale);
 
               const parentCardContent = (
-                <Card className={`border-border bg-card ${!parent.is_active ? 'opacity-50' : ''}`}>
-                  <CardHeader className='flex flex-row items-center gap-2 space-y-0 py-3 sm:gap-3'>
+                <Card className='border-border bg-card overflow-hidden rounded-2xl shadow-none'>
+                  <CardHeader className='flex flex-row flex-wrap items-center gap-2 space-y-0 px-4 py-4 sm:gap-3'>
                     {hasChildren ? (
                       <button
                         onClick={(e): void => {
                           e.stopPropagation();
                           toggleExpanded(parent.id);
                         }}
-                        className='text-muted-foreground hover:text-foreground flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center'>
+                        aria-label={`${t('subcategories')} ${displayName}`}
+                        aria-expanded={isExpanded}
+                        className='text-muted-foreground hover:text-foreground focus-visible:ring-ring flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-lg focus-visible:ring-2'>
                         {isExpanded ? (
                           <ChevronDown className='h-4 w-4' />
                         ) : (
@@ -235,10 +262,22 @@ export default function CategoriesPage(): React.ReactElement {
                       <div className='w-4 shrink-0' />
                     )}
 
-                    <span className='shrink-0 text-lg'>{parent.icon ?? '📁'}</span>
+                    <span className='bg-accent flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-lg'>
+                      {parent.icon ?? '📁'}
+                    </span>
                     <div className='min-w-0 flex-1'>
                       <CardTitle className='truncate text-base font-medium'>
                         {displayName}
+                        {hasChildren ? (
+                          <span className='text-muted-foreground ml-2 text-xs tabular-nums'>
+                            ({parent.children.length})
+                          </span>
+                        ) : null}
+                        {!parent.is_active ? (
+                          <Badge variant='outline' className='ml-2'>
+                            {tCommon('disabled')}
+                          </Badge>
+                        ) : null}
                       </CardTitle>
                       <Tooltip>
                         <TooltipTrigger asChild>
@@ -247,10 +286,8 @@ export default function CategoriesPage(): React.ReactElement {
                         <TooltipContent side='top'>{t('slugTooltip')}</TooltipContent>
                       </Tooltip>
                     </div>
-                    <Badge
-                      variant={TYPE_BADGE_VARIANT[parent.type]}
-                      className='hidden shrink-0 sm:inline-flex'>
-                      {parent.type}
+                    <Badge variant={TYPE_BADGE_VARIANT[parent.type]} className='shrink-0'>
+                      {t(parent.type)}
                     </Badge>
                     {parent.spending_nature && parent.spending_nature !== 'none' && (
                       <Tooltip>
@@ -277,7 +314,7 @@ export default function CategoriesPage(): React.ReactElement {
                         style={{ backgroundColor: parent.color }}
                       />
                     )}
-                    <div className='flex shrink-0 items-center'>
+                    <div className='border-border flex w-full shrink-0 items-center justify-end border-t pt-2 sm:w-auto sm:border-0 sm:pt-0'>
                       {/* Add subcategory - only on top-level categories */}
                       {!parent.parent_id && (
                         <Button
@@ -300,8 +337,9 @@ export default function CategoriesPage(): React.ReactElement {
                           e.stopPropagation();
                           handleToggleVisibility(parent);
                         }}
-                        className='hidden h-9 w-9 cursor-pointer p-0 sm:flex'
-                        title={t('hideCategory')}>
+                        className='h-11 w-11 cursor-pointer p-0'
+                        aria-label={`${t(parent.is_active ? 'hideCategory' : 'showCategory')} ${displayName}`}
+                        disabled={updateMutation.isPending}>
                         {parent.is_active ? (
                           <Eye className='h-4 w-4' />
                         ) : (
@@ -315,7 +353,8 @@ export default function CategoriesPage(): React.ReactElement {
                           e.stopPropagation();
                           handleEdit(parent);
                         }}
-                        className='hidden h-9 w-9 cursor-pointer p-0 sm:flex'>
+                        aria-label={`${t('editCategory')} ${displayName}`}
+                        className='h-11 w-11 cursor-pointer p-0'>
                         <Pencil className='h-4 w-4' />
                       </Button>
                       {/* Delete button: hidden for default categories */}
@@ -327,6 +366,7 @@ export default function CategoriesPage(): React.ReactElement {
                                 variant='ghost'
                                 size='sm'
                                 disabled
+                                aria-label={`${t('deleteCategory')} ${displayName}: ${t('cannotDeleteDefault')}`}
                                 className='text-muted-foreground hidden h-9 w-9 p-0 sm:flex'>
                                 <Trash2 className='h-4 w-4' />
                               </Button>
@@ -342,7 +382,8 @@ export default function CategoriesPage(): React.ReactElement {
                             e.stopPropagation();
                             void handleDeleteClick(parent);
                           }}
-                          className='text-destructive hidden h-9 w-9 cursor-pointer p-0 sm:flex'>
+                          aria-label={`${t('deleteCategory')} ${displayName}`}
+                          className='text-destructive h-11 w-11 cursor-pointer p-0'>
                           <Trash2 className='h-4 w-4' />
                         </Button>
                       )}
@@ -351,16 +392,22 @@ export default function CategoriesPage(): React.ReactElement {
 
                   {isExpanded && hasChildren && (
                     <CardContent className='pt-0 pb-3'>
-                      <div className='ml-4 space-y-1 sm:ml-8'>
+                      <div className='border-border space-y-1 border-t pt-2 sm:ml-8'>
                         {parent.children.map((child) => {
                           const childDisplayName = getCategoryDisplayName(child, locale);
 
                           const childRowContent = (
-                            <div
-                              className={`hover:bg-card-overlay flex items-center gap-2 rounded-lg px-3 py-2 sm:gap-3 ${!child.is_active ? 'opacity-50' : ''}`}>
+                            <div className='hover:bg-accent flex flex-wrap items-center gap-2 rounded-lg px-3 py-2 sm:gap-3'>
                               <span>{child.icon ?? '📄'}</span>
                               <div className='min-w-0 flex-1'>
-                                <span className='block truncate text-sm'>{childDisplayName}</span>
+                                <span className='block truncate text-sm'>
+                                  {childDisplayName}
+                                  {!child.is_active ? (
+                                    <span className='text-muted-foreground ml-2 text-xs'>
+                                      ({tCommon('disabled')})
+                                    </span>
+                                  ) : null}
+                                </span>
                                 <Tooltip>
                                   <TooltipTrigger asChild>
                                     <p className='text-muted-foreground hidden truncate text-xs sm:block'>
@@ -395,8 +442,10 @@ export default function CategoriesPage(): React.ReactElement {
                               <Button
                                 variant='ghost'
                                 size='sm'
+                                aria-label={`${t(child.is_active ? 'hideCategory' : 'showCategory')} ${childDisplayName}`}
+                                disabled={updateMutation.isPending}
                                 onClick={(): void => handleToggleVisibility(child)}
-                                className='hidden h-9 w-9 cursor-pointer p-0 sm:flex sm:h-7 sm:w-7'>
+                                className='h-11 w-11 cursor-pointer p-0'>
                                 {child.is_active ? (
                                   <Eye className='h-4 w-4 sm:h-3 sm:w-3' />
                                 ) : (
@@ -406,8 +455,9 @@ export default function CategoriesPage(): React.ReactElement {
                               <Button
                                 variant='ghost'
                                 size='sm'
+                                aria-label={`${t('editCategory')} ${childDisplayName}`}
                                 onClick={(): void => handleEdit(child)}
-                                className='hidden h-9 w-9 cursor-pointer p-0 sm:flex sm:h-7 sm:w-7'>
+                                className='h-11 w-11 cursor-pointer p-0'>
                                 <Pencil className='h-4 w-4 sm:h-3 sm:w-3' />
                               </Button>
                               {child.is_default ? (
@@ -418,6 +468,7 @@ export default function CategoriesPage(): React.ReactElement {
                                         variant='ghost'
                                         size='sm'
                                         disabled
+                                        aria-label={`${t('deleteCategory')} ${childDisplayName}: ${t('cannotDeleteDefault')}`}
                                         className='text-muted-foreground hidden h-9 w-9 p-0 sm:flex sm:h-7 sm:w-7'>
                                         <Trash2 className='h-4 w-4 sm:h-3 sm:w-3' />
                                       </Button>
@@ -429,32 +480,16 @@ export default function CategoriesPage(): React.ReactElement {
                                 <Button
                                   variant='ghost'
                                   size='sm'
+                                  aria-label={`${t('deleteCategory')} ${childDisplayName}`}
                                   onClick={(): void => void handleDeleteClick(child)}
-                                  className='text-destructive hidden h-9 w-9 cursor-pointer p-0 sm:flex sm:h-7 sm:w-7'>
+                                  className='text-destructive h-11 w-11 cursor-pointer p-0'>
                                   <Trash2 className='h-4 w-4 sm:h-3 sm:w-3' />
                                 </Button>
                               )}
                             </div>
                           );
 
-                          return (
-                            <div key={child.id}>
-                              {/* Desktop: regular row */}
-                              <div className='hidden sm:block'>{childRowContent}</div>
-                              {/* Mobile: swipeable row */}
-                              <div className='sm:hidden'>
-                                <SwipeableRow
-                                  onEdit={(): void => handleEdit(child)}
-                                  onDelete={
-                                    child.is_default
-                                      ? undefined
-                                      : (): void => void handleDeleteClick(child)
-                                  }>
-                                  {childRowContent}
-                                </SwipeableRow>
-                              </div>
-                            </div>
-                          );
+                          return <div key={child.id}>{childRowContent}</div>;
                         })}
                       </div>
                     </CardContent>
@@ -462,22 +497,7 @@ export default function CategoriesPage(): React.ReactElement {
                 </Card>
               );
 
-              return (
-                <div key={parent.id}>
-                  {/* Desktop: regular card */}
-                  <div className='hidden sm:block'>{parentCardContent}</div>
-                  {/* Mobile: swipeable card */}
-                  <div className='sm:hidden'>
-                    <SwipeableRow
-                      onEdit={(): void => handleEdit(parent)}
-                      onDelete={
-                        parent.is_default ? undefined : (): void => void handleDeleteClick(parent)
-                      }>
-                      {parentCardContent}
-                    </SwipeableRow>
-                  </div>
-                </div>
-              );
+              return <div key={parent.id}>{parentCardContent}</div>;
             })}
           </div>
         )}

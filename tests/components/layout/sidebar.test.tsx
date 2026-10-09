@@ -2,6 +2,13 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Sidebar } from '@/components/layout/sidebar';
 
+vi.mock('@/lib/api/queries/notifications.queries', () => ({
+  useNotifications: () => ({ data: undefined }),
+}));
+vi.mock('@/components/notifications/notification-center', () => ({
+  NotificationCenter: () => null,
+}));
+
 vi.mock('next/navigation', () => ({
   usePathname: () => '/accounts',
   useRouter: () => ({ push: vi.fn() }),

@@ -2,9 +2,11 @@
 
 import { usePathname } from 'next/navigation';
 import { useTranslations } from 'next-intl';
+import { NotificationCenter } from '@/components/notifications/notification-center';
 
 const routeToKey: Record<string, string> = {
   '/dashboard': 'dashboard',
+  '/notifications': 'notifications',
   '/transactions': 'transactions',
   '/documents': 'documents',
   '/accounts': 'accounts',
@@ -35,6 +37,7 @@ export function Header(): React.ReactElement {
     <header className='border-border bg-sidebar-bg/50 hidden h-14 shrink-0 items-center gap-4 border-b px-6 backdrop-blur-sm md:flex'>
       <h1 className='text-foreground text-lg font-semibold'>{t(titleKey)}</h1>
       <div className='flex-1' />
+      <NotificationCenter />
     </header>
   );
 }

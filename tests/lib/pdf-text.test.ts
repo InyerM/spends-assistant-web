@@ -23,7 +23,8 @@ function samplePdf(text: string, pageCount = 1): Uint8Array {
     .join('')}trailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF`;
   return new TextEncoder().encode(pdf);
 }
-describe('isolated local PDF text extraction', () => {
+// Allow the parser's 20-second worker limit to report its own bounded failure under load.
+describe('isolated local PDF text extraction', { timeout: 25_000 }, () => {
   it('reads text from the original PDF without external network requests', async () => {
     const result = await readPdfText(samplePdf('Bancolombia COP Compra 42000'));
     expect(result.pages).toEqual(['Bancolombia COP Compra 42000']);
