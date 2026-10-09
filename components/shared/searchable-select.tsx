@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useId } from 'react';
 import { Command } from 'cmdk';
 import { CheckIcon, ChevronDownIcon, ChevronRight, Search } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -13,6 +13,7 @@ export interface SearchableSelectItem {
 }
 
 interface SearchableSelectProps {
+  id?: string;
   value?: string;
   onValueChange: (value: string) => void;
   ariaLabel?: string;
@@ -26,6 +27,7 @@ interface SearchableSelectProps {
 }
 
 export function SearchableSelect({
+  id,
   value,
   onValueChange,
   ariaLabel,
@@ -37,6 +39,7 @@ export function SearchableSelect({
   disabled,
   collapsibleGroups = false,
 }: SearchableSelectProps): React.ReactElement {
+  const listId = useId();
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
@@ -75,11 +78,12 @@ export function SearchableSelect({
     <Popover open={open} onOpenChange={setOpen} modal>
       <PopoverTrigger asChild disabled={disabled}>
         <button
+          id={id}
           type='button'
           role='combobox'
           aria-label={ariaLabel}
           aria-expanded={open}
-          aria-controls='searchable-select-list'
+          aria-controls={listId}
           className={cn(
             "border-border data-[placeholder]:text-muted-foreground [&_svg:not([class*='text-'])]:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 flex h-11 w-full items-center justify-between gap-2 rounded-md border bg-transparent px-3 py-2 text-sm whitespace-nowrap shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50 sm:h-9 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
             className,
@@ -106,7 +110,7 @@ export function SearchableSelect({
             />
           </div>
           <Command.List
-            id='searchable-select-list'
+            id={listId}
             className='scrollbar-subtle !max-h-60 !overflow-y-auto overscroll-contain p-1'>
             {(!collapsibleGroups || isSearching) && (
               <Command.Empty className='text-muted-foreground py-6 text-center text-sm'>

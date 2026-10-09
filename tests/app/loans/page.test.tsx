@@ -29,7 +29,7 @@ describe('manual loan ledger', () => {
   afterEach(cleanup);
   it('links to the separate journal for money owed to the user', async () => {
     render(<LoansPage />);
-    expect(await screen.findByRole('link', { name: 'Money owed to you' })).toHaveAttribute(
+    expect(await screen.findByRole('link', { name: 'Money lent' })).toHaveAttribute(
       'href',
       '/receivables',
     );

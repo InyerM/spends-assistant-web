@@ -10,10 +10,10 @@ interface LoaderProps {
 export function Loader({ className, text }: LoaderProps): React.ReactElement {
   const t = useTranslations('common');
   return (
-    <div className='flex flex-col items-center gap-4' role='status' aria-live='polite'>
-      <AnottoMark animated className={cn('h-8 w-8', className)} />
+    <div className='flex flex-col items-center gap-3' role='status' aria-live='polite'>
+      <AnottoMark animated className={cn('h-10 w-10', className)} />
       {text ? (
-        <p className='text-muted-foreground text-sm'>{text}</p>
+        <p className='text-foreground/70 text-sm'>{text}</p>
       ) : (
         <span className='sr-only'>{t('loading')}</span>
       )}

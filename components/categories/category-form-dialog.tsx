@@ -7,7 +7,13 @@ import { useForm, useWatch } from 'react-hook-form';
 import { z } from 'zod';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import {
   Form,
@@ -19,6 +25,7 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { ColorPicker } from '@/components/ui/color-picker';
+import { SearchableSelect } from '@/components/shared/searchable-select';
 import {
   Select,
   SelectContent,
@@ -72,6 +79,7 @@ export function CategoryFormDialog({
 }: CategoryFormDialogProps): React.ReactElement {
   const t = useTranslations('categories');
   const tCommon = useTranslations('common');
+  const tTransactions = useTranslations('transactions');
   const locale = useLocale();
   const { data: allCategories } = useAllCategories();
   const createMutation = useCreateCategory();
@@ -91,6 +99,7 @@ export function CategoryFormDialog({
   });
 
   const watchName = useWatch({ control: form.control, name: 'name' });
+  const watchType = useWatch({ control: form.control, name: 'type' });
 
   const generateUniqueSlug = useCallback(
     (name: string): string => {
@@ -162,13 +171,21 @@ export function CategoryFormDialog({
     }
   }
 
-  const parentCategories = allCategories?.filter((c) => !c.parent_id) ?? [];
+  const parentCategories =
+    allCategories?.filter(
+      (category) =>
+        !category.parent_id &&
+        category.type === watchType &&
+        category.id !== editingCategory?.id &&
+        category.is_active,
+    ) ?? [];
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className='border-border bg-card max-h-[85dvh] overflow-y-auto sm:max-w-[425px]'>
         <DialogHeader>
           <DialogTitle>{editingCategory ? t('editCategory') : t('newCategory')}</DialogTitle>
+          <DialogDescription>{t('formHint')}</DialogDescription>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className='space-y-4'>
@@ -192,7 +209,12 @@ export function CategoryFormDialog({
               render={({ field }): React.ReactElement => (
                 <FormItem>
                   <FormLabel>{t('type')}</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select
+                    value={field.value}
+                    onValueChange={(value): void => {
+                      field.onChange(value);
+                      form.setValue('parent_id', undefined);
+                    }}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder={t('type')} />
@@ -214,22 +236,25 @@ export function CategoryFormDialog({
               name='parent_id'
               render={({ field }): React.ReactElement => (
                 <FormItem>
-                  <FormLabel>{t('parent')}</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value ?? 'none'}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder={t('noneTopLevel')} />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value='none'>{t('noneTopLevel')}</SelectItem>
-                      {parentCategories.map((cat) => (
-                        <SelectItem key={cat.id} value={cat.id}>
-                          {cat.icon ?? ''} {getCategoryDisplayName(cat, locale)}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <FormLabel htmlFor='category-parent'>{t('parent')}</FormLabel>
+                  <SearchableSelect
+                    id='category-parent'
+                    value={field.value ?? 'none'}
+                    onValueChange={(value): void =>
+                      field.onChange(value === 'none' ? undefined : value)
+                    }
+                    ariaLabel={t('parent')}
+                    placeholder={t('noneTopLevel')}
+                    searchPlaceholder={tTransactions('searchCategories')}
+                    emptyText={tCommon('noResults')}
+                    items={[
+                      { value: 'none', label: t('noneTopLevel') },
+                      ...parentCategories.map((category) => ({
+                        value: category.id,
+                        label: `${category.icon ? `${category.icon} ` : ''}${getCategoryDisplayName(category, locale)}`,
+                      })),
+                    ]}
+                  />
                   <FormMessage />
                 </FormItem>
               )}

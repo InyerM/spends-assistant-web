@@ -24,16 +24,18 @@ export function AnottoMark({
 
 export function AnottoWordmark({
   compact = false,
+  animated = false,
   className,
 }: {
   compact?: boolean;
+  animated?: boolean;
   className?: string;
 }): React.ReactElement {
   return (
     <span
       aria-label='Anotto'
       className={cn('text-foreground inline-flex items-center gap-3', className)}>
-      <AnottoMark />
+      <AnottoMark animated={animated} />
       {!compact && (
         <span aria-hidden='true' className='text-[27px] font-extrabold tracking-[-0.055em]'>
           anotto<span className='text-brand'>.</span>

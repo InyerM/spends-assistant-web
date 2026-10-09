@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -14,34 +14,30 @@ import { DangerZoneSection } from '@/components/settings/danger-zone-section';
 import { EmailForwardingTab } from '@/components/settings/email-forwarding-tab';
 import { AiConsentTab } from '@/components/settings/ai-consent-tab';
 import { useUserSettings } from '@/hooks/use-user-settings';
-import { User, Shield, Gauge, Key, LifeBuoy, Mail, Sparkles } from 'lucide-react';
-
-const VALID_TABS = [
-  'profile',
-  'security',
-  'subscription',
-  'email-forwarding',
-  'ai-processing',
-  'api-keys',
-  'help',
-] as const;
-type TabValue = (typeof VALID_TABS)[number];
-
-function isValidTab(value: string | null): value is TabValue {
-  return VALID_TABS.includes(value as TabValue);
-}
+import { User, SlidersHorizontal, Plug, Gauge, LifeBuoy } from 'lucide-react';
+import { resolveSettingsSection } from '@/lib/settings-navigation';
 
 export default function SettingsPage(): React.ReactElement {
   const t = useTranslations('settings');
-  const emailT = useTranslations('emailForwarding');
-  const aiT = useTranslations('aiConsent');
   const router = useRouter();
   const searchParams = useSearchParams();
   const { data: userSettings } = useUserSettings();
 
   const tabParam = searchParams.get('tab');
-  const tab: TabValue = isValidTab(tabParam) ? tabParam : 'profile';
+  const section = resolveSettingsSection(tabParam);
   const showApiKeys = userSettings?.show_api_keys === true;
+
+  useEffect(() => {
+    const targetId = {
+      security: 'settings-security',
+      'ai-processing': 'settings-ai-processing',
+      'api-keys': 'settings-api-keys',
+    }[tabParam ?? ''];
+    const target = targetId ? document.getElementById(targetId) : null;
+    if (target && typeof target.scrollIntoView === 'function') {
+      target.scrollIntoView({ block: 'start' });
+    }
+  }, [tabParam, showApiKeys]);
 
   const handleTabChange = useCallback(
     (value: string): void => {
@@ -51,70 +47,61 @@ export default function SettingsPage(): React.ReactElement {
   );
 
   return (
-    <div className='mx-auto w-full max-w-3xl space-y-6 p-4 sm:p-6 lg:p-8'>
-      <Tabs value={tab} onValueChange={handleTabChange}>
-        <TabsList variant='line' className='scrollbar-none w-full justify-start overflow-x-auto'>
-          <TabsTrigger value='profile' aria-label={t('profile')}>
-            <User className='h-4 w-4' />
-            <span className='hidden sm:inline'>{t('profile')}</span>
+    <div className='mx-auto w-full max-w-4xl space-y-6 p-4 sm:p-6 lg:p-8'>
+      <h1 className='font-display text-3xl font-semibold tracking-tight'>{t('title')}</h1>
+      <Tabs value={section} onValueChange={handleTabChange}>
+        <TabsList className='bg-card grid h-auto w-full grid-cols-2 gap-2 rounded-xl p-2 group-data-[orientation=horizontal]/tabs:h-auto sm:grid-cols-3 lg:grid-cols-5'>
+          <TabsTrigger value='account' className='h-11 min-w-0 gap-2 rounded-lg px-2 text-sm'>
+            <User className='size-4' />
+            <span>{t('accountGroup')}</span>
           </TabsTrigger>
-          <TabsTrigger value='security' aria-label={t('security')}>
-            <Shield className='h-4 w-4' />
-            <span className='hidden sm:inline'>{t('security')}</span>
+          <TabsTrigger value='preferences' className='h-11 min-w-0 gap-2 rounded-lg px-2 text-sm'>
+            <SlidersHorizontal className='size-4' />
+            <span>{t('preferences')}</span>
           </TabsTrigger>
-          <TabsTrigger value='subscription' aria-label={t('subscription')}>
-            <Gauge className='h-4 w-4' />
-            <span className='hidden sm:inline'>{t('subscription')}</span>
+          <TabsTrigger value='connections' className='h-11 min-w-0 gap-2 rounded-lg px-2 text-sm'>
+            <Plug className='size-4' />
+            <span>{t('connections')}</span>
           </TabsTrigger>
-          <TabsTrigger value='email-forwarding' aria-label={emailT('tab')}>
-            <Mail className='h-4 w-4' />
-            <span className='hidden sm:inline'>{emailT('tab')}</span>
+          <TabsTrigger value='plan' className='h-11 min-w-0 gap-2 rounded-lg px-2 text-sm'>
+            <Gauge className='size-4' />
+            <span>{t('subscription')}</span>
           </TabsTrigger>
-          <TabsTrigger value='ai-processing' aria-label={aiT('tab')}>
-            <Sparkles className='h-4 w-4' />
-            <span className='hidden sm:inline'>{aiT('tab')}</span>
-          </TabsTrigger>
-          {showApiKeys && (
-            <TabsTrigger value='api-keys' aria-label={t('apiKeys')}>
-              <Key className='h-4 w-4' />
-              <span className='hidden sm:inline'>{t('apiKeys')}</span>
-            </TabsTrigger>
-          )}
-          <TabsTrigger value='help' aria-label={t('help')}>
-            <LifeBuoy className='h-4 w-4' />
-            <span className='hidden sm:inline'>{t('help')}</span>
+          <TabsTrigger value='help' className='h-11 min-w-0 gap-2 rounded-lg px-2 text-sm'>
+            <LifeBuoy className='size-4' />
+            <span>{t('help')}</span>
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value='profile' className='mt-6'>
+        <TabsContent value='account' className='mt-6'>
           <div className='space-y-6'>
             <ProfileTab />
-            <LanguageSelector />
+            <section id='settings-security' className='scroll-mt-8'>
+              <SecurityTab />
+            </section>
             <DangerZoneSection />
           </div>
         </TabsContent>
 
-        <TabsContent value='security' className='mt-6'>
-          <SecurityTab />
+        <TabsContent value='preferences' className='mt-6 space-y-6'>
+          <LanguageSelector />
+          <section id='settings-ai-processing' className='scroll-mt-8'>
+            <AiConsentTab />
+          </section>
         </TabsContent>
 
-        <TabsContent value='subscription' className='mt-6'>
+        <TabsContent value='plan' className='mt-6'>
           <SubscriptionTab />
         </TabsContent>
 
-        <TabsContent value='email-forwarding' className='mt-6'>
+        <TabsContent value='connections' className='mt-6 space-y-6'>
           <EmailForwardingTab />
+          {showApiKeys && (
+            <section id='settings-api-keys' className='scroll-mt-8'>
+              <ApiKeysTab />
+            </section>
+          )}
         </TabsContent>
-
-        <TabsContent value='ai-processing' className='mt-6'>
-          <AiConsentTab />
-        </TabsContent>
-
-        {showApiKeys && (
-          <TabsContent value='api-keys' className='mt-6'>
-            <ApiKeysTab />
-          </TabsContent>
-        )}
 
         <TabsContent value='help' className='mt-6'>
           <HelpSection />

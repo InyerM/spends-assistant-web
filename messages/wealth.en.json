@@ -1,6 +1,6 @@
 {
   "receivables": {
-    "title": "Money owed to you",
+    "title": "Money lent",
     "subtitle": "Track principal you lent to other people and reviewed repayments.",
     "journalNote": "This is a separate receivables journal. It links existing bank transactions and never moves account balances or adds amounts to spending or net worth totals. Only principal repayments reduce a loan. Sales, gifts, and unrelated transfers stay separate. Your own bank debts are tracked in",
     "loansLink": "Loans you owe",
@@ -154,7 +154,7 @@
     "title": "Manual loan journal",
     "subtitle": "Record sourced Lulo Bank and Bancolombia balances and payment allocations.",
     "receivableNote": "Loans you made to other people are tracked separately in",
-    "receivableLink": "Money owed to you",
+    "receivableLink": "Money lent",
     "journalNote": "This journal is separate from bank accounts, transactions, spending reports, and net worth. Entries here do not change those balances. Interest, insurance, and fees are never estimated.",
     "section": "Loans",
     "current": "Current",

@@ -14,13 +14,8 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { SearchableSelect } from '@/components/shared/searchable-select';
+import { buildCategoryItems } from '@/lib/utils/select-items';
 import { useSaveMonthlyBudget } from '@/lib/api/mutations/budget.mutations';
 import type { BudgetStatus } from '@/lib/api/queries/budget.queries';
 import type { Category } from '@/types/category';
@@ -44,6 +39,7 @@ export function BudgetEditorDialog({
 }: BudgetEditorDialogProps): React.ReactElement {
   const t = useTranslations('budgets');
   const common = useTranslations('common');
+  const transactions = useTranslations('transactions');
   const save = useSaveMonthlyBudget();
   const [categoryId, setCategoryId] = useState(editing?.category_id ?? '');
   const [amount, setAmount] = useState(editing ? String(Number(editing.limit_cop)) : '');
@@ -78,18 +74,20 @@ export function BudgetEditorDialog({
         <div className='space-y-5 py-2'>
           <div className='space-y-2'>
             <Label htmlFor='budget-category'>{t('category')}</Label>
-            <Select value={categoryId} onValueChange={setCategoryId} disabled={Boolean(editing)}>
-              <SelectTrigger id='budget-category' className='w-full'>
-                <SelectValue placeholder={t('selectCategory')} />
-              </SelectTrigger>
-              <SelectContent>
-                {categories.map((category) => (
-                  <SelectItem key={category.id} value={category.id}>
-                    {category.translations?.[locale] || category.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <SearchableSelect
+              id='budget-category'
+              value={categoryId}
+              onValueChange={setCategoryId}
+              ariaLabel={t('category')}
+              placeholder={t('selectCategory')}
+              searchPlaceholder={transactions('searchCategories')}
+              emptyText={common('noResults')}
+              items={buildCategoryItems(categories, undefined, {
+                locale: locale as 'en' | 'es' | 'pt',
+                allPrefix: (name: string): string => common('allOf', { name }),
+              })}
+              disabled={Boolean(editing)}
+            />
           </div>
           <div className='space-y-2'>
             <Label htmlFor='budget-amount'>{t('limitCop')}</Label>

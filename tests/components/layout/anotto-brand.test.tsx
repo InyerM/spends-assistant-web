@@ -14,6 +14,11 @@ describe('Anotto customer identity', () => {
     expect(screen.queryByText('anotto')).not.toBeInTheDocument();
   });
 
+  it('can animate the same mark inside the sidebar wordmark', () => {
+    const { container } = render(<AnottoWordmark animated />);
+    expect(container.querySelector('svg.anotto-loading-mark')).toBeInTheDocument();
+  });
+
   it.each([en, es, pt])('provides localized authentication and navigation labels', (messages) => {
     expect(messages.auth).toMatchObject({ productName: 'Anotto' });
     expect(messages.auth).toHaveProperty('signIn');
