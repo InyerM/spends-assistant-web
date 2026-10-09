@@ -49,6 +49,19 @@ describe('free launch plan and usage', () => {
     expect(screen.queryByRole('button', { name: 'Mejorar a Pro' })).not.toBeInTheDocument();
   });
 
+  it('does not show a Free plan when subscription loading fails', () => {
+    subscriptionQuery.mockReturnValue({ isLoading: false, isError: true, refetch: vi.fn() });
+    usageQuery.mockReturnValue({ data: usage, isLoading: false, refetch: vi.fn() });
+    render(
+      <NextIntlClientProvider locale='es' messages={es}>
+        <SubscriptionTab />
+      </NextIntlClientProvider>,
+    );
+    expect(screen.getByRole('alert')).toHaveTextContent(es.settings.usageUnavailable);
+    expect(screen.queryByText('12/15 este mes')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: es.settings.retryUsage })).toBeVisible();
+  });
+
   it('links high usage to the plan and usage screen instead of an upgrade', () => {
     render(
       <NextIntlClientProvider locale='es' messages={es}>
@@ -64,7 +77,7 @@ describe('free launch plan and usage', () => {
     expect(screen.queryByText('Upgrade')).not.toBeInTheDocument();
   });
 
-  it('shows complimentary expanded access without billing status for an existing Pro record', () => {
+  it('shows complimentary Pro access without billing status for an existing Pro record', () => {
     subscriptionQuery.mockReturnValue({
       data: {
         plan: 'pro',
@@ -82,7 +95,7 @@ describe('free launch plan and usage', () => {
       </NextIntlClientProvider>,
     );
 
-    expect(screen.getByText('Acceso ampliado')).toBeInTheDocument();
+    expect(screen.getByText('Pro')).toBeInTheDocument();
     expect(screen.getByText('Anotto no cobra por ahora.')).toBeInTheDocument();
     expect(screen.queryByText('Vencido')).not.toBeInTheDocument();
     expect(screen.queryByText('Período actual')).not.toBeInTheDocument();

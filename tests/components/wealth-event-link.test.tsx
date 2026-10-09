@@ -1,5 +1,6 @@
-import { describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { WealthEventLink } from '@/components/wealth/wealth-event-link';
 
 vi.mock('next-intl', () => ({
@@ -10,7 +11,14 @@ vi.mock('next-intl', () => ({
 }));
 
 describe('reviewed wealth event links', () => {
+  beforeEach(() => {
+    Element.prototype.hasPointerCapture = vi.fn(() => false);
+    Element.prototype.setPointerCapture = vi.fn();
+    Element.prototype.releasePointerCapture = vi.fn();
+    Element.prototype.scrollIntoView = vi.fn();
+  });
   it('shows the exact transaction link and requires review before changing it', async () => {
+    const user = userEvent.setup();
     const fetchMock = vi.fn().mockImplementation((url: string) =>
       Promise.resolve(
         Response.json(
@@ -46,12 +54,12 @@ describe('reviewed wealth event links', () => {
       'href',
       '/transactions/tx-1',
     );
-    fireEvent.click(screen.getByRole('button', { name: 'changeLink' }));
-    await screen.findByRole('option', { name: /Loan payment/ });
-    fireEvent.change(screen.getByLabelText('selectTransaction'), { target: { value: 'tx-2' } });
+    await user.click(screen.getByRole('button', { name: 'changeLink' }));
+    await user.click(screen.getByRole('combobox', { name: 'selectTransaction' }));
+    await user.click(await screen.findByRole('option', { name: /Loan payment/ }));
     expect(fetchMock.mock.calls.every(([, options]) => options?.method !== 'POST')).toBe(true);
-    fireEvent.click(screen.getByLabelText('checked'));
-    fireEvent.click(screen.getByRole('button', { name: 'confirmLink' }));
+    await user.click(screen.getByLabelText('checked'));
+    await user.click(screen.getByRole('button', { name: 'confirmLink' }));
     await waitFor(() =>
       expect(fetchMock).toHaveBeenCalledWith(
         '/api/wealth-links',

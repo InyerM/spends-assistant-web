@@ -134,42 +134,44 @@ export default function DocumentsPage(): React.ReactElement {
 
   return (
     <div className='mx-auto w-full max-w-7xl space-y-6 p-4 sm:p-6 lg:p-8'>
-      <div className='flex flex-wrap items-start justify-between gap-4'>
+      <header className='flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between'>
         <div>
           <h2 className='text-foreground text-2xl font-semibold'>{t('title')}</h2>
           <p className='text-muted-foreground mt-1 text-sm'>{t('subtitle')}</p>
         </div>
-        <input
-          ref={inputRef}
-          className='sr-only'
-          type='file'
-          accept='image/png,image/jpeg,image/webp'
-          aria-label={t('chooseImage')}
-          onChange={(event) => {
-            const file = event.target.files?.[0];
-            if (file) void upload(file);
-          }}
-        />
-        <Button variant='ai' disabled={busy !== null} onClick={() => inputRef.current?.click()}>
-          {busy === 'upload' ? (
-            <InlineLoader className='mr-2' />
-          ) : (
-            <Upload className='mr-2 h-4 w-4' />
-          )}
-          {busy === 'upload' ? t('uploading') : t('upload')}
-        </Button>
-        <Button variant='outline' asChild>
-          <Link href='/settings?tab=email-forwarding'>
-            <MailPlus className='size-4' aria-hidden='true' />
-            {t('connectEmail')}
-          </Link>
-        </Button>
-        <Button variant='outline' onClick={() => setShowArchived((current) => !current)}>
-          {showArchived
-            ? t('activeCaptures')
-            : `${t('archivedCaptures')} · ${documents.filter((document) => !!document.archived_at).length}`}
-        </Button>
-      </div>
+        <div className='flex flex-wrap items-center gap-2 [&>[data-slot=button]]:min-h-11'>
+          <input
+            ref={inputRef}
+            className='sr-only'
+            type='file'
+            accept='image/png,image/jpeg,image/webp'
+            aria-label={t('chooseImage')}
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              if (file) void upload(file);
+            }}
+          />
+          <Button variant='ai' disabled={busy !== null} onClick={() => inputRef.current?.click()}>
+            {busy === 'upload' ? (
+              <InlineLoader className='mr-2' />
+            ) : (
+              <Upload className='mr-2 h-4 w-4' />
+            )}
+            {busy === 'upload' ? t('uploading') : t('upload')}
+          </Button>
+          <Button variant='outline' asChild>
+            <Link href='/settings?tab=email-forwarding'>
+              <MailPlus className='size-4' aria-hidden='true' />
+              {t('connectEmail')}
+            </Link>
+          </Button>
+          <Button variant='outline' onClick={() => setShowArchived((current) => !current)}>
+            {showArchived
+              ? t('activeCaptures')
+              : `${t('archivedCaptures')} · ${documents.filter((document) => !!document.archived_at).length}`}
+          </Button>
+        </div>
+      </header>
 
       {error instanceof AiConsentRequiredError && <AiConsentNotice scope={error.scope} />}
       {(typeof error === 'string' || documentQuery.error) && (

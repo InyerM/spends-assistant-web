@@ -1,5 +1,13 @@
 'use client';
 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useLocale, useTranslations } from 'next-intl';
@@ -310,16 +318,19 @@ export default function ReliefFundsPage(): React.ReactElement {
             <CardContent className='space-y-4'>
               <label className='block space-y-2 text-sm'>
                 {t('entryType')}
-                <select
-                  aria-label={t('entryType')}
-                  className='border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 h-10 w-full min-w-0 rounded-lg border px-3 focus-visible:ring-2 focus-visible:outline-none'
+                <Select
                   value={draft.entryType}
-                  onChange={(event) => changeType(event.target.value as EntryType)}>
-                  <option value='create_fund'>{t('createFund')}</option>
-                  <option value='receipt'>{t('donationReceived')}</option>
-                  <option value='outlay'>{t('knownPurchase')}</option>
-                  <option value='unknown_spend'>{t('unknownSpend')}</option>
-                </select>
+                  onValueChange={(value) => changeType(value as EntryType)}>
+                  <SelectTrigger aria-label={t('entryType')} className='h-11 w-full min-w-0'>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value='create_fund'>{t('createFund')}</SelectItem>
+                    <SelectItem value='receipt'>{t('donationReceived')}</SelectItem>
+                    <SelectItem value='outlay'>{t('knownPurchase')}</SelectItem>
+                    <SelectItem value='unknown_spend'>{t('unknownSpend')}</SelectItem>
+                  </SelectContent>
+                </Select>
               </label>
               {draft.entryType === 'create_fund' ? (
                 <>
@@ -344,18 +355,23 @@ export default function ReliefFundsPage(): React.ReactElement {
                 <>
                   <label className='block space-y-2 text-sm'>
                     {t('fund')}
-                    <select
-                      aria-label={t('fund')}
-                      className='border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 h-10 w-full min-w-0 rounded-lg border px-3 focus-visible:ring-2 focus-visible:outline-none'
-                      value={draft.fundId}
-                      onChange={(event) => change('fundId', event.target.value)}>
-                      <option value=''>{t('selectFund')}</option>
-                      {funds.map((fund) => (
-                        <option key={fund.id} value={fund.id}>
-                          {fund.title}
-                        </option>
-                      ))}
-                    </select>
+                    <Select
+                      value={draft.fundId || '__none__'}
+                      onValueChange={(value) =>
+                        change('fundId', value === '__none__' ? '' : value)
+                      }>
+                      <SelectTrigger aria-label={t('fund')} className='h-11 w-full min-w-0'>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value='__none__'>{t('selectFund')}</SelectItem>
+                        {funds.map((fund) => (
+                          <SelectItem key={fund.id} value={fund.id}>
+                            {fund.title}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </label>
                   <label className='block space-y-2 text-sm'>
                     {draft.entryType === 'unknown_spend' ? t('optionalDate') : t('date')}
@@ -389,22 +405,29 @@ export default function ReliefFundsPage(): React.ReactElement {
                   </label>
                   <label className='block space-y-2 text-sm'>
                     {t('sourceType')}
-                    <select
-                      aria-label={t('sourceType')}
-                      className='border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 h-10 w-full min-w-0 rounded-lg border px-3 focus-visible:ring-2 focus-visible:outline-none'
+                    <Select
                       value={draft.sourceKind}
-                      onChange={(event) => {
-                        change('sourceKind', event.target.value as SourceKind);
+                      onValueChange={(value) => {
+                        change('sourceKind', value as SourceKind);
                         change('transactionId', '');
                       }}>
-                      <option value='bank_notice'>{t('bankNotice')}</option>
-                      <option value='cash'>{t('cash')}</option>
-                      <option value='receipt'>{t('receipt')}</option>
-                      <option value='manual_recollection'>{t('manualRecollection')}</option>
-                      {draft.entryType !== 'unknown_spend' && (
-                        <option value='ledger_transaction'>{t('ledgerTransaction')}</option>
-                      )}
-                    </select>
+                      <SelectTrigger aria-label={t('sourceType')} className='h-11 w-full min-w-0'>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value='bank_notice'>{t('bankNotice')}</SelectItem>
+                        <SelectItem value='cash'>{t('cash')}</SelectItem>
+                        <SelectItem value='receipt'>{t('receipt')}</SelectItem>
+                        <SelectItem value='manual_recollection'>
+                          {t('manualRecollection')}
+                        </SelectItem>
+                        {draft.entryType !== 'unknown_spend' && (
+                          <SelectItem value='ledger_transaction'>
+                            {t('ledgerTransaction')}
+                          </SelectItem>
+                        )}
+                      </SelectContent>
+                    </Select>
                   </label>
                   <label className='block space-y-2 text-sm'>
                     {t('sourceReference')}

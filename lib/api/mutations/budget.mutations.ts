@@ -5,6 +5,7 @@ export interface SaveBudgetInput {
   month: string;
   category_id: string;
   limit_cop: number;
+  repeat_monthly?: boolean;
 }
 
 export async function saveMonthlyBudget(input: SaveBudgetInput): Promise<string> {
@@ -18,11 +19,13 @@ export async function saveMonthlyBudget(input: SaveBudgetInput): Promise<string>
   return body.id;
 }
 
-export async function deactivateMonthlyBudget(budgetId: string): Promise<void> {
+export async function deactivateMonthlyBudget(
+  input: string | { budget_id: string; month: string },
+): Promise<void> {
   const response = await fetch('/api/budgets', {
     method: 'DELETE',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ budget_id: budgetId }),
+    body: JSON.stringify(typeof input === 'string' ? { budget_id: input } : input),
   });
   if (!response.ok) throw new Error('Could not deactivate monthly budget');
 }
@@ -39,7 +42,9 @@ export function useSaveMonthlyBudget(): ReturnType<
   });
 }
 
-export function useDeactivateMonthlyBudget(): ReturnType<typeof useMutation<void, Error, string>> {
+export function useDeactivateMonthlyBudget(): ReturnType<
+  typeof useMutation<void, Error, string | { budget_id: string; month: string }>
+> {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: deactivateMonthlyBudget,

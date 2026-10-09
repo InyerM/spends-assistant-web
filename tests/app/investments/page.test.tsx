@@ -22,6 +22,10 @@ vi.mock('next-intl', async () => {
 describe('manual investment tracker', () => {
   const fetchMock = vi.fn();
   beforeEach(() => {
+    Element.prototype.hasPointerCapture = vi.fn(() => false);
+    Element.prototype.setPointerCapture = vi.fn();
+    Element.prototype.releasePointerCapture = vi.fn();
+    Element.prototype.scrollIntoView = vi.fn();
     fetchMock.mockReset();
     fetchMock.mockResolvedValue({ ok: true, json: async () => ({ data: [] }) });
     vi.stubGlobal('fetch', fetchMock);
@@ -118,11 +122,10 @@ describe('manual investment tracker', () => {
     render(<InvestmentsPage />);
     await screen.findByText('BTC');
     expect(screen.getByText('Not recorded')).toBeInTheDocument();
-    await user.selectOptions(screen.getByLabelText('Entry type'), 'opening');
-    await user.selectOptions(
-      screen.getByLabelText('Position'),
-      '00000000-0000-4000-8000-000000000222',
-    );
+    await user.click(screen.getByRole('combobox', { name: 'Entry type' }));
+    await user.click(screen.getByRole('option', { name: 'Opening lot' }));
+    await user.click(screen.getByRole('combobox', { name: 'Position' }));
+    await user.click(screen.getByRole('option', { name: 'binance · BTC (USDT)' }));
     await user.type(screen.getByLabelText('Trade date'), '2026-09-28');
     await user.type(screen.getByLabelText(/Quantity/), '1');
     await user.type(screen.getByLabelText('Known cost basis (leave blank if unknown) (USDT)'), '0');
@@ -158,11 +161,10 @@ describe('manual investment tracker', () => {
     const user = userEvent.setup();
     render(<InvestmentsPage />);
     await screen.findByText('BTC');
-    await user.selectOptions(screen.getByLabelText('Entry type'), 'sell');
-    await user.selectOptions(
-      screen.getByLabelText('Position'),
-      '00000000-0000-4000-8000-000000000222',
-    );
+    await user.click(screen.getByRole('combobox', { name: 'Entry type' }));
+    await user.click(screen.getByRole('option', { name: 'Sell' }));
+    await user.click(screen.getByRole('combobox', { name: 'Position' }));
+    await user.click(screen.getByRole('option', { name: 'binance · BTC (USDT)' }));
     await user.type(screen.getByLabelText('Trade date'), '2026-09-28');
     await user.type(screen.getByLabelText(/Quantity/), '5');
     await user.type(screen.getByLabelText('Gross amount (USDT)'), '700');

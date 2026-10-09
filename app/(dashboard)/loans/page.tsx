@@ -1,5 +1,13 @@
 'use client';
 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useLocale, useTranslations } from 'next-intl';
@@ -365,26 +373,34 @@ export default function LoansPage(): React.ReactElement {
           <CardContent className='space-y-4'>
             <label className='block space-y-2 text-sm font-medium'>
               {t('entryType')}
-              <select
-                className='border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 h-10 w-full min-w-0 rounded-lg border px-3 focus-visible:ring-2 focus-visible:outline-none'
+              <Select
                 value={draft.action}
-                onChange={(event) => change('action', event.target.value as Action)}>
-                <option value='create_loan'>{t('createLoan')}</option>
-                <option value='opening'>{t('openingBalance')}</option>
-                <option value='payment'>{t('paymentAllocation')}</option>
-              </select>
+                onValueChange={(value) => change('action', value as Action)}>
+                <SelectTrigger aria-label={t('entryType')} className='h-11 w-full min-w-0'>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value='create_loan'>{t('createLoan')}</SelectItem>
+                  <SelectItem value='opening'>{t('openingBalance')}</SelectItem>
+                  <SelectItem value='payment'>{t('paymentAllocation')}</SelectItem>
+                </SelectContent>
+              </Select>
             </label>
             {draft.action === 'create_loan' ? (
               <>
                 <label className='block space-y-2 text-sm font-medium'>
                   {t('lender')}
-                  <select
-                    className='border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 h-10 w-full min-w-0 rounded-lg border px-3 focus-visible:ring-2 focus-visible:outline-none'
+                  <Select
                     value={draft.lender}
-                    onChange={(event) => change('lender', event.target.value as Draft['lender'])}>
-                    <option value='lulo_bank'>Lulo Bank</option>
-                    <option value='bancolombia'>Bancolombia</option>
-                  </select>
+                    onValueChange={(value) => change('lender', value as Draft['lender'])}>
+                    <SelectTrigger aria-label={t('lender')} className='h-11 w-full min-w-0'>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value='lulo_bank'>Lulo Bank</SelectItem>
+                      <SelectItem value='bancolombia'>Bancolombia</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </label>
                 {field(t('loanName'), 'label')}
                 {field(t('currency'), 'currency', 'COP')}
@@ -394,17 +410,21 @@ export default function LoansPage(): React.ReactElement {
               <>
                 <label className='block space-y-2 text-sm font-medium'>
                   {t('loan')}
-                  <select
-                    className='border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 h-10 w-full min-w-0 rounded-lg border px-3 focus-visible:ring-2 focus-visible:outline-none'
-                    value={draft.loanId}
-                    onChange={(event) => change('loanId', event.target.value)}>
-                    <option value=''>{t('selectLoan')}</option>
-                    {loans.map((loan) => (
-                      <option key={loan.id} value={loan.id}>
-                        {loan.label} · {loan.currency}
-                      </option>
-                    ))}
-                  </select>
+                  <Select
+                    value={draft.loanId || '__none__'}
+                    onValueChange={(value) => change('loanId', value === '__none__' ? '' : value)}>
+                    <SelectTrigger aria-label={t('loan')} className='h-11 w-full min-w-0'>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value='__none__'>{t('selectLoan')}</SelectItem>
+                      {loans.map((loan) => (
+                        <SelectItem key={loan.id} value={loan.id}>
+                          {loan.label} · {loan.currency}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </label>
                 {field(t('entryDate'), 'date', 'YYYY-MM-DD')}
                 {draft.action === 'opening' ? (

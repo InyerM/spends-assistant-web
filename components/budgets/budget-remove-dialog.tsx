@@ -15,11 +15,13 @@ import { useDeactivateMonthlyBudget } from '@/lib/api/mutations/budget.mutations
 
 interface BudgetRemoveDialogProps {
   budgetId: string;
+  month: string;
   onClose: () => void;
 }
 
 export function BudgetRemoveDialog({
   budgetId,
+  month,
   onClose,
 }: BudgetRemoveDialogProps): React.ReactElement {
   const t = useTranslations('budgets');
@@ -27,13 +29,16 @@ export function BudgetRemoveDialog({
   const deactivate = useDeactivateMonthlyBudget();
 
   function handleDeactivate(): void {
-    deactivate.mutate(budgetId, {
-      onSuccess: () => {
-        onClose();
-        toast.success(t('removed'));
+    deactivate.mutate(
+      { budget_id: budgetId, month },
+      {
+        onSuccess: () => {
+          onClose();
+          toast.success(t('removed'));
+        },
+        onError: () => toast.error(t('removeFailed')),
       },
-      onError: () => toast.error(t('removeFailed')),
-    });
+    );
   }
 
   return (

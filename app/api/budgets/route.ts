@@ -7,13 +7,14 @@ const monthSchema = z.string().regex(/^\d{4}-(0[1-9]|1[0-2])-01$/);
 const upsertSchema = z.object({
   month: monthSchema,
   category_id: z.uuid(),
+  repeat_monthly: z.boolean().default(false),
   limit_cop: z
     .number()
     .positive()
     .max(9_999_999_999_999.99)
     .refine((value) => Math.abs(Math.round(value * 100) / 100 - value) < 1e-9),
 });
-const deactivateSchema = z.object({ budget_id: z.uuid() });
+const deactivateSchema = z.object({ budget_id: z.uuid(), month: monthSchema.optional() });
 
 function rpcError(error: { code?: string; message: string }): Response {
   if (error.code === '42501') return errorResponse('Budget category not found', 404);
@@ -51,6 +52,7 @@ export async function POST(request: NextRequest): Promise<Response> {
       p_month: parsed.data.month,
       p_category_id: parsed.data.category_id,
       p_limit_cop: parsed.data.limit_cop,
+      p_repeat_monthly: parsed.data.repeat_monthly,
     });
     if (error) return rpcError(error);
     return Response.json({ id: data }, { headers: privateHeaders });
@@ -67,9 +69,13 @@ export async function DELETE(request: NextRequest): Promise<Response> {
     if (!parsed.success) return errorResponse('A valid budget is required', 400);
 
     const { supabase } = await getUserClient();
-    const { data, error } = await supabase.rpc('deactivate_monthly_budget', {
-      p_budget_id: parsed.data.budget_id,
-    });
+    const { data, error } = await supabase.rpc(
+      parsed.data.month ? 'stop_monthly_budget' : 'deactivate_monthly_budget',
+      {
+        p_budget_id: parsed.data.budget_id,
+        ...(parsed.data.month ? { p_month: parsed.data.month } : {}),
+      },
+    );
     if (error) return rpcError(error);
     if (!data) return errorResponse('Budget not found', 404);
     return Response.json({ deactivated: true }, { headers: privateHeaders });

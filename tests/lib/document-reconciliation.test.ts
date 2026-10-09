@@ -4,6 +4,7 @@ import { dateWindow, rankCandidates } from '@/lib/document-reconciliation';
 const observation = {
   id: 'observation-1',
   amount: 12000,
+  currency: 'COP',
   occurred_at_text: '2026-09-28',
   description: 'Coffee shop',
   counterparty: 'Cafe North',
@@ -13,6 +14,7 @@ const observation = {
 const transaction = (id: string, overrides: Record<string, unknown> = {}) => ({
   id,
   amount: 12000,
+  currency: 'COP',
   date: '2026-09-28',
   description: 'Cafe North coffee',
   account_id: 'account-1',
@@ -23,6 +25,15 @@ const transaction = (id: string, overrides: Record<string, unknown> = {}) => ({
 });
 
 describe('document reconciliation candidates', () => {
+  it('excludes mismatched or unknown currencies even with identical amounts and dates', () => {
+    expect(
+      rankCandidates(observation, [
+        transaction('usd', { currency: 'USD' }),
+        transaction('unknown', { currency: null }),
+      ]),
+    ).toEqual([]);
+    expect(rankCandidates({ ...observation, currency: null }, [transaction('cop')])).toEqual([]);
+  });
   it('accepts only real ISO dates and builds a three-day window', () => {
     expect(dateWindow('2026-09-28')).toEqual({ from: '2026-09-25', to: '2026-10-01' });
     expect(dateWindow('2026-02-30')).toBeNull();

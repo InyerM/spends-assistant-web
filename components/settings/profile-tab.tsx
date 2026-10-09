@@ -170,7 +170,7 @@ export function ProfileTab(): React.ReactElement {
         <CardHeader>
           <CardTitle className='flex items-center gap-2'>
             <Settings2 className='h-5 w-5' />
-            {t('preferences')}
+            {t('accountOptions')}
           </CardTitle>
           <CardDescription>{t('preferencesDescription')}</CardDescription>
         </CardHeader>

@@ -3,6 +3,7 @@ import { inferDocumentTransactionType } from '@/lib/document-review';
 export interface ReconciliationObservation {
   id: string;
   amount: number | null;
+  currency?: string | null;
   occurred_at_text: string | null;
   description: string;
   counterparty: string | null;
@@ -13,6 +14,7 @@ export interface ReconciliationObservation {
 export interface ReconciliationTransaction {
   id: string;
   amount: number;
+  currency?: string | null;
   date: string;
   description: string;
   account_id: string;
@@ -25,6 +27,7 @@ export interface ReconciliationCandidate {
   kind: 'candidate';
   transaction_id: string;
   amount: number;
+  currency?: string | null;
   amount_difference: number;
   date: string;
   description: string;
@@ -79,7 +82,8 @@ export function rankCandidates(
   transactions: ReconciliationTransaction[],
 ): ReconciliationCandidate[] {
   const cents = observation.amount === null ? null : amountCents(Math.abs(observation.amount));
-  if (cents === null) return [];
+  if (cents === null || !observation.currency || !/^[A-Z]{3}$/.test(observation.currency))
+    return [];
   const observedAt = parseDate(observation.occurred_at_text);
   const expectedType = inferDocumentTransactionType(
     observation.amount,
@@ -91,6 +95,7 @@ export function rankCandidates(
 
   return transactions
     .flatMap((transaction) => {
+      if (transaction.currency !== observation.currency) return [];
       if (amountCents(transaction.amount) !== cents) return [];
       if (expectedType === 'income' ? transaction.type !== 'income' : transaction.type === 'income')
         return [];
@@ -110,6 +115,7 @@ export function rankCandidates(
           kind: 'candidate' as const,
           transaction_id: transaction.id,
           amount: transaction.amount,
+          currency: transaction.currency,
           amount_difference: 0,
           date: transaction.date,
           description: transaction.description,

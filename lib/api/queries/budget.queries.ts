@@ -3,6 +3,8 @@ import { useQuery } from '@tanstack/react-query';
 export interface BudgetStatus {
   budget_id: string;
   category_id: string;
+  repeat_monthly?: boolean;
+  start_month?: string;
   limit_cop: string;
   spent_cop: string;
   pending_count: number;

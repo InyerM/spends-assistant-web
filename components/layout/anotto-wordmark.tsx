@@ -10,7 +10,7 @@ export function AnottoMark({
   return (
     <svg
       aria-hidden='true'
-      viewBox='0 0 27 27'
+      viewBox='-1 -1 30 30'
       className={cn('text-brand h-7 w-7 shrink-0', animated && 'anotto-loading-mark', className)}
       fill='currentColor'>
       <g transform='rotate(-13 13.5 13.5)'>

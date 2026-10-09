@@ -22,6 +22,10 @@ vi.mock('next-intl', async () => {
 describe('manual loan ledger', () => {
   const fetchMock = vi.fn();
   beforeEach(() => {
+    Element.prototype.hasPointerCapture = vi.fn(() => false);
+    Element.prototype.setPointerCapture = vi.fn();
+    Element.prototype.releasePointerCapture = vi.fn();
+    Element.prototype.scrollIntoView = vi.fn();
     fetchMock.mockReset();
     fetchMock.mockResolvedValue({ ok: true, json: async () => ({ data: [] }) });
     vi.stubGlobal('fetch', fetchMock);
@@ -117,8 +121,10 @@ describe('manual loan ledger', () => {
     const user = userEvent.setup();
     render(<LoansPage />);
     await screen.findByText('Statement loan');
-    await user.selectOptions(screen.getByLabelText('Entry type'), 'payment');
-    await user.selectOptions(screen.getByLabelText('Loan'), loanId);
+    await user.click(screen.getByRole('combobox', { name: 'Entry type' }));
+    await user.click(screen.getByRole('option', { name: 'Payment allocation' }));
+    await user.click(screen.getByRole('combobox', { name: 'Loan' }));
+    await user.click(screen.getByRole('option', { name: /Statement loan/ }));
     for (const [label, amount] of [
       ['Entry date', '2026-09-28'],
       ['Cash paid', '12345'],
@@ -170,8 +176,10 @@ describe('manual loan ledger', () => {
     render(<LoansPage />);
     await screen.findByText('Opening from statement');
     expect(screen.getByText('Not recorded')).toBeInTheDocument();
-    await user.selectOptions(screen.getByLabelText('Entry type'), 'opening');
-    await user.selectOptions(screen.getByLabelText('Loan'), loanId);
+    await user.click(screen.getByRole('combobox', { name: 'Entry type' }));
+    await user.click(screen.getByRole('option', { name: 'Opening balance' }));
+    await user.click(screen.getByRole('combobox', { name: 'Loan' }));
+    await user.click(screen.getByRole('option', { name: /Opening from statement/ }));
     await user.type(screen.getByLabelText('Entry date'), '2026-09-28');
     await user.type(screen.getByLabelText('Known outstanding principal'), '123456789');
     await user.type(screen.getByLabelText('Evidence reference'), 'Statement outstanding row');

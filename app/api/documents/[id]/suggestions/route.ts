@@ -37,7 +37,7 @@ export async function GET(
     const { data: rawObservations, error: observationError } = await supabase
       .from('document_observations')
       .select(
-        'id, amount, occurred_at_text, description, counterparty, reference, source_excerpt, status',
+        'id, amount, currency, occurred_at_text, description, counterparty, reference, source_excerpt, status',
       )
       .eq('document_id', id)
       .eq('user_id', userId)
@@ -80,7 +80,7 @@ export async function GET(
 
       let query = supabase
         .from('transactions')
-        .select('id, amount, date, description, account_id, type, raw_text')
+        .select('id, amount, currency, date, description, account_id, type, raw_text')
         .eq('user_id', userId)
         .is('deleted_at', null)
         .eq('amount', Math.abs(observation.amount));
@@ -109,8 +109,9 @@ export async function GET(
         .eq('user_id', userId)
         .in('id', accountIds);
       if (accountError) return errorResponse('Failed to load accounts');
-      for (const account of (accounts as { id: string; name: string }[] | null) ?? [])
-        accountNames.set(account.id as string, account.name as string);
+      for (const account of (accounts as { id: string; name: string }[] | null) ?? []) {
+        accountNames.set(account.id, account.name);
+      }
     }
 
     const data = observations.map((observation) => {

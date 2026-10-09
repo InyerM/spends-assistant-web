@@ -16,7 +16,10 @@ describe('Anotto customer identity', () => {
 
   it('can animate the same mark inside the sidebar wordmark', () => {
     const { container } = render(<AnottoWordmark animated />);
-    expect(container.querySelector('svg.anotto-loading-mark')).toBeInTheDocument();
+    expect(container.querySelector('svg.anotto-loading-mark')).toHaveAttribute(
+      'viewBox',
+      '-1 -1 30 30',
+    );
   });
 
   it.each([en, es, pt])('provides localized authentication and navigation labels', (messages) => {

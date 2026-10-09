@@ -17,15 +17,19 @@ vi.mock('@/store/ui-store', () => ({
   useUiStore: (selector: (state: object) => unknown) =>
     selector({ sidebarCollapsed: false, toggleSidebarCollapsed: vi.fn() }),
 }));
+const subscription = vi.hoisted(() => ({ plan: 'free' }));
 vi.mock('@/hooks/use-subscription', () => ({
-  useSubscription: () => ({ data: { plan: 'free' } }),
+  useSubscription: () => ({ data: subscription }),
 }));
 vi.mock('@/hooks/use-usage', () => ({
   useUsage: () => ({ data: { ai_parses_used: 4, ai_parses_limit: 15 } }),
 }));
 
 describe('Sidebar navigation', () => {
-  afterEach(cleanup);
+  afterEach(() => {
+    cleanup();
+    subscription.plan = 'free';
+  });
   it('keeps dashboard and transactions visible while grouping the rest', () => {
     render(<Sidebar />);
 
@@ -43,6 +47,14 @@ describe('Sidebar navigation', () => {
       'false',
     );
     expect(screen.queryByRole('button', { name: 'accounts' })).not.toBeInTheDocument();
+  });
+
+  it('does not present a Free quota as a limit for Pro', () => {
+    subscription.plan = 'pro';
+    render(<Sidebar />);
+    expect(screen.getByText(/planLabel · pro/)).toBeVisible();
+    expect(screen.queryByText('4 / 15')).not.toBeInTheDocument();
+    expect(screen.getByText('unlimitedAi')).toBeVisible();
   });
 
   it('shows actual plan usage without a trial or purchase claim', () => {

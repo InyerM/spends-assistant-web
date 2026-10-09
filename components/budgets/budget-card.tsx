@@ -46,7 +46,9 @@ export function BudgetCard({
         <div className='flex items-start justify-between gap-4'>
           <div className='min-w-0 space-y-1'>
             <h2 className='truncate text-lg font-semibold'>{name}</h2>
-            <p className='text-muted-foreground text-sm'>{t('monthlyLimit')}</p>
+            <p className='text-muted-foreground text-sm'>
+              {t(budget.repeat_monthly ? 'repeatMonthly' : 'onlyThisMonth')}
+            </p>
           </div>
           <div className='flex shrink-0 items-center gap-1'>
             <Button variant='ghost' size='icon-sm' onClick={onEdit} aria-label={tCommon('edit')}>

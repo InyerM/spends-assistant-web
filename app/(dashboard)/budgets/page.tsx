@@ -116,6 +116,7 @@ export default function BudgetsPage(): React.ReactElement {
       {deleteTarget && (
         <BudgetRemoveDialog
           budgetId={deleteTarget.budget_id}
+          month={month}
           onClose={(): void => setDeleteTarget(null)}
         />
       )}

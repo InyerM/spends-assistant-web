@@ -46,6 +46,7 @@ vi.mock('@/lib/api/server', () => ({
 
 const observation = {
   id: 'obs-1',
+  currency: 'COP',
   amount: 12000,
   occurred_at_text: '2026-09-28',
   description: 'Cafe North',
@@ -64,6 +65,7 @@ describe('GET document reconciliation suggestions', () => {
         {
           id: 'tx-1',
           amount: 12000,
+          currency: 'COP',
           date: '2026-09-28',
           description: 'Cafe North',
           account_id: 'account-1',
@@ -73,7 +75,10 @@ describe('GET document reconciliation suggestions', () => {
       ],
       error: null,
     });
-    accountQuery.mockResolvedValue({ data: [{ id: 'account-1', name: 'Checking' }], error: null });
+    accountQuery.mockResolvedValue({
+      data: [{ id: 'account-1', name: 'Checking', currency: 'COP' }],
+      error: null,
+    });
     historyQuery.mockResolvedValue({ data: [], error: null });
 
     const documentBuilder = { select: () => ({ eq: documentEq }) };
@@ -129,6 +134,7 @@ describe('GET document reconciliation suggestions', () => {
       kind: 'candidate',
       transaction_id: 'tx-1',
       account_name: 'Checking',
+      currency: 'COP',
       basis: 'exact_date',
     });
     expect(JSON.stringify(body)).not.toContain('raw_text');
@@ -141,6 +147,31 @@ describe('GET document reconciliation suggestions', () => {
     expect(transactionGte).toHaveBeenCalledWith('date', '2026-09-25');
     expect(transactionLte).toHaveBeenCalledWith('date', '2026-10-01');
     expect(accountEq).toHaveBeenCalledWith('user_id', 'user-1');
+  });
+
+  it('uses transaction currency even when the account has a different currency', async () => {
+    const initial = await request();
+    expect((await initial.json()).data[0].candidates[0].currency).toBe('COP');
+    accountQuery.mockResolvedValue({
+      data: [{ id: 'account-1', name: 'Checking', currency: 'COP' }],
+      error: null,
+    });
+    transactionQuery.mockResolvedValue({
+      data: [
+        {
+          id: 'tx-usd',
+          amount: 12000,
+          currency: 'USD',
+          date: '2026-09-28',
+          description: 'Cafe North',
+          account_id: 'account-1',
+          type: 'expense',
+          raw_text: null,
+        },
+      ],
+      error: null,
+    });
+    expect((await (await request()).json()).data[0].candidates).toEqual([]);
   });
 
   it('searches signed bank debits by absolute amount', async () => {
@@ -169,6 +200,7 @@ describe('GET document reconciliation suggestions', () => {
         {
           id: 'expense',
           amount: 12000,
+          currency: 'COP',
           date: '2026-09-28',
           description: 'Cafe North',
           account_id: 'account-1',
@@ -178,6 +210,7 @@ describe('GET document reconciliation suggestions', () => {
         {
           id: 'income',
           amount: 12000,
+          currency: 'COP',
           date: '2026-09-28',
           description: 'Received',
           account_id: 'account-1',

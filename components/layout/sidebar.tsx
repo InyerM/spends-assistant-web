@@ -213,7 +213,9 @@ export function Sidebar({ className, onClose }: SidebarProps): React.ReactElemen
           <p className='text-foreground text-sm font-semibold'>
             {t('planLabel')} · {t(subscription.plan === 'pro' ? 'pro' : 'free')}
           </p>
-          {typeof aiUsed === 'number' && typeof aiLimit === 'number' && aiLimit > 0 && (
+          {subscription.plan === 'pro' ? (
+            <p className='text-muted-foreground mt-2 text-xs'>{t('unlimitedAi')}</p>
+          ) : typeof aiUsed === 'number' && typeof aiLimit === 'number' && aiLimit > 0 ? (
             <div className='mt-3 space-y-2'>
               <div className='text-muted-foreground flex justify-between text-xs'>
                 <span>{t('aiUsage')}</span>
@@ -227,7 +229,7 @@ export function Sidebar({ className, onClose }: SidebarProps): React.ReactElemen
                 className='bg-brand-secondary/15 [&_[data-slot=progress-indicator]]:bg-brand-secondary'
               />
             </div>
-          )}
+          ) : null}
           <Button
             variant='outline'
             className='mt-3 h-8 w-full rounded-lg text-xs'

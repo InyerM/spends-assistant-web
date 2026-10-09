@@ -113,7 +113,7 @@ export const useAuthStore = create<AuthStore>((set) => ({
   signOut: async (): Promise<void> => {
     set({ isLoading: true });
     try {
-      const { error } = await supabaseClient.auth.signOut();
+      const { error } = await supabaseClient.auth.signOut({ scope: 'local' });
       if (error) throw error;
       set({ ...initialState, isLoading: false });
     } catch {

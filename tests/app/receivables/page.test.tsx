@@ -20,6 +20,10 @@ const transactionId = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
 describe('personal receivables review', () => {
   const fetchMock = vi.fn();
   beforeEach(() => {
+    Element.prototype.hasPointerCapture = vi.fn(() => false);
+    Element.prototype.setPointerCapture = vi.fn();
+    Element.prototype.releasePointerCapture = vi.fn();
+    Element.prototype.scrollIntoView = vi.fn();
     fetchMock.mockReset();
     fetchMock.mockImplementation(async (url: string) => {
       if (url.startsWith('/api/transactions?'))
@@ -62,12 +66,14 @@ describe('personal receivables review', () => {
     const user = userEvent.setup();
     render(<ReceivablesPage />);
     await screen.findByText('May personal loan');
-    await user.selectOptions(screen.getByLabelText('Entry type'), 'repayment');
-    await user.selectOptions(screen.getByLabelText('Receivable'), loanId);
+    await user.click(screen.getByRole('combobox', { name: 'Entry type' }));
+    await user.click(screen.getByRole('option', { name: 'Principal repayment' }));
+    await user.click(screen.getByRole('combobox', { name: 'Receivable' }));
+    await user.click(screen.getByRole('option', { name: 'May personal loan · Brother' }));
     await user.type(screen.getByLabelText('Event date'), '2026-05-19');
     await user.click(screen.getByRole('button', { name: 'Find bank transaction' }));
-    await screen.findByText(/Transfer received from brother/);
-    await user.selectOptions(screen.getByLabelText('Source transaction'), transactionId);
+    await user.click(screen.getByRole('combobox', { name: 'Source transaction' }));
+    await user.click(await screen.findByRole('option', { name: /Transfer received from brother/ }));
     await user.type(screen.getByLabelText('Principal amount'), '100000');
     await user.type(
       screen.getByLabelText('Evidence reference'),

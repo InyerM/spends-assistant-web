@@ -12,6 +12,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { SearchableSelect } from '@/components/shared/searchable-select';
@@ -43,6 +50,7 @@ export function BudgetEditorDialog({
   const save = useSaveMonthlyBudget();
   const [categoryId, setCategoryId] = useState(editing?.category_id ?? '');
   const [amount, setAmount] = useState(editing ? String(Number(editing.limit_cop)) : '');
+  const [repeatMonthly, setRepeatMonthly] = useState(editing?.repeat_monthly ?? false);
   const parsedAmount = Number(amount);
   const validAmount =
     Number.isFinite(parsedAmount) &&
@@ -53,7 +61,7 @@ export function BudgetEditorDialog({
   function handleSave(): void {
     if (!categoryId || !validAmount) return;
     save.mutate(
-      { month, category_id: categoryId, limit_cop: parsedAmount },
+      { month, category_id: categoryId, limit_cop: parsedAmount, repeat_monthly: repeatMonthly },
       {
         onSuccess: () => {
           onOpenChange(false);
@@ -72,6 +80,23 @@ export function BudgetEditorDialog({
           <DialogDescription>{t('formDescription')}</DialogDescription>
         </DialogHeader>
         <div className='space-y-5 py-2'>
+          <div className='space-y-2'>
+            <Label htmlFor='budget-duration'>{t('duration')}</Label>
+            <Select
+              value={repeatMonthly ? 'monthly' : 'once'}
+              onValueChange={(value) => setRepeatMonthly(value === 'monthly')}>
+              <SelectTrigger id='budget-duration' className='w-full'>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value='once'>{t('onlyThisMonth')}</SelectItem>
+                <SelectItem value='monthly'>{t('repeatMonthly')}</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className='text-muted-foreground text-sm'>
+              {t(repeatMonthly ? 'repeatHint' : 'onceHint')}
+            </p>
+          </div>
           <div className='space-y-2'>
             <Label htmlFor='budget-category'>{t('category')}</Label>
             <SearchableSelect

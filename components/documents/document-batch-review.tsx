@@ -1,11 +1,13 @@
 'use client';
 
+import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { DocumentAccountSelect } from '@/components/documents/document-review-selects';
 import { DocumentRejectDialog } from '@/components/documents/document-reject-dialog';
+import { DocumentBulkReconciliation } from '@/components/documents/document-bulk-reconciliation';
 import { DocumentBatchReviewRow } from '@/components/documents/document-batch-review-row';
 import { useDocumentBatchReview } from '@/hooks/use-document-batch-review';
 import type { DocumentReviewRow } from '@/hooks/use-document-batch-review';
@@ -35,6 +37,7 @@ export function DocumentBatchReview({
   suggestions = [],
 }: Props): React.ReactElement | null {
   const t = useTranslations('documents');
+  const [reconciling, setReconciling] = useState(false);
   const review = useDocumentBatchReview({
     documentId,
     rows,
@@ -55,7 +58,7 @@ export function DocumentBatchReview({
     setRejectTarget,
     matchReview,
     setMatchReview,
-    busy,
+    busy: posting,
     progress,
     activeAccounts,
     selectAll,
@@ -65,10 +68,20 @@ export function DocumentBatchReview({
     linkExisting,
   } = review;
 
+  const busy = posting || reconciling;
+
   if (pending.length === 0) return null;
 
   return (
     <section className='space-y-3' aria-label={t('batchReview')}>
+      <DocumentBulkReconciliation
+        documentId={documentId}
+        rows={rows}
+        suggestions={suggestions}
+        onRefresh={onRefresh}
+        disabled={posting}
+        onBusyChange={setReconciling}
+      />
       <div className='flex flex-wrap items-center justify-between gap-2'>
         <div>
           <h4 className='text-sm font-semibold'>{t('pendingGroup', { count: pending.length })}</h4>
@@ -94,7 +107,7 @@ export function DocumentBatchReview({
             accounts={accounts}
             categories={categories}
             suggestions={suggestions}
-            review={review}
+            review={{ ...review, busy }}
           />
         ))}
       </div>

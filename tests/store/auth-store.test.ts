@@ -142,6 +142,7 @@ describe('useAuthStore', () => {
     useAuthStore.setState({ supabaseUser: { id: 'user-1' } as never, isAuthenticated: true });
     await useAuthStore.getState().signOut();
 
+    expect(mockSignOut).toHaveBeenCalledWith({ scope: 'local' });
     const state = useAuthStore.getState();
     expect(state.supabaseUser).toBeNull();
     expect(state.isAuthenticated).toBe(false);

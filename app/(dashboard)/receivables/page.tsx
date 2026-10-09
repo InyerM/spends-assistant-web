@@ -1,5 +1,13 @@
 'use client';
 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useLocale, useTranslations } from 'next-intl';
@@ -293,14 +301,18 @@ export default function ReceivablesPage(): React.ReactElement {
           <CardContent className='space-y-4'>
             <label className='block space-y-2 text-sm font-medium'>
               {t('entryType')}
-              <select
-                className='border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 h-10 w-full min-w-0 rounded-lg border px-3 focus-visible:ring-2 focus-visible:outline-none'
+              <Select
                 value={draft.action}
-                onChange={(event) => change('action', event.target.value as Action)}>
-                <option value='create_receivable'>{t('createBorrower')}</option>
-                <option value='disbursement'>{t('moneyLent')}</option>
-                <option value='repayment'>{t('principalRepayment')}</option>
-              </select>
+                onValueChange={(value) => change('action', value as Action)}>
+                <SelectTrigger aria-label={t('entryType')} className='h-11 w-full min-w-0'>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value='create_receivable'>{t('createBorrower')}</SelectItem>
+                  <SelectItem value='disbursement'>{t('moneyLent')}</SelectItem>
+                  <SelectItem value='repayment'>{t('principalRepayment')}</SelectItem>
+                </SelectContent>
+              </Select>
             </label>
             {draft.action === 'create_receivable' ? (
               <>
@@ -313,17 +325,23 @@ export default function ReceivablesPage(): React.ReactElement {
               <>
                 <label className='block space-y-2 text-sm font-medium'>
                   {t('receivable')}
-                  <select
-                    className='border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 h-10 w-full min-w-0 rounded-lg border px-3 focus-visible:ring-2 focus-visible:outline-none'
-                    value={draft.receivableId}
-                    onChange={(event) => change('receivableId', event.target.value)}>
-                    <option value=''>{t('selectReceivable')}</option>
-                    {receivables.map((item) => (
-                      <option key={item.id} value={item.id}>
-                        {item.label} · {item.borrower}
-                      </option>
-                    ))}
-                  </select>
+                  <Select
+                    value={draft.receivableId || '__none__'}
+                    onValueChange={(value) =>
+                      change('receivableId', value === '__none__' ? '' : value)
+                    }>
+                    <SelectTrigger aria-label={t('receivable')} className='h-11 w-full min-w-0'>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value='__none__'>{t('selectReceivable')}</SelectItem>
+                      {receivables.map((item) => (
+                        <SelectItem key={item.id} value={item.id}>
+                          {item.label} · {item.borrower}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </label>
                 {field(t('eventDate'), 'date', 'YYYY-MM-DD')}
                 <Button
@@ -335,17 +353,25 @@ export default function ReceivablesPage(): React.ReactElement {
                 </Button>
                 <label className='block space-y-2 text-sm font-medium'>
                   {t('sourceTransaction')}
-                  <select
-                    className='border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 h-10 w-full min-w-0 rounded-lg border px-3 focus-visible:ring-2 focus-visible:outline-none'
-                    value={draft.sourceTransactionId}
-                    onChange={(event) => change('sourceTransactionId', event.target.value)}>
-                    <option value=''>{t('selectTransaction')}</option>
-                    {transactions.map((item) => (
-                      <option key={item.id} value={item.id}>
-                        {item.description} · {item.amount} · {item.id.slice(0, 8)}
-                      </option>
-                    ))}
-                  </select>
+                  <Select
+                    value={draft.sourceTransactionId || '__none__'}
+                    onValueChange={(value) =>
+                      change('sourceTransactionId', value === '__none__' ? '' : value)
+                    }>
+                    <SelectTrigger
+                      aria-label={t('sourceTransaction')}
+                      className='h-11 w-full min-w-0'>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value='__none__'>{t('selectTransaction')}</SelectItem>
+                      {transactions.map((item) => (
+                        <SelectItem key={item.id} value={item.id}>
+                          {item.description} · {item.amount} · {item.id.slice(0, 8)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </label>
                 {transactions.length === 0 && !searching && (
                   <p className='text-muted-foreground text-xs'>{t('searchHint')}</p>

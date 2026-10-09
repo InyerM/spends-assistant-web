@@ -75,6 +75,7 @@ describe('budget category picker', () => {
         month: '2026-10-01',
         category_id: '22222222-2222-4222-8222-222222222222',
         limit_cop: 500000,
+        repeat_monthly: false,
       },
       expect.any(Object),
     );

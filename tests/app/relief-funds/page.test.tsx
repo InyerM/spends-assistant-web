@@ -50,6 +50,10 @@ const savedFund = {
 describe('relief fund journal page', () => {
   const fetchMock = vi.fn();
   beforeEach(() => {
+    Element.prototype.hasPointerCapture = vi.fn(() => false);
+    Element.prototype.setPointerCapture = vi.fn();
+    Element.prototype.releasePointerCapture = vi.fn();
+    Element.prototype.scrollIntoView = vi.fn();
     fetchMock.mockReset();
     fetchMock.mockResolvedValue({ ok: true, json: async () => ({ data: [savedFund] }) });
     vi.stubGlobal('fetch', fetchMock);
@@ -69,8 +73,10 @@ describe('relief fund journal page', () => {
     const user = userEvent.setup();
     render(<ReliefFundsPage />);
     await screen.findByText('August 2026 emergency relief');
-    await user.selectOptions(screen.getByLabelText('Entry type'), 'unknown_spend');
-    await user.selectOptions(screen.getByLabelText('Fund'), fundId);
+    await user.click(screen.getByRole('combobox', { name: 'Entry type' }));
+    await user.click(screen.getByRole('option', { name: 'Spend, amount unknown' }));
+    await user.click(screen.getByRole('combobox', { name: 'Fund' }));
+    await user.click(screen.getByRole('option', { name: 'August 2026 emergency relief' }));
     expect(screen.getByLabelText('Date (optional)')).toBeInTheDocument();
     await user.type(screen.getByLabelText('Description'), 'Other cash purchases');
     await user.type(screen.getByLabelText('Source reference'), 'Owner recollection');

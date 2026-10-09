@@ -76,7 +76,8 @@
     "pro": "Pro",
     "aiUsage": "Análises de IA neste mês",
     "viewUsage": "Ver plano e uso",
-    "addTransaction": "Adicionar transação"
+    "addTransaction": "Adicionar transação",
+    "unlimitedAi": "Análises de IA sem limite"
   },
   "budgets": {
     "eyebrow": "Plano mensal",
@@ -99,7 +100,7 @@
     "removed": "Orçamento removido deste mês",
     "removeFailed": "Não foi possível remover o orçamento",
     "removeTitle": "Remover orçamento",
-    "removeDescription": "O limite deixará de aparecer neste mês. As transações não mudam e você poderá adicioná-lo novamente.",
+    "removeDescription": "Este limite deixa de valer a partir do mês selecionado. O histórico anterior e suas transações são preservados.",
     "unknownCategory": "Categoria indisponível",
     "monthlyLimit": "Limite deste mês",
     "spent": "Gasto",
@@ -110,7 +111,12 @@
     "alert80": "Chegou a 80%",
     "alert100": "Limite atingido",
     "coverageWarning": "Fora deste total: {pending} pendentes, {currency} sem valor em COP e {excluded} movimentos excluídos.",
-    "viewMovements": "Ver movimentos incluídos ({count})"
+    "viewMovements": "Ver movimentos incluídos ({count})",
+    "duration": "Duração",
+    "onlyThisMonth": "Somente este mês",
+    "repeatMonthly": "Repetir todo mês",
+    "onceHint": "Aplica-se ao mês selecionado.",
+    "repeatHint": "Renova a cada mês a partir do mês selecionado até você interromper. Os gastos começam em zero a cada mês."
   },
   "helpCenter": {
     "title": "Central de ajuda",
@@ -741,7 +747,7 @@
     "changePasswordConfirmDescription": "Sua senha será atualizada. Certifique-se de lembrar a nova senha.",
     "closeSessionsConfirmDescription": "Sua senha será atualizada e todas as outras sessões serão encerradas. Você precisará fazer login novamente em outros dispositivos.",
     "currentPlan": "Plano atual",
-    "pro": "Acesso ampliado",
+    "pro": "Pro",
     "free": "Gratuito",
     "freePlanDescription": "O Anotto é gratuito por enquanto; não há cobranças.",
     "proPlanDescription": "O Anotto não cobra por enquanto.",
@@ -815,7 +821,11 @@
     "hourFormat": "Formato de hora",
     "hourFormatDescription": "Usar formato de 24 horas em vez de 12 horas (AM/PM)",
     "showApiKeys": "Mostrar aba de API Keys",
-    "deleteAccountHelp": "Entre em contato com o suporte para ajuda com a exclusão da conta"
+    "deleteAccountHelp": "Entre em contato com o suporte para ajuda com a exclusão da conta",
+    "accountOptions": "Opções da conta",
+    "aiUsageExplanation": "A análise de texto e a digitalização de documentos compartilham a cota de IA. Cada solicitação conta uma vez, mesmo quando detecta vários movimentos. Pro não tem limite de solicitações.",
+    "usageUnavailable": "Não foi possível carregar seu plano e uso. Tente novamente.",
+    "retryUsage": "Tentar novamente"
   },
   "security": {
     "passwordProvider": "Senha",
@@ -979,6 +989,12 @@
       "sms_screenshot": "Captura de SMS",
       "statement": "Extrato",
       "other": "Outro"
-    }
+    },
+    "bulkReconcile": "Revisar correspondências exatas ({count})",
+    "bulkReconcileHint": "Correspondências únicas de valor, data e moeda, com texto de apoio. Linhas ambíguas ficam pendentes.",
+    "bulkReconcileConfirm": "Confirmar {count} vínculos com transações existentes",
+    "bulkReconcileWarning": "Revise estes vínculos antes de confirmar. Apenas as evidências são conciliadas com transações existentes; saldos e transações não mudam.",
+    "bulkReconcileResult": "{completed} vinculados · {failed} falharam",
+    "bulkReconcileRefreshError": "Os vínculos foram salvos, mas a lista não pôde ser atualizada. Recarregue para verificar o estado."
   }
 }

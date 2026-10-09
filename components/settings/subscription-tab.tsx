@@ -2,6 +2,7 @@
 
 import { useTranslations } from 'next-intl';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -11,8 +12,18 @@ import { Check } from 'lucide-react';
 
 export function SubscriptionTab(): React.ReactElement {
   const t = useTranslations('settings');
-  const { data: subscription, isLoading: subLoading } = useSubscription();
-  const { data: usage, isLoading: usageLoading } = useUsage();
+  const {
+    data: subscription,
+    isLoading: subLoading,
+    isError: subError,
+    refetch: retrySubscription,
+  } = useSubscription();
+  const {
+    data: usage,
+    isLoading: usageLoading,
+    isError: usageError,
+    refetch: retryUsage,
+  } = useUsage();
 
   const isLoading = subLoading || usageLoading;
 
@@ -32,6 +43,24 @@ export function SubscriptionTab(): React.ReactElement {
     );
   }
 
+  if (subError || usageError) {
+    return (
+      <Card>
+        <CardContent className='space-y-3 pt-6'>
+          <p role='alert'>{t('usageUnavailable')}</p>
+          <Button
+            variant='outline'
+            onClick={() => {
+              void retrySubscription();
+              void retryUsage();
+            }}>
+            {t('retryUsage')}
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
+
   const plan = subscription?.plan ?? 'free';
   const aiUsed = usage?.ai_parses_used ?? 0;
   const aiLimit = usage?.ai_parses_limit ?? 15;
@@ -40,9 +69,9 @@ export function SubscriptionTab(): React.ReactElement {
   const accountsCount = usage?.accounts_count ?? 0;
   const accountsLimit = usage?.accounts_limit ?? 4;
   const categoriesCount = usage?.categories_count ?? 0;
-  const categoriesLimit = usage?.categories_limit ?? 10;
+  const categoriesLimit = usage?.categories_limit ?? 15;
   const automationsCount = usage?.automations_count ?? 0;
-  const automationsLimit = usage?.automations_limit ?? 10;
+  const automationsLimit = usage?.automations_limit ?? 5;
 
   const aiPercent = aiLimit > 0 ? Math.round((aiUsed / aiLimit) * 100) : 0;
   const txPercent = txLimit > 0 ? Math.round((txCount / txLimit) * 100) : 0;
@@ -59,8 +88,6 @@ export function SubscriptionTab(): React.ReactElement {
     t('unlimitedAutomationRules'),
     t('unlimitedCategories'),
     t('dataExport'),
-    t('advancedAnalytics'),
-    t('prioritySupport'),
   ];
 
   const usageBars = [
@@ -116,6 +143,7 @@ export function SubscriptionTab(): React.ReactElement {
           </CardDescription>
         </CardHeader>
         <CardContent className='space-y-6'>
+          <p className='text-muted-foreground text-sm leading-6'>{t('aiUsageExplanation')}</p>
           {plan === 'free' ? (
             <div className='space-y-4'>
               {usageBars.map((bar) => (

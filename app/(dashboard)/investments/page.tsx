@@ -1,5 +1,13 @@
 'use client';
 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import { ArrowRight, BookOpenCheck, CircleAlert, TrendingUp } from 'lucide-react';
@@ -517,17 +525,23 @@ export default function InvestmentsPage(): React.ReactElement {
           <CardContent className='space-y-4'>
             <label className='block space-y-2 text-sm font-medium' htmlFor='investment-action'>
               {t('entryType')}
-              <select
-                id='investment-action'
+              <Select
                 value={draft.action}
-                onChange={(e) => change('action', e.target.value as Action)}
-                className='border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 h-10 w-full min-w-0 rounded-lg border px-3 focus-visible:ring-2 focus-visible:outline-none'>
-                <option value='create_position'>{t('createPosition')}</option>
-                <option value='opening'>{t('openingLot')}</option>
-                <option value='buy'>{t('buy')}</option>
-                <option value='sell'>{t('sell')}</option>
-                <option value='valuation'>{t('datedValuation')}</option>
-              </select>
+                onValueChange={(value) => change('action', value as Action)}>
+                <SelectTrigger
+                  id='investment-action'
+                  aria-label={t('entryType')}
+                  className='h-11 w-full min-w-0'>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value='create_position'>{t('createPosition')}</SelectItem>
+                  <SelectItem value='opening'>{t('openingLot')}</SelectItem>
+                  <SelectItem value='buy'>{t('buy')}</SelectItem>
+                  <SelectItem value='sell'>{t('sell')}</SelectItem>
+                  <SelectItem value='valuation'>{t('datedValuation')}</SelectItem>
+                </SelectContent>
+              </Select>
             </label>
             {draft.action === 'create_position' ? (
               <>
@@ -535,14 +549,20 @@ export default function InvestmentsPage(): React.ReactElement {
                   className='block space-y-2 text-sm font-medium'
                   htmlFor='investment-provider'>
                   {t('provider')}
-                  <select
-                    id='investment-provider'
+                  <Select
                     value={draft.provider}
-                    onChange={(e) => change('provider', e.target.value as Draft['provider'])}
-                    className='border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 h-10 w-full min-w-0 rounded-lg border px-3 focus-visible:ring-2 focus-visible:outline-none'>
-                    <option value='tyba'>Tyba</option>
-                    <option value='binance'>Binance</option>
-                  </select>
+                    onValueChange={(value) => change('provider', value as Draft['provider'])}>
+                    <SelectTrigger
+                      id='investment-provider'
+                      aria-label={t('provider')}
+                      className='h-11 w-full min-w-0'>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value='tyba'>Tyba</SelectItem>
+                      <SelectItem value='binance'>Binance</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </label>
                 <label className='block space-y-2 text-sm font-medium' htmlFor='investment-symbol'>
                   {t('symbol')}
@@ -593,18 +613,26 @@ export default function InvestmentsPage(): React.ReactElement {
                   className='block space-y-2 text-sm font-medium'
                   htmlFor='investment-position'>
                   {t('position')}
-                  <select
-                    id='investment-position'
-                    value={draft.positionId}
-                    onChange={(e) => change('positionId', e.target.value)}
-                    className='border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 h-10 w-full min-w-0 rounded-lg border px-3 focus-visible:ring-2 focus-visible:outline-none'>
-                    <option value=''>{t('selectPosition')}</option>
-                    {positions.map((position) => (
-                      <option key={position.id} value={position.id}>
-                        {position.provider} · {position.symbol} ({position.quote_currency})
-                      </option>
-                    ))}
-                  </select>
+                  <Select
+                    value={draft.positionId || '__none__'}
+                    onValueChange={(value) =>
+                      change('positionId', value === '__none__' ? '' : value)
+                    }>
+                    <SelectTrigger
+                      id='investment-position'
+                      aria-label={t('position')}
+                      className='h-11 w-full min-w-0'>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value='__none__'>{t('selectPosition')}</SelectItem>
+                      {positions.map((position) => (
+                        <SelectItem key={position.id} value={position.id}>
+                          {position.provider} · {position.symbol} ({position.quote_currency})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </label>
                 <label className='block space-y-2 text-sm font-medium' htmlFor='investment-date'>
                   {draft.action === 'valuation' ? t('valuationDate') : t('tradeDate')}

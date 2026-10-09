@@ -28,10 +28,10 @@
   --brand-foreground: 152.5 57.14286% 8.23529%;
   --brand-secondary: 37.5 70.88608% 69.01961%;
   --brand-secondary-foreground: 225 11.11111% 7.05882%;
-  --ai-gradient-start: #a37be8;
-  --ai-gradient-middle: #7397eb;
-  --ai-gradient-end: #69cdb7;
-  --ai-gradient-warm: #e8be78;
+  --ai-gradient-start: #b391ff;
+  --ai-gradient-middle: #79aaff;
+  --ai-gradient-end: #6fe5cf;
+  --ai-gradient-warm: #ffd18c;
 
   /* Custom application colors */
   --sidebar-bg: 220 12% 4.90196%;
@@ -116,9 +116,9 @@
 
 /* A quiet interior keeps model-assisted actions distinct from white primary actions. */
 .ai-gradient-btn {
-  border: 2px solid transparent;
+  border: 1.5px solid transparent;
   background:
-    linear-gradient(180deg, #1b1f22, #111316) padding-box,
+    linear-gradient(110deg, #29223d, #172735 55%, #1a302b) padding-box,
     linear-gradient(
         110deg,
         var(--ai-gradient-start),
@@ -128,13 +128,15 @@
       )
       border-box;
   color: #fff;
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.06);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.1);
   transition:
     box-shadow 180ms ease,
-    transform 180ms ease;
+    transform 180ms ease,
+    filter 180ms ease;
 }
 
 .ai-gradient-btn:hover:not(:disabled) {
+  filter: brightness(1.14);
   box-shadow:
     inset 0 1px 0 rgb(255 255 255 / 0.08),
     0 0 18px rgb(115 151 235 / 0.2);
@@ -220,7 +222,7 @@ body {
 }
 
 .anotto-loading-mark rect {
-  animation: anotto-loading-signal 1.65s ease-in-out infinite;
+  animation: anotto-loading-signal 1.2s ease-in-out infinite;
 }
 
 .anotto-loading-mark rect:nth-child(2) {

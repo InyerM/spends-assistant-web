@@ -1,5 +1,13 @@
 'use client';
 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+
 import Link from 'next/link';
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
@@ -114,21 +122,26 @@ export function WealthEventLink({
           <p className='text-muted-foreground'>{t('reviewHint')}</p>
           <label className='block space-y-1'>
             {t('selectTransaction')}
-            <select
-              aria-label={t('selectTransaction')}
-              className='border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 h-10 w-full min-w-0 rounded-lg border px-3 text-sm focus-visible:ring-2 focus-visible:outline-none'
-              value={selected}
-              onChange={(event) => {
-                setSelected(event.target.value);
+            <Select
+              value={selected || '__none__'}
+              onValueChange={(value) => {
+                setSelected(value === '__none__' ? '' : value);
                 setChecked(false);
               }}>
-              <option value=''>{transactionId ? t('unlink') : t('selectTransaction')}</option>
-              {candidates.map((candidate) => (
-                <option key={candidate.id} value={candidate.id}>
-                  {candidate.date} · {candidate.description} · {candidate.amount}
-                </option>
-              ))}
-            </select>
+              <SelectTrigger aria-label={t('selectTransaction')} className='h-11 w-full min-w-0'>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value='__none__'>
+                  {transactionId ? t('unlink') : t('selectTransaction')}
+                </SelectItem>
+                {candidates.map((candidate) => (
+                  <SelectItem key={candidate.id} value={candidate.id}>
+                    {candidate.date} · {candidate.description} · {candidate.amount}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </label>
           {candidates.length === 0 && !busy && (
             <p className='text-muted-foreground'>{t('noCandidates')}</p>

@@ -76,7 +76,8 @@
     "pro": "Pro",
     "aiUsage": "AI analyses this month",
     "viewUsage": "View plan and usage",
-    "addTransaction": "Add transaction"
+    "addTransaction": "Add transaction",
+    "unlimitedAi": "Unlimited AI analyses"
   },
   "budgets": {
     "eyebrow": "Monthly plan",
@@ -99,7 +100,7 @@
     "removed": "Budget removed for this month",
     "removeFailed": "Could not remove budget",
     "removeTitle": "Remove budget",
-    "removeDescription": "The limit will no longer appear this month. Transactions stay unchanged, and you can add it again.",
+    "removeDescription": "This limit stops applying from the selected month. Earlier history and your transactions are preserved.",
     "unknownCategory": "Category unavailable",
     "monthlyLimit": "This month's limit",
     "spent": "Spent",
@@ -110,7 +111,12 @@
     "alert80": "Reached 80%",
     "alert100": "Limit reached",
     "coverageWarning": "Outside this total: {pending} pending, {currency} without a COP amount, and {excluded} excluded movements.",
-    "viewMovements": "View included movements ({count})"
+    "viewMovements": "View included movements ({count})",
+    "duration": "Duration",
+    "onlyThisMonth": "This month only",
+    "repeatMonthly": "Repeat every month",
+    "onceHint": "Applies to the selected month.",
+    "repeatHint": "Renews each month from the selected month until you stop it. Spending starts at zero each month."
   },
   "helpCenter": {
     "title": "Help center",
@@ -775,7 +781,7 @@
     "changePasswordConfirmDescription": "Your password will be updated. Make sure you remember the new password.",
     "closeSessionsConfirmDescription": "Your password will be updated and all other sessions will be closed. You will need to sign in again on other devices.",
     "currentPlan": "Current plan",
-    "pro": "Expanded access",
+    "pro": "Pro",
     "free": "Free",
     "freePlanDescription": "Anotto is free for now; there are no charges.",
     "proPlanDescription": "Anotto does not charge for now.",
@@ -849,7 +855,11 @@
     "hourFormat": "Hour format",
     "hourFormatDescription": "Use 24-hour format instead of 12-hour (AM/PM)",
     "showApiKeys": "Show API Keys tab",
-    "deleteAccountHelp": "Contact support for help with account deletion"
+    "deleteAccountHelp": "Contact support for help with account deletion",
+    "accountOptions": "Account options",
+    "aiUsageExplanation": "Text analysis and document scans share the AI allowance. Each scan request counts once, even when it detects several movements. Pro has no request limit.",
+    "usageUnavailable": "We could not load your plan and usage. Please try again.",
+    "retryUsage": "Try again"
   },
   "security": {
     "passwordProvider": "Password",
@@ -1096,6 +1106,12 @@
       "sms_screenshot": "SMS screenshot",
       "statement": "Statement",
       "other": "Other"
-    }
+    },
+    "bulkReconcile": "Review exact matches ({count})",
+    "bulkReconcileHint": "Unique matches with the same amount, date and currency, plus supporting text. Ambiguous rows stay pending.",
+    "bulkReconcileConfirm": "Confirm {count} existing transaction links",
+    "bulkReconcileWarning": "Check these links before confirming. This only reconciles evidence with existing transactions; balances and transactions are unchanged.",
+    "bulkReconcileResult": "{completed} linked · {failed} failed",
+    "bulkReconcileRefreshError": "Links were saved, but the document list could not refresh. Reload to check their status."
   }
 }

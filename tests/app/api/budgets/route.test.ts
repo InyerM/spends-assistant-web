@@ -66,6 +66,33 @@ describe('/api/budgets', () => {
       p_month: '2026-10-01',
       p_category_id: categoryId,
       p_limit_cop: 500,
+      p_repeat_monthly: false,
+    });
+  });
+
+  it('forwards monthly recurrence and rejects unknown cadence', async () => {
+    const input = {
+      month: '2026-10-01',
+      category_id: categoryId,
+      limit_cop: 500,
+      repeat_monthly: true,
+    };
+    expect((await POST(request('POST', input))).status).toBe(200);
+    expect(rpc).toHaveBeenCalledWith(
+      'upsert_monthly_budget',
+      expect.objectContaining({ p_repeat_monthly: true }),
+    );
+    expect((await POST(request('POST', { ...input, repeat_monthly: 'forever' }))).status).toBe(400);
+  });
+
+  it('stops recurrence from the selected month while retaining past months', async () => {
+    rpc.mockResolvedValueOnce({ data: true, error: null });
+    expect(
+      (await DELETE(request('DELETE', { budget_id: budgetId, month: '2026-12-01' }))).status,
+    ).toBe(200);
+    expect(rpc).toHaveBeenCalledWith('stop_monthly_budget', {
+      p_budget_id: budgetId,
+      p_month: '2026-12-01',
     });
   });
 
