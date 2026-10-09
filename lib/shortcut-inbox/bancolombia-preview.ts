@@ -72,7 +72,7 @@ export function previewBancolombiaNotice(
   const amountDecimal = amountMatch ? decimalAmount(amountMatch[2]) : null;
   const currency = amountMatch?.[1].toUpperCase() === 'USD' ? 'USD' : 'COP';
   const dateMatch =
-    /\bel\s+(\d{2})\/(\d{2})\/(\d{2}|\d{4})\s+(?:a las\s+)?(\d{1,2}):(\d{2})(?::\d{2})?\b/iu.exec(
+    /\bel\s+(\d{2})\/(\d{2})\/(\d{4}|\d{2})\b(?:\s+(?:a las\s+)?(\d{1,2}):(\d{2})(?::\d{2})?\b)?/iu.exec(
       alert,
     );
   const date = dateMatch ? bankDate(dateMatch[1], dateMatch[2], dateMatch[3]) : null;

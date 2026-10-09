@@ -2,6 +2,9 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Sidebar } from '@/components/layout/sidebar';
 
+vi.mock('@/lib/api/queries/document-pending.queries', () => ({
+  usePendingDocumentCount: () => ({ data: 2 }),
+}));
 vi.mock('@/lib/api/queries/notifications.queries', () => ({
   useNotifications: () => ({ data: undefined }),
 }));
@@ -122,4 +125,10 @@ describe('Sidebar navigation', () => {
     expect(screen.getByRole('button', { name: 'viewUsage' })).toBeVisible();
     expect(screen.queryByText(/trial|upgrade/i)).not.toBeInTheDocument();
   });
+});
+
+it('shows the pending document count beside the document navigation', () => {
+  navigation.pathname = '/documents';
+  render(<Sidebar />);
+  expect(screen.getByLabelText('pendingCaptures')).toHaveTextContent('2');
 });

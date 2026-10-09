@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { FileImage, FileText, ScanText } from 'lucide-react';
@@ -11,6 +12,7 @@ import { DocumentBatchReview } from '@/components/documents/document-batch-revie
 import { DocumentReviewedList } from '@/components/documents/document-reviewed-list';
 import type { ReviewHistoryObservation } from '@/lib/document-review';
 import type { DocumentSuggestionGroup, StoredDocument } from '@/lib/api/queries/document.queries';
+import { documentNeedsReview } from '@/lib/documents/pending';
 import type { Account, Category } from '@/types';
 
 interface Props {
@@ -77,6 +79,23 @@ export function DocumentCaptureCard({
                 {new Date(document.created_at).toLocaleString()} ·{' '}
                 {document.document_type ? t(`type.${document.document_type}`) : t('unclassified')}
               </p>
+              <div className='mt-2 flex flex-wrap items-center gap-2 text-xs'>
+                <Badge variant='outline'>
+                  {t(document.source_inbox_item_id ? 'sourceEmail' : 'sourceUpload')}
+                </Badge>
+                {documentNeedsReview(document) ? (
+                  <Badge variant='secondary' className='bg-brand-secondary/15 text-brand-secondary'>
+                    {t('pendingCapture')}
+                  </Badge>
+                ) : null}
+                {document.source_inbox_item_id ? (
+                  <Link
+                    href={`/inbox/${document.source_inbox_item_id}`}
+                    className='text-brand underline-offset-4 hover:underline'>
+                    {t('viewSourceEmail')}
+                  </Link>
+                ) : null}
+              </div>
             </div>
           </div>
           <div className='flex flex-wrap items-center gap-2'>

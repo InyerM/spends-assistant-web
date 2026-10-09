@@ -12,6 +12,8 @@ import { PdfPasswordDialog } from '@/components/documents/pdf-password-dialog';
 import { DocumentCaptureCard } from '@/components/documents/document-capture-card';
 import { AiConsentNotice } from '@/components/ai-consent-notice';
 import { AiConsentRequiredError } from '@/lib/ai-consent';
+import { Badge } from '@/components/ui/badge';
+import { documentNeedsReview } from '@/lib/documents/pending';
 import { MAX_DOCUMENT_BYTES } from '@/lib/documents';
 import { useAccounts } from '@/lib/api/queries/account.queries';
 import { useCategories } from '@/lib/api/queries/category.queries';
@@ -175,7 +177,16 @@ export default function DocumentsPage(): React.ReactElement {
     <div className='mx-auto w-full max-w-7xl space-y-6 p-4 sm:p-6 lg:p-8'>
       <header className='flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between'>
         <div>
-          <h2 className='text-foreground text-2xl font-semibold'>{t('title')}</h2>
+          <h2 className='text-foreground text-2xl font-semibold'>
+            {t('title')}{' '}
+            {documents.filter(documentNeedsReview).length > 0 ? (
+              <Badge
+                variant='secondary'
+                className='bg-brand-secondary/15 text-brand-secondary ml-2'>
+                {t('pendingCaptures', { count: documents.filter(documentNeedsReview).length })}
+              </Badge>
+            ) : null}
+          </h2>
           <p className='text-muted-foreground mt-1 text-sm'>{t('subtitle')}</p>
         </div>
         <div className='flex flex-wrap items-center gap-2 [&>[data-slot=button]]:min-h-11'>

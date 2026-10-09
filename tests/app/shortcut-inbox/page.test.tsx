@@ -1019,3 +1019,47 @@ it('keeps other message controls mounted during the refresh after a review actio
   cleanup();
   vi.unstubAllGlobals();
 });
+
+it('checks existing transactions when opening analysis even before AI completes', async () => {
+  const item = {
+    id: '11111111-1111-4111-8111-111111111111',
+    source: 'forwarded_email',
+    raw_text: 'Synthetic forwarded purchase',
+    status: 'pending',
+    received_at: '2026-10-08T12:00:00Z',
+    created_at: '2026-10-08T12:00:00Z',
+    external_id: null,
+  };
+  const fetcher = vi.fn().mockImplementation((url: string) => {
+    if (/\/api\/(accounts|categories|automation-rules)/u.test(String(url)))
+      return Promise.resolve(Response.json([]));
+    if (String(url).endsWith('/analyze')) return new Promise<Response>(() => {});
+    if (String(url).endsWith('/candidates'))
+      return Promise.resolve(
+        Response.json({
+          evidence: { amount: '12000.00', date: '2026-10-08', account: 'unique' },
+          candidates: [
+            {
+              id: 'existing',
+              date: '2026-10-08',
+              amount: 12000,
+              description: 'Already recorded purchase',
+              type: 'expense',
+              source: 'web',
+              strength: 'possible',
+              signals: ['same_amount_date_account'],
+            },
+          ],
+          at_limit: false,
+        }),
+      );
+    return Promise.resolve(Response.json({ data: [item], count: 1 }));
+  });
+  vi.stubGlobal('fetch', fetcher);
+  renderPage('forwarded_email');
+  fireEvent.click(await screen.findByRole('button', { name: 'Analyze and review transaction' }));
+  await waitFor(() =>
+    expect(fetcher.mock.calls.some(([url]) => String(url).endsWith('/candidates'))).toBe(true),
+  );
+  expect(await screen.findByText('Already recorded purchase')).toBeInTheDocument();
+});

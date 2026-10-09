@@ -42,6 +42,7 @@ import { useSubscription } from '@/hooks/use-subscription';
 import { useUsage } from '@/hooks/use-usage';
 import { Progress } from '@/components/ui/progress';
 import { NotificationCenter } from '@/components/notifications/notification-center';
+import { usePendingDocumentCount } from '@/lib/api/queries/document-pending.queries';
 import { useNotifications } from '@/lib/api/queries/notifications.queries';
 
 interface NavItem {
@@ -101,6 +102,8 @@ export function Sidebar({ className, onClose }: SidebarProps): React.ReactElemen
   const tCommon = useTranslations('common');
   const tNotifications = useTranslations('notifications');
   const { data: notifications } = useNotifications();
+  const { data: pendingDocuments = 0 } = usePendingDocumentCount();
+  const tDocuments = useTranslations('documents');
   const { user, signOut } = useAuth();
   const { data: forwardingRoute } = useEmailForwardingRoute();
   const emailInboxReady =
@@ -158,6 +161,13 @@ export function Sidebar({ className, onClose }: SidebarProps): React.ReactElemen
         title={isCollapsed ? title : undefined}>
         <item.icon className='h-5 w-5 shrink-0' />
         {!isCollapsed && <span className='truncate'>{title}</span>}
+        {item.href === '/documents' && pendingDocuments > 0 ? (
+          <span
+            className='bg-brand-secondary/15 text-brand-secondary ml-auto rounded-full px-2 text-xs tabular-nums'
+            aria-label={tDocuments('pendingCaptures', { count: pendingDocuments })}>
+            {pendingDocuments}
+          </span>
+        ) : null}
         {item.href === '/inbox' &&
         emailInboxReady &&
         (notifications?.pending_email_count ?? 0) > 0 ? (

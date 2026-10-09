@@ -73,3 +73,11 @@ describe('Bancolombia forwarded notice preview', () => {
     ).toBeNull();
   });
 });
+
+it('keeps an explicit bank date when the alert omits its hour', () => {
+  const result = previewBancolombiaNotice(
+    'forwarded_email',
+    'From (unverified): alertas@notificacionesbancolombia.com\nBancolombia: Compraste COP119.000 en Store con tu T.Deb *7799, el 23/11/24.',
+  );
+  expect(result).toMatchObject({ date: '2024-11-23', time: null });
+});

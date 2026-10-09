@@ -15,6 +15,7 @@ export interface DocumentObservation extends ReviewHistoryObservation {
 
 export interface StoredDocument {
   id: string;
+  source_inbox_item_id?: string | null;
   file_name: string;
   mime_type?: string;
   document_type: string | null;

@@ -352,7 +352,10 @@
     "fieldSuggested": "Suggested by AI",
     "receivedPeriod": "Received period",
     "allDates": "All dates",
-    "refreshing": "Updating results…"
+    "refreshing": "Updating results…",
+    "reviewStatusHelp": "Not a transaction classifies an informational email and keeps its attachments available. Dismiss removes it from pending review and archives its attachments; returning it to pending restores attachments archived by this action. Neither action deletes financial records.",
+    "backToInbox": "Back to inbox",
+    "reviewHelpTitle": "What do the review actions do?"
   },
   "transactions": {
     "originalEvidence": "Original evidence",
@@ -1177,7 +1180,12 @@
     "bulkReconcileConfirm": "Confirm {count} existing transaction links",
     "bulkReconcileWarning": "Check these links before confirming. This only reconciles evidence with existing transactions; balances and transactions are unchanged.",
     "bulkReconcileResult": "{completed} linked · {failed} failed",
-    "bulkReconcileRefreshError": "Links were saved, but the document list could not refresh. Reload to check their status."
+    "bulkReconcileRefreshError": "Links were saved, but the document list could not refresh. Reload to check their status.",
+    "sourceEmail": "Forwarded email",
+    "sourceUpload": "Uploaded file",
+    "viewSourceEmail": "View original email",
+    "pendingCapture": "Pending review",
+    "pendingCaptures": "{count, plural, one {# pending} other {# pending}}"
   },
   "financialChat": {
     "history": "Your conversations",

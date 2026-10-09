@@ -352,7 +352,10 @@
     "fieldSuggested": "Sugerido por IA",
     "receivedPeriod": "Fecha de recepción",
     "allDates": "Todas las fechas",
-    "refreshing": "Actualizando resultados…"
+    "refreshing": "Actualizando resultados…",
+    "reviewStatusHelp": "No es transacción clasifica un correo informativo y conserva sus adjuntos disponibles. Descartar lo retira de pendientes y archiva sus adjuntos; al devolverlo a pendientes se restauran los que archivó esta acción. Ninguna opción elimina movimientos.",
+    "backToInbox": "Volver a bandeja de correo",
+    "reviewHelpTitle": "¿Qué hace cada acción?"
   },
   "transactions": {
     "originalEvidence": "Origen de la transacción",
@@ -1123,7 +1126,12 @@
     "bulkReconcileConfirm": "Confirmar {count} vínculos con movimientos existentes",
     "bulkReconcileWarning": "Revisa estos vínculos antes de confirmar. Solo se concilia la evidencia con movimientos existentes; los saldos y movimientos no cambian.",
     "bulkReconcileResult": "{completed} vinculados · {failed} fallidos",
-    "bulkReconcileRefreshError": "Los vínculos se guardaron, pero no se pudo actualizar la lista. Recarga para comprobar su estado."
+    "bulkReconcileRefreshError": "Los vínculos se guardaron, pero no se pudo actualizar la lista. Recarga para comprobar su estado.",
+    "sourceEmail": "Correo reenviado",
+    "sourceUpload": "Archivo subido",
+    "viewSourceEmail": "Ver correo original",
+    "pendingCapture": "Pendiente de revisión",
+    "pendingCaptures": "{count, plural, one {# pendiente} other {# pendientes}}"
   },
   "auth": {
     "signInDescription": "Inicia sesión para gestionar tus finanzas",

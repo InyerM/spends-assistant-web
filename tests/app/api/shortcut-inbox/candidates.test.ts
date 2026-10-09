@@ -177,6 +177,48 @@ describe('GET Shortcut inbox candidates', () => {
     ).toBe(true);
   });
 
+  it('finds a backfilled purchase through an inactive card identifier and the bank alert date', async () => {
+    const email =
+      'From (unverified): alertas@notificacionesbancolombia.com\nAlertas y Notificaciones\nBancolombia: Compraste COP119.000,00 en Synthetic Store con tu T.Deb *7799, el 23/11/24 a las 12:20. Si tienes dudas, llamanos.';
+    const db = fakeDatabase({
+      inbox: [
+        {
+          id: inboxId,
+          user_id: 'owner-a',
+          source: 'forwarded_email',
+          raw_text: email,
+          received_at: '2024-11-25T12:00:00Z',
+        },
+      ],
+      accounts: [
+        {
+          id: 'account-a',
+          user_id: 'owner-a',
+          last_four: '2651',
+          type: 'savings',
+          currency: 'COP',
+          deleted_at: null,
+          identifiers: [
+            { kind: 'bank_account', last_four: '2651', is_active: true, is_primary: true },
+            { kind: 'debit_card', last_four: '7799', is_active: false, is_primary: false },
+          ],
+        },
+      ],
+    });
+    getUserClient.mockResolvedValue({ supabase: db.supabase, userId: 'owner-a' });
+    const body = await (await GET(request() as never, context)).json();
+    expect(body.evidence).toMatchObject({
+      amount: '119000.00',
+      date: '2024-11-23',
+      account: 'unique',
+    });
+    expect(body.candidates.map((row: { id: string }) => row.id)).toEqual([
+      'tx-exact',
+      'tx-other-payment',
+    ]);
+    expect(getUserClient).toHaveBeenCalledWith(expect.any(Request));
+  });
+
   it('skips the amount/date/account query when the account suffix is absent', async () => {
     const db = fakeDatabase({
       inbox: [

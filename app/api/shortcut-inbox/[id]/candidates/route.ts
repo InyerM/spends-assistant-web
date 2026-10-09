@@ -7,6 +7,9 @@ import {
   type CandidateTransaction,
 } from '@/lib/shortcut-inbox/candidates';
 import { previewLuloNotice } from '@/lib/shortcut-inbox/lulo-preview';
+import { previewBancolombiaNotice } from '@/lib/shortcut-inbox/bancolombia-preview';
+import { accountIdentifiers } from '@/lib/accounts/identifiers';
+import type { Account } from '@/types/account';
 
 interface Context {
   params: Promise<{ id: string }>;
@@ -14,9 +17,9 @@ interface Context {
 
 const transactionFields = 'id,date,amount,account_id,description,type,source';
 
-export async function GET(_request: NextRequest, context: Context): Promise<Response> {
+export async function GET(request: NextRequest, context: Context): Promise<Response> {
   try {
-    const { supabase, userId } = await getUserClient();
+    const { supabase, userId } = await getUserClient(request);
     const { id } = await context.params;
     if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu.test(id)) {
       return errorResponse('Invalid inbox item ID', 400);
@@ -32,6 +35,7 @@ export async function GET(_request: NextRequest, context: Context): Promise<Resp
 
     const ownedInbox = inbox as { source: string; raw_text: string; received_at: string };
     const lulo = previewLuloNotice(ownedInbox.source, ownedInbox.raw_text, ownedInbox.received_at);
+    const bank = previewBancolombiaNotice(ownedInbox.source, ownedInbox.raw_text);
     const evidence = lulo
       ? lulo.kind === 'card_purchase'
         ? {
@@ -40,7 +44,9 @@ export async function GET(_request: NextRequest, context: Context): Promise<Resp
             lastFour: lulo.cardLastFour,
           }
         : { amount: null, date: null, lastFour: null }
-      : extractCandidateEvidence(inbox.raw_text as string);
+      : bank
+        ? { amount: bank.amountDecimal, date: bank.date, lastFour: bank.sourceLastFour }
+        : extractCandidateEvidence(inbox.raw_text as string);
     const { data: exactRaw, error: rawError } = await supabase
       .from('transactions')
       .select(transactionFields)
@@ -55,14 +61,18 @@ export async function GET(_request: NextRequest, context: Context): Promise<Resp
     if (evidence.amount && evidence.date && evidence.lastFour) {
       const { data: accounts, error: accountError } = await supabase
         .from('accounts')
-        .select('id')
+        .select('id,type,currency,last_four,bank_account_last_four,identifiers')
         .eq('user_id', userId)
-        .eq('last_four', evidence.lastFour)
         .is('deleted_at', null)
-        .limit(2);
+        .limit(1001);
       if (accountError) return errorResponse('Candidate lookup failed');
-      if (accounts.length === 0) account = 'missing';
-      else if (accounts.length > 1) account = 'ambiguous';
+      const matching = (accounts as Account[]).filter(
+        (row) =>
+          (!bank || !row.currency || row.currency === bank.currency) &&
+          accountIdentifiers(row).some((identifier) => identifier.last_four === evidence.lastFour),
+      );
+      if (accounts.length === 1001 || matching.length > 1) account = 'ambiguous';
+      else if (matching.length === 0) account = 'missing';
       else {
         account = 'unique';
         const { data, error } = await supabase
@@ -71,7 +81,7 @@ export async function GET(_request: NextRequest, context: Context): Promise<Resp
           .eq('user_id', userId)
           .eq('date', evidence.date)
           .eq('amount', Number(evidence.amount))
-          .eq('account_id', accounts[0].id)
+          .eq('account_id', matching[0].id)
           .is('deleted_at', null)
           .limit(MAX_CANDIDATES);
         if (error) return errorResponse('Candidate lookup failed');

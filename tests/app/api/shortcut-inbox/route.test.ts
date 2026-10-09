@@ -450,3 +450,24 @@ it.each(['date_from=2026-02-30', 'date_from=2026-10-09&date_to=2026-10-01'])(
     ).toBe(400);
   },
 );
+
+it('opens an owned email by ID even if it is no longer pending', async () => {
+  const db = fakeDatabase();
+  const id = '11111111-1111-4111-8111-111111111111';
+  db.rows.push({ id, user_id: 'owner-a', source: 'forwarded_email', status: 'non_transaction' });
+  db.forwardingRoutes.push({
+    user_id: 'owner-a',
+    confirmation_received_at: '2026-10-01',
+    user_confirmed_at: '2026-10-01',
+  });
+  getUserClient.mockResolvedValue({ supabase: db.supabase, userId: 'owner-a' });
+  const response = await GET(
+    new Request(
+      `https://example.test/api/shortcut-inbox?source=forwarded_email&status=pending&item_id=${id}`,
+    ) as never,
+  );
+  expect(response.status).toBe(200);
+  expect((await response.json()).data).toHaveLength(1);
+  expect(db.filters).toContainEqual(['id', id]);
+  expect(db.filters).not.toContainEqual(['status', 'pending']);
+});

@@ -1,5 +1,6 @@
 'use client';
 
+import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { useShortcutInbox } from '@/lib/api/queries/shortcut-inbox.queries';
 import { PeriodSelector } from '@/components/transactions/period-selector';
@@ -70,7 +71,7 @@ function LuloPreview({ preview }: { preview: LuloNoticePreview }): React.ReactEl
     needs_review: 'luloNeedsReview',
   } as const;
   return (
-    <div className='bg-muted/50 space-y-2 rounded-md border p-3 text-sm'>
+    <div className='bg-muted/50 border-border space-y-2 rounded-md border p-3 text-sm'>
       <div className='flex flex-wrap items-center gap-2'>
         <Badge variant='secondary'>{t(kindLabel[preview.kind])}</Badge>
         <span className='text-muted-foreground text-xs'>
@@ -116,10 +117,13 @@ function LuloPreview({ preview }: { preview: LuloNoticePreview }): React.ReactEl
 
 export default function ShortcutInboxPage({
   source,
+  itemId,
 }: {
   source?: 'forwarded_email';
+  itemId?: string;
 }): React.ReactElement {
   const t = useTranslations('shortcutInbox');
+  const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const [filter, setFilter] = useState('pending');
   const [searchText, setSearchText] = useState('');
@@ -136,6 +140,7 @@ export default function ShortcutInboxPage({
   }, [searchText, search]);
   const inbox = useShortcutInbox({
     page,
+    item_id: itemId,
     status: filter,
     source,
     search,
@@ -174,6 +179,8 @@ export default function ShortcutInboxPage({
       return;
     }
     setCreateInboxId(item.id);
+    setOpenCandidateId(item.id);
+    void loadCandidates(item.id);
     if (item.source === 'forwarded_email') {
       setAnalysisBusyIds((current) => new Set(current).add(item.id));
       setConsentRequired(null);
@@ -202,7 +209,11 @@ export default function ShortcutInboxPage({
         body: JSON.stringify({ status }),
       });
       if (!response.ok) throw new Error('Review failed');
-      await inbox.refetch();
+      await Promise.all([
+        inbox.refetch(),
+        queryClient.invalidateQueries({ queryKey: ['documents'] }),
+        queryClient.invalidateQueries({ queryKey: ['notifications'] }),
+      ]);
     } catch {
       setError(t('saveFailed'));
     } finally {
@@ -216,13 +227,17 @@ export default function ShortcutInboxPage({
       return;
     }
     setOpenCandidateId(id);
+    await loadCandidates(id);
+  };
+
+  const loadCandidates = async (id: string): Promise<void> => {
     setCandidateErrorId(null);
-    if (candidateById[id]) return;
     setCandidateBusyId(id);
     try {
       const response = await fetch(`/api/shortcut-inbox/${id}/candidates`, { cache: 'no-store' });
       if (!response.ok) throw new Error('Candidate lookup failed');
       const result = (await response.json()) as CandidateResponse;
+      if (!Array.isArray(result.candidates)) throw new Error('Invalid candidate response');
       setCandidateById((current) => ({ ...current, [id]: result }));
     } catch {
       setCandidateErrorId(id);
@@ -279,8 +294,9 @@ export default function ShortcutInboxPage({
       <div className='flex flex-wrap items-start justify-between gap-4'>
         <div className='space-y-2'>
           <Button asChild variant='ghost' size='sm' className='-ml-2'>
-            <Link href={source ? '/dashboard' : '/transactions'}>
-              <ArrowLeft /> {t(source ? 'backToDashboard' : 'backToTransactions')}
+            <Link href={itemId ? '/inbox' : source ? '/dashboard' : '/transactions'}>
+              <ArrowLeft />{' '}
+              {t(itemId ? 'backToInbox' : source ? 'backToDashboard' : 'backToTransactions')}
             </Link>
           </Button>
           <h1 className='text-foreground text-3xl font-semibold tracking-tight'>
@@ -299,86 +315,93 @@ export default function ShortcutInboxPage({
         )}
       </div>
 
-      <form
-        className='flex flex-wrap items-center gap-3'
-        onSubmit={(event): void => {
-          event.preventDefault();
-          setPage(1);
-          setSearch(searchText.trim());
-        }}>
-        <SearchInput
-          value={searchText}
-          onChange={(value): void => {
-            setSearchText(value);
-            if (!value) {
-              setSearch('');
-              setPage(1);
-            }
-          }}
-          placeholder={t('searchPlaceholder')}
-          clearLabel={t('clearSearch')}
-          className='min-w-0 flex-1'
-        />
-        <Button type='submit' variant='outline'>
-          {t('searchAction')}
-        </Button>
-      </form>
-      <div className='border-border flex flex-wrap items-center justify-between gap-3 border-b pb-5'>
-        <label className='text-sm font-medium'>{t('statusFilter')}</label>
-        <Select
-          value={filter}
-          onValueChange={(value): void => {
-            setFilter(value);
+      <div className={itemId ? 'hidden' : 'contents'}>
+        <form
+          className='flex flex-wrap items-center gap-3'
+          onSubmit={(event): void => {
+            event.preventDefault();
             setPage(1);
+            setSearch(searchText.trim());
           }}>
-          <SelectTrigger aria-label={t('statusFilter')}>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value='pending'>{t('pending')}</SelectItem>
-            <SelectItem value='non_transaction'>{t('nonTransaction')}</SelectItem>
-            <SelectItem value='dismissed'>{t('dismissed')}</SelectItem>
-            <SelectItem value='matched'>{t('matched')}</SelectItem>
-            <SelectItem value='created'>{t('created')}</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
-      {source === 'forwarded_email' && (
-        <div className='flex flex-wrap items-end gap-3'>
-          <div className='space-y-1 text-sm'>
-            <p className='font-medium'>{t('receivedPeriod')}</p>
-            <PeriodSelector
-              dateFrom={dateFrom}
-              dateTo={dateTo}
-              emptyLabel={t('allDates')}
-              onChange={(from, to): void => {
-                setDateFrom(from);
-                setDateTo(to);
+          <SearchInput
+            value={searchText}
+            onChange={(value): void => {
+              setSearchText(value);
+              if (!value) {
+                setSearch('');
                 setPage(1);
-              }}
-            />
-          </div>
-          {(dateFrom || dateTo) && (
-            <Button
-              variant='outline'
-              onClick={(): void => {
-                setDateFrom('');
-                setDateTo('');
-                setPage(1);
-              }}>
-              {t('clearDates')}
-            </Button>
-          )}
-          <p className='text-muted-foreground w-full text-xs'>{t('receivedDateHint')}</p>
+              }
+            }}
+            placeholder={t('searchPlaceholder')}
+            clearLabel={t('clearSearch')}
+            className='min-w-0 flex-1'
+          />
+          <Button type='submit' variant='outline'>
+            {t('searchAction')}
+          </Button>
+        </form>
+        <div className='border-border flex flex-wrap items-center justify-between gap-3 border-b pb-5'>
+          <label className='text-sm font-medium'>{t('statusFilter')}</label>
+          <Select
+            value={filter}
+            onValueChange={(value): void => {
+              setFilter(value);
+              setPage(1);
+            }}>
+            <SelectTrigger aria-label={t('statusFilter')}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value='pending'>{t('pending')}</SelectItem>
+              <SelectItem value='non_transaction'>{t('nonTransaction')}</SelectItem>
+              <SelectItem value='dismissed'>{t('dismissed')}</SelectItem>
+              <SelectItem value='matched'>{t('matched')}</SelectItem>
+              <SelectItem value='created'>{t('created')}</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
-      )}
 
+        {source === 'forwarded_email' && (
+          <div className='flex flex-wrap items-end gap-3'>
+            <div className='space-y-1 text-sm'>
+              <p className='font-medium'>{t('receivedPeriod')}</p>
+              <PeriodSelector
+                dateFrom={dateFrom}
+                dateTo={dateTo}
+                emptyLabel={t('allDates')}
+                onChange={(from, to): void => {
+                  setDateFrom(from);
+                  setDateTo(to);
+                  setPage(1);
+                }}
+              />
+            </div>
+            {(dateFrom || dateTo) && (
+              <Button
+                variant='outline'
+                onClick={(): void => {
+                  setDateFrom('');
+                  setDateTo('');
+                  setPage(1);
+                }}>
+                {t('clearDates')}
+              </Button>
+            )}
+            <p className='text-muted-foreground w-full text-xs'>{t('receivedDateHint')}</p>
+          </div>
+        )}
+      </div>
       {(error || inbox.isError) && (
         <p role='alert' className='text-destructive text-sm'>
           {error ?? t('loadFailed')}
         </p>
       )}
+      {source === 'forwarded_email' ? (
+        <details className='text-muted-foreground text-xs leading-5'>
+          <summary className='cursor-pointer'>{t('reviewHelpTitle')}</summary>
+          <p className='mt-2 max-w-3xl'>{t('reviewStatusHelp')}</p>
+        </details>
+      ) : null}
       {consentRequired && <AiConsentNotice scope={consentRequired} />}
       <div className='text-muted-foreground min-h-5 text-xs' role='status' aria-live='polite'>
         {inbox.isFetching && !loading ? t('refreshing') : null}
@@ -404,7 +427,7 @@ export default function ShortcutInboxPage({
             const hasAttachments = Boolean(item.attachments?.length);
             const historicalLulo = item.source === 'lulo-email-backfill';
             return (
-              <Card key={item.id}>
+              <Card key={item.id} id={`inbox-${item.id}`}>
                 <CardContent className='space-y-4 py-4'>
                   <div className='flex flex-wrap items-center justify-between gap-2 text-xs'>
                     <div className='flex flex-wrap items-center gap-2'>
@@ -427,7 +450,7 @@ export default function ShortcutInboxPage({
                   </div>
                   <ForwardedEmailEvidence source={item.source} rawText={item.raw_text} />
                   {hasAttachments && (
-                    <div className='space-y-2 rounded-lg border p-3'>
+                    <div className='border-border space-y-2 rounded-lg border p-3'>
                       <p className='text-muted-foreground text-sm'>{t('pdfReviewHint')}</p>
                       <div className='flex flex-wrap gap-2'>
                         {item.attachments?.map((attachment) => (
@@ -450,7 +473,7 @@ export default function ShortcutInboxPage({
                       : {item.match.transaction_id}
                     </p>
                   )}
-                  <div className='flex flex-wrap gap-2 border-t pt-3'>
+                  <div className='border-border flex flex-wrap gap-2 border-t pt-3'>
                     {item.status === 'matched' && item.match && (
                       <Button
                         size='sm'
@@ -550,7 +573,7 @@ export default function ShortcutInboxPage({
                     />
                   )}
                   {openCandidateId === item.id && (
-                    <div className='space-y-3 rounded-md border p-3 text-sm'>
+                    <div className='border-border space-y-3 rounded-md border p-3 text-sm'>
                       {candidateBusyId === item.id && <p>{t('candidateLoading')}</p>}
                       {candidateErrorId === item.id && <p role='alert'>{t('candidateFailed')}</p>}
                       {candidateResult && (
@@ -558,7 +581,9 @@ export default function ShortcutInboxPage({
                           <p className='text-muted-foreground'>{t('candidateCaution')}</p>
                           {candidateResult.candidates.length === 0 && <p>{t('noCandidates')}</p>}
                           {candidateResult.candidates.map((candidate) => (
-                            <div key={candidate.id} className='space-y-1 border-t pt-3'>
+                            <div
+                              key={candidate.id}
+                              className='border-border space-y-1 border-t pt-3'>
                               <div className='flex flex-wrap items-center gap-2'>
                                 <Badge variant='outline'>
                                   {candidate.strength === 'strong'

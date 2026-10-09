@@ -4,6 +4,7 @@ import type { InboxList } from '@/types/shortcut-inbox';
 
 interface InboxFilters {
   page: number;
+  item_id?: string;
   status: string;
   source?: 'forwarded_email';
   search: string;
@@ -20,6 +21,7 @@ export async function fetchShortcutInbox(
     limit: '20',
     status: filters.status,
   });
+  if (filters.item_id) params.set('item_id', filters.item_id);
   if (filters.source) params.set('source', filters.source);
   if (filters.search) params.set('q', filters.search);
   if (filters.date_from) params.set('date_from', filters.date_from);

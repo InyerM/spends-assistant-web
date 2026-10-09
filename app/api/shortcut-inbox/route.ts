@@ -73,6 +73,9 @@ export async function GET(request: NextRequest): Promise<Response> {
     const { supabase, userId } = await getUserClient(request);
     const params = new URL(request.url).searchParams;
     const source = params.get('source');
+    const itemId = params.get('item_id');
+    if (itemId && !z.uuid().safeParse(itemId).success)
+      return errorResponse('Invalid inbox item ID', 400);
     const dateFrom = params.get('date_from');
     const dateTo = params.get('date_to');
     if (
@@ -112,9 +115,11 @@ export async function GET(request: NextRequest): Promise<Response> {
       )
       .eq('user_id', userId);
     const status = params.get('status');
+    if (itemId) query = query.eq('id', itemId);
     if (source === 'forwarded_email') query = query.eq('source', source);
     else query = query.neq('source', 'forwarded_email');
     if (
+      !itemId &&
       status &&
       ['pending', 'non_transaction', 'dismissed', 'matched', 'created'].includes(status)
     ) {

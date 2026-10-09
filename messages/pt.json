@@ -323,7 +323,10 @@
     "fieldSuggested": "Sugerido por IA",
     "receivedPeriod": "Período de recebimento",
     "allDates": "Todas as datas",
-    "refreshing": "Atualizando resultados…"
+    "refreshing": "Atualizando resultados…",
+    "reviewStatusHelp": "Não é transação classifica um e-mail informativo e mantém seus anexos disponíveis. Descartar remove-o dos pendentes e arquiva os anexos; ao devolvê-lo aos pendentes, os anexos arquivados por essa ação são restaurados. Nenhuma opção exclui movimentações.",
+    "backToInbox": "Voltar à caixa de entrada",
+    "reviewHelpTitle": "O que cada ação faz?"
   },
   "transactions": {
     "originalEvidence": "Origem da transação",
@@ -1060,7 +1063,12 @@
     "bulkReconcileConfirm": "Confirmar {count} vínculos com transações existentes",
     "bulkReconcileWarning": "Revise estes vínculos antes de confirmar. Apenas as evidências são conciliadas com transações existentes; saldos e transações não mudam.",
     "bulkReconcileResult": "{completed} vinculados · {failed} falharam",
-    "bulkReconcileRefreshError": "Os vínculos foram salvos, mas a lista não pôde ser atualizada. Recarregue para verificar o estado."
+    "bulkReconcileRefreshError": "Os vínculos foram salvos, mas a lista não pôde ser atualizada. Recarregue para verificar o estado.",
+    "sourceEmail": "E-mail encaminhado",
+    "sourceUpload": "Arquivo enviado",
+    "viewSourceEmail": "Ver e-mail original",
+    "pendingCapture": "Revisão pendente",
+    "pendingCaptures": "{count, plural, one {# pendente} other {# pendentes}}"
   },
   "financialChat": {
     "history": "Suas conversas",
