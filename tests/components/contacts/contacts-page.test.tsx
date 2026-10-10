@@ -4,9 +4,10 @@ import { NextIntlClientProvider } from 'next-intl';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import ContactsPage from '@/app/(dashboard)/contacts/page';
 import messages from '@/messages/es.json';
+import { useContacts } from '@/lib/api/queries/contacts.queries';
 
 vi.mock('@/lib/api/queries/contacts.queries', () => ({
-  useContacts: () => ({
+  useContacts: vi.fn(() => ({
     data: {
       items: [
         {
@@ -25,7 +26,7 @@ vi.mock('@/lib/api/queries/contacts.queries', () => ({
     },
     isLoading: false,
     isError: false,
-  }),
+  })),
   scanContacts: vi.fn(),
 }));
 vi.mock('@/components/contacts/contact-detail-dialog', () => ({
@@ -48,4 +49,22 @@ describe('Contacts directory', () => {
     expect(screen.getByRole('dialog')).toBeVisible();
     expect(screen.queryByText('001234567890')).not.toBeInTheDocument();
   });
+});
+
+it('offers most and fewest transactions and reloads the first page when sorting changes', () => {
+  Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', {
+    configurable: true,
+    value: vi.fn(),
+  });
+  render(
+    <QueryClientProvider client={new QueryClient()}>
+      <NextIntlClientProvider locale='es' messages={messages}>
+        <ContactsPage />
+      </NextIntlClientProvider>
+    </QueryClientProvider>,
+  );
+  const control = screen.getByRole('combobox', { name: 'Ordenar contactos' });
+  fireEvent.keyDown(control, { key: 'Enter' });
+  fireEvent.click(screen.getByRole('option', { name: 'Más transacciones' }));
+  expect(useContacts).toHaveBeenLastCalledWith('', 1, 'most_transactions');
 });

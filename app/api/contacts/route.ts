@@ -8,13 +8,26 @@ export async function GET(request: Request): Promise<Response> {
     const params = new URL(request.url).searchParams;
     const query = params.get('q')?.trim() ?? '';
     const page = Number(params.get('page') ?? 1);
-    if (query.length > 200 || !Number.isSafeInteger(page) || page < 1 || page > 10000)
+    const sort = z
+      .enum(['recent', 'most_transactions', 'fewest_transactions'])
+      .safeParse(params.get('sort') ?? 'recent');
+    if (
+      !sort.success ||
+      query.length > 200 ||
+      !Number.isSafeInteger(page) ||
+      page < 1 ||
+      page > 10000
+    )
       return errorResponse('Invalid contact filters', 400);
-    const { data, error } = await supabase.rpc('list_counterparties', {
-      p_query: query,
-      p_offset: (page - 1) * 50,
-      p_limit: 50,
-    });
+    const { data, error } = await supabase.rpc(
+      sort.data === 'recent' ? 'list_counterparties' : 'list_counterparties_sorted',
+      {
+        p_query: query,
+        p_offset: (page - 1) * 50,
+        p_limit: 50,
+        ...(sort.data === 'recent' ? {} : { p_sort: sort.data }),
+      },
+    );
     if (error) return errorResponse('Contacts unavailable');
     return Response.json(data, { headers: privateHeaders });
   } catch (error) {

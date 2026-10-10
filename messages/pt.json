@@ -1246,7 +1246,11 @@
     "directory": "Buscar contatos e estabelecimentos",
     "results": "{count, plural, one {# contato} other {# contatos}}",
     "lastActivity": "Última movimentação",
-    "scanHint": "Buscamos contatos nas suas movimentações confirmadas. Atualizar este histórico não cria nem modifica transações."
+    "scanHint": "Buscamos contatos nas suas movimentações confirmadas. Atualizar este histórico não cria nem modifica transações.",
+    "sortLabel": "Ordenar contatos",
+    "sortRecent": "Atividade mais recente",
+    "sortMost": "Mais transações",
+    "sortFewest": "Menos transações"
   },
   "statementReconciliation": {
     "title": "Conciliar extrato",

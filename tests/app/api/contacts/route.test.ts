@@ -41,3 +41,21 @@ it('bounds scan pages and returns the owner-scoped catalog', async () => {
   ).toBe(200);
   expect(rpc).toHaveBeenCalledWith('scan_counterparty_catalog', { p_after: null, p_limit: 200 });
 });
+it('sorts by transaction count in SQL before pagination and rejects unknown sort values', async () => {
+  rpc.mockResolvedValue({ data: { items: [], count: 0 }, error: null });
+  expect(
+    (await GET(new Request('https://my.anotto.app/api/contacts?sort=most_transactions&page=2')))
+      .status,
+  ).toBe(200);
+  expect(rpc).toHaveBeenCalledWith('list_counterparties_sorted', {
+    p_query: '',
+    p_offset: 50,
+    p_limit: 50,
+    p_sort: 'most_transactions',
+  });
+  rpc.mockClear();
+  expect((await GET(new Request('https://my.anotto.app/api/contacts?sort=invalid'))).status).toBe(
+    400,
+  );
+  expect(rpc).not.toHaveBeenCalled();
+});

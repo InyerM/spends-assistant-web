@@ -1,18 +1,25 @@
 import { useQuery, type UseQueryResult } from '@tanstack/react-query';
 import { useAuthStore } from '@/store/auth-store';
-import type { ContactList, ContactDetail, ContactScanPage } from '@/types/contacts';
+import type { ContactList, ContactDetail, ContactScanPage, ContactSort } from '@/types/contacts';
 async function read<T>(url: string, signal?: AbortSignal): Promise<T> {
   const response = await fetch(url, { signal });
   if (!response.ok) throw new Error('Contacts unavailable');
   return response.json() as Promise<T>;
 }
-export function useContacts(search: string, page: number): UseQueryResult<ContactList> {
+export function useContacts(
+  search: string,
+  page: number,
+  sort: ContactSort = 'recent',
+): UseQueryResult<ContactList> {
   const owner = useAuthStore((state) => state.supabaseUser?.id);
   return useQuery({
-    queryKey: ['contacts', owner, search, page],
+    queryKey: ['contacts', owner, search, page, sort],
     enabled: Boolean(owner),
     queryFn: ({ signal }) =>
-      read<ContactList>(`/api/contacts?q=${encodeURIComponent(search)}&page=${page}`, signal),
+      read<ContactList>(
+        `/api/contacts?q=${encodeURIComponent(search)}&page=${page}&sort=${sort}`,
+        signal,
+      ),
   });
 }
 export function useContactDetail(id: string | null): UseQueryResult<ContactDetail> {

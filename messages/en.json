@@ -1363,7 +1363,11 @@
     "directory": "Search contacts and merchants",
     "results": "{count, plural, one {# contact} other {# contacts}}",
     "lastActivity": "Last activity",
-    "scanHint": "We find contacts in your confirmed transactions. Refreshing this history does not create or change transactions."
+    "scanHint": "We find contacts in your confirmed transactions. Refreshing this history does not create or change transactions.",
+    "sortLabel": "Sort contacts",
+    "sortRecent": "Most recent activity",
+    "sortMost": "Most transactions",
+    "sortFewest": "Fewest transactions"
   },
   "statementReconciliation": {
     "title": "Reconcile statement",

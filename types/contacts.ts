@@ -1,3 +1,5 @@
+export type ContactSort = 'recent' | 'most_transactions' | 'fewest_transactions';
+
 export interface Contact {
   id: string;
   identity_kind: 'account' | 'nequi' | 'payment_key' | 'merchant';

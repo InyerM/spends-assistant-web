@@ -1360,7 +1360,11 @@
     "directory": "Buscar contactos y comercios",
     "results": "{count, plural, one {# contacto} other {# contactos}}",
     "lastActivity": "Último movimiento",
-    "scanHint": "Buscamos contactos en tus movimientos confirmados. Actualizar este historial no crea ni modifica transacciones."
+    "scanHint": "Buscamos contactos en tus movimientos confirmados. Actualizar este historial no crea ni modifica transacciones.",
+    "sortLabel": "Ordenar contactos",
+    "sortRecent": "Actividad más reciente",
+    "sortMost": "Más transacciones",
+    "sortFewest": "Menos transacciones"
   },
   "statementReconciliation": {
     "title": "Conciliar extracto",

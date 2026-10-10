@@ -10,18 +10,26 @@ import { SearchInput } from '@/components/shared/search-input';
 import { Loader, InlineLoader } from '@/components/shared/loader';
 import { useContacts, scanContacts } from '@/lib/api/queries/contacts.queries';
 import { ContactDetailDialog } from '@/components/contacts/contact-detail-dialog';
-import type { Contact } from '@/types/contacts';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import type { Contact, ContactSort } from '@/types/contacts';
 
 export default function ContactsPage(): React.ReactElement {
   const t = useTranslations('contacts');
   const locale = useLocale();
   const cache = useQueryClient();
   const [search, setSearch] = useState('');
+  const [sort, setSort] = useState<ContactSort>('recent');
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<Contact | null>(null);
   const [scanning, setScanning] = useState(false);
   const [progress, setProgress] = useState(0);
-  const { data, isLoading, isError } = useContacts(search, page);
+  const { data, isLoading, isError } = useContacts(search, page, sort);
   const scan = async (): Promise<void> => {
     setScanning(true);
     setProgress(0);
@@ -70,6 +78,21 @@ export default function ContactsPage(): React.ReactElement {
               clearLabel={t('clear')}
             />
           </div>
+          <Select
+            value={sort}
+            onValueChange={(value) => {
+              setSort(value as ContactSort);
+              setPage(1);
+            }}>
+            <SelectTrigger className='w-full shrink-0 sm:w-56' aria-label={t('sortLabel')}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value='recent'>{t('sortRecent')}</SelectItem>
+              <SelectItem value='most_transactions'>{t('sortMost')}</SelectItem>
+              <SelectItem value='fewest_transactions'>{t('sortFewest')}</SelectItem>
+            </SelectContent>
+          </Select>
           {data ? (
             <p className='text-muted-foreground shrink-0 text-sm' role='status'>
               {t('results', { count: data.count })}
