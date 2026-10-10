@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import type { StatementProof } from '@/lib/statement-reconciliation';
+import type { StatementProof, StatementReview } from '@/lib/statement-reconciliation';
 export function useStatementProofs(ids: string[]): ReturnType<typeof useQuery<StatementProof[]>> {
   const stable = [...new Set(ids)].sort();
   return useQuery({
@@ -17,6 +17,19 @@ export function useStatementProofs(ids: string[]): ReturnType<typeof useQuery<St
         }),
       );
       return results.flat();
+    },
+  });
+}
+
+export function useStatementReconciliation(
+  documentId: string,
+): ReturnType<typeof useQuery<StatementReview>> {
+  return useQuery({
+    queryKey: ['documents', documentId, 'reconciliation'],
+    queryFn: async () => {
+      const response = await fetch(`/api/documents/${documentId}/reconciliation`);
+      if (!response.ok) throw new Error('Could not load reconciliation');
+      return response.json() as Promise<StatementReview>;
     },
   });
 }

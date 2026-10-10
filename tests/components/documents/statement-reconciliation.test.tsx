@@ -10,6 +10,16 @@ vi.mock('next-intl', () => ({
   useTranslations: () => (key: string) => key,
 }));
 vi.mock('@tanstack/react-query', () => ({
+  useMutation: (options: {
+    mutationFn: (body: Record<string, string>) => Promise<void>;
+    onSuccess: () => Promise<void>;
+  }) => ({
+    isPending: false,
+    error: null,
+    mutate: (body: Record<string, string>) => {
+      void options.mutationFn(body).then(options.onSuccess);
+    },
+  }),
   useQueryClient: () => ({ invalidateQueries: invalidate }),
   useQuery: () => ({
     isPending: false,
@@ -76,7 +86,7 @@ it('shows both differences, blocks incomplete evidence and confirms only the sel
   render(<StatementReconciliation documentId='doc' accounts={[]} />);
   expect(screen.getByText('Statement lunch')).toBeInTheDocument();
   expect(screen.getByText('App only')).toBeInTheDocument();
-  expect(screen.getByText('needsFields')).toBeInTheDocument();
+  expect(screen.getByText('unverifiedHint')).toBeInTheDocument();
   expect(screen.getByRole('link', { name: /App only/ })).toHaveAttribute(
     'href',
     '/transactions/extra',

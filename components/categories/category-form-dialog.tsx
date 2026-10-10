@@ -188,7 +188,10 @@ export function CategoryFormDialog({
           <DialogDescription>{t('formHint')}</DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className='space-y-4'>
+          <form
+            data-guide='category-form'
+            onSubmit={form.handleSubmit(onSubmit)}
+            className='space-y-4'>
             <FormField
               control={form.control}
               name='name'

@@ -1,3 +1,4 @@
+import { completeOnboardingStep } from '@/lib/onboarding-flow';
 import { useMemo, useRef, useState, type Dispatch, type SetStateAction } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useLocale, useTranslations } from 'next-intl';
@@ -403,6 +404,7 @@ export function useDocumentBatchReview({
               time_source: draft.time ? 'image' : 'unknown',
             },
           });
+          if (transaction.type === 'expense') completeOnboardingStep('expense');
           transactionId = transaction.id;
         }
         createdIds.current[row.id] = transactionId;

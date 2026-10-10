@@ -174,7 +174,9 @@ export default function DocumentsPage(): React.ReactElement {
   };
 
   return (
-    <div className='mx-auto w-full max-w-7xl space-y-6 p-4 sm:p-6 lg:p-8'>
+    <div
+      data-guide='documents-page'
+      className='mx-auto w-full max-w-7xl space-y-6 p-4 sm:p-6 lg:p-8'>
       <header className='flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between'>
         <div>
           <h2 className='text-foreground text-2xl font-semibold'>

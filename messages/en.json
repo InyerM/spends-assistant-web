@@ -575,7 +575,7 @@
     "fieldTransfer": "Transfer",
     "aiDialogDescription": "Paste a bank notification, SMS, or describe a transaction and AI will extract the details.",
     "aiTooltip": "Create with AI",
-    "orCreateManually": "or create manually",
+    "orCreateManually": "Create manually",
     "limitReachedTooltip": "Limit reached",
     "dragDropCsv": "Drag and drop a CSV file here, or click to select",
     "thisMonth": "This month",
@@ -600,7 +600,11 @@
     "noImports": "No imports yet",
     "showingRows": "{imported}/{total} rows",
     "previous": "Previous",
-    "page": "Page {page}"
+    "page": "Page {page}",
+    "uploadReceipt": "Upload receipt",
+    "uploadingReceipt": "Uploading…",
+    "receiptUploadFailed": "Could not upload the receipt. Try again.",
+    "aiInputDescription": "Type or paste a transaction, dictate its details or upload a receipt. Review it before saving."
   },
   "accounts": {
     "title": "Accounts",
@@ -1436,7 +1440,9 @@
     "detectionError": "We could not detect these details. Choose the account and period manually.",
     "pdfTitle": "Original statement",
     "openPdf": "Open PDF in another tab",
-    "emptyStatement": "The text indicates no movements. Check every PDF page; if there is nothing to reconcile, you can archive the document."
+    "emptyStatement": "The text indicates no movements. Check every PDF page; if there is nothing to reconcile, you can archive the document.",
+    "unverifiedRows": "Needs verification · {count}",
+    "unverifiedHint": "These rows have incomplete data. They are not confirmed differences; check them against the PDF before reconciliation."
   },
   "planning": {
     "title": "Plan your money",
@@ -1494,7 +1500,15 @@
     "next": "Next",
     "previous": "Previous",
     "done": "Get started",
-    "guideError": "We could not open the guide. You can complete the steps with the buttons below."
+    "guideError": "We could not open the guide. You can complete the steps with the buttons below.",
+    "accountNameHint": "Use a recognizable name, such as “Main account”.",
+    "accountDetails": "Identify your account",
+    "accountDetailsHint": "Choose its type and currency. Add the last four digits to recognize bank alerts. Save to continue; no expense is recorded.",
+    "categoryFormHint": "Choose a name, type and parent category. Expenses use expense categories; transfers between your accounts have their own type.",
+    "expenseFormHint": "Type, dictate or upload a receipt. Review account, amount, category and date; nothing is recorded until you confirm.",
+    "categoriesPageHint": "Review the available categories. Open one to edit it or create your own. Then continue to your first expense.",
+    "continueExpense": "Continue to expense",
+    "receiptGuideHint": "Open your receipt and extract its data. Review the detected movements and confirm only the expense you want to record. Statements are used for reconciliation, without creating expenses."
   },
   "dashboardWidgets": {
     "title": "Customize home",
@@ -1518,7 +1532,27 @@
     "overBudget": "you exceeded the limit ({spent} of {limit}).",
     "nearBudget": "you are nearing the limit ({spent} of {limit}).",
     "goalReached": "You reached “{name}”.",
-    "goalNear": "“{name}” is at {progress}%."
+    "goalNear": "“{name}” is at {progress}%.",
+    "canvasHint": "Drag a widget into a home section. Resize it and preview your changes before saving.",
+    "selected": "{count} visible widgets",
+    "zones": {
+      "overview": "Overview",
+      "activity": "Activity",
+      "planning": "Planning"
+    },
+    "add": "Add {name}",
+    "remove": "Remove {name}",
+    "createChart": "Create a custom chart",
+    "reset": "Reset layout",
+    "zone": "Section",
+    "width": "Width",
+    "height": "Height",
+    "columns": "{count} columns",
+    "rows": "{count} rows",
+    "resize": "Resize {name}",
+    "dropHere": "Drag a widget here",
+    "summary": "Money summary",
+    "usage": "Plan and usage"
   },
   "dictation": {
     "start": "Dictate",
@@ -1530,7 +1564,13 @@
     "microphone": "No microphone is available. Check your audio input or type the movement.",
     "noSpeech": "No speech detected. Move closer to the microphone and try again.",
     "language": "This browser does not support this language. Use system dictation or type.",
-    "service": "The browser speech service is unavailable. Retry or use system dictation; microphone permission may already be granted."
+    "service": "The browser speech service is unavailable. Retry or use system dictation; microphone permission may already be granted.",
+    "record": "Record voice",
+    "transcribe": "Finish and transcribe",
+    "transcribing": "Transcribing…",
+    "audioHint": "Up to 30 seconds. When finished, audio is sent to AI for transcription and is not stored. Uses one analysis.",
+    "consent": "Enable AI processing in Settings to transcribe.",
+    "quota": "Your plan has no analyses remaining. You can type the transaction."
   },
   "locations": {
     "title": "Purchase locations",

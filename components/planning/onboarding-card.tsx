@@ -1,6 +1,6 @@
 'use client';
 import Link from 'next/link';
-import { useGuidedOnboarding } from '@/hooks/use-guided-onboarding';
+import { onboardingPhase } from '@/lib/onboarding-flow';
 import { useTransactions } from '@/lib/api/queries/transaction.queries';
 import { useTranslations } from 'next-intl';
 import { Check, X } from 'lucide-react';
@@ -23,28 +23,11 @@ export function OnboardingCard({
   const { data: history } = useTransactions({ type: 'expense', limit: 1 });
   const recorded = hasExpense || Boolean(history?.count);
   const t = useTranslations('onboarding');
-  const guide = useGuidedOnboarding({
-    account: t('account'),
-    accountHint: t('accountHint'),
-    categories: t('categories'),
-    categoriesHint: t('categoriesHint'),
-    expense: t('expense'),
-    expenseHint: t('expenseHint'),
-    next: t('next'),
-    previous: t('previous'),
-    done: t('done'),
-  });
   const { data: accounts } = useAccounts();
   const { data: categories } = useCategories();
   const { data } = usePlanning();
   const save = useSavePlanning();
-  if (
-    !data ||
-    (!force &&
-      (data.preferences.onboarding_dismissed === true ||
-        (accounts?.length && categories?.length && recorded)))
-  )
-    return null;
+  if (!data || (!force && onboardingPhase(data.preferences, recorded) === 'complete')) return null;
   const steps = [
     {
       name: t('account'),
@@ -54,7 +37,6 @@ export function OnboardingCard({
           data-guide='account'
           variant='outline'
           onClick={() => {
-            guide.stop();
             onCreateAccount();
           }}>
           {t('createAccount')}
@@ -66,7 +48,7 @@ export function OnboardingCard({
       done: Boolean(categories?.length),
       action: (
         <Button asChild variant='outline'>
-          <Link data-guide='categories' href='/categories' onClick={guide.stop}>
+          <Link data-guide='categories' href='/categories'>
             {t('reviewCategories')}
           </Link>
         </Button>
@@ -80,7 +62,6 @@ export function OnboardingCard({
           <Button
             data-guide='expense'
             onClick={() => {
-              guide.stop();
               onCreateExpense();
             }}>
             {t('addExpense')}
@@ -106,20 +87,15 @@ export function OnboardingCard({
           onClick={() =>
             save.mutate({
               request_id: crypto.randomUUID(),
-              payload: { action: 'preferences', preferences: { onboarding_dismissed: true } },
+              payload: {
+                action: 'preferences',
+                preferences: { onboarding_dismissed: true, onboarding_phase: 'complete' },
+              },
             })
           }>
           <X className='size-4' />
         </Button>
       </div>
-      <Button variant='outline' className='mt-4' onClick={() => void guide.start()}>
-        {t('guided')}
-      </Button>
-      {guide.failed && (
-        <p role='alert' className='text-warning mt-2 text-sm'>
-          {t('guideError')}
-        </p>
-      )}
       <div className='divide-border mt-4 divide-y'>
         {steps.map((step) => (
           <div key={step.name} className='flex flex-wrap items-center justify-between gap-3 py-3'>

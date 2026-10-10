@@ -1,11 +1,12 @@
 'use client';
+import { DashboardZone } from '@/components/planning/dashboard-zone';
+import { DASHBOARD_ZONES, dashboardLayout, type WidgetPlacement } from '@/lib/dashboard-layout';
 import { DashboardEditor } from '@/components/planning/dashboard-editor';
 import { TopContacts } from '@/components/dashboard/top-contacts';
 import { MoneyAlerts } from '@/components/dashboard/money-alerts';
 import { CustomCharts } from '@/components/planning/custom-charts';
 
 import { usePlanning } from '@/lib/api/queries/planning.queries';
-import { dashboardWidgets } from '@/lib/planning';
 import { PlanningOverview } from '@/components/planning/planning-overview';
 import { OnboardingCard } from '@/components/planning/onboarding-card';
 
@@ -39,7 +40,13 @@ export default function DashboardPage(): React.ReactElement {
   const t = useTranslations('dashboard');
   const guideRequested = useSearchParams().get('guide') === '1';
   const { data: planning } = usePlanning();
-  const widgets = dashboardWidgets(planning?.preferences.dashboard_widgets);
+  const [draftLayout, setDraftLayout] = useState<WidgetPlacement[] | null>(null);
+  const layout =
+    draftLayout ??
+    dashboardLayout(
+      planning?.preferences.dashboard_layout,
+      planning?.preferences.dashboard_widgets,
+    );
   const openNew = useTransactionFormStore((s) => s.openNew);
   const now = new Date();
   const [dateFrom, setDateFrom] = useState(() => toStr(startOfMonth(now)));
@@ -70,11 +77,9 @@ export default function DashboardPage(): React.ReactElement {
         </h1>
         <div className='flex flex-wrap items-center gap-2'>
           <PeriodSelector dateFrom={dateFrom} dateTo={dateTo} onChange={handlePeriodChange} />
-          <DashboardEditor />
+          <DashboardEditor draft={draftLayout} onDraft={setDraftLayout} />
         </div>
       </div>
-
-      <SummaryCards transactions={transactions} isLoading={txLoading} />
 
       <OnboardingCard
         force={guideRequested}
@@ -83,44 +88,53 @@ export default function DashboardPage(): React.ReactElement {
         onCreateExpense={openNew}
       />
 
-      <div className='grid items-start gap-4 sm:gap-6 xl:grid-cols-2'>
-        {widgets.map((id) => (
-          <div
-            key={id}
-            className={
-              id === 'accounts' || id === 'nature'
-                ? 'min-w-0 empty:hidden xl:col-span-2'
-                : 'min-w-0 empty:hidden'
-            }>
-            {id === 'accounts' && (
-              <BalanceOverview
-                onEditAccount={setEditingAccount}
-                onAddAccount={() => setCreateAccountOpen(true)}
-              />
+      <div className={draftLayout ? 'space-y-5 xl:pr-[380px]' : 'space-y-6'}>
+        {DASHBOARD_ZONES.map((zone) => (
+          <DashboardZone
+            key={zone}
+            zone={zone}
+            items={layout}
+            editing={draftLayout !== null}
+            onChange={setDraftLayout}
+            renderWidget={(id) => (
+              <>
+                {id === 'summary' && (
+                  <SummaryCards transactions={transactions} isLoading={txLoading} />
+                )}
+                {id === 'usage' && <UsageCard />}
+                {id === 'accounts' && (
+                  <BalanceOverview
+                    onEditAccount={setEditingAccount}
+                    onAddAccount={() => setCreateAccountOpen(true)}
+                  />
+                )}
+                {id === 'trend' && (
+                  <BalanceTrendChart
+                    transactions={transactions}
+                    dateFrom={dateFrom}
+                    dateTo={dateTo}
+                  />
+                )}
+                {id === 'categories' && (
+                  <SpendingByCategory transactions={transactions} isLoading={txLoading} />
+                )}
+                {id === 'nature' && <SpendingNatureCards transactions={transactions} />}
+                {id === 'contacts' && <TopContacts />}
+                {id === 'alerts' && <MoneyAlerts />}
+                {id === 'recent' && <RecentTransactions />}
+                {id === 'budgets' && budgetMonth && <BudgetOverview month={budgetMonth} />}
+                {id === 'goals' && <PlanningOverview />}
+                {id === 'custom' && (
+                  <CustomCharts
+                    transactions={transactions}
+                    partial={(txResult?.count ?? 0) > transactions.length}
+                  />
+                )}
+              </>
             )}
-            {id === 'trend' && (
-              <BalanceTrendChart transactions={transactions} dateFrom={dateFrom} dateTo={dateTo} />
-            )}
-            {id === 'categories' && (
-              <SpendingByCategory transactions={transactions} isLoading={txLoading} />
-            )}
-            {id === 'nature' && <SpendingNatureCards transactions={transactions} />}
-            {id === 'contacts' && <TopContacts />}
-            {id === 'alerts' && <MoneyAlerts />}
-            {id === 'recent' && <RecentTransactions />}
-            {id === 'budgets' && budgetMonth && <BudgetOverview month={budgetMonth} />}
-            {id === 'goals' && <PlanningOverview />}
-            {id === 'custom' && (
-              <CustomCharts
-                transactions={transactions}
-                partial={(txResult?.count ?? 0) > transactions.length}
-              />
-            )}
-          </div>
+          />
         ))}
       </div>
-
-      <UsageCard />
 
       <AccountEditDialog
         account={editingAccount}

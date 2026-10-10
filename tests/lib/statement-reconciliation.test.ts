@@ -35,7 +35,8 @@ it('shows both differences, preserves ambiguous matches and handles incoming tra
     },
   ];
   const result = compareStatement(rows, transactions, [], 'bank');
-  expect(result.statementOnly.map((r) => r.id)).toEqual(['a', 'b']);
+  expect(result.statementOnly.map((r) => r.id)).toEqual(['a']);
+  expect(result.needsReview.map((r) => r.id)).toEqual(['b']);
   expect(result.appOnly.map((r) => r.id)).toEqual(['t', 'u', 'v']);
   expect(result.candidates.a).toEqual(['t', 'u']);
   const linked = compareStatement(
@@ -44,7 +45,7 @@ it('shows both differences, preserves ambiguous matches and handles incoming tra
     [{ observation_id: 'a', transaction_id: 't', valid: true }],
     'bank',
   );
-  expect(linked.statementOnly.map((r) => r.id)).toEqual(['b']);
+  expect(linked.statementOnly.map((r) => r.id)).toEqual([]);
   expect(linked.appOnly.map((r) => r.id)).toEqual(['u', 'v']);
   expect(
     compareStatement(
@@ -53,5 +54,5 @@ it('shows both differences, preserves ambiguous matches and handles incoming tra
       [{ observation_id: 'a', transaction_id: 't', valid: false }],
       'bank',
     ).statementOnly,
-  ).toHaveLength(2);
+  ).toHaveLength(1);
 });

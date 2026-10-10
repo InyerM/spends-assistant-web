@@ -3,6 +3,7 @@ import { useState } from 'react';
 import Image from 'next/image';
 import { useTranslations } from 'next-intl';
 import { Eye } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -75,10 +76,20 @@ export function DocumentPreview({
   const [open, setOpen] = useState(false);
   return (
     <>
-      <Button size='sm' variant='outline' onClick={() => setOpen(true)}>
-        <Eye className='size-4' aria-hidden='true' />
-        {t('viewDocument')}
-      </Button>
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              size='icon'
+              variant='outline'
+              aria-label={t('viewDocument')}
+              onClick={() => setOpen(true)}>
+              <Eye className='size-4' aria-hidden='true' />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>{t('viewDocument')}</TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className='w-[calc(100%-2rem)] max-w-4xl'>
           <DialogHeader>

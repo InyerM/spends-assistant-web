@@ -1,5 +1,6 @@
 'use client';
 
+import { AutomaticOnboarding } from '@/components/planning/automatic-onboarding';
 import { useTranslations } from 'next-intl';
 import { usePathname } from 'next/navigation';
 import { AuthGuard } from '@/components/guards/auth-guard';
@@ -34,6 +35,7 @@ export default function DashboardLayout({
         </div>
       </div>
 
+      <AutomaticOnboarding />
       <BottomNav />
 
       {showFab && (

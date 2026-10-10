@@ -3,7 +3,8 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { FileImage, FileText, ScanText } from 'lucide-react';
+import { FileImage, FileText, Sparkles, Archive, ArchiveRestore } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -100,46 +101,60 @@ export function DocumentCaptureCard({
               </div>
             </div>
           </div>
-          <div className='flex flex-wrap items-center gap-2'>
-            <DocumentPreview
-              id={document.id}
-              name={document.file_name}
-              mime={document.mime_type ?? 'application/pdf'}
-            />
-            <Badge
-              variant='outline'
-              className={
-                document.status === 'extracted'
-                  ? 'border-primary/30 bg-primary/10 text-primary'
-                  : document.status === 'failed'
-                    ? 'border-destructive/30 bg-destructive/10 text-destructive'
-                    : 'border-brand-secondary/30 bg-brand-secondary/10 text-brand-secondary'
-              }>
-              {t(`status.${document.status}`)}
-            </Badge>
-            <Button
-              size='sm'
-              variant='ghost'
-              className={
-                document.archived_at
-                  ? undefined
-                  : 'text-destructive hover:bg-destructive/10 hover:text-destructive'
-              }
-              disabled={busy !== null}
-              onClick={() => onArchive(!document.archived_at)}>
-              {document.archived_at ? t('restoreCapture') : t('archiveCapture')}
-            </Button>
-            {canExtract && (
-              <Button size='sm' variant='ai' disabled={busy !== null} onClick={onExtract}>
-                {busy === document.id ? (
-                  <InlineLoader />
-                ) : (
-                  <ScanText className='size-4' aria-hidden='true' />
-                )}
-                {busy === document.id ? t('extracting') : t('extract')}
-              </Button>
-            )}
-          </div>
+          <TooltipProvider>
+            <div className='flex flex-wrap items-center gap-2'>
+              <DocumentPreview
+                id={document.id}
+                name={document.file_name}
+                mime={document.mime_type ?? 'application/pdf'}
+              />
+              <Badge
+                variant='outline'
+                className={
+                  document.status === 'extracted'
+                    ? 'border-primary/30 bg-primary/10 text-primary'
+                    : document.status === 'failed'
+                      ? 'border-destructive/30 bg-destructive/10 text-destructive'
+                      : 'border-brand-secondary/30 bg-brand-secondary/10 text-brand-secondary'
+                }>
+                {t(`status.${document.status}`)}
+              </Badge>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    size='icon'
+                    aria-label={document.archived_at ? t('restoreCapture') : t('archiveCapture')}
+                    variant='ghost'
+                    className={
+                      document.archived_at
+                        ? undefined
+                        : 'text-destructive hover:bg-destructive/10 hover:text-destructive'
+                    }
+                    disabled={busy !== null}
+                    onClick={() => onArchive(!document.archived_at)}>
+                    {document.archived_at ? (
+                      <ArchiveRestore className='size-4' aria-hidden='true' />
+                    ) : (
+                      <Archive className='size-4' aria-hidden='true' />
+                    )}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {document.archived_at ? t('restoreCapture') : t('archiveCapture')}
+                </TooltipContent>
+              </Tooltip>
+              {canExtract && (
+                <Button size='sm' variant='ai' disabled={busy !== null} onClick={onExtract}>
+                  {busy === document.id ? (
+                    <InlineLoader />
+                  ) : (
+                    <Sparkles className='size-4' aria-hidden='true' />
+                  )}
+                  {busy === document.id ? t('extracting') : t('extract')}
+                </Button>
+              )}
+            </div>
+          </TooltipProvider>
         </div>
         {document.status === 'extracted' && !document.archived_at && (
           <details

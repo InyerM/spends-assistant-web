@@ -1,4 +1,6 @@
 'use client';
+import { completeOnboardingStep } from '@/lib/onboarding-flow';
+import { ReceiptUploadButton } from '@/components/transactions/receipt-upload-button';
 import { DictationButton } from '@/components/transactions/dictation-button';
 import type { TransactionDraft } from '@/lib/stores/transaction-form.store';
 
@@ -224,6 +226,7 @@ export function TransactionForm({
         transfer_to_account_id: fields.transfer_to_account_id ?? undefined,
       });
       toast.success(t('transactionCreatedFromAi'));
+      completeOnboardingStep('expense');
       onOpenChange(false);
     } catch (err) {
       if (err instanceof DuplicateError) {
@@ -269,6 +272,7 @@ export function TransactionForm({
         transfer_to_account_id: fields.transfer_to_account_id ?? undefined,
       });
       toast.success(t('transactionCreatedFromAi'));
+      completeOnboardingStep('expense');
       ai.resetToPrompt();
     } catch (err) {
       if (err instanceof DuplicateError) {
@@ -332,6 +336,7 @@ export function TransactionForm({
             : {}),
         });
         toast.success(t('transactionCreated'));
+        if (values.type === 'expense') completeOnboardingStep('expense');
         if (addAnotherRef.current) {
           const times = getCurrentColombiaTimes();
           form.reset({
@@ -411,7 +416,9 @@ export function TransactionForm({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className='border-border bg-card max-h-[85dvh] grid-cols-[minmax(0,1fr)] overflow-y-auto sm:max-w-[500px] [&>*]:min-w-0'>
+      <DialogContent
+        data-guide={!isEditing ? 'expense-form' : undefined}
+        className='border-border bg-card max-h-[85dvh] grid-cols-[minmax(0,1fr)] overflow-y-auto sm:max-w-[500px] [&>*]:min-w-0'>
         <DialogHeader>
           <DialogTitle>
             {isEditing
@@ -421,7 +428,7 @@ export function TransactionForm({
                 : t('newTransaction')}
           </DialogTitle>
           {ai.step === 'ai-prompt' && !isEditing && (
-            <p className='text-muted-foreground text-sm'>{t('aiDialogDescription')}</p>
+            <p className='text-muted-foreground text-sm'>{t('aiInputDescription')}</p>
           )}
         </DialogHeader>
 
@@ -429,8 +436,13 @@ export function TransactionForm({
 
         {/* ========== STEP: AI PROMPT ========== */}
         {ai.step === 'ai-prompt' && !isEditing && (
-          <div className='space-y-4'>
-            {!isPro && usage && <UsageIndicator usage={usage} />}
+          <div className='space-y-3'>
+            {!isPro && usage && (
+              <UsageIndicator
+                usage={usage}
+                className='ml-auto w-fit border-0 bg-transparent px-0 py-0'
+              />
+            )}
 
             {!isPro && atLimit ? (
               /* At limit: show error + create manually as primary */
@@ -458,11 +470,18 @@ export function TransactionForm({
                   placeholder={t('aiTextPlaceholder')}
                   value={ai.aiText}
                   onChange={(e): void => ai.setAiText(e.target.value)}
-                  rows={3}
+                  className='min-h-28 resize-y'
+                  rows={4}
                   disabled={ai.isParsing}
                 />
 
-                <DictationButton value={ai.aiText} onChange={ai.setAiText} />
+                <div className='flex flex-wrap items-start gap-2'>
+                  <ReceiptUploadButton
+                    disabled={ai.isParsing}
+                    onUploaded={() => onOpenChange(false)}
+                  />
+                  <DictationButton value={ai.aiText} onChange={ai.setAiText} />
+                </div>
 
                 {ai.limitReached && (
                   <div className='border-destructive/30 bg-destructive/5 space-y-3 rounded-lg border p-4'>
@@ -538,8 +557,8 @@ export function TransactionForm({
                     </TooltipProvider>
                     <Button
                       type='button'
-                      variant='link'
-                      className='text-muted-foreground hover:text-foreground h-auto w-full cursor-pointer p-0 text-sm'
+                      variant='outline'
+                      className='w-full'
                       onClick={ai.handleCreateManually}>
                       {t('orCreateManually')}
                     </Button>

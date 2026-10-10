@@ -16,3 +16,8 @@ and the production build.
 
 Do not create `middleware.ts`. Preserve owner-scoped review, duplicate checks, and explicit
 financial confirmation. The web release precedes corresponding mobile work.
+
+## Local design previews
+
+Keep design explorations outside public routes and deployment artifacts. Serve them on localhost
+only. Never publish design proposals or indexable previews; the user reviews them locally.

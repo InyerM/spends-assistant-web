@@ -164,7 +164,9 @@ export default function CategoriesPage(): React.ReactElement {
 
   return (
     <TooltipProvider>
-      <div className='mx-auto w-full max-w-7xl space-y-6 p-4 sm:p-6 lg:p-8'>
+      <div
+        data-guide='categories-page'
+        className='mx-auto w-full max-w-7xl space-y-6 p-4 sm:p-6 lg:p-8'>
         <header className='flex flex-wrap items-start justify-between gap-4'>
           <div className='space-y-2'>
             <h1 className='text-3xl font-bold tracking-tight'>{t('title')}</h1>

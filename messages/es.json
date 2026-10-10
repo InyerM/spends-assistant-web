@@ -578,7 +578,7 @@
     "fieldTransfer": "Transferencia",
     "aiDialogDescription": "Pega una notificación bancaria, SMS o describe una transacción y la IA extraerá los detalles.",
     "aiTooltip": "Crear con IA",
-    "orCreateManually": "o crear manualmente",
+    "orCreateManually": "Crear manualmente",
     "limitReachedTooltip": "Límite alcanzado",
     "dragDropCsv": "Arrastra y suelta un archivo CSV aquí, o haz clic para seleccionar",
     "dragAndDrop": "Arrastra y suelta tu archivo aquí",
@@ -600,7 +600,11 @@
     "page": "Página {page}",
     "transactionLimitReached": "Limite de transacciones alcanzado este mes",
     "aiParseLimitBanner": "Limite de analisis IA alcanzado este mes",
-    "importLimitExceeded": "La importacion excederia tu limite de transacciones. Te quedan {remaining} transacciones este mes."
+    "importLimitExceeded": "La importacion excederia tu limite de transacciones. Te quedan {remaining} transacciones este mes.",
+    "uploadReceipt": "Subir comprobante",
+    "uploadingReceipt": "Subiendo…",
+    "receiptUploadFailed": "No pudimos subir el comprobante. Reintenta.",
+    "aiInputDescription": "Escribe o pega un movimiento, dicta sus datos o sube un comprobante. Siempre podrás revisarlo antes de guardarlo."
   },
   "accounts": {
     "title": "Cuentas",
@@ -1433,7 +1437,9 @@
     "detectionError": "No pudimos detectar estos datos. Puedes elegir la cuenta y el período manualmente.",
     "pdfTitle": "Extracto original",
     "openPdf": "Abrir PDF en otra pestaña",
-    "emptyStatement": "El texto indica que no hay movimientos. Verifica todas las páginas del PDF; si no hay nada para conciliar, puedes archivar el documento."
+    "emptyStatement": "El texto indica que no hay movimientos. Verifica todas las páginas del PDF; si no hay nada para conciliar, puedes archivar el documento.",
+    "unverifiedRows": "Por verificar · {count}",
+    "unverifiedHint": "Estas filas tienen datos incompletos. No cuentan como diferencias confirmadas: compáralas con el PDF antes de conciliarlas."
   },
   "planning": {
     "title": "Planifica tu dinero",
@@ -1491,7 +1497,15 @@
     "next": "Siguiente",
     "previous": "Anterior",
     "done": "Empezar",
-    "guideError": "No pudimos abrir la guía. Puedes completar los pasos con los botones de abajo."
+    "guideError": "No pudimos abrir la guía. Puedes completar los pasos con los botones de abajo.",
+    "accountNameHint": "Dale un nombre fácil de reconocer, por ejemplo «Cuenta principal».",
+    "accountDetails": "Identifica tu cuenta",
+    "accountDetailsHint": "Elige tipo y moneda. Añade los últimos cuatro dígitos para reconocer avisos bancarios. Guarda para continuar: no se registra ningún gasto.",
+    "categoryFormHint": "Elige nombre, tipo y categoría superior. Los gastos usan categorías de gasto; una transferencia entre tus cuentas usa su propio tipo.",
+    "expenseFormHint": "Puedes escribir, dictar o subir un comprobante. Revisa cuenta, monto, categoría y fecha; sólo se registra cuando confirmas.",
+    "categoriesPageHint": "Revisa las categorías disponibles. Puedes abrir una para editarla o crear una propia. Cuando termines, continúa al primer gasto.",
+    "continueExpense": "Continuar al gasto",
+    "receiptGuideHint": "Abre tu comprobante y pulsa «Extraer datos». Revisa los movimientos detectados y confirma sólo el gasto que quieres registrar. Los extractos sirven para conciliar, sin crear gastos."
   },
   "dashboardWidgets": {
     "title": "Personalizar inicio",
@@ -1515,7 +1529,27 @@
     "overBudget": "superaste el límite ({spent} de {limit}).",
     "nearBudget": "te acercas al límite ({spent} de {limit}).",
     "goalReached": "Alcanzaste la meta «{name}».",
-    "goalNear": "La meta «{name}» va al {progress} %."
+    "goalNear": "La meta «{name}» va al {progress} %.",
+    "canvasHint": "Arrastra un widget a una zona del inicio. Ajusta su tamaño y comprueba el resultado antes de guardar.",
+    "selected": "{count} widgets visibles",
+    "zones": {
+      "overview": "Resumen",
+      "activity": "Actividad",
+      "planning": "Planificación"
+    },
+    "add": "Agregar {name}",
+    "remove": "Quitar {name}",
+    "createChart": "Crear gráfico personalizado",
+    "reset": "Restablecer distribución",
+    "zone": "Zona",
+    "width": "Ancho",
+    "height": "Alto",
+    "columns": "{count} columnas",
+    "rows": "{count} filas",
+    "resize": "Cambiar tamaño de {name}",
+    "dropHere": "Arrastra un widget aquí",
+    "summary": "Resumen de dinero",
+    "usage": "Plan y uso"
   },
   "dictation": {
     "start": "Dictar",
@@ -1527,7 +1561,13 @@
     "microphone": "No hay un micrófono disponible. Comprueba la entrada de audio o escribe el movimiento.",
     "noSpeech": "No se detectó voz. Acércate al micrófono y vuelve a intentar.",
     "language": "Este navegador no reconoce español con este servicio. Puedes usar el dictado del sistema o escribir.",
-    "service": "El servicio de voz del navegador no está disponible. Reintenta o usa el dictado del sistema; el permiso del micrófono puede estar activo."
+    "service": "El servicio de voz del navegador no está disponible. Reintenta o usa el dictado del sistema; el permiso del micrófono puede estar activo.",
+    "record": "Grabar voz",
+    "transcribe": "Terminar y transcribir",
+    "transcribing": "Transcribiendo…",
+    "audioHint": "Hasta 30 segundos. Al terminar, enviamos el audio a la IA para transcribirlo; no lo guardamos. Consume un análisis.",
+    "consent": "Activa el procesamiento con IA en Configuración para transcribir.",
+    "quota": "Agotaste los análisis de tu plan. Puedes escribir el movimiento."
   },
   "locations": {
     "title": "Ubicaciones de compras",

@@ -42,13 +42,19 @@ export function compareStatement(
   accountId: string,
 ): {
   statementOnly: StatementRow[];
+  needsReview: StatementRow[];
   appOnly: StatementTransaction[];
   candidates: Record<string, string[]>;
 } {
   const valid = proofs.filter((p) => p.valid);
   const linkedRows = new Set(valid.map((p) => p.observation_id));
   const linkedTransactions = new Set(valid.map((p) => p.transaction_id));
-  const statementOnly = rows.filter((r) => r.status !== 'rejected' && !linkedRows.has(r.id));
+  const pending = rows.filter((r) => r.status !== 'rejected' && !linkedRows.has(r.id));
+  const needsReview = pending.filter(
+    (r) => r.amount === null || !r.currency || !r.occurred_at_text,
+  );
+  const unverified = new Set(needsReview.map((r) => r.id));
+  const statementOnly = pending.filter((r) => !unverified.has(r.id));
   const appOnly = transactions.filter((t) => !linkedTransactions.has(t.id));
   const candidates: Record<string, string[]> = {};
   for (const row of statementOnly) {
@@ -71,5 +77,5 @@ export function compareStatement(
       })
       .map((t) => t.id);
   }
-  return { statementOnly, appOnly, candidates };
+  return { statementOnly, needsReview, appOnly, candidates };
 }

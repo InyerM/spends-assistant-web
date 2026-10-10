@@ -4,8 +4,6 @@ import { useCallback, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { DashboardControls } from '@/components/planning/dashboard-controls';
-import { CustomChartBuilder } from '@/components/planning/custom-chart-builder';
 import { NotificationPreferences } from '@/components/settings/notification-preferences';
 import { ProfileTab } from '@/components/settings/profile-tab';
 import { SecurityTab } from '@/components/settings/security-tab';
@@ -89,10 +87,6 @@ export default function SettingsPage(): React.ReactElement {
         <TabsContent value='preferences' className='mt-6 space-y-6'>
           <LanguageSelector />
           <NotificationPreferences />
-          <section className='bg-card border-border space-y-6 rounded-xl border p-5'>
-            <DashboardControls />
-            <CustomChartBuilder />
-          </section>
           <section id='settings-ai-processing' className='scroll-mt-8'>
             <AiConsentTab />
           </section>

@@ -1,5 +1,6 @@
 'use client';
 
+import { completeOnboardingStep } from '@/lib/onboarding-flow';
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -103,6 +104,7 @@ export function AccountCreateDialog({
       };
       await createMutation.mutateAsync(payload);
       toast.success(t('accountCreated'));
+      completeOnboardingStep('account');
       onOpenChange(false);
     } catch {
       toast.error(t('failedToCreate'));
@@ -116,7 +118,10 @@ export function AccountCreateDialog({
           <DialogTitle>{t('newAccount')}</DialogTitle>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className='space-y-4'>
+          <form
+            data-guide='account-form'
+            onSubmit={form.handleSubmit(onSubmit)}
+            className='space-y-4'>
             <FormField
               control={form.control}
               name='name'
@@ -124,7 +129,11 @@ export function AccountCreateDialog({
                 <FormItem>
                   <FormLabel>{t('name')}</FormLabel>
                   <FormControl>
-                    <Input placeholder={t('namePlaceholder')} {...field} />
+                    <Input
+                      data-guide='account-name'
+                      placeholder={t('namePlaceholder')}
+                      {...field}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

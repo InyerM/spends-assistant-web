@@ -86,6 +86,7 @@ export interface PlanningSnapshot {
   preferences: Record<string, unknown>;
 }
 export const DASHBOARD_WIDGETS = [
+  'summary',
   'accounts',
   'trend',
   'categories',
@@ -96,6 +97,7 @@ export const DASHBOARD_WIDGETS = [
   'custom',
   'contacts',
   'alerts',
+  'usage',
 ] as const;
 export type DashboardWidget = (typeof DASHBOARD_WIDGETS)[number];
 export function dashboardWidgets(value: unknown): DashboardWidget[] {

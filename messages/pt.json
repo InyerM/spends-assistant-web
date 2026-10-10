@@ -542,7 +542,7 @@
     "fieldTransfer": "Transferência",
     "aiDialogDescription": "Cole uma notificação bancária, SMS ou descreva uma transação e a IA extrairá os detalhes.",
     "aiTooltip": "Criar com IA",
-    "orCreateManually": "ou criar manualmente",
+    "orCreateManually": "Criar manualmente",
     "limitReachedTooltip": "Limite atingido",
     "dragDropCsv": "Arraste e solte um arquivo CSV aqui, ou clique para selecionar",
     "thisMonth": "Este mês",
@@ -566,7 +566,11 @@
     "noImports": "Nenhuma importação ainda",
     "showingRows": "{imported}/{total} linhas",
     "previous": "Anterior",
-    "page": "Página {page}"
+    "page": "Página {page}",
+    "uploadReceipt": "Enviar comprovante",
+    "uploadingReceipt": "Enviando…",
+    "receiptUploadFailed": "Não foi possível enviar o comprovante. Tente novamente.",
+    "aiInputDescription": "Digite ou cole um movimento, dite os dados ou envie um comprovante. Confira antes de salvar."
   },
   "accounts": {
     "title": "Contas",
@@ -1319,7 +1323,9 @@
     "detectionError": "Não foi possível detectar esses dados. Escolha a conta e o período manualmente.",
     "pdfTitle": "Extrato original",
     "openPdf": "Abrir PDF em outra aba",
-    "emptyStatement": "O texto indica que não há movimentos. Verifique todas as páginas; se não houver nada a conciliar, você pode arquivar o documento."
+    "emptyStatement": "O texto indica que não há movimentos. Verifique todas as páginas; se não houver nada a conciliar, você pode arquivar o documento.",
+    "unverifiedRows": "A verificar · {count}",
+    "unverifiedHint": "Estas linhas têm dados incompletos. Não são diferenças confirmadas; confira no PDF antes de conciliar."
   },
   "planning": {
     "title": "Planeje seu dinheiro",
@@ -1377,7 +1383,15 @@
     "next": "Próximo",
     "previous": "Anterior",
     "done": "Começar",
-    "guideError": "Não foi possível abrir o guia. Use os botões abaixo para completar os passos."
+    "guideError": "Não foi possível abrir o guia. Use os botões abaixo para completar os passos.",
+    "accountNameHint": "Use um nome fácil de reconhecer, como “Conta principal”.",
+    "accountDetails": "Identifique sua conta",
+    "accountDetailsHint": "Escolha tipo e moeda. Adicione os últimos quatro dígitos para reconhecer alertas bancários. Salve para continuar; nenhum gasto será registrado.",
+    "categoryFormHint": "Escolha nome, tipo e categoria superior. Gastos usam categorias de gastos; transferências entre suas contas têm seu próprio tipo.",
+    "expenseFormHint": "Digite, dite ou envie um comprovante. Confira conta, valor, categoria e data; só registramos após sua confirmação.",
+    "categoriesPageHint": "Confira as categorias disponíveis. Abra uma para editar ou crie a sua. Depois continue ao primeiro gasto.",
+    "continueExpense": "Continuar ao gasto",
+    "receiptGuideHint": "Abra o comprovante e extraia os dados. Confira os movimentos e confirme apenas o gasto que deseja registrar. Extratos servem para conciliar, sem criar gastos."
   },
   "dashboardWidgets": {
     "title": "Personalizar início",
@@ -1401,7 +1415,27 @@
     "overBudget": "você superou o limite ({spent} de {limit}).",
     "nearBudget": "você está perto do limite ({spent} de {limit}).",
     "goalReached": "Você alcançou «{name}».",
-    "goalNear": "«{name}» está em {progress}%."
+    "goalNear": "«{name}» está em {progress}%.",
+    "canvasHint": "Arraste um widget para uma seção do início. Ajuste o tamanho e confira antes de salvar.",
+    "selected": "{count} widgets visíveis",
+    "zones": {
+      "overview": "Resumo",
+      "activity": "Atividade",
+      "planning": "Planejamento"
+    },
+    "add": "Adicionar {name}",
+    "remove": "Remover {name}",
+    "createChart": "Criar gráfico personalizado",
+    "reset": "Restaurar layout",
+    "zone": "Seção",
+    "width": "Largura",
+    "height": "Altura",
+    "columns": "{count} colunas",
+    "rows": "{count} linhas",
+    "resize": "Redimensionar {name}",
+    "dropHere": "Arraste um widget aqui",
+    "summary": "Resumo financeiro",
+    "usage": "Plano e uso"
   },
   "dictation": {
     "start": "Ditar",
@@ -1413,7 +1447,13 @@
     "microphone": "Nenhum microfone disponível. Verifique a entrada de áudio ou digite.",
     "noSpeech": "Nenhuma voz detectada. Aproxime-se do microfone e tente novamente.",
     "language": "Este navegador não reconhece este idioma. Use o ditado do sistema ou digite.",
-    "service": "O serviço de voz do navegador está indisponível. Tente novamente ou use o ditado do sistema; a permissão pode estar ativa."
+    "service": "O serviço de voz do navegador está indisponível. Tente novamente ou use o ditado do sistema; a permissão pode estar ativa.",
+    "record": "Gravar voz",
+    "transcribe": "Concluir e transcrever",
+    "transcribing": "Transcrevendo…",
+    "audioHint": "Até 30 segundos. Ao concluir, enviamos o áudio à IA para transcrição; não o armazenamos. Usa uma análise.",
+    "consent": "Ative o processamento com IA nas Configurações para transcrever.",
+    "quota": "Você esgotou as análises do plano. Pode digitar o movimento."
   },
   "locations": {
     "title": "Locais de compras",
