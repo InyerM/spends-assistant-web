@@ -75,3 +75,36 @@ emails/documents. Review decisions and source links remain intact, deletion is a
 account balances reverse atomically once, and retries do not reverse them again. Existing wealth
 allocation guards remain authoritative. The inbox retains its current filters and the acknowledged
 email shows its matched transaction immediately.
+
+## Protected PDF follow-up
+
+Three production `/documents/extract-text` requests returned 502 on October 9 at 20:44:24, 20:44:41
+and 20:48:33 Colombia time. These requests reached text analysis, so password unlocking had already
+succeeded. Historical handler logs did not record the validation reason; they cannot establish which
+model validation failed.
+
+A synthetic, multi-row PDF test found duplicate blank separators when both PDF item boundaries and
+vertical positions marked the same line break. The reader now avoids those redundant blank lines.
+This is not evidence that the duplicate lines caused the owner's failure: the historical logs lack
+that detail. A failed source validation now gets one bounded correction attempt with the same
+original text, retaining whole-draft validation. The statement handler logs only allowlisted failure
+reasons, never passwords, PDF text or provider bodies. A live OpenRouter test on synthetic multiline
+text returned both expected rows. The owner's protected PDF needs a retry to verify its particular
+rows and diagnose any remaining model validation failure.
+
+The PDF password is sent over HTTPS to the authenticated, owner-scoped extraction route and used in
+an isolated server worker's memory. It is not persisted or sent to the AI provider. Password inputs
+are cleared after submission; no claim of cryptographic memory zeroization is made. The dialog now
+uses the shared cancel translation and an accessible reveal/hide toggle.
+
+## Manual acceptance checks
+
+1. Reload the web app and the iPhone development bundle. Analyze a pending invoice notice: verify
+   original amount/date and leave hour blank when absent.
+2. Analyze a notice containing an explicit clock, and check both platforms agree.
+3. Recognize an existing transaction: keep the current inbox filter/page and show the linked
+   reviewed transaction. No transaction is automatically posted.
+4. Delete a reviewed transaction that is not allocated to a wealth record: verify the account
+   balance reverses once, and that the source's audit link remains.
+5. Retry the protected PDF with the original password: verify movement rows and totals manually
+   before confirming. Reveal/hide must work, Cancel must translate.

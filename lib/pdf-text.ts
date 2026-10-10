@@ -45,7 +45,7 @@ const { parentPort, workerData } = require('node:worker_threads');
       for (const item of content.items) {
         if (typeof item.str !== 'string') continue;
         const y = item.transform?.[5];
-        if (lastY !== undefined && y !== undefined && Math.abs(y - lastY) > 2) text += '\n';
+        if (lastY !== undefined && y !== undefined && Math.abs(y - lastY) > 2 && !text.endsWith('\n')) text += '\n';
         text += item.str + (item.hasEOL ? '\n' : ' '); lastY = y;
         if (text.length > 20000) throw { code: 'PDF_LIMIT_EXCEEDED' };
       }

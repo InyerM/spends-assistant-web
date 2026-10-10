@@ -2,7 +2,8 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { readPdfText, PdfTextError } from '@/lib/pdf-text';
 function samplePdf(text: string, pageCount = 1): Uint8Array {
-  const stream = `BT /F1 12 Tf 50 750 Td (${text}) Tj ET`;
+  const lines = text.split('\n');
+  const stream = `BT /F1 12 Tf 50 750 Td ${lines.map((line, index) => `${index ? '0 -6 Td ' : ''}(${line}) Tj`).join(' ')} ET`;
   const objects = [
     '<< /Type /Catalog /Pages 2 0 R >>',
     `<< /Type /Pages /Kids [${Array(pageCount).fill('3 0 R').join(' ')}] /Count ${pageCount} >>`,
@@ -28,6 +29,15 @@ describe('isolated local PDF text extraction', { timeout: 25_000 }, () => {
   it('reads text from the original PDF without external network requests', async () => {
     const result = await readPdfText(samplePdf('Bancolombia COP Compra 42000'));
     expect(result.pages).toEqual(['Bancolombia COP Compra 42000']);
+  });
+  it('preserves real row boundaries for statement chunking', async () => {
+    const lines = [
+      'Synthetic Bank COP',
+      ...Array.from({ length: 90 }, (_, index) => `2026-09-11 Purchase ${index} 33812.00`),
+    ];
+    const result = await readPdfText(samplePdf(lines.join('\n')));
+    expect(result.pages[0].split('\n')).toHaveLength(91);
+    expect(result.pages[0]).not.toContain('\\n');
   });
   it('rejects empty/image-only PDFs instead of reporting an empty successful statement', async () => {
     await expect(readPdfText(samplePdf(''))).rejects.toMatchObject({ code: 'PDF_NO_TEXT' });
