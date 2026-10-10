@@ -9,11 +9,16 @@ const command = z.discriminatedUnion('action', [
       period_start: z.iso.date(),
       period_end: z.iso.date(),
     })
+    .extend({ request_id: z.uuid().optional() })
     .strict(),
   z
     .object({ action: z.literal('confirm'), observation_id: z.uuid(), transaction_id: z.uuid() })
+    .extend({ request_id: z.uuid().optional() })
     .strict(),
-  z.object({ action: z.literal('undo'), link_id: z.uuid() }).strict(),
+  z
+    .object({ action: z.literal('undo'), link_id: z.uuid() })
+    .extend({ request_id: z.uuid().optional() })
+    .strict(),
 ]);
 interface Context {
   params: Promise<{ id: string }>;
@@ -95,6 +100,17 @@ export async function POST(request: Request, { params }: Context): Promise<Respo
     if (!z.uuid().safeParse(id).success || !body.success)
       return errorResponse('Invalid reconciliation request', 400);
     const data = body.data;
+    if (data.request_id) {
+      const { request_id, ...payload } = data;
+      const result = await supabase.rpc('apply_statement_reconciliation_command', {
+        p_request_id: request_id,
+        p_document_id: id,
+        p_payload: payload,
+      });
+      return result.error
+        ? errorResponse('Reconciliation could not be saved. Refresh and review the movement.', 409)
+        : Response.json({ success: true });
+    }
     if (data.action === 'undo') {
       const owned = await supabase
         .from('statement_reconciliation_links')
