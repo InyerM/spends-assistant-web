@@ -570,7 +570,8 @@
     "uploadReceipt": "Enviar comprovante",
     "uploadingReceipt": "Enviando…",
     "receiptUploadFailed": "Não foi possível enviar o comprovante. Tente novamente.",
-    "aiInputDescription": "Digite ou cole um movimento, dite os dados ou envie um comprovante. Confira antes de salvar."
+    "aiInputDescription": "Cole uma mensagem bancária ou descreva seu gasto. Confira os dados antes de salvar.",
+    "aiInputLabel": "Mensagem ou descrição"
   },
   "accounts": {
     "title": "Contas",

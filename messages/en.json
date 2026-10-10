@@ -604,7 +604,8 @@
     "uploadReceipt": "Upload receipt",
     "uploadingReceipt": "Uploading…",
     "receiptUploadFailed": "Could not upload the receipt. Try again.",
-    "aiInputDescription": "Type or paste a transaction, dictate its details or upload a receipt. Review it before saving."
+    "aiInputDescription": "Paste a bank message or describe your expense. Review the details before saving.",
+    "aiInputLabel": "Message or description"
   },
   "accounts": {
     "title": "Accounts",

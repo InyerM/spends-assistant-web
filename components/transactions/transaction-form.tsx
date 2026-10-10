@@ -418,8 +418,8 @@ export function TransactionForm({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         data-guide={!isEditing ? 'expense-form' : undefined}
-        className='border-border bg-card max-h-[85dvh] grid-cols-[minmax(0,1fr)] overflow-y-auto sm:max-w-[500px] [&>*]:min-w-0'>
-        <DialogHeader>
+        className='border-border bg-card max-h-[85dvh] max-w-[calc(100vw_-_2rem)] grid-cols-[minmax(0,1fr)] overflow-y-auto sm:max-w-[500px] [&>*]:min-w-0'>
+        <DialogHeader className='pr-6 text-left'>
           <DialogTitle>
             {isEditing
               ? t('editTransaction')
@@ -437,7 +437,7 @@ export function TransactionForm({
         {/* ========== STEP: AI PROMPT ========== */}
         {ai.step === 'ai-prompt' && !isEditing && (
           <div className='space-y-3'>
-            {!isPro && usage && (
+            {!isPro && atLimit && usage && (
               <UsageIndicator
                 usage={usage}
                 className='ml-auto w-fit border-0 bg-transparent px-0 py-0'
@@ -465,22 +465,35 @@ export function TransactionForm({
             ) : (
               /* Normal: textarea + parse button + create manually link */
               <>
-                <Textarea
-                  ref={textareaRef}
-                  placeholder={t('aiTextPlaceholder')}
-                  value={ai.aiText}
-                  onChange={(e): void => ai.setAiText(e.target.value)}
-                  className='min-h-28 resize-y'
-                  rows={4}
-                  disabled={ai.isParsing}
-                />
-
-                <div className='flex flex-wrap items-start gap-2'>
-                  <ReceiptUploadButton
-                    disabled={ai.isParsing}
-                    onUploaded={() => onOpenChange(false)}
-                  />
-                  <DictationButton value={ai.aiText} onChange={ai.setAiText} />
+                <div className='space-y-2'>
+                  <div className='flex flex-wrap items-center justify-between gap-2'>
+                    <span className='text-sm font-medium'>{t('aiInputLabel')}</span>
+                    {!isPro && usage && (
+                      <UsageIndicator
+                        usage={usage}
+                        className='w-fit gap-2 border-0 bg-transparent p-0'
+                      />
+                    )}
+                  </div>
+                  <div className='border-input focus-within:border-ring overflow-hidden rounded-lg border transition-colors'>
+                    <Textarea
+                      ref={textareaRef}
+                      aria-label={t('aiInputLabel')}
+                      placeholder={t('aiTextPlaceholder')}
+                      value={ai.aiText}
+                      onChange={(e): void => ai.setAiText(e.target.value)}
+                      className='min-h-24 resize-y rounded-none border-0 bg-transparent px-3 py-3 focus-visible:ring-0'
+                      rows={3}
+                      disabled={ai.isParsing}
+                    />
+                    <div className='border-border bg-muted/20 flex flex-wrap items-start gap-1 border-t p-2'>
+                      <ReceiptUploadButton
+                        disabled={ai.isParsing}
+                        onUploaded={() => onOpenChange(false)}
+                      />
+                      <DictationButton value={ai.aiText} onChange={ai.setAiText} />
+                    </div>
+                  </div>
                 </div>
 
                 {ai.limitReached && (
@@ -528,16 +541,23 @@ export function TransactionForm({
                 )}
 
                 {!ai.limitReached && !ai.skippedReason && (
-                  <>
+                  <div className='flex flex-wrap items-center justify-between gap-3 pt-2'>
+                    <Button
+                      type='button'
+                      variant='ghost'
+                      className='text-muted-foreground hover:text-foreground -ml-2'
+                      onClick={ai.handleCreateManually}>
+                      {t('orCreateManually')}
+                    </Button>
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>
-                          <span className='w-full'>
+                          <span className='ml-auto'>
                             <Button
                               variant='ai'
                               onClick={ai.handleParse}
                               disabled={ai.isParsing || !ai.aiText.trim()}
-                              className='w-full cursor-pointer'>
+                              className='cursor-pointer px-5'>
                               {ai.isParsing ? (
                                 <>
                                   <InlineLoader className='mr-2' />
@@ -555,14 +575,7 @@ export function TransactionForm({
                         {atLimit && <TooltipContent>{t('limitReachedTooltip')}</TooltipContent>}
                       </Tooltip>
                     </TooltipProvider>
-                    <Button
-                      type='button'
-                      variant='outline'
-                      className='w-full'
-                      onClick={ai.handleCreateManually}>
-                      {t('orCreateManually')}
-                    </Button>
-                  </>
+                  </div>
                 )}
               </>
             )}

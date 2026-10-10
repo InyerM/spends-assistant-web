@@ -42,7 +42,7 @@ export function ReceiptUploadButton({
       <Button
         type='button'
         size='sm'
-        variant='outline'
+        variant='ghost'
         disabled={disabled || upload.isPending}
         onClick={() => input.current?.click()}>
         {upload.isPending ? (

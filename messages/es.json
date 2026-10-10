@@ -604,7 +604,8 @@
     "uploadReceipt": "Subir comprobante",
     "uploadingReceipt": "Subiendo…",
     "receiptUploadFailed": "No pudimos subir el comprobante. Reintenta.",
-    "aiInputDescription": "Escribe o pega un movimiento, dicta sus datos o sube un comprobante. Siempre podrás revisarlo antes de guardarlo."
+    "aiInputDescription": "Pega un mensaje bancario o describe tu gasto. Revisa los datos antes de guardarlo.",
+    "aiInputLabel": "Mensaje o descripción"
   },
   "accounts": {
     "title": "Cuentas",
