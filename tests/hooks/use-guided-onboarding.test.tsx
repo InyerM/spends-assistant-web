@@ -33,6 +33,11 @@ it('highlights actual setup actions without posting and destroys its overlay on 
       ]),
     }),
   );
+  const config = factory.mock.calls[0][0] as { onHighlighted: (element: Element) => void };
+  const action = document.createElement('button');
+  config.onHighlighted(action);
+  action.click();
+  expect(destroy).toHaveBeenCalled();
   hook.unmount();
   expect(destroy).toHaveBeenCalled();
 });
