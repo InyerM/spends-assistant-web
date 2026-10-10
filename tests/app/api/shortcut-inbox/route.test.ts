@@ -482,3 +482,36 @@ it('rejects unsupported ordering instead of silently choosing an order', async (
       .status,
   ).toBe(400);
 });
+
+it('rejects unknown message kinds before listing owner mail', async () => {
+  const db = fakeDatabase();
+  getUserClient.mockResolvedValue({ supabase: db.supabase, userId: 'owner-a' });
+  expect(
+    (await GET(new Request('https://example.test/api/shortcut-inbox?kind=invalid') as never))
+      .status,
+  ).toBe(400);
+});
+it('filters a message kind independently from its review status', async () => {
+  const db = fakeDatabase();
+  db.forwardingRoutes.push({
+    user_id: 'owner-a',
+    confirmation_received_at: '2026-10-03T16:00:00Z',
+    user_confirmed_at: '2026-10-03T17:00:00Z',
+  });
+  db.rows.push({
+    id: 'email-1',
+    user_id: 'owner-a',
+    source: 'forwarded_email',
+    status: 'dismissed',
+    message_kind: 'promotion',
+  });
+  getUserClient.mockResolvedValue({ supabase: db.supabase, userId: 'owner-a' });
+  const response = await GET(
+    new Request(
+      'https://example.test/api/shortcut-inbox?source=forwarded_email&kind=promotion&status=all',
+    ) as never,
+  );
+  expect(response.status).toBe(200);
+  expect(db.filters).toContainEqual(['message_kind', 'promotion']);
+  expect((await response.json()).data).toEqual([db.rows[0]]);
+});

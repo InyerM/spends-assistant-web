@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { EMAIL_MESSAGE_KINDS } from '@/types/shortcut-inbox';
 import type { NextRequest } from 'next/server';
 import { AuthError, errorResponse, getUserClient } from '@/lib/api/server';
 import { getShortcutPostClient } from '@/lib/shortcut-inbox/auth';
@@ -73,6 +74,9 @@ export async function GET(request: NextRequest): Promise<Response> {
     const { supabase, userId } = await getUserClient(request);
     const params = new URL(request.url).searchParams;
     const source = params.get('source');
+    const kind = params.get('kind');
+    if (kind && !(EMAIL_MESSAGE_KINDS as readonly string[]).includes(kind))
+      return errorResponse('Invalid email message kind', 400);
     const sort = params.get('sort') ?? 'newest';
     if (!['newest', 'oldest'].includes(sort)) return errorResponse('Invalid inbox sort', 400);
     const itemId = params.get('item_id');
@@ -112,7 +116,7 @@ export async function GET(request: NextRequest): Promise<Response> {
     let query = supabase
       .from('shortcut_inbox_items')
       .select(
-        'id,source,external_id,received_at,raw_text,status,created_at,attachments:documents!documents_email_source_owner_fk(id,file_name,status)',
+        'id,source,external_id,received_at,raw_text,status,message_kind,created_at,attachments:documents!documents_email_source_owner_fk(id,file_name,status)',
         { count: 'exact' },
       )
       .eq('user_id', userId);
@@ -127,6 +131,7 @@ export async function GET(request: NextRequest): Promise<Response> {
     ) {
       query = query.eq('status', status);
     }
+    if (kind) query = query.eq('message_kind', kind);
     if (dateFrom) query = query.gte('received_at', `${dateFrom}T00:00:00-05:00`);
     if (dateTo) {
       const nextDay = new Date(`${dateTo}T00:00:00Z`);

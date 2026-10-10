@@ -391,7 +391,20 @@
     "senderConfirmFailed": "We could not save the confirmation. Try again.",
     "cancelSenderConfirmation": "Cancel",
     "confirmingSender": "Saving…",
-    "confirmSender": "Confirm sender"
+    "confirmSender": "Confirm sender",
+    "kindFilter": "Message type",
+    "allKinds": "All message types",
+    "allStatuses": "All review statuses",
+    "kind_purchase": "Purchases and payments",
+    "kind_transfer": "Transfers and withdrawals",
+    "kind_income": "Income and refunds",
+    "kind_statement": "Statements",
+    "kind_promotion": "Promotions",
+    "kind_informational": "Information",
+    "kind_security": "Security",
+    "kind_spam": "Possible spam",
+    "kind_uncertain": "Unclassified",
+    "kind_financial_document": "Other financial documents"
   },
   "transactions": {
     "originalEvidence": "Original evidence",

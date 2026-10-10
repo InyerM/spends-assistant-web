@@ -391,7 +391,20 @@
     "senderConfirmFailed": "No pudimos guardar la confirmación. Inténtalo de nuevo.",
     "cancelSenderConfirmation": "Cancelar",
     "confirmingSender": "Guardando…",
-    "confirmSender": "Confirmar remitente"
+    "confirmSender": "Confirmar remitente",
+    "kindFilter": "Tipo de correo",
+    "allKinds": "Todos los tipos",
+    "allStatuses": "Todos los estados",
+    "kind_purchase": "Compras y pagos",
+    "kind_transfer": "Transferencias y retiros",
+    "kind_income": "Ingresos y devoluciones",
+    "kind_statement": "Extractos",
+    "kind_promotion": "Promociones",
+    "kind_informational": "Informativos",
+    "kind_security": "Seguridad",
+    "kind_spam": "Posible spam",
+    "kind_uncertain": "Por clasificar",
+    "kind_financial_document": "Otros documentos financieros"
   },
   "transactions": {
     "originalEvidence": "Origen de la transacción",

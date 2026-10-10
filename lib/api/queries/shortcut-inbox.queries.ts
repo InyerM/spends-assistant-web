@@ -1,9 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
 import { useAuthStore } from '@/store/auth-store';
-import type { InboxList } from '@/types/shortcut-inbox';
+import type { EmailMessageKind, InboxList } from '@/types/shortcut-inbox';
 
 interface InboxFilters {
   page: number;
+  kind?: EmailMessageKind;
   item_id?: string;
   status: string;
   source?: 'forwarded_email';
@@ -22,6 +23,7 @@ export async function fetchShortcutInbox(
     limit: '20',
     status: filters.status,
   });
+  if (filters.kind) params.set('kind', filters.kind);
   if (filters.sort) params.set('sort', filters.sort);
   if (filters.item_id) params.set('item_id', filters.item_id);
   if (filters.source) params.set('source', filters.source);

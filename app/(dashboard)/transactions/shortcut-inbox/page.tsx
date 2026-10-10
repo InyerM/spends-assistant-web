@@ -1,5 +1,7 @@
 'use client';
 
+import { EMAIL_MESSAGE_KINDS, type EmailMessageKind } from '@/types/shortcut-inbox';
+
 import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { useShortcutInbox } from '@/lib/api/queries/shortcut-inbox.queries';
@@ -79,7 +81,7 @@ function LuloPreview({ preview }: { preview: LuloNoticePreview }): React.ReactEl
           {t(preview.confidence === 'structured' ? 'luloStructured' : 'luloLow')}
         </span>
       </div>
-      <dl className='grid gap-x-4 gap-y-2 sm:grid-cols-2 lg:grid-cols-3'>
+      <dl className='grid gap-x-4 gap-y-2 sm:grid-cols-2 lg:grid-cols-4'>
         <div>
           <dt className='text-muted-foreground'>{t('luloEmailTime')}</dt>
           <dd>{formatBogotaDate(preview.messageReceivedAt)}</dd>
@@ -127,6 +129,7 @@ export default function ShortcutInboxPage({
   const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const [filter, setFilter] = useState('pending');
+  const [messageKind, setMessageKind] = useState<EmailMessageKind | 'all'>('all');
   const [sort, setSort] = useState<'newest' | 'oldest'>('newest');
   const [completedById, setCompletedById] = useState<
     Partial<Record<string, { item: InboxItem; viewKey: string }>>
@@ -145,6 +148,7 @@ export default function ShortcutInboxPage({
   }, [searchText, search]);
   const inbox = useShortcutInbox({
     page,
+    kind: messageKind === 'all' ? undefined : messageKind,
     sort,
     item_id: itemId,
     status: filter,
@@ -153,7 +157,17 @@ export default function ShortcutInboxPage({
     date_from: dateFrom || undefined,
     date_to: dateTo || undefined,
   });
-  const viewKey = JSON.stringify([page, filter, sort, search, dateFrom, dateTo, itemId, source]);
+  const viewKey = JSON.stringify([
+    page,
+    filter,
+    messageKind,
+    sort,
+    search,
+    dateFrom,
+    dateTo,
+    itemId,
+    source,
+  ]);
   const rows = inbox.data?.data ?? [];
   const retained = Object.values(completedById).filter(
     (entry): entry is { item: InboxItem; viewKey: string } =>
@@ -340,10 +354,10 @@ export default function ShortcutInboxPage({
         className={
           itemId
             ? 'hidden'
-            : 'border-border bg-card grid gap-4 rounded-xl border p-4 sm:grid-cols-2 lg:grid-cols-3'
+            : 'border-border bg-card grid gap-4 rounded-xl border p-4 sm:grid-cols-2 lg:grid-cols-4'
         }>
         <form
-          className='flex min-w-0 items-center gap-2 sm:col-span-2 lg:col-span-3'
+          className='flex min-w-0 items-center gap-2 sm:col-span-2 lg:col-span-4'
           onSubmit={(event): void => {
             event.preventDefault();
             setPage(1);
@@ -378,6 +392,7 @@ export default function ShortcutInboxPage({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
+              <SelectItem value='all'>{t('allStatuses')}</SelectItem>
               <SelectItem value='pending'>{t('pending')}</SelectItem>
               <SelectItem value='non_transaction'>{t('nonTransaction')}</SelectItem>
               <SelectItem value='dismissed'>{t('dismissed')}</SelectItem>
@@ -386,6 +401,31 @@ export default function ShortcutInboxPage({
             </SelectContent>
           </Select>
         </div>
+
+        {source === 'forwarded_email' && (
+          <div className='min-w-0 space-y-2'>
+            <label className='block text-sm font-medium'>{t('kindFilter')}</label>
+            <Select
+              value={messageKind}
+              onValueChange={(value): void => {
+                setMessageKind(value as EmailMessageKind | 'all');
+                setFilter('all');
+                setPage(1);
+              }}>
+              <SelectTrigger className='w-full' aria-label={t('kindFilter')}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value='all'>{t('allKinds')}</SelectItem>
+                {EMAIL_MESSAGE_KINDS.map((kind) => (
+                  <SelectItem key={kind} value={kind}>
+                    {t(`kind_${kind}`)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
 
         <div className='min-w-0 space-y-2'>
           <label className='block text-sm font-medium'>{t('sortLabel')}</label>
@@ -474,6 +514,22 @@ export default function ShortcutInboxPage({
                       <Badge variant='outline'>
                         {item.source === 'forwarded_email' ? t('forwardedSource') : item.source}
                       </Badge>
+                      {source === 'forwarded_email' && (
+                        <Badge
+                          variant='outline'
+                          className={
+                            item.message_kind === 'spam'
+                              ? 'border-destructive/30 bg-destructive/10 text-destructive'
+                              : item.message_kind === 'purchase' || item.message_kind === 'income'
+                                ? 'border-success/30 bg-success/10 text-success'
+                                : item.message_kind === 'statement' ||
+                                    item.message_kind === 'security'
+                                  ? 'border-brand-secondary/30 bg-brand-secondary/10 text-brand-secondary'
+                                  : 'border-border bg-muted/30 text-muted-foreground'
+                          }>
+                          {t(`kind_${item.message_kind ?? 'uncertain'}`)}
+                        </Badge>
+                      )}
                       <Badge
                         variant={item.status === 'pending' ? 'secondary' : 'outline'}
                         className={
