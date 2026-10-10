@@ -79,7 +79,8 @@
     "addTransaction": "Adicionar transação",
     "unlimitedAi": "Análises de IA sem limite",
     "financialChat": "Assistente IA",
-    "notifications": "Notificações"
+    "notifications": "Notificações",
+    "contacts": "Contatos e estabelecimentos"
   },
   "budgets": {
     "eyebrow": "Plano mensal",
@@ -1207,5 +1208,39 @@
     "previous": "Anterior",
     "next": "Próxima",
     "page": "Página {page} de {pages} · {count} notificações"
+  },
+  "contacts": {
+    "title": "Contatos e estabelecimentos",
+    "subtitle": "Veja para quem envia dinheiro e onde compra. O histórico reúne transações confirmadas.",
+    "name": "Nome de identificação",
+    "save": "Salvar nome",
+    "saved": "Nome atualizado",
+    "failed": "Não foi possível carregar ou atualizar os contatos. Tente novamente.",
+    "movements": "{count} transações",
+    "sent": "Enviado e gasto",
+    "received": "Recebido",
+    "recent": "Transações recentes",
+    "latestOnly": "Mostrando as 100 transações mais recentes.",
+    "scan": "Revisar todas as transações",
+    "scanning": "Revisando {count} transações…",
+    "scanDone": "Histórico de contatos atualizado",
+    "search": "Buscar nome, estabelecimento ou identificador",
+    "clear": "Limpar busca",
+    "coverage": "{scanned} de {total} transações revisadas",
+    "unresolved": "{count} sem destinatário ou estabelecimento identificado",
+    "empty": "Seu histórico reúne seus contatos",
+    "emptyHint": "Revise suas transações para encontrar destinatários e estabelecimentos. Dados incompletos ficam sem identificação.",
+    "noMatches": "Nenhum resultado encontrado",
+    "searchHint": "Tente outro nome ou número.",
+    "previous": "Anterior",
+    "next": "Próximo",
+    "kind": {
+      "account": "Conta de destino",
+      "nequi": "Nequi",
+      "payment_key": "Chave de pagamento",
+      "merchant": "Estabelecimento"
+    },
+    "categoryHistory": "Categorias do seu histórico",
+    "uncategorized": "Sem categoria"
   }
 }

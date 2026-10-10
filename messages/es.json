@@ -79,7 +79,8 @@
     "addTransaction": "Añadir transacción",
     "unlimitedAi": "Análisis IA sin límite",
     "financialChat": "Asistente IA",
-    "notifications": "Notificaciones"
+    "notifications": "Notificaciones",
+    "contacts": "Contactos y comercios"
   },
   "budgets": {
     "eyebrow": "Plan mensual",
@@ -1321,5 +1322,39 @@
     "previous": "Anterior",
     "next": "Siguiente",
     "page": "Página {page} de {pages} · {count} notificaciones"
+  },
+  "contacts": {
+    "title": "Contactos y comercios",
+    "subtitle": "Consulta a quién envías dinero y dónde compras. El historial reúne tus movimientos confirmados.",
+    "name": "Nombre para identificarlo",
+    "save": "Guardar nombre",
+    "saved": "Nombre actualizado",
+    "failed": "No pudimos cargar o actualizar los contactos. Inténtalo de nuevo.",
+    "movements": "{count} movimientos",
+    "sent": "Enviado y gastado",
+    "received": "Recibido",
+    "recent": "Movimientos recientes",
+    "latestOnly": "Se muestran los 100 movimientos más recientes.",
+    "scan": "Revisar todos los movimientos",
+    "scanning": "Revisando {count} movimientos…",
+    "scanDone": "Historial de contactos actualizado",
+    "search": "Buscar nombre, comercio o identificador",
+    "clear": "Limpiar búsqueda",
+    "coverage": "{scanned} de {total} movimientos revisados",
+    "unresolved": "{count} sin destinatario o comercio identificado",
+    "empty": "Tu historial reúne tus contactos",
+    "emptyHint": "Revisa tus movimientos para encontrar destinatarios y comercios. Los datos incompletos quedan pendientes de identificar.",
+    "noMatches": "No encontramos coincidencias",
+    "searchHint": "Prueba con otro nombre o número.",
+    "previous": "Anterior",
+    "next": "Siguiente",
+    "kind": {
+      "account": "Cuenta de destino",
+      "nequi": "Nequi",
+      "payment_key": "Llave de pago",
+      "merchant": "Comercio"
+    },
+    "categoryHistory": "Categorías de tus movimientos",
+    "uncategorized": "Sin categoría"
   }
 }

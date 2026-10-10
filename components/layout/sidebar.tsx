@@ -27,6 +27,7 @@ import {
   Target,
   ChevronDown,
   MessageCircle,
+  Users,
 } from 'lucide-react';
 import { AnottoWordmark } from '@/components/layout/anotto-wordmark';
 import { Button } from '@/components/ui/button';
@@ -69,6 +70,7 @@ const navGroups: { titleKey: string; items: NavItem[] }[] = [
     titleKey: 'planningGroup',
     items: [
       { titleKey: 'budgets', href: '/budgets', icon: Target },
+      { titleKey: 'contacts', href: '/contacts', icon: Users },
       { titleKey: 'categories', href: '/categories', icon: Tags },
       { titleKey: 'automation', href: '/automation', icon: Zap },
     ],

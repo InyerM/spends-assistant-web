@@ -79,7 +79,8 @@
     "addTransaction": "Add transaction",
     "unlimitedAi": "Unlimited AI analyses",
     "financialChat": "AI assistant",
-    "notifications": "Notifications"
+    "notifications": "Notifications",
+    "contacts": "Contacts and merchants"
   },
   "budgets": {
     "eyebrow": "Monthly plan",
@@ -1324,5 +1325,39 @@
     "previous": "Previous",
     "next": "Next",
     "page": "Page {page} of {pages} · {count} notifications"
+  },
+  "contacts": {
+    "title": "Contacts and merchants",
+    "subtitle": "See whom you send money to and where you shop. Your history uses confirmed transactions.",
+    "name": "Display name",
+    "save": "Save name",
+    "saved": "Name updated",
+    "failed": "We could not load or update contacts. Try again.",
+    "movements": "{count} transactions",
+    "sent": "Sent and spent",
+    "received": "Received",
+    "recent": "Recent transactions",
+    "latestOnly": "Showing the 100 most recent transactions.",
+    "scan": "Review all transactions",
+    "scanning": "Reviewing {count} transactions…",
+    "scanDone": "Contact history updated",
+    "search": "Search name, merchant or identifier",
+    "clear": "Clear search",
+    "coverage": "{scanned} of {total} transactions reviewed",
+    "unresolved": "{count} without an identified recipient or merchant",
+    "empty": "Your history brings your contacts together",
+    "emptyHint": "Review your transactions to find recipients and merchants. Incomplete evidence remains unidentified.",
+    "noMatches": "No matches found",
+    "searchHint": "Try another name or number.",
+    "previous": "Previous",
+    "next": "Next",
+    "kind": {
+      "account": "Destination account",
+      "nequi": "Nequi",
+      "payment_key": "Payment key",
+      "merchant": "Merchant"
+    },
+    "categoryHistory": "Categories in your history",
+    "uncategorized": "Uncategorized"
   }
 }

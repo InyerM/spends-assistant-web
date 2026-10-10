@@ -1,0 +1,43 @@
+import { beforeEach, expect, it, vi } from 'vitest';
+vi.mock('@/lib/api/server', () => ({
+  getUserClient: vi.fn(),
+  AuthError: class extends Error {},
+  errorResponse: (error: string, status = 500) => Response.json({ error }, { status }),
+}));
+import { getUserClient } from '@/lib/api/server';
+import { GET, POST } from '@/app/api/contacts/route';
+const rpc = vi.fn();
+beforeEach(() => {
+  vi.clearAllMocks();
+  vi.mocked(getUserClient).mockResolvedValue({
+    userId: 'owner',
+    accessToken: 'test',
+    supabase: { rpc } as never,
+  });
+});
+it('bounds scan pages and returns the owner-scoped catalog', async () => {
+  rpc.mockResolvedValue({ data: { items: [], count: 0 }, error: null });
+  expect((await GET(new Request('https://my.anotto.app/api/contacts?q=demo&page=1'))).status).toBe(
+    200,
+  );
+  expect(rpc).toHaveBeenCalledWith('list_counterparties', {
+    p_query: 'demo',
+    p_offset: 0,
+    p_limit: 50,
+  });
+  expect(
+    (
+      await POST(
+        new Request('https://my.anotto.app/api/contacts', {
+          method: 'POST',
+          body: '{"after":"bad"}',
+        }),
+      )
+    ).status,
+  ).toBe(400);
+  expect(
+    (await POST(new Request('https://my.anotto.app/api/contacts', { method: 'POST', body: '{}' })))
+      .status,
+  ).toBe(200);
+  expect(rpc).toHaveBeenCalledWith('scan_counterparty_catalog', { p_after: null, p_limit: 200 });
+});
