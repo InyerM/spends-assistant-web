@@ -15,8 +15,9 @@ import {
 } from '@/lib/planning';
 export function DashboardControls(): React.ReactElement {
   const t = useTranslations('dashboardWidgets');
-  const { data } = usePlanning();
+  const { data, isPending: loading } = usePlanning();
   const save = useSavePlanning();
+  const blocked = save.isPending || loading;
   const now = new Date();
   const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
   const { data: budgets } = useMonthlyBudgets(month);
@@ -48,14 +49,14 @@ export function DashboardControls(): React.ReactElement {
               onDragOver={(event) => event.preventDefault()}
               onDrop={(event) => {
                 event.preventDefault();
-                if (!save.isPending)
+                if (!blocked)
                   update(reorderWidget(widgets, event.dataTransfer.getData('text/plain'), id));
               }}
               className='flex items-center justify-between gap-3 py-3'>
               <label className='flex min-w-0 items-center gap-3'>
                 <Checkbox
                   checked={index >= 0}
-                  disabled={save.isPending || (!available && index < 0)}
+                  disabled={blocked || (!available && index < 0)}
                   onCheckedChange={(value) =>
                     update(value ? [...widgets, id] : widgets.filter((widget) => widget !== id))
                   }
@@ -72,7 +73,7 @@ export function DashboardControls(): React.ReactElement {
                   <Button
                     variant='ghost'
                     size='icon'
-                    disabled={save.isPending || index === 0}
+                    disabled={blocked || index === 0}
                     aria-label={t('up', { name: t(id) })}
                     onClick={() => update(moveWidget(widgets, index, -1))}>
                     <ArrowUp className='size-4' aria-hidden='true' />
@@ -80,13 +81,13 @@ export function DashboardControls(): React.ReactElement {
                   <Button
                     variant='ghost'
                     size='icon'
-                    disabled={save.isPending || index === widgets.length - 1}
+                    disabled={blocked || index === widgets.length - 1}
                     aria-label={t('down', { name: t(id) })}
                     onClick={() => update(moveWidget(widgets, index, 1))}>
                     <ArrowDown className='size-4' aria-hidden='true' />
                   </Button>
                   <span
-                    draggable={!save.isPending}
+                    draggable={!blocked}
                     onDragStart={(event) => event.dataTransfer.setData('text/plain', id)}
                     aria-hidden='true'
                     className='text-muted-foreground cursor-grab p-2 active:cursor-grabbing'>

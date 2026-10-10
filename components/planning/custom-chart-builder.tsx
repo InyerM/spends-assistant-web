@@ -10,7 +10,7 @@ import { useSavePlanning } from '@/lib/api/mutations/planning.mutations';
 import { customCharts, type CustomChart } from '@/lib/custom-charts';
 export function CustomChartBuilder(): React.ReactElement {
   const t = useTranslations('customCharts');
-  const { data } = usePlanning();
+  const { data, isPending: loading } = usePlanning();
   const { data: accounts } = useAccounts();
   const save = useSavePlanning();
   const charts = customCharts(data?.preferences.dashboard_custom_charts);
@@ -38,7 +38,7 @@ export function CustomChartBuilder(): React.ReactElement {
             <Button
               variant='outline'
               size='sm'
-              disabled={index === 0 || save.isPending}
+              disabled={index === 0 || save.isPending || loading}
               onClick={() => {
                 const next = [...charts];
                 [next[index - 1], next[index]] = [next[index], next[index - 1]];
@@ -49,7 +49,7 @@ export function CustomChartBuilder(): React.ReactElement {
             <Button
               variant='outline'
               size='sm'
-              disabled={save.isPending}
+              disabled={save.isPending || loading}
               onClick={() => update(charts.filter((c) => c.id !== chart.id))}>
               {t('remove')}
             </Button>
@@ -111,7 +111,7 @@ export function CustomChartBuilder(): React.ReactElement {
               onValueChange={setAccount}
             />
           </label>
-          <Button className='self-end' disabled={save.isPending || !name.trim()}>
+          <Button className='self-end' disabled={save.isPending || loading || !name.trim()}>
             {t('add')}
           </Button>
         </form>

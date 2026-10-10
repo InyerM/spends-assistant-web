@@ -87,7 +87,11 @@ export default function DashboardPage(): React.ReactElement {
         {widgets.map((id) => (
           <div
             key={id}
-            className={id === 'accounts' || id === 'nature' ? 'min-w-0 xl:col-span-2' : 'min-w-0'}>
+            className={
+              id === 'accounts' || id === 'nature'
+                ? 'min-w-0 empty:hidden xl:col-span-2'
+                : 'min-w-0 empty:hidden'
+            }>
             {id === 'accounts' && (
               <BalanceOverview
                 onEditAccount={setEditingAccount}
