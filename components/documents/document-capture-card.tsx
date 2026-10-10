@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { InlineLoader } from '@/components/shared/loader';
+import { StatementReconciliation } from '@/components/documents/statement-reconciliation';
 import { DocumentBatchReview } from '@/components/documents/document-batch-review';
 import { DocumentReviewedList } from '@/components/documents/document-reviewed-list';
 import type { ReviewHistoryObservation } from '@/lib/document-review';
@@ -144,18 +145,22 @@ export function DocumentCaptureCard({
               {t('observations')} · {document.document_observations.length}
             </summary>
             <div className='mt-4 space-y-4'>
-              <DocumentBatchReview
-                documentId={document.id}
-                rows={document.document_observations.map((observation) => ({
-                  ...observation,
-                  document_type: document.document_type,
-                }))}
-                history={history}
-                accounts={accounts}
-                categories={categories}
-                suggestions={suggestions}
-                onRefresh={onRefresh}
-              />
+              {document.document_type === 'statement' ? (
+                <StatementReconciliation documentId={document.id} accounts={accounts} />
+              ) : (
+                <DocumentBatchReview
+                  documentId={document.id}
+                  rows={document.document_observations.map((observation) => ({
+                    ...observation,
+                    document_type: document.document_type,
+                  }))}
+                  history={history}
+                  accounts={accounts}
+                  categories={categories}
+                  suggestions={suggestions}
+                  onRefresh={onRefresh}
+                />
+              )}
               {document.document_observations.length === 0 && (
                 <p className='text-muted-foreground text-sm'>{t('noObservations')}</p>
               )}

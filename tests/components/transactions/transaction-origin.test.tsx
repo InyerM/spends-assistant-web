@@ -9,17 +9,19 @@ afterEach(() => {
 });
 describe('transaction origin', () => {
   it('links the original document and expands the received email using the shared evidence view', async () => {
-    const fetch = vi.fn().mockResolvedValue(
-      Response.json({
-        document: { id: 'doc', file_name: 'Synthetic receipt.pdf' },
-        inbox: {
-          id: 'mail',
-          source: 'forwarded_email',
-          raw_text:
-            'From (unverified): notices@bank.example\n\nSynthetic original subject\n\nSynthetic original body',
-          received_at: '2026-10-08T12:00:00Z',
-        },
-      }),
+    const fetch = vi.fn().mockImplementation(async (url: string) =>
+      url.startsWith('/api/statements/proofs')
+        ? Response.json({ data: [] })
+        : Response.json({
+            document: { id: 'doc', file_name: 'Synthetic receipt.pdf' },
+            inbox: {
+              id: 'mail',
+              source: 'forwarded_email',
+              raw_text:
+                'From (unverified): notices@bank.example\n\nSynthetic original subject\n\nSynthetic original body',
+              received_at: '2026-10-08T12:00:00Z',
+            },
+          }),
     );
     vi.stubGlobal('fetch', fetch);
     render(

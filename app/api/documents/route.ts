@@ -1,3 +1,6 @@
+import { withStatementProofs } from '@/lib/statement-document-status';
+import type { StoredDocument } from '@/lib/api/queries/document.queries';
+import type { StatementProof } from '@/lib/statement-reconciliation';
 import type { NextRequest } from 'next/server';
 import { AuthError, errorResponse, getUserClient } from '@/lib/api/server';
 import { validateDocumentFile } from '@/lib/documents';
@@ -15,7 +18,26 @@ export async function GET(request: Request): Promise<Response> {
       .eq('user_id', userId)
       .order('created_at', { ascending: false });
     if (error) return errorResponse(error.message, 400);
-    return Response.json({ data }, { headers: privateHeaders });
+    const documents = data as StoredDocument[];
+    const proofs: StatementProof[] = [];
+    if (documents.some((document) => document.document_type === 'statement')) {
+      for (let offset = 0; offset < 20000; offset += 1000) {
+        const result = await supabase
+          .from('statement_reconciliation_proofs')
+          .select('id,document_id,observation_id,transaction_id,file_name,valid')
+          .eq('user_id', userId)
+          .order('id')
+          .range(offset, offset + 999);
+        if (result.error) return errorResponse('Could not load statement evidence');
+        proofs.push(...(result.data as StatementProof[]));
+        if (result.data.length < 1000) break;
+        if (offset === 19000) return errorResponse('Statement evidence exceeds review limit', 422);
+      }
+    }
+    return Response.json(
+      { data: documents.map((document) => withStatementProofs(document, proofs)) },
+      { headers: privateHeaders },
+    );
   } catch (error) {
     return error instanceof AuthError
       ? errorResponse('Unauthorized', 401)

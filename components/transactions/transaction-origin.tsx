@@ -1,5 +1,6 @@
 'use client';
 
+import { StatementEvidence } from '@/components/transactions/statement-evidence';
 import { useState } from 'react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
@@ -16,16 +17,18 @@ export function TransactionOrigin({
   const t = useTranslations('transactions');
   const query = useTransactionOrigin(transactionId);
   const [expanded, setExpanded] = useState(false);
+  if (query.isPending) return null;
   if (query.isError)
     return (
       <p className='text-muted-foreground text-sm' role='status'>
         {t('originUnavailable')}
       </p>
     );
-  const { document, inbox } = query.data ?? { document: null, inbox: null };
-  if (!document && !inbox) return null;
+  const { document, inbox } = query.data;
+  if (!document && !inbox) return <StatementEvidence transactionId={transactionId} />;
   return (
     <div className='border-border max-w-full min-w-0 space-y-3 rounded-lg border p-3'>
+      <StatementEvidence transactionId={transactionId} />
       <p className='text-muted-foreground text-xs font-medium'>{t('originalEvidence')}</p>
       {document && (
         <Button variant='outline' size='sm' className='max-w-full min-w-0' asChild>

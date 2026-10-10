@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { TransactionOrigin } from '@/components/transactions/transaction-origin';
 import { useParams } from 'next/navigation';
 import { useLocale, useTranslations } from 'next-intl';
 import { ArrowLeft, ArrowDownLeft, ArrowRightLeft, ArrowUpRight } from 'lucide-react';
@@ -65,6 +66,7 @@ export default function TransactionDetailPage(): React.ReactElement {
             </div>
           </CardHeader>
           <CardContent>
+            <TransactionOrigin transactionId={id} />
             <dl className='border-border grid gap-4 border-t pt-4 text-sm sm:grid-cols-2'>
               <div>
                 <dt className='text-muted-foreground'>{t('type')}</dt>

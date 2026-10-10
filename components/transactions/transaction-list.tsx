@@ -1,5 +1,6 @@
 'use client';
 
+import { useStatementProofs } from '@/lib/api/queries/statement.queries';
 import { useMemo, useState } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
 import { Badge } from '@/components/ui/badge';
@@ -131,6 +132,7 @@ function MetadataField({
 
 interface TransactionRowProps {
   tx: Transaction;
+  statementStatus?: 'valid' | 'changed';
   categoryInfo: { name: string; color: string | null } | null;
   accountName: string;
   locale: string;
@@ -146,6 +148,7 @@ interface TransactionRowProps {
 
 function TransactionRow({
   tx,
+  statementStatus,
   categoryInfo,
   accountName,
   locale,
@@ -177,6 +180,7 @@ function TransactionRow({
                 ? t('reliefOutlay')
                 : null;
 
+  const tStatement = useTranslations('statementReconciliation');
   const longPressHandlers = useLongPress({
     onLongPress: (): void => onLongPress?.(tx.id),
   });
@@ -223,6 +227,17 @@ function TransactionRow({
             )}
           </div>
           <p className='text-muted-foreground truncate text-xs'>{accountName}</p>
+          {statementStatus && (
+            <Badge
+              variant='outline'
+              className={
+                statementStatus === 'valid'
+                  ? 'border-success/30 bg-success/10 text-success text-[10px]'
+                  : 'border-warning/30 text-warning text-[10px]'
+              }>
+              {tStatement(statementStatus === 'valid' ? 'reconciled' : 'changed')}
+            </Badge>
+          )}
           {categoryInfo && (
             <Badge
               variant='secondary'
@@ -307,6 +322,9 @@ export function TransactionList({
   const locale = useLocale();
   const { data, isLoading, hasNextPage, fetchNextPage, isFetchingNextPage } =
     useInfiniteTransactions(filters);
+  const { data: statementProofs } = useStatementProofs(
+    data?.pages.flatMap((page) => page.data.map((tx) => tx.id)) ?? [],
+  );
   const { data: categories } = useCategories();
   const { data: accounts } = useAccounts();
   const bottomRef = useInfiniteScroll({ fetchNextPage, hasNextPage, isFetchingNextPage });
@@ -399,6 +417,13 @@ export function TransactionList({
               <TransactionRow
                 key={tx.id}
                 tx={tx}
+                statementStatus={
+                  statementProofs?.some((p) => p.transaction_id === tx.id && p.valid)
+                    ? 'valid'
+                    : statementProofs?.some((p) => p.transaction_id === tx.id)
+                      ? 'changed'
+                      : undefined
+                }
                 categoryInfo={getCategory(tx.category_id)}
                 accountName={getAccountName(tx.account_id)}
                 locale={locale}
