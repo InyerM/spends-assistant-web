@@ -123,3 +123,18 @@ it('parses a card repayment from the bancolombia.com.co sender without treating 
     ),
   ).toBeNull();
 });
+
+it('reads an incoming transfer with a named sender before the amount', () => {
+  const result = previewBancolombiaNotice(
+    'forwarded_email',
+    `${sender}¡Listo! Bancolombia: ANA, recibiste una transferencia de ACME S.A.S. por $320,945.75 en tu cuenta *1234 conectada a la llave 3001112233 el 27/09/26 a las 09:40. Con llaves es de una.`,
+  );
+  expect(result).toMatchObject({
+    kind: 'income',
+    amountDecimal: '320945.75',
+    date: '2026-09-27',
+    time: '09:40',
+    sourceLastFour: '1234',
+    sourceKind: 'debit',
+  });
+});

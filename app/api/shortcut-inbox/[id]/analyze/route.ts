@@ -165,6 +165,7 @@ export async function POST(request: Request, context: Context): Promise<Response
     let validRuleCategory: string | null = null;
     const bankPreview = previewBancolombiaNotice(inboxFields.source, inboxFields.raw_text);
     const cachedType =
+      (bankPreview?.kind === 'income' ? 'income' : null) ??
       cached?.suggested_type ??
       (bankPreview
         ? bankPreview.kind === 'income'
@@ -200,7 +201,7 @@ export async function POST(request: Request, context: Context): Promise<Response
         .eq('account_id', accountId)
         .eq('type', 'expense')
         .is('deleted_at', null)
-        .ilike('raw_text', `%*${recipient}%`)
+        .ilike('raw_text', `%${recipient}%`)
         .order('date', { ascending: false })
         .limit(21);
       if (historyError) return errorResponse('Email history lookup failed');
@@ -337,17 +338,22 @@ export async function POST(request: Request, context: Context): Promise<Response
 
     if (cached?.analysis_version === 2) {
       const nextCategory =
-        validRuleCategory ?? (cached.category_source === 'automation' ? null : cached.category_id);
+        validRuleCategory ??
+        (cached.category_source === 'automation' ||
+        (bankPreview?.kind === 'income' && cached.suggested_type !== 'income')
+          ? null
+          : cached.category_id);
       const nextSource = validRuleCategory
         ? matchedRule
           ? 'automation'
           : 'review_context'
-        : cached.category_source === 'automation'
+        : !nextCategory || cached.category_source === 'automation'
           ? null
           : cached.category_source;
       if (
         (!ruleNote || cached.notes === ruleNote) &&
         (!ruleDescription || cached.description === ruleDescription) &&
+        cached.suggested_type === cachedType &&
         cached.account_id === accountId &&
         cached.category_id === nextCategory &&
         cached.category_source === nextSource
@@ -373,6 +379,7 @@ export async function POST(request: Request, context: Context): Promise<Response
       const { data: updated, error: updateError } = await supabase
         .from('forwarded_email_analyses')
         .update({
+          suggested_type: cachedType,
           account_id: accountId,
           category_id: nextCategory,
           category_source: nextSource,
@@ -453,11 +460,14 @@ export async function POST(request: Request, context: Context): Promise<Response
         };
       }
     }
-    const suggestedType = parsed
-      ? 'expense'
-      : suggestion.type === 'expense' || suggestion.type === 'income'
-        ? suggestion.type
-        : null;
+    const suggestedType =
+      bankPreview?.kind === 'income'
+        ? 'income'
+        : parsed
+          ? 'expense'
+          : suggestion.type === 'expense' || suggestion.type === 'income'
+            ? suggestion.type
+            : null;
     if (
       suggestedType &&
       typeof suggestion.category_id === 'string' &&

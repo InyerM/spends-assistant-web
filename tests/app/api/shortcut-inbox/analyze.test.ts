@@ -706,3 +706,30 @@ it('returns parsed card repayment evidence without relying on the unavailable AI
   });
   expect(fetch).not.toHaveBeenCalled();
 });
+
+it('recovers the explicit amount and time of a cached incoming transfer and corrects its proposed type', async () => {
+  const db = fakeDb({
+    inbox: {
+      ...inbox,
+      raw_text:
+        'From (unverified): alerts@notificacionesbancolombia.com\nBancolombia: ANA, recibiste una transferencia de ACME S.A.S. por $320,945.75 en tu cuenta *1234 conectada a la llave 3001112233 el 27/09/26 a las 09:40.',
+    },
+    cached: {
+      inbox_item_id: inbox.id,
+      analysis_version: 2,
+      suggested_type: 'expense',
+      amount: null,
+      bank_event_at: null,
+      category_id: null,
+      category_source: null,
+      account_id: null,
+    },
+  });
+  getUserClient.mockResolvedValue({ userId: 'owner-a', accessToken: 'test-jwt', supabase: db });
+  const response = await POST(request(), context);
+  expect(await response.json()).toMatchObject({
+    amount: 320945.75,
+    bank_event_at: '2026-09-27T09:40:00-05:00',
+    suggested_type: 'income',
+  });
+});

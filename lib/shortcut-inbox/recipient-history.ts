@@ -6,18 +6,35 @@ export interface RecipientHistoryRow {
 }
 
 export function recipientFromEmail(rawText: string): string | null {
-  const recipients = [...rawText.matchAll(/\ba\s+la\s+cuenta\s+\*(\d{4,12})\b/giu)];
-  return recipients.length === 1 ? recipients[0][1] : null;
+  // Read explicit destinations only; owned source accounts and incoming keys are excluded.
+  const recipients = [
+    ...rawText.matchAll(
+      /\b(?:a\s+la\s+cuenta\s*\*?|a\s+(?:la\s+)?(?:llave|nequi)\s*\*?)\s*(\d{4,12})\b/giu,
+    ),
+  ]
+    .filter(
+      (match) =>
+        !/\bconectad[ao]\s*$/iu.test(rawText.slice(Math.max(0, match.index! - 20), match.index)),
+    )
+    .map((match) => match[1]);
+  const unique = [...new Set(recipients)];
+  return unique.length === 1 ? unique[0] : null;
 }
 
-/** History remains a proposal; conflicting purposes never establish a recipient category. */
+/** History is a proposal. A divided history cannot establish a recipient category. */
 export function suggestRecipientHistory(
   recipient: string,
   rows: RecipientHistoryRow[],
 ): RecipientHistoryRow | null {
   if (!/^\d{4,12}$/u.test(recipient)) return null;
-  const target = new RegExp(`\\b(?:a|hacia|destino)[\\s\\S]{0,45}\\*${recipient}(?!\\d)`, 'iu');
-  const matches = rows.filter((row) => row.category_id && target.test(row.raw_text ?? ''));
-  if (matches.length < 2 || new Set(matches.map((row) => row.category_id)).size !== 1) return null;
-  return matches[0];
+  const matches = rows.filter(
+    (row) => row.category_id && recipientFromEmail(row.raw_text ?? '') === recipient,
+  );
+  if (matches.length < 2) return null;
+  const counts = new Map<string, number>();
+  for (const row of matches) counts.set(row.category_id!, (counts.get(row.category_id!) ?? 0) + 1);
+  const ranked = [...counts].sort((a, b) => b[1] - a[1]);
+  const [category, count] = ranked[0];
+  if (ranked.length > 1 && (count < 3 || count / matches.length < 0.9)) return null;
+  return matches.find((row) => row.category_id === category) ?? null;
 }

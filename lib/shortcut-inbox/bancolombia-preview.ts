@@ -63,7 +63,7 @@ export function previewBancolombiaNotice(
   const decoded = decodeEmailEntities(rawText).replace(/\s+/gu, ' ');
   const matches = [
     ...decoded.matchAll(
-      /\bBancolombia:\s*(?:[\p{L}][\p{L} .'-]{0,139}?\s+)?(Compraste|Transferiste|Pagaste|Retiraste|Recibiste|Consignaste)\b(?=\s+(?:COP|USD|\$))/giu,
+      /\bBancolombia:\s*(?:[\p{L}][\p{L} .,'-]{0,139}?\s+)?(Compraste|Transferiste|Pagaste|Retiraste|Recibiste|Consignaste)\b(?=\s+(?:COP|USD|\$|una transferencia de\b))/giu,
     ),
   ];
   if (matches.length !== 1) return null;
@@ -75,8 +75,9 @@ export function previewBancolombiaNotice(
     1,
   )[0];
   const verb = matches[0][1].toLowerCase() as keyof typeof kindByVerb;
+  const amountPrefix = verb === 'recibiste' ? '(?:una transferencia de [^$]{1,160}? por )?' : '';
   const amountMatch = new RegExp(
-    `^Bancolombia:\\s*${verb}\\s+(COP|USD|\\$)\\s*([0-9][0-9.,]*)`,
+    `^Bancolombia:\\s*${verb}\\s+${amountPrefix}(COP|USD|\\$)\\s*([0-9][0-9.,]*)`,
     'iu',
   ).exec(alert);
   const amountDecimal = amountMatch ? decimalAmount(amountMatch[2]) : null;
@@ -106,6 +107,11 @@ export function previewBancolombiaNotice(
       }),
     ),
   ];
+  if (verb === 'recibiste') {
+    for (const match of alert.matchAll(/\ben tu cuenta\s*\*+\s*(\d{4})\b/giu)) {
+      references.push({ kind: 'debit', suffix: match[1] });
+    }
+  }
   const sourceReference = [
     ...new Map(
       references.map((reference) => [`${reference.kind}:${reference.suffix}`, reference]),
