@@ -92,6 +92,17 @@ reasons, never passwords, PDF text or provider bodies. A live OpenRouter test on
 text returned both expected rows. The owner's protected PDF needs a retry to verify its particular
 rows and diagnose any remaining model validation failure.
 
+Subsequent owner retries identified `Ungrounded statement excerpt` and then
+`Ungrounded statement amount`. The model now selects original numbered lines and copies the original
+amount string; the server constructs the exact excerpt and parses its decimal separators. Unverified
+amounts remain null with low confidence for manual review. A diagnostic review found a successful
+draft consisting of summary headings without usable movement amounts. No transactions were posted. A
+synthetic column-first PDF reproduced the reader returning whole columns instead of rows. PDF items
+are now grouped by vertical coordinates and ordered horizontally before chunking. Obvious summary
+headings without date/amount evidence are excluded, and statement parsing uses the existing fast
+text model with the same privacy caps. The incorrect unreviewed draft needs to be re-extracted
+before reconciliation.
+
 The PDF password is sent over HTTPS to the authenticated, owner-scoped extraction route and used in
 an isolated server worker's memory. It is not persisted or sent to the AI provider. Password inputs
 are cleared after submission; no claim of cryptographic memory zeroization is made. The dialog now

@@ -41,12 +41,26 @@ const { parentPort, workerData } = require('node:worker_threads');
     for (let number = 1; number <= pdf.numPages; number++) {
       const page = await pdf.getPage(number);
       const content = await page.getTextContent();
-      let text = ''; let lastY;
-      for (const item of content.items) {
-        if (typeof item.str !== 'string') continue;
-        const y = item.transform?.[5];
-        if (lastY !== undefined && y !== undefined && Math.abs(y - lastY) > 2 && !text.endsWith('\n')) text += '\n';
-        text += item.str + (item.hasEOL ? '\n' : ' '); lastY = y;
+      const positioned = content.items.filter(item => typeof item.str === 'string').map((item, index) => ({ item, index, x: item.transform?.[4] ?? 0, y: item.transform?.[5] ?? 0 }));
+      positioned.sort((a, b) => b.y - a.y || a.x - b.x || a.index - b.index);
+      const rows = [];
+      for (const entry of positioned) {
+        const row = rows[rows.length - 1];
+        if (row && Math.abs(row.y - entry.y) <= 2) row.items.push(entry);
+        else rows.push({ y: entry.y, items: [entry] });
+      }
+      let text = '';
+      for (const row of rows) {
+        row.items.sort((a, b) => a.x - b.x || a.index - b.index);
+        let line = ''; let previous;
+        for (const entry of row.items) {
+          const fragment = entry.item.str;
+          const gap = previous ? entry.x - previous.x - (previous.item.width ?? 0) : Infinity;
+          const numericContinuation = /[0-9.,]$/.test(line) && /^[0-9.,]+$/.test(fragment) && gap <= 2 && gap >= -1;
+          line += (line && !numericContinuation ? ' ' : '') + fragment;
+          previous = entry;
+        }
+        if (line.trim()) text += line.trim() + '\n';
         if (text.length > 20000) throw { code: 'PDF_LIMIT_EXCEEDED' };
       }
       text = text.replace(/[ \t]+/g, ' ').replace(/ *\n */g, '\n').trim();

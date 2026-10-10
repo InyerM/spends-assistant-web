@@ -1,9 +1,11 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { readPdfText, PdfTextError } from '@/lib/pdf-text';
-function samplePdf(text: string, pageCount = 1): Uint8Array {
+function samplePdf(text: string, pageCount = 1, customStream?: string): Uint8Array {
   const lines = text.split('\n');
-  const stream = `BT /F1 12 Tf 50 750 Td ${lines.map((line, index) => `${index ? '0 -6 Td ' : ''}(${line}) Tj`).join(' ')} ET`;
+  const stream =
+    customStream ??
+    `BT /F1 12 Tf 50 750 Td ${lines.map((line, index) => `${index ? '0 -6 Td ' : ''}(${line}) Tj`).join(' ')} ET`;
   const objects = [
     '<< /Type /Catalog /Pages 2 0 R >>',
     `<< /Type /Pages /Kids [${Array(pageCount).fill('3 0 R').join(' ')}] /Count ${pageCount} >>`,
@@ -38,6 +40,24 @@ describe('isolated local PDF text extraction', { timeout: 25_000 }, () => {
     const result = await readPdfText(samplePdf(lines.join('\n')));
     expect(result.pages[0].split('\n')).toHaveLength(91);
     expect(result.pages[0]).not.toContain('\\n');
+  });
+  it('reconstructs table rows when the PDF draws whole columns first', async () => {
+    const cells = [
+      [50, 750, '11/09/2026'],
+      [50, 730, '12/09/2026'],
+      [180, 750, 'PURCHASE CLUB HOGAR'],
+      [180, 730, 'TRANSFER EXAMPLE'],
+      [400, 750, '33.812,00'],
+      [400, 730, '42.000,00'],
+    ];
+    const stream = cells
+      .map(([x, y, value]) => `BT /F1 12 Tf 1 0 0 1 ${x} ${y} Tm (${value}) Tj ET`)
+      .join('\n');
+    const result = await readPdfText(samplePdf('', 1, stream));
+    expect(result.pages[0].split('\n')).toEqual([
+      '11/09/2026 PURCHASE CLUB HOGAR 33.812,00',
+      '12/09/2026 TRANSFER EXAMPLE 42.000,00',
+    ]);
   });
   it('rejects empty/image-only PDFs instead of reporting an empty successful statement', async () => {
     await expect(readPdfText(samplePdf(''))).rejects.toMatchObject({ code: 'PDF_NO_TEXT' });
