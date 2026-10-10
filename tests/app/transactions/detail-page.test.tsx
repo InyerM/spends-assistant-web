@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import TransactionDetailPage from '@/app/(dashboard)/transactions/[id]/page';
 
 vi.mock('next-intl', () => ({
@@ -33,9 +33,19 @@ vi.mock('@/lib/api/queries/account.queries', () => ({
 }));
 vi.mock('@/lib/api/queries/category.queries', () => ({ useCategories: () => ({ data: [] }) }));
 
+const openWith = vi.fn();
+vi.mock('@/lib/stores/transaction-form.store', () => ({
+  useTransactionFormStore: () => ({ openWith }),
+}));
+vi.mock('@/components/transactions/transaction-origin', () => ({
+  TransactionOrigin: () => <div>Origin</div>,
+}));
+
 describe('transaction detail', () => {
   it('opens a reviewed link to one exact transaction', () => {
     render(<TransactionDetailPage />);
+    fireEvent.click(screen.getByRole('button', { name: 'transactions.editTransaction' }));
+    expect(openWith).toHaveBeenCalledWith(expect.objectContaining({ id: 'transaction-1' }));
     expect(screen.getByText('Almuerzos Liliana')).toBeInTheDocument();
     expect(screen.getByText('Bancolombia')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'transactions.title' })).toHaveAttribute(

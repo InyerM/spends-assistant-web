@@ -1,6 +1,8 @@
 'use client';
 
 import Link from 'next/link';
+import { Button } from '@/components/ui/button';
+import { useTransactionFormStore } from '@/lib/stores/transaction-form.store';
 import { TransactionOrigin } from '@/components/transactions/transaction-origin';
 import { useParams } from 'next/navigation';
 import { useLocale, useTranslations } from 'next-intl';
@@ -17,6 +19,7 @@ export default function TransactionDetailPage(): React.ReactElement {
   const { id } = useParams<{ id: string }>();
   const t = useTranslations('transactions');
   const locale = useLocale();
+  const { openWith } = useTransactionFormStore();
   const { data: transaction, isLoading, isError } = useTransaction(id);
   const { data: accounts } = useAccounts();
   const { data: categories } = useCategories();
@@ -46,13 +49,18 @@ export default function TransactionDetailPage(): React.ReactElement {
       ) : (
         <Card>
           <CardHeader className='gap-3'>
-            <div className='flex items-start justify-between gap-4'>
+            <div className='flex justify-end'>
+              <Button variant='outline' onClick={() => openWith(transaction)}>
+                {t('editTransaction')}
+              </Button>
+            </div>
+            <div className='flex flex-wrap items-start justify-between gap-4'>
               <div className='flex min-w-0 items-start gap-3'>
                 <span className='bg-muted rounded-lg p-2'>
                   <Icon aria-hidden='true' className='h-5 w-5' />
                 </span>
-                <div>
-                  <CardTitle className='text-2xl tracking-tight'>
+                <div className='min-w-0'>
+                  <CardTitle className='text-2xl tracking-tight wrap-anywhere'>
                     {transaction.description}
                   </CardTitle>
                   <p className='text-muted-foreground mt-1 text-sm'>
@@ -61,7 +69,7 @@ export default function TransactionDetailPage(): React.ReactElement {
                 </div>
               </div>
               <strong className='shrink-0 text-lg tabular-nums'>
-                {formatCurrency(transaction.amount, 'COP', locale)}
+                {formatCurrency(transaction.amount, account?.currency ?? 'COP', locale)}
               </strong>
             </div>
           </CardHeader>

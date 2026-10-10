@@ -9,6 +9,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { SearchInput } from '@/components/shared/search-input';
 import { Loader, InlineLoader } from '@/components/shared/loader';
 import { useContacts, scanContacts } from '@/lib/api/queries/contacts.queries';
+import { ContactSummary } from '@/components/contacts/contact-summary';
 import { ContactDetailDialog } from '@/components/contacts/contact-detail-dialog';
 import {
   Select,
@@ -63,6 +64,7 @@ export default function ContactsPage(): React.ReactElement {
           {scanning ? t('scanning', { count: progress }) : t('scan')}
         </Button>
       </header>
+      <ContactSummary onSelect={setSelected} />
       <section
         aria-label={t('directory')}
         className='border-border bg-card space-y-3 rounded-xl border p-4'>

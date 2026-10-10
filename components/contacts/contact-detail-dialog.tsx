@@ -46,26 +46,30 @@ export function ContactDetailDialog({
       onOpenChange={(open) => {
         if (!open) onClose();
       }}>
-      <DialogContent className='max-h-[85vh] overflow-y-auto sm:max-w-2xl'>
+      <DialogContent className='max-h-[85dvh] min-w-0 overflow-x-hidden overflow-y-auto sm:max-w-2xl [&>*]:min-w-0'>
         <DialogHeader>
-          <DialogTitle>
+          <DialogTitle className='pr-8 wrap-anywhere'>
             {data?.contact.custom_name ?? data?.contact.display_name ?? contact.name}
           </DialogTitle>
         </DialogHeader>
         <div className='space-y-2'>
           <Label htmlFor='contact-name'>{t('name')}</Label>
-          <div className='flex gap-2'>
+          <div className='flex min-w-0 flex-col gap-2 sm:flex-row'>
             <Input
+              className='min-w-0 flex-1'
               id='contact-name'
               value={name}
               onChange={(event) => setName(event.target.value)}
               maxLength={100}
             />
-            <Button disabled={saving || !name.trim()} onClick={() => void save()}>
+            <Button
+              className='min-h-11 shrink-0'
+              disabled={saving || !name.trim()}
+              onClick={() => void save()}>
               {t('save')}
             </Button>
           </div>
-          <p className='text-muted-foreground text-sm'>
+          <p className='text-muted-foreground text-sm wrap-anywhere'>
             {t(`kind.${contact.identity_kind}`)} · {contact.identity_value}
           </p>
         </div>
@@ -75,7 +79,7 @@ export function ContactDetailDialog({
           <p role='alert'>{t('failed')}</p>
         ) : data ? (
           <>
-            <p className='text-muted-foreground text-sm'>
+            <p className='text-muted-foreground text-sm wrap-anywhere'>
               {t('movements', { count: data.movement_count })}
             </p>
             <div className='grid gap-3 sm:grid-cols-2'>
@@ -87,7 +91,7 @@ export function ContactDetailDialog({
                   <p className='text-muted-foreground mt-2 text-sm'>
                     {t('sent')}: {formatCurrency(total.expenses ?? 0, total.currency, locale)}
                   </p>
-                  <p className='text-muted-foreground text-sm'>
+                  <p className='text-muted-foreground text-sm wrap-anywhere'>
                     {t('received')}: {formatCurrency(total.income ?? 0, total.currency, locale)}
                   </p>
                 </div>
@@ -97,8 +101,8 @@ export function ContactDetailDialog({
             <div className='space-y-3'>
               {data.categories.map((category) => (
                 <div key={category.category_id ?? 'none'} className='space-y-2'>
-                  <div className='flex justify-between gap-4 text-sm'>
-                    <span>
+                  <div className='flex min-w-0 flex-wrap justify-between gap-2 text-sm'>
+                    <span className='min-w-0 wrap-anywhere'>
                       {category.translations?.[locale] ?? category.name ?? t('uncategorized')}
                     </span>
                     <span>{t('movements', { count: category.count })}</span>
@@ -119,13 +123,13 @@ export function ContactDetailDialog({
                   href={`/transactions/${transaction.id}`}
                   key={transaction.id}
                   className='hover:bg-muted/40 focus-visible:ring-ring flex items-center justify-between gap-4 rounded-lg px-2 py-3 focus-visible:ring-2'>
-                  <div className='min-w-0'>
+                  <div className='min-w-0 flex-1'>
                     <p className='truncate text-sm'>{transaction.description}</p>
                     <p className='text-muted-foreground text-xs'>
                       {new Date(`${transaction.date}T12:00:00`).toLocaleDateString(locale)}
                     </p>
                   </div>
-                  <span className='shrink-0 text-sm'>
+                  <span className='shrink-0 text-sm tabular-nums'>
                     {formatCurrency(transaction.amount, transaction.currency, locale)}
                   </span>
                 </Link>

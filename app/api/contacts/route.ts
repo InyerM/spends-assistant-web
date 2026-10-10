@@ -6,6 +6,7 @@ export async function GET(request: Request): Promise<Response> {
   try {
     const { supabase } = await getUserClient(request);
     const params = new URL(request.url).searchParams;
+    const summary = params.get('summary') === '1';
     const query = params.get('q')?.trim() ?? '';
     const page = Number(params.get('page') ?? 1);
     const sort = z
@@ -20,12 +21,16 @@ export async function GET(request: Request): Promise<Response> {
     )
       return errorResponse('Invalid contact filters', 400);
     const { data, error } = await supabase.rpc(
-      sort.data === 'recent' ? 'list_counterparties' : 'list_counterparties_sorted',
+      !summary && sort.data === 'recent' ? 'list_counterparties' : 'list_counterparties_sorted',
       {
-        p_query: query,
-        p_offset: (page - 1) * 50,
-        p_limit: 50,
-        ...(sort.data === 'recent' ? {} : { p_sort: sort.data }),
+        p_query: summary ? '' : query,
+        p_offset: summary ? 0 : (page - 1) * 50,
+        p_limit: summary ? 5 : 50,
+        ...(summary
+          ? { p_sort: 'most_transactions' }
+          : sort.data === 'recent'
+            ? {}
+            : { p_sort: sort.data }),
       },
     );
     if (error) return errorResponse('Contacts unavailable');

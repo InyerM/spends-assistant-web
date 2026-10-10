@@ -56,3 +56,12 @@ export async function renameContact(id: string, name: string): Promise<void> {
   });
   if (!response.ok) throw new Error('Contact update failed');
 }
+
+export function useContactSummary(): UseQueryResult<ContactList> {
+  const owner = useAuthStore((state) => state.supabaseUser?.id);
+  return useQuery({
+    queryKey: ['contacts', owner, 'summary'],
+    enabled: Boolean(owner),
+    queryFn: ({ signal }) => read<ContactList>('/api/contacts?summary=1', signal),
+  });
+}

@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useLocale, useTranslations } from 'next-intl';
 import { CheckCheck, AlertTriangle } from 'lucide-react';
@@ -18,6 +18,8 @@ import { DocumentAccountSelect } from '@/components/documents/document-review-se
 import { PeriodSelector } from '@/components/transactions/period-selector';
 import { InlineLoader } from '@/components/shared/loader';
 import { compareStatement, type StatementReview } from '@/lib/statement-reconciliation';
+import { StatementInspector } from '@/components/documents/statement-inspector';
+import type { StatementHints } from '@/lib/statement-hints';
 import type { Account } from '@/types';
 
 export function StatementReconciliation({
@@ -64,6 +66,11 @@ function StatementReviewPanel({
   const [account, setAccount] = useState(data.scope?.account_id ?? '');
   const [from, setFrom] = useState(data.scope?.period_start ?? '');
   const [to, setTo] = useState(data.scope?.period_end ?? '');
+  const applyHints = useCallback((hints: StatementHints): void => {
+    setAccount((current) => current || hints.account_id || '');
+    setFrom((current) => current || hints.period_start || '');
+    setTo((current) => current || hints.period_end || '');
+  }, []);
   const [selection, setSelection] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(false);
@@ -109,6 +116,7 @@ function StatementReviewPanel({
         <h4 className='font-semibold'>{t('title')}</h4>
         <p className='text-muted-foreground mt-1 text-sm'>{t('intro')}</p>
       </div>
+      <StatementInspector documentId={documentId} onHints={applyHints} />
       <div className='bg-card-overlay grid gap-3 rounded-xl p-4 sm:grid-cols-2'>
         <div className='space-y-1'>
           <p className='text-sm font-medium'>{t('account')}</p>

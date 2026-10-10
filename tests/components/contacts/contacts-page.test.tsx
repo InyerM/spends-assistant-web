@@ -27,6 +27,7 @@ vi.mock('@/lib/api/queries/contacts.queries', () => ({
     isLoading: false,
     isError: false,
   })),
+  useContactSummary: () => ({ data: null }),
   scanContacts: vi.fn(),
 }));
 vi.mock('@/components/contacts/contact-detail-dialog', () => ({

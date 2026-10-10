@@ -1,6 +1,9 @@
 import { afterEach, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { StatementReconciliation } from '@/components/documents/statement-reconciliation';
+vi.mock('@/components/documents/statement-inspector', () => ({
+  StatementInspector: () => <div>PDF inspection</div>,
+}));
 const invalidate = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
 vi.mock('next-intl', () => ({
   useLocale: () => 'es',

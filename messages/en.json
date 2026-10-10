@@ -1367,7 +1367,12 @@
     "sortLabel": "Sort contacts",
     "sortRecent": "Most recent activity",
     "sortMost": "Most transactions",
-    "sortFewest": "Fewest transactions"
+    "sortFewest": "Fewest transactions",
+    "summaryTitle": "Your history at a glance",
+    "summaryHint": "See who you transact with most. This summary covers contacts and merchants across your confirmed history.",
+    "summaryContacts": "Contacts and merchants",
+    "summaryReviewed": "Reviewed transactions",
+    "topContacts": "Most frequent contacts"
   },
   "statementReconciliation": {
     "title": "Reconcile statement",
@@ -1399,6 +1404,21 @@
     "retry": "Retry",
     "saveError": "Not saved. Refresh and review the account, period and movement.",
     "saving": "Saving reconciliation…",
-    "viewStatement": "View statement"
+    "viewStatement": "View statement",
+    "detectionHint": "We suggest the account and period when clearly stated in the statement. Check them against the PDF before comparing.",
+    "viewPdf": "View statement PDF",
+    "hidePdf": "Hide PDF",
+    "pdfPassword": "PDF password",
+    "detect": "Detect account and period",
+    "passwordHint": "The password is only used to read this PDF. It is not saved or sent to AI.",
+    "cycleDetected": "Detected period: {cycle}. Check the dates before confirming.",
+    "cycles": {
+      "monthly": "monthly",
+      "quarterly": "quarterly",
+      "other": "custom"
+    },
+    "detectionError": "We could not detect these details. Choose the account and period manually.",
+    "pdfTitle": "Original statement",
+    "openPdf": "Open PDF in another tab"
   }
 }

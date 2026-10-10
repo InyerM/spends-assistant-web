@@ -1364,7 +1364,12 @@
     "sortLabel": "Ordenar contactos",
     "sortRecent": "Actividad más reciente",
     "sortMost": "Más transacciones",
-    "sortFewest": "Menos transacciones"
+    "sortFewest": "Menos transacciones",
+    "summaryTitle": "Tu historial, de un vistazo",
+    "summaryHint": "Descubre con quién haces más movimientos. Este resumen reúne contactos y comercios de todo tu historial confirmado.",
+    "summaryContacts": "Contactos y comercios",
+    "summaryReviewed": "Movimientos revisados",
+    "topContacts": "Más movimientos contigo"
   },
   "statementReconciliation": {
     "title": "Conciliar extracto",
@@ -1396,6 +1401,21 @@
     "retry": "Reintentar",
     "saveError": "No se guardó. Actualiza y revisa la cuenta, el periodo y el movimiento.",
     "saving": "Guardando conciliación…",
-    "viewStatement": "Ver extracto"
+    "viewStatement": "Ver extracto",
+    "detectionHint": "Sugerimos la cuenta y el período cuando aparecen claramente en el extracto. Compruébalos en el PDF antes de comparar.",
+    "viewPdf": "Ver extracto PDF",
+    "hidePdf": "Ocultar PDF",
+    "pdfPassword": "Clave del PDF",
+    "detect": "Detectar cuenta y período",
+    "passwordHint": "La clave solo se usa para leer este PDF. No se guarda ni se envía a la IA.",
+    "cycleDetected": "Período detectado: {cycle}. Revisa las fechas antes de confirmar.",
+    "cycles": {
+      "monthly": "mensual",
+      "quarterly": "trimestral",
+      "other": "personalizado"
+    },
+    "detectionError": "No pudimos detectar estos datos. Puedes elegir la cuenta y el período manualmente.",
+    "pdfTitle": "Extracto original",
+    "openPdf": "Abrir PDF en otra pestaña"
   }
 }
