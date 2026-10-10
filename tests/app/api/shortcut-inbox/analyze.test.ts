@@ -157,42 +157,45 @@ describe('POST forwarded email analysis', () => {
     );
   });
 
-  it.each([false, true])('fills a missing bank time from AI with cached=%s', async (cached) => {
-    const db = fakeDb({
-      inbox: {
-        ...inbox,
-        raw_text:
-          'From (unverified): alertas@example.test\nPago QR de $15,800 completado el 02/10/2026 a las 16:31.',
-      },
-      ...(cached
-        ? {
-            cached: {
-              inbox_item_id: id,
-              user_id: 'owner-a',
-              analysis_version: 2,
-              bank_event_at: null,
-              suggested_type: 'expense',
-            },
-          }
-        : {}),
-    });
-    getUserClient.mockResolvedValue({ userId: 'owner-a', accessToken: 'test-jwt', supabase: db });
-    vi.stubGlobal(
-      'fetch',
-      vi.fn().mockResolvedValue(
-        Response.json({
-          type: 'expense',
-          category_id: null,
-          bank_event_at: '2026-10-02T16:31:00-05:00',
-        }),
-      ),
-    );
-    const response = await POST(request(), context);
-    expect(response.status).toBe(cached ? 200 : 201);
-    expect(await response.json()).toMatchObject({ bank_event_at: '2026-10-02T16:31:00-05:00' });
-    expect(fetch).toHaveBeenCalledTimes(1);
-    expect(db.updates.every((value) => !('bank_event_at' in value))).toBe(true);
-  });
+  it.each([false, true])(
+    'extracts the original bank time independently of AI with cached=%s',
+    async (cached) => {
+      const db = fakeDb({
+        inbox: {
+          ...inbox,
+          raw_text:
+            'From (unverified): alertas@example.test\nPago QR de $15,800 completado el 02/10/2026 a las 16:31.',
+        },
+        ...(cached
+          ? {
+              cached: {
+                inbox_item_id: id,
+                user_id: 'owner-a',
+                analysis_version: 2,
+                bank_event_at: null,
+                suggested_type: 'expense',
+              },
+            }
+          : {}),
+      });
+      getUserClient.mockResolvedValue({ userId: 'owner-a', accessToken: 'test-jwt', supabase: db });
+      vi.stubGlobal(
+        'fetch',
+        vi.fn().mockResolvedValue(
+          Response.json({
+            type: 'expense',
+            category_id: null,
+            bank_event_at: '2026-10-02T16:31:00-05:00',
+          }),
+        ),
+      );
+      const response = await POST(request(), context);
+      expect(response.status).toBe(cached ? 200 : 201);
+      expect(await response.json()).toMatchObject({ bank_event_at: '2026-10-02T16:31:00-05:00' });
+      expect(fetch).toHaveBeenCalledTimes(cached ? 0 : 1);
+      expect(db.updates.every((value) => !('bank_event_at' in value))).toBe(true);
+    },
+  );
 
   it('keeps deterministic bank time when the AI returns a conflicting time', async () => {
     const db = fakeDb();
@@ -210,7 +213,7 @@ describe('POST forwarded email analysis', () => {
     });
   });
 
-  it('rejects an AI clock attached to a different deterministic bank date', async () => {
+  it('keeps explicit original date and clock when AI returns a different date', async () => {
     const db = fakeDb({
       inbox: {
         ...inbox,
@@ -227,10 +230,12 @@ describe('POST forwarded email analysis', () => {
           Response.json({ type: 'expense', bank_event_at: '2026-10-03T16:31:00-05:00' }),
         ),
     );
-    expect(await (await POST(request(), context)).json()).toMatchObject({ bank_event_at: null });
+    expect(await (await POST(request(), context)).json()).toMatchObject({
+      bank_event_at: '2026-10-02T16:31:00-05:00',
+    });
   });
 
-  it('keeps a missing cached time empty when the AI is unavailable', async () => {
+  it('recovers a missing cached time without requiring available AI', async () => {
     const db = fakeDb({
       inbox: { ...inbox, raw_text: 'Pago QR de $15,800 completado el 02/10/2026 a las 16:31.' },
       cached: { inbox_item_id: id, user_id: 'owner-a', analysis_version: 2, bank_event_at: null },
@@ -242,8 +247,8 @@ describe('POST forwarded email analysis', () => {
     );
     const response = await POST(request(), context);
     expect(response.status).toBe(200);
-    expect(await response.json()).toMatchObject({ bank_event_at: null });
-    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(await response.json()).toMatchObject({ bank_event_at: '2026-10-02T16:31:00-05:00' });
+    expect(fetch).not.toHaveBeenCalled();
   });
   it.each(['upstream', 'network', 'invalid-json'])(
     'preserves receipt evidence during %s failure without caching incomplete AI output',
@@ -732,4 +737,72 @@ it('recovers the explicit amount and time of a cached incoming transfer and corr
     bank_event_at: '2026-09-27T09:40:00-05:00',
     suggested_type: 'income',
   });
+});
+
+it('recovers a scheduled invoice amount and date from an incomplete legacy cache without inventing a time', async () => {
+  const db = fakeDb({
+    inbox: {
+      ...inbox,
+      raw_text:
+        'From (unverified): alerts@examplebank.test\nBanco informa pago Factura Programada CLUB HOGAR Ref 112233 por $33.812,00 desde Aho*2468. 11/09/2026. Inquietudes 6045109095.',
+    },
+    cached: {
+      analysis_version: 2,
+      amount: null,
+      bank_event_at: null,
+      category_id: null,
+      category_source: null,
+      account_id: null,
+      suggested_type: null,
+    },
+  });
+  getUserClient.mockResolvedValue({ userId: 'owner-a', accessToken: 'test-jwt', supabase: db });
+  const response = await POST(request(), context);
+  expect(await response.json()).toMatchObject({
+    amount: 33812,
+    event_date: '2026-09-11',
+    bank_event_at: null,
+    suggested_type: 'expense',
+    card_last_four: '2468',
+  });
+  expect(db.updates.every((update) => !('amount' in update) && !('bank_event_at' in update))).toBe(
+    true,
+  );
+});
+
+it('explicitly refreshes AI annotations in an incomplete version-2 proposal', async () => {
+  vi.stubGlobal(
+    'fetch',
+    vi
+      .fn()
+      .mockResolvedValue(
+        Response.json({ type: 'expense', category_id: categoryId, category_source: 'ai' }),
+      ),
+  );
+  const db = fakeDb({
+    cached: {
+      analysis_version: 2,
+      amount: 1550000,
+      bank_event_at: '2026-10-06T15:42:00-05:00',
+      category_id: null,
+      category_source: null,
+      account_id: null,
+      suggested_type: 'expense',
+    },
+  });
+  getUserClient.mockResolvedValue({ userId: 'owner-a', accessToken: 'test-jwt', supabase: db });
+  const refreshed = new Request(`https://example.test/api/shortcut-inbox/${id}/analyze`, {
+    method: 'POST',
+    headers: { Authorization: 'Bearer test-jwt', 'Content-Type': 'application/json' },
+    body: JSON.stringify({ refresh: true }),
+  });
+  const response = await POST(refreshed, context);
+  expect(await response.json()).toMatchObject({
+    category_id: categoryId,
+    category_source: 'ai',
+    amount: 1550000,
+    event_date: '2026-10-06',
+  });
+  expect(fetch).toHaveBeenCalledTimes(1);
+  expect(db.updates.every((update) => !('amount' in update))).toBe(true);
 });

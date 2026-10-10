@@ -439,3 +439,25 @@ it('identifies a unique owned repayment destination without guessing unknown or 
   expect(inferForwardedPaymentDestination(preview, [card, { ...card, id: 'other' }])).toBe('');
   expect(inferForwardedPaymentDestination(preview, [{ ...card, last_four: '0000' }])).toBe('');
 });
+
+it('infers an owner account from a new-bank scheduled payment without a bank allowlist', async () => {
+  const { inferForwardedGenericAccount } = await import('@/lib/shortcut-inbox/create-draft');
+  const accounts = [
+    {
+      id: 'savings',
+      name: 'Other Bank',
+      institution: 'Other Bank',
+      type: 'savings' as const,
+      last_four: '2468',
+      currency: 'COP',
+      is_active: true,
+      deleted_at: null,
+    },
+  ];
+  const raw =
+    'Other Bank informa pago Factura Programada CLUB HOGAR por $33.812,00 desde Aho*2468. 11/09/2026.';
+  expect(inferForwardedGenericAccount(raw, accounts)).toBe('savings');
+  expect(
+    inferForwardedGenericAccount(raw, [...accounts, { ...accounts[0], id: 'ambiguous' }]),
+  ).toBe('');
+});

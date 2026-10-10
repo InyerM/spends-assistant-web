@@ -1,9 +1,11 @@
+import { extractEmailEventEvidence } from '@/lib/shortcut-inbox/email-event-evidence';
 import { AuthError, errorResponse, getUserClient } from '@/lib/api/server';
 import { workerConfig } from '@/lib/config';
 import {
   inferForwardedAccount,
   inferForwardedBancolombiaAccount,
   inferForwardedAccountFromRules,
+  inferForwardedGenericAccount,
 } from '@/lib/shortcut-inbox/create-draft';
 import { previewBancolombiaNotice } from '@/lib/shortcut-inbox/bancolombia-preview';
 import { previewLuloNotice } from '@/lib/shortcut-inbox/lulo-preview';
@@ -63,6 +65,8 @@ export async function POST(request: Request, context: Context): Promise<Response
     if (!accessToken && request.headers.get('Origin') !== new URL(request.url).origin) {
       return errorResponse('Invalid request origin', 403);
     }
+    const options = (await request.json().catch(() => null)) as { refresh?: unknown } | null;
+    const refresh = options?.refresh === true;
     const { id } = await context.params;
     if (!uuid.test(id)) return errorResponse('Invalid inbox item ID', 400);
 
@@ -107,6 +111,7 @@ export async function POST(request: Request, context: Context): Promise<Response
       return errorResponse('Inbox item has invalid email data', 422);
     }
     const rawText = inboxFields.raw_text;
+    const eventEvidence = extractEmailEventEvidence(rawText);
     const preview = previewLuloNotice(
       inboxFields.source,
       inboxFields.raw_text,
@@ -144,6 +149,7 @@ export async function POST(request: Request, context: Context): Promise<Response
       ) ||
       null;
 
+    accountId ??= inferForwardedGenericAccount(rawText, ownedAccounts) || null;
     const currentRules = Array.isArray(rules) ? (rules as AutomationRule[]) : [];
     const cachedFields = cached as Record<string, unknown> | null;
     const bank = previewBancolombiaNotice(inboxFields.source, inboxFields.raw_text);
@@ -156,15 +162,18 @@ export async function POST(request: Request, context: Context): Promise<Response
         ? Number(preview.amountDecimal)
         : bank?.amountDecimal
           ? Number(bank.amountDecimal)
-          : typeof cachedFields?.amount === 'number'
-            ? cachedFields.amount
-            : null,
+          : eventEvidence.amount
+            ? Number(eventEvidence.amount)
+            : typeof cachedFields?.amount === 'number'
+              ? cachedFields.amount
+              : null,
       accountId,
       currentRules,
     );
     let validRuleCategory: string | null = null;
     const bankPreview = previewBancolombiaNotice(inboxFields.source, inboxFields.raw_text);
     const cachedType =
+      eventEvidence.type ??
       (bankPreview?.kind === 'income' ? 'income' : null) ??
       cached?.suggested_type ??
       (bankPreview
@@ -242,9 +251,11 @@ export async function POST(request: Request, context: Context): Promise<Response
                   ? Number(preview.amountDecimal)
                   : bankPreview?.amountDecimal
                     ? Number(bankPreview.amountDecimal)
-                    : typeof cachedFields?.amount === 'number'
-                      ? cachedFields.amount
-                      : null,
+                    : eventEvidence.amount
+                      ? Number(eventEvidence.amount)
+                      : typeof cachedFields?.amount === 'number'
+                        ? cachedFields.amount
+                        : null,
                 accountId,
                 [rule],
               ) === validRuleCategory,
@@ -261,13 +272,18 @@ export async function POST(request: Request, context: Context): Promise<Response
       : [];
 
     const sourceEvidence = {
-      merchant: preview?.merchant ?? bankPreview?.merchant ?? null,
-      amount: preview?.amountDecimal
-        ? Number(preview.amountDecimal)
-        : bankPreview?.amountDecimal
-          ? Number(bankPreview.amountDecimal)
-          : null,
+      merchant: eventEvidence.merchant ?? preview?.merchant ?? bankPreview?.merchant ?? null,
+      amount: eventEvidence.amount
+        ? Number(eventEvidence.amount)
+        : preview?.amountDecimal
+          ? Number(preview.amountDecimal)
+          : bankPreview?.amountDecimal
+            ? Number(bankPreview.amountDecimal)
+            : null,
       bank_event_at:
+        (eventEvidence.date && eventEvidence.time
+          ? `${eventEvidence.date}T${eventEvidence.time}:00-05:00`
+          : null) ??
         preview?.bankEventAt ??
         (bankPreview?.date && bankPreview.time
           ? `${bankPreview.date}T${bankPreview.time}:00-05:00`
@@ -276,6 +292,7 @@ export async function POST(request: Request, context: Context): Promise<Response
         preview?.cardLastFour ??
         bankPreview?.destinationLastFour ??
         bankPreview?.sourceLastFour ??
+        eventEvidence.sourceLastFour ??
         null,
     };
     let suggestionRequest: Promise<{ response: Response | null; payload: unknown }> | null = null;
@@ -336,7 +353,11 @@ export async function POST(request: Request, context: Context): Promise<Response
       }),
     );
 
-    if (cached?.analysis_version === 2) {
+    if (
+      cached?.analysis_version === 2 &&
+      (!refresh || matchedRule || recipientHistory) &&
+      (sourceEvidence.amount !== null || typeof cached.amount === 'number')
+    ) {
       const nextCategory =
         validRuleCategory ??
         (cached.category_source === 'automation' ||
@@ -362,6 +383,8 @@ export async function POST(request: Request, context: Context): Promise<Response
           {
             ...cached,
             ...evidencePatch,
+            event_date: eventEvidence.date,
+            extraction_version: 1,
             analysis_source: matchedRule
               ? 'automation'
               : recipientHistory
@@ -395,6 +418,8 @@ export async function POST(request: Request, context: Context): Promise<Response
         {
           ...updated,
           ...evidencePatch,
+          event_date: eventEvidence.date,
+          extraction_version: 1,
           analysis_source: matchedRule
             ? 'automation'
             : recipientHistory
@@ -461,13 +486,14 @@ export async function POST(request: Request, context: Context): Promise<Response
       }
     }
     const suggestedType =
-      bankPreview?.kind === 'income'
+      eventEvidence.type ??
+      (bankPreview?.kind === 'income'
         ? 'income'
         : parsed
           ? 'expense'
           : suggestion.type === 'expense' || suggestion.type === 'income'
             ? suggestion.type
-            : null;
+            : null);
     if (
       suggestedType &&
       typeof suggestion.category_id === 'string' &&
@@ -503,6 +529,19 @@ export async function POST(request: Request, context: Context): Promise<Response
       }
     }
 
+    if (
+      !sourceEvidence.amount &&
+      typeof suggestion.amount === 'string' &&
+      /^\d+(?:\.\d{1,2})?$/u.test(suggestion.amount) &&
+      Number(suggestion.amount) > 0
+    )
+      sourceEvidence.amount = Number(suggestion.amount);
+    if (
+      !eventEvidence.date &&
+      typeof suggestion.event_date === 'string' &&
+      /^\d{4}-\d{2}-\d{2}$/u.test(suggestion.event_date)
+    )
+      eventEvidence.date = suggestion.event_date;
     sourceEvidence.bank_event_at ??=
       validatedAiEventAt(suggestion.bank_event_at, bankPreview?.date) ??
       validatedAiEventAt(cachedFields?.bank_event_at);
@@ -530,6 +569,8 @@ export async function POST(request: Request, context: Context): Promise<Response
       return Response.json(
         {
           ...analysis,
+          event_date: eventEvidence.date,
+          extraction_version: 1,
           analysis_source: 'evidence',
           ai_status: 'unavailable',
           automation_fields: [],
@@ -558,7 +599,12 @@ export async function POST(request: Request, context: Context): Promise<Response
       return Response.json(
         {
           ...updated,
+          ...(typeof suggestion.merchant_source_url === 'string'
+            ? { merchant_source_url: suggestion.merchant_source_url }
+            : {}),
           ...sourceEvidence,
+          event_date: eventEvidence.date,
+          extraction_version: 1,
           analysis_source: matchedRule
             ? 'automation'
             : recipientHistory
@@ -593,6 +639,11 @@ export async function POST(request: Request, context: Context): Promise<Response
     return Response.json(
       {
         ...inserted,
+        ...(typeof suggestion.merchant_source_url === 'string'
+          ? { merchant_source_url: suggestion.merchant_source_url }
+          : {}),
+        event_date: eventEvidence.date,
+        extraction_version: 1,
         analysis_source: matchedRule
           ? 'automation'
           : recipientHistory

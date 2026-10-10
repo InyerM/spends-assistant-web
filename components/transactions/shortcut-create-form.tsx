@@ -1,5 +1,7 @@
 'use client';
 
+import { extractEmailEventEvidence } from '@/lib/shortcut-inbox/email-event-evidence';
+
 import { useState } from 'react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
@@ -69,6 +71,7 @@ export function ShortcutCreateForm({
   const createMutation = useCreateInboxTransaction();
   const bancolombia = previewBancolombiaNotice('forwarded_email', rawText);
   const [fieldDraft, setFieldDraft] = useState<Partial<ShortcutCreateDraft>>({});
+  const evidence = extractEmailEventEvidence(rawText);
   const base = buildForwardedEmailDraft(preview, receivedAt, bancolombia);
   const paymentDestination = inferForwardedPaymentDestination(
     bancolombia,
@@ -89,6 +92,15 @@ export function ShortcutCreateForm({
       : null;
   const proposedDraft = {
     ...base,
+    amount:
+      evidence.currency === 'USD'
+        ? ''
+        : (evidence.amount ??
+          (analysis?.amount !== null && analysis?.amount !== undefined
+            ? String(analysis.amount)
+            : base.amount)),
+    date: evidence.date ?? analysis?.event_date ?? base.date,
+    eventTime: evidence.time ?? base.eventTime,
     ...(fallbackEventAt
       ? { date: fallbackEventAt.slice(0, 10), eventTime: fallbackEventAt.slice(11, 16) }
       : {}),

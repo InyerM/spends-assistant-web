@@ -17,9 +17,15 @@ interface TimePickerProps {
   value: string;
   onChange: (time: string) => void;
   className?: string;
+  allowEmpty?: boolean;
 }
 
-export function TimePicker({ value, onChange, className }: TimePickerProps): React.ReactElement {
+export function TimePicker({
+  value,
+  onChange,
+  className,
+  allowEmpty = false,
+}: TimePickerProps): React.ReactElement {
   const { hours, minutes } = useMemo(() => parse24h(value), [value]);
   const { hours12, period } = to12h(hours);
   const { data: userSettings } = useUserSettings();
@@ -28,8 +34,9 @@ export function TimePicker({ value, onChange, className }: TimePickerProps): Rea
   const minutesRef = useRef<HTMLInputElement>(null);
   const periodRef = useRef<HTMLButtonElement>(null);
 
-  const displayHours = is24h ? String(hours).padStart(2, '0') : String(hours12);
-  const displayMinutes = String(minutes).padStart(2, '0');
+  const empty = allowEmpty && !value;
+  const displayHours = empty ? '' : is24h ? String(hours).padStart(2, '0') : String(hours12);
+  const displayMinutes = empty ? '' : String(minutes).padStart(2, '0');
 
   const [hoursText, setHoursText] = useState(displayHours);
   const [minutesText, setMinutesText] = useState(displayMinutes);
@@ -166,6 +173,7 @@ export function TimePicker({ value, onChange, className }: TimePickerProps): Rea
         type='text'
         inputMode='numeric'
         maxLength={2}
+        placeholder={allowEmpty ? '--' : undefined}
         value={hoursText}
         onChange={(e): void => {
           const val = e.target.value.replace(/\D/g, '').slice(0, 2);
@@ -189,6 +197,7 @@ export function TimePicker({ value, onChange, className }: TimePickerProps): Rea
         type='text'
         inputMode='numeric'
         maxLength={2}
+        placeholder={allowEmpty ? '--' : undefined}
         value={minutesText}
         onChange={(e): void => {
           const val = e.target.value.replace(/\D/g, '').slice(0, 2);

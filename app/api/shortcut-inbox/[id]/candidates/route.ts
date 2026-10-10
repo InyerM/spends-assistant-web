@@ -38,7 +38,8 @@ export async function GET(request: NextRequest, context: Context): Promise<Respo
     const ownedInbox = inbox as { source: string; raw_text: string; received_at: string };
     const lulo = previewLuloNotice(ownedInbox.source, ownedInbox.raw_text, ownedInbox.received_at);
     const bank = previewBancolombiaNotice(ownedInbox.source, ownedInbox.raw_text);
-    const evidence = lulo
+    const generic = extractCandidateEvidence(ownedInbox.raw_text);
+    const specialized = lulo
       ? lulo.kind === 'card_purchase'
         ? {
             amount: lulo.amountDecimal,
@@ -49,6 +50,11 @@ export async function GET(request: NextRequest, context: Context): Promise<Respo
       : bank
         ? { amount: bank.amountDecimal, date: bank.date, lastFour: bank.sourceLastFour }
         : extractCandidateEvidence(inbox.raw_text as string);
+    const evidence = {
+      amount: generic.amount ?? specialized.amount,
+      date: generic.date ?? specialized.date,
+      lastFour: generic.lastFour ?? specialized.lastFour,
+    };
     const { data: exactRaw, error: rawError } = await supabase
       .from('transactions')
       .select(transactionFields)

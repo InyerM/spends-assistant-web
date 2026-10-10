@@ -6,6 +6,10 @@ export interface ForwardedEmailAnalysis {
   account_id: string | null;
   category_id: string | null;
   category_source: 'ai' | 'catalog' | 'automation' | 'review_context' | null;
+  amount?: number | string | null;
+  event_date?: string | null;
+  merchant_source_url?: string;
+  extraction_version?: number;
   bank_event_at?: string | null;
   ai_status?: 'unavailable';
   analysis_source?: 'automation' | 'history' | 'ai' | 'evidence';
@@ -19,6 +23,8 @@ export interface ForwardedEmailAnalysis {
 export async function analyzeForwardedEmail(inboxId: string): Promise<ForwardedEmailAnalysis> {
   const response = await fetch(`/api/shortcut-inbox/${inboxId}/analyze`, {
     method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ refresh: true }),
     signal: AbortSignal.timeout(60_000),
   });
   if (!response.ok) {

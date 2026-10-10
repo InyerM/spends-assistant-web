@@ -295,10 +295,23 @@ export default function ShortcutInboxPage({
         body: JSON.stringify({ transaction_id: transactionId }),
       });
       if (!response.ok) throw new Error('Match acknowledgement failed');
+      const acknowledged = (await response.json()) as { decision_id?: string };
+      const item = items.find((row) => row.id === inboxId);
+      if (item)
+        setCompletedById((current) => ({
+          ...current,
+          [inboxId]: {
+            viewKey,
+            item: {
+              ...item,
+              status: 'matched',
+              match: { transaction_id: transactionId, decision_id: acknowledged.decision_id ?? '' },
+            },
+          },
+        }));
       setReviewCandidate(null);
       setOpenCandidateId(null);
-      setPage(1);
-      setFilter('matched');
+      void queryClient.invalidateQueries({ queryKey: ['notifications'] });
     } catch {
       setMatchErrorId(inboxId);
     } finally {

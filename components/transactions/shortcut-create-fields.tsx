@@ -157,6 +157,7 @@ export function ShortcutCreateFields({
           {fieldStatus('eventTime')}
         </div>
         <TimePicker
+          allowEmpty
           value={draft.eventTime}
           onChange={(eventTime) => onChange({ eventTime, eventTimeConfirmed: false })}
         />

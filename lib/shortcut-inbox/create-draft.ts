@@ -1,3 +1,4 @@
+import { extractEmailEventEvidence } from './email-event-evidence';
 import type { Account, Category, Transaction } from '@/types';
 import type { AutomationRule } from '@/types/automation-rule';
 import { inferCategoryFromHistory } from '@/lib/document-review';
@@ -8,7 +9,7 @@ import {
   isBancolombiaSender,
   type BancolombiaNoticePreview,
 } from './bancolombia-preview';
-import { matchesAccountSuffix } from '@/lib/accounts/identifiers';
+import { accountIdentifiers, matchesAccountSuffix } from '@/lib/accounts/identifiers';
 
 export interface ForwardedEmailDraft {
   type: 'expense' | 'income' | 'transfer';
@@ -92,7 +93,11 @@ export function inferForwardedBancolombiaAccount(
   const evidence = decodeEmailEntities(rawText)
     .normalize('NFKD')
     .replace(/[\u0300-\u036f]/gu, '');
-  const source = sourceAccountReference(evidence);
+  const generic = extractEmailEventEvidence(rawText);
+  const source =
+    generic.sourceLastFour && generic.sourceKind
+      ? { suffix: generic.sourceLastFour, kind: generic.sourceKind }
+      : sourceAccountReference(evidence);
   if (!source) return '';
   const credit = source.kind === 'credit';
   const suffix = source.suffix;
@@ -154,7 +159,11 @@ export function inferForwardedAccountFromRules(
   >[],
 ): string {
   if (previewBancolombiaNotice('forwarded_email', rawText)?.currency === 'USD') return '';
-  const source = sourceAccountReference(rawText);
+  const generic = extractEmailEventEvidence(rawText);
+  const source =
+    generic.sourceLastFour && generic.sourceKind
+      ? { suffix: generic.sourceLastFour, kind: generic.sourceKind }
+      : sourceAccountReference(rawText);
   if (!source) return '';
   const evidence = decodeEmailEntities(rawText).toLowerCase();
   const sender = evidence.split('\n', 1)[0] ?? '';
@@ -231,4 +240,28 @@ export function inferForwardedPaymentDestination(
       matchesAccountSuffix(account, destinationLastFour, 'credit'),
   );
   return matches.length === 1 ? matches[0].id : '';
+}
+
+export function inferForwardedGenericAccount(
+  rawText: string,
+  accounts: MatchableAccount[],
+): string {
+  const evidence = extractEmailEventEvidence(rawText);
+  if (!evidence.sourceLastFour || evidence.ambiguous) return '';
+  const matched = accounts.filter(
+    (account) =>
+      account.is_active &&
+      !account.deleted_at &&
+      account.currency === (evidence.currency ?? 'COP') &&
+      (!evidence.sourceKind ||
+        (evidence.sourceKind === 'credit'
+          ? account.type === 'credit_card'
+          : account.type === 'savings' || account.type === 'checking')) &&
+      (evidence.sourceKind
+        ? matchesAccountSuffix(account, evidence.sourceLastFour!, evidence.sourceKind)
+        : accountIdentifiers(account).some(
+            (identifier) => identifier.last_four === evidence.sourceLastFour,
+          )),
+  );
+  return matched.length === 1 ? matched[0].id : '';
 }

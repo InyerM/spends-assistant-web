@@ -647,6 +647,11 @@ describe('Shortcut inbox review page', () => {
     );
     expect(await screen.findByRole('link', { name: 'viewMatchedTransaction' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Mark non-transaction' })).not.toBeInTheDocument();
+    expect(
+      fetchMock.mock.calls.some(
+        ([url]) => typeof url === 'string' && url.includes('status=matched'),
+      ),
+    ).toBe(false);
   });
 
   it('requires explicit confirmation to undo an existing match and return the message to review', async () => {
