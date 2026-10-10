@@ -1,5 +1,6 @@
 'use client';
 
+import { useId } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import { AiFieldStatus } from '@/components/shared/ai-field-status';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -42,11 +43,12 @@ export function ShortcutCreateFields({
   onChange: (patch: Partial<ShortcutCreateDraft>) => void;
 }): React.ReactElement {
   const t = useTranslations('shortcutInbox');
+  const eventTimeLabelId = useId();
   const locale = useLocale() as Locale;
   const transactionT = useTranslations('transactions');
   const commonT = useTranslations('common');
   const fieldClass = (key: keyof ShortcutCreateDraft): string =>
-    analysisStates[key] ? 'ai-field space-y-1' : 'space-y-1';
+    analysisStates[key] ? 'ai-field min-w-0 space-y-1' : 'min-w-0 space-y-1';
   const fieldStatus = (key: keyof ShortcutCreateDraft): React.ReactNode =>
     analysisStates[key] ? <AiFieldStatus state={analysisStates[key]} /> : null;
   const activeAccounts = accounts.filter(
@@ -145,14 +147,20 @@ export function ShortcutCreateFields({
           ariaLabel={t('createDate')}
         />
       </div>
-      <fieldset className={fieldClass('eventTime')} data-ai-state={analysisStates.eventTime}>
-        <legend>{t('createEventTime')}</legend>
-        {fieldStatus('eventTime')}
+      <div
+        role='group'
+        aria-labelledby={eventTimeLabelId}
+        className={fieldClass('eventTime')}
+        data-ai-state={analysisStates.eventTime}>
+        <div className='flex flex-wrap items-center justify-between gap-x-2 gap-y-1'>
+          <span id={eventTimeLabelId}>{t('createEventTime')}</span>
+          {fieldStatus('eventTime')}
+        </div>
         <TimePicker
           value={draft.eventTime}
           onChange={(eventTime) => onChange({ eventTime, eventTimeConfirmed: false })}
         />
-      </fieldset>
+      </div>
       {draft.eventTime && (
         <label className='flex items-center gap-2 sm:col-span-2'>
           <Checkbox

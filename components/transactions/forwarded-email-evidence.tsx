@@ -25,7 +25,7 @@ export function ForwardedEmailEvidence({
       : null;
   if (!match) {
     return (
-      <p className='text-foreground text-sm leading-relaxed wrap-break-word whitespace-pre-wrap'>
+      <p className='text-foreground text-sm leading-relaxed wrap-anywhere whitespace-pre-wrap'>
         {rawText}
       </p>
     );
@@ -49,7 +49,7 @@ export function ForwardedEmailEvidence({
   const bank = detectEmailBank(rawText);
 
   return (
-    <div className='space-y-4'>
+    <div className='max-w-full min-w-0 space-y-4'>
       <div className='bg-muted/50 flex flex-wrap items-center gap-2 rounded-lg px-3 py-2 text-xs'>
         {inboxId ? (
           <EmailSenderReview inboxId={inboxId} sender={match[1]} detectedBank={bank} />
@@ -68,14 +68,14 @@ export function ForwardedEmailEvidence({
           {subject && (
             <div>
               <p className='text-muted-foreground text-xs'>{t('subject')}</p>
-              <p className='text-foreground font-medium'>{subject}</p>
+              <p className='text-foreground font-medium wrap-anywhere'>{subject}</p>
             </div>
           )}
-          <div className='border-border/70 space-y-2 border-l-2 pl-4'>
+          <div className='border-border/70 min-w-0 space-y-2 border-l-2 pl-4'>
             {visible.map((paragraph, index) => (
               <p
                 key={`${index}-${paragraph.slice(0, 16)}`}
-                className='text-foreground text-sm leading-relaxed wrap-break-word whitespace-pre-wrap'>
+                className='text-foreground text-sm leading-relaxed wrap-anywhere whitespace-pre-wrap'>
                 {paragraph}
               </p>
             ))}

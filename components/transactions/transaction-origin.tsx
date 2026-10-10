@@ -25,7 +25,7 @@ export function TransactionOrigin({
   const { document, inbox } = query.data ?? { document: null, inbox: null };
   if (!document && !inbox) return null;
   return (
-    <div className='border-border space-y-3 rounded-lg border p-3'>
+    <div className='border-border max-w-full min-w-0 space-y-3 rounded-lg border p-3'>
       <p className='text-muted-foreground text-xs font-medium'>{t('originalEvidence')}</p>
       {document && (
         <Button variant='outline' size='sm' className='max-w-full min-w-0' asChild>
@@ -38,7 +38,7 @@ export function TransactionOrigin({
         </Button>
       )}
       {inbox && (
-        <div className='space-y-3'>
+        <div className='min-w-0 space-y-3'>
           <Button
             variant='outline'
             size='sm'

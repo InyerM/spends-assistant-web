@@ -330,7 +330,7 @@
     "completeRequired": "Elige una cuenta y una categoría, y revisa el monto, la fecha y la descripción.",
     "createAmount": "Monto",
     "createDate": "Fecha",
-    "createEventTime": "Hora original de la transacción (opcional)",
+    "createEventTime": "Hora original (opcional)",
     "confirmEventTime": "Confirmé esta hora original con el mensaje o mis registros",
     "eventTimeNeedsConfirmation": "Confirma la hora original antes de guardar.",
     "createDescription": "Descripción",
@@ -1330,12 +1330,12 @@
     "save": "Guardar nombre",
     "saved": "Nombre actualizado",
     "failed": "No pudimos cargar o actualizar los contactos. Inténtalo de nuevo.",
-    "movements": "{count} movimientos",
+    "movements": "{count, plural, one {# movimiento} other {# movimientos}}",
     "sent": "Enviado y gastado",
     "received": "Recibido",
     "recent": "Movimientos recientes",
     "latestOnly": "Se muestran los 100 movimientos más recientes.",
-    "scan": "Revisar todos los movimientos",
+    "scan": "Actualizar contactos",
     "scanning": "Revisando {count} movimientos…",
     "scanDone": "Historial de contactos actualizado",
     "search": "Buscar nombre, comercio o identificador",
@@ -1355,6 +1355,11 @@
       "merchant": "Comercio"
     },
     "categoryHistory": "Categorías de tus movimientos",
-    "uncategorized": "Sin categoría"
+    "uncategorized": "Sin categoría",
+    "eyebrow": "Tu actividad",
+    "directory": "Buscar contactos y comercios",
+    "results": "{count, plural, one {# contacto} other {# contactos}}",
+    "lastActivity": "Último movimiento",
+    "scanHint": "Buscamos contactos en tus movimientos confirmados. Actualizar este historial no crea ni modifica transacciones."
   }
 }

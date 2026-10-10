@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import ShortcutInboxPage from '@/app/(dashboard)/transactions/shortcut-inbox/page';
 
@@ -783,7 +783,9 @@ describe('Shortcut inbox review page', () => {
     });
     fireEvent.click(screen.getByRole('button', { name: 'Save reviewed transaction' }));
     expect(await screen.findByRole('alertdialog')).toBeVisible();
-    expect(screen.getByText(/Existing payment/u)).toBeInTheDocument();
+    expect(
+      within(screen.getByRole('alertdialog')).getByText(/Existing payment/u),
+    ).toBeInTheDocument();
     expect(
       fetchMock.mock.calls.filter(([url]) => typeof url === 'string' && url.endsWith('/create')),
     ).toHaveLength(1);

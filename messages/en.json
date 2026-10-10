@@ -330,7 +330,7 @@
     "completeRequired": "Choose an account and category, then check the amount, date, and description.",
     "createAmount": "Amount",
     "createDate": "Date",
-    "createEventTime": "Original transaction time (optional)",
+    "createEventTime": "Original time (optional)",
     "confirmEventTime": "I confirmed this original time from the message or my records",
     "eventTimeNeedsConfirmation": "Confirm the original time before saving.",
     "createDescription": "Description",
@@ -1333,12 +1333,12 @@
     "save": "Save name",
     "saved": "Name updated",
     "failed": "We could not load or update contacts. Try again.",
-    "movements": "{count} transactions",
+    "movements": "{count, plural, one {# transaction} other {# transactions}}",
     "sent": "Sent and spent",
     "received": "Received",
     "recent": "Recent transactions",
     "latestOnly": "Showing the 100 most recent transactions.",
-    "scan": "Review all transactions",
+    "scan": "Refresh contacts",
     "scanning": "Reviewing {count} transactions…",
     "scanDone": "Contact history updated",
     "search": "Search name, merchant or identifier",
@@ -1358,6 +1358,11 @@
       "merchant": "Merchant"
     },
     "categoryHistory": "Categories in your history",
-    "uncategorized": "Uncategorized"
+    "uncategorized": "Uncategorized",
+    "eyebrow": "Your activity",
+    "directory": "Search contacts and merchants",
+    "results": "{count, plural, one {# contact} other {# contacts}}",
+    "lastActivity": "Last activity",
+    "scanHint": "We find contacts in your confirmed transactions. Refreshing this history does not create or change transactions."
   }
 }

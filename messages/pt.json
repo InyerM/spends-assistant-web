@@ -302,7 +302,7 @@
     "chooseCategory": "Escolha uma categoria",
     "createAmount": "Valor",
     "createDate": "Data",
-    "createEventTime": "Horário original da transação (opcional)",
+    "createEventTime": "Horário original (opcional)",
     "confirmEventTime": "Confirmei este horário original pela mensagem ou pelos meus registros",
     "eventTimeNeedsConfirmation": "Confirme o horário original antes de salvar.",
     "createDescription": "Descrição",
@@ -1216,12 +1216,12 @@
     "save": "Salvar nome",
     "saved": "Nome atualizado",
     "failed": "Não foi possível carregar ou atualizar os contatos. Tente novamente.",
-    "movements": "{count} transações",
+    "movements": "{count, plural, one {# movimentação} other {# movimentações}}",
     "sent": "Enviado e gasto",
     "received": "Recebido",
     "recent": "Transações recentes",
     "latestOnly": "Mostrando as 100 transações mais recentes.",
-    "scan": "Revisar todas as transações",
+    "scan": "Atualizar contatos",
     "scanning": "Revisando {count} transações…",
     "scanDone": "Histórico de contatos atualizado",
     "search": "Buscar nome, estabelecimento ou identificador",
@@ -1241,6 +1241,11 @@
       "merchant": "Estabelecimento"
     },
     "categoryHistory": "Categorias do seu histórico",
-    "uncategorized": "Sem categoria"
+    "uncategorized": "Sem categoria",
+    "eyebrow": "Sua atividade",
+    "directory": "Buscar contatos e estabelecimentos",
+    "results": "{count, plural, one {# contato} other {# contatos}}",
+    "lastActivity": "Última movimentação",
+    "scanHint": "Buscamos contatos nas suas movimentações confirmadas. Atualizar este histórico não cria nem modifica transações."
   }
 }

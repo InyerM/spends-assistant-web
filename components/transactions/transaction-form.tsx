@@ -405,7 +405,7 @@ export function TransactionForm({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className='border-border bg-card max-h-[85dvh] overflow-y-auto sm:max-w-[500px]'>
+      <DialogContent className='border-border bg-card max-h-[85dvh] grid-cols-[minmax(0,1fr)] overflow-y-auto sm:max-w-[500px] [&>*]:min-w-0'>
         <DialogHeader>
           <DialogTitle>
             {isEditing
