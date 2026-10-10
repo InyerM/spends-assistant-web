@@ -1,5 +1,8 @@
 'use client';
 
+import { reviewCandidateSuggestions } from '@/lib/shortcut-inbox/candidates';
+import type { CandidateReview } from '@/lib/api/mutations/shortcut-inbox.mutations';
+
 import { EMAIL_MESSAGE_KINDS, type EmailMessageKind } from '@/types/shortcut-inbox';
 
 import { useQueryClient } from '@tanstack/react-query';
@@ -192,6 +195,7 @@ export default function ShortcutInboxPage({
     {},
   );
   const [openCandidateId, setOpenCandidateId] = useState<string | null>(null);
+  const [reviewById, setReviewById] = useState<Partial<Record<string, CandidateReview>>>({});
   const [candidateBusyId, setCandidateBusyId] = useState<string | null>(null);
   const [candidateErrorId, setCandidateErrorId] = useState<string | null>(null);
   const [reviewCandidate, setReviewCandidate] = useState<{
@@ -502,7 +506,13 @@ export default function ShortcutInboxPage({
           disabled={inbox.isPlaceholderData}
           aria-busy={inbox.isFetching}>
           {items.map((item) => {
-            const candidateResult = candidateById[item.id];
+            const finalReview = reviewById[item.id];
+            const candidateResult = finalReview
+              ? {
+                  candidates: reviewCandidateSuggestions(finalReview),
+                  at_limit: finalReview.status === 'review_overflow',
+                }
+              : candidateById[item.id];
             const luloPreview = previewLuloNotice(item.source, item.raw_text, item.received_at);
             const hasAttachments = Boolean(item.attachments?.length);
             const historicalLulo = item.source === 'lulo-email-backfill';
@@ -683,6 +693,13 @@ export default function ShortcutInboxPage({
                       preview={luloPreview}
                       analysis={analysisById[item.id]}
                       analyzing={analysisBusyIds.has(item.id)}
+                      onReview={(review): void => {
+                        setReviewById((current) => ({
+                          ...current,
+                          [item.id]: review ?? undefined,
+                        }));
+                        if (review) setOpenCandidateId(item.id);
+                      }}
                       onCancel={(): void => setCreateInboxId(null)}
                       onCreated={(transactionId, decisionId): void => {
                         setCreateInboxId(null);

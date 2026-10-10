@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { InlineLoader } from '@/components/shared/loader';
 import { AlertTriangle, Check } from 'lucide-react';
@@ -44,6 +45,7 @@ export function ShortcutCreateForm({
   analysis,
   analyzing = false,
   onCreated,
+  onReview,
   onCancel,
 }: {
   inboxId: string;
@@ -53,6 +55,7 @@ export function ShortcutCreateForm({
   analysis?: ForwardedEmailAnalysis;
   analyzing?: boolean;
   onCreated: (transactionId?: string, decisionId?: string) => void;
+  onReview?: (review: CandidateReview | null) => void;
   onCancel: () => void;
 }): React.ReactElement {
   const t = useTranslations('shortcutInbox');
@@ -176,6 +179,7 @@ export function ShortcutCreateForm({
     if (categoryId !== undefined) setSelectedCategoryId(categoryId);
     if (Object.keys(fields).length) setFieldDraft((current) => ({ ...current, ...fields }));
     setReview(null);
+    onReview?.(null);
     setError(null);
   };
 
@@ -231,6 +235,7 @@ export function ShortcutCreateForm({
       if (result.status === 'created') onCreated(result.transaction_id, result.decision_id);
       else {
         setReview(result);
+        onReview?.(result);
         setDuplicateDialogOpen(result.status === 'review_required');
       }
     } catch {
@@ -373,12 +378,14 @@ export function ShortcutCreateForm({
               ? t('overflowCaution')
               : t('distinctCaution', { count: review.candidate_count })}
           </p>
-          {review.status === 'review_overflow' &&
-            review.candidates.map((candidate) => (
-              <p key={candidate.id}>
-                {candidate.date} · {candidate.amount} · {candidate.description} · {candidate.source}
-              </p>
-            ))}
+          {review.candidates.map((candidate) => (
+            <Link
+              key={candidate.id}
+              href={`/transactions/${candidate.id}`}
+              className='text-primary block underline underline-offset-4'>
+              {candidate.date} · {candidate.amount} · {candidate.description}
+            </Link>
+          ))}
           {review.status === 'review_required' && (
             <Button
               type='button'

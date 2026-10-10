@@ -86,7 +86,12 @@ export default function ContactsPage(): React.ReactElement {
                       )}
                     </span>
                     <div className='min-w-0 flex-1'>
-                      <h2 className='truncate font-medium'>{contact.name}</h2>
+                      <h2 className='truncate font-medium'>
+                        {contact.custom_name ??
+                          (contact.identity_kind === 'merchant'
+                            ? contact.display_name
+                            : `${t(`kind.${contact.identity_kind}`)} •${contact.identity_value.slice(-4)}`)}
+                      </h2>
                       <p className='text-muted-foreground text-xs'>
                         {t(`kind.${contact.identity_kind}`)}
                         {contact.identity_kind !== 'merchant'

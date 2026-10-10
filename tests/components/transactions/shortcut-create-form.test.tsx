@@ -38,6 +38,89 @@ describe('ShortcutCreateForm', () => {
     vi.unstubAllGlobals();
   });
 
+  it('publishes authoritative matches to the inbox and keeps them visible after closing the warning', async () => {
+    const review = {
+      status: 'review_required',
+      candidate_count: 1,
+      candidate_hash: 'hash',
+      candidates: [
+        {
+          id: 'existing-payment',
+          date: '2026-09-25',
+          amount: '15900',
+          description: 'Existing subscription',
+          source: 'web',
+        },
+      ],
+    };
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockImplementation((url: string) => {
+        if (url === '/api/accounts')
+          return Promise.resolve(
+            Response.json([
+              {
+                id: 'account',
+                name: 'Account',
+                currency: 'COP',
+                is_active: true,
+                type: 'savings',
+                deleted_at: null,
+              },
+            ]),
+          );
+        if (url === '/api/categories')
+          return Promise.resolve(
+            Response.json([
+              { id: 'category', name: 'Subscription', type: 'expense', is_active: true },
+            ]),
+          );
+        if (url === '/api/settings/user-settings')
+          return Promise.resolve(Response.json({ hour_format: '24h' }));
+        if (url.endsWith('/create')) return Promise.resolve(Response.json(review, { status: 409 }));
+        throw new Error(`Unexpected request: ${url}`);
+      }),
+    );
+    const onReview = vi.fn();
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <ShortcutCreateForm
+          inboxId='item'
+          rawText='Purchase'
+          receivedAt={receivedAt}
+          analysis={{
+            status: 'parsed',
+            account_id: 'account',
+            category_id: 'category',
+            category_source: 'automation',
+            suggested_type: 'expense',
+            description: 'Subscription',
+            notes: null,
+          }}
+          onReview={onReview}
+          onCreated={vi.fn()}
+          onCancel={vi.fn()}
+        />
+      </QueryClientProvider>,
+    );
+    await waitFor(() => expect(screen.getByRole('button', { name: 'saveReviewed' })).toBeEnabled());
+    fireEvent.change(screen.getByRole('textbox', { name: 'createAmount' }), {
+      target: { value: '15900' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'saveReviewed' }));
+    await waitFor(() => expect(onReview).toHaveBeenLastCalledWith(review));
+    fireEvent.click(screen.getByRole('button', { name: 'duplicateGoBack' }));
+    expect(screen.getByRole('link', { name: /Existing subscription/ })).toHaveAttribute(
+      'href',
+      '/transactions/existing-payment',
+    );
+    fireEvent.change(screen.getByRole('textbox', { name: 'createAmount' }), {
+      target: { value: '16000' },
+    });
+    expect(onReview).toHaveBeenLastCalledWith(null);
+  });
+
   it('shows the AI time fallback while preserving a manual time edit', async () => {
     vi.stubGlobal(
       'fetch',

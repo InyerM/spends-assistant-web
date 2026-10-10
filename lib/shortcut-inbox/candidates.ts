@@ -1,3 +1,4 @@
+import type { CandidateReview } from '@/lib/api/mutations/shortcut-inbox.mutations';
 export interface CandidateEvidence {
   amount: string | null;
   date: string | null;
@@ -110,4 +111,15 @@ export function rankCandidates(
         a.id.localeCompare(b.id),
     )
     .slice(0, Math.max(0, Math.min(maximum, MAX_CANDIDATES)));
+}
+
+/** Creation validation uses the final reviewed fields and takes precedence over raw-text hints. */
+export function reviewCandidateSuggestions(review: CandidateReview): CandidateSuggestion[] {
+  return review.candidates.map((candidate) => ({
+    ...candidate,
+    amount: Number(candidate.amount),
+    type: '',
+    strength: 'possible',
+    signals: [],
+  }));
 }
