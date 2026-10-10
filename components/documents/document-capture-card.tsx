@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { InlineLoader } from '@/components/shared/loader';
+import { DocumentPreview } from '@/components/documents/document-preview';
 import { StatementReconciliation } from '@/components/documents/statement-reconciliation';
 import { DocumentBatchReview } from '@/components/documents/document-batch-review';
 import { DocumentReviewedList } from '@/components/documents/document-reviewed-list';
@@ -100,6 +101,11 @@ export function DocumentCaptureCard({
             </div>
           </div>
           <div className='flex flex-wrap items-center gap-2'>
+            <DocumentPreview
+              id={document.id}
+              name={document.file_name}
+              mime={document.mime_type ?? 'application/pdf'}
+            />
             <Badge
               variant='outline'
               className={

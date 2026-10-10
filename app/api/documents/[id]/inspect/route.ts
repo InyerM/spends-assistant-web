@@ -1,7 +1,11 @@
 import { z } from 'zod';
 import { AuthError, errorResponse, getUserClient } from '@/lib/api/server';
 import { PdfTextError, readPdfText } from '@/lib/pdf-text';
-import { detectStatementHints, type HintAccount } from '@/lib/statement-hints';
+import {
+  detectStatementHints,
+  classifyStatementActivity,
+  type HintAccount,
+} from '@/lib/statement-hints';
 const headers = { 'Cache-Control': 'private, no-store' };
 interface Context {
   params: Promise<{ id: string }>;
@@ -51,7 +55,10 @@ export async function POST(request: Request, { params }: Context): Promise<Respo
       body.data.password,
     );
     return Response.json(
-      { hints: detectStatementHints(pdf.pages.join('\n'), accounts.data as HintAccount[]) },
+      {
+        hints: detectStatementHints(pdf.pages.join('\n'), accounts.data as HintAccount[]),
+        activity: classifyStatementActivity(pdf.pages.join('\n')),
+      },
       { headers },
     );
   } catch (error) {
@@ -76,7 +83,7 @@ export async function GET(request: Request, { params }: Context): Promise<Respon
     if (
       doc.error ||
       !stored ||
-      stored.mime_type !== 'application/pdf' ||
+      !['application/pdf', 'image/png', 'image/jpeg', 'image/webp'].includes(stored.mime_type) ||
       !stored.file_path.startsWith(`${userId}/`)
     )
       return errorResponse('PDF not found', 404);

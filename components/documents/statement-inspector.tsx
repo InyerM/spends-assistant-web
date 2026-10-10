@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { InlineLoader } from '@/components/shared/loader';
 import type { StatementHints } from '@/lib/statement-hints';
 const inspection = z.object({
+  activity: z.enum(['empty', 'movements', 'unknown']).optional(),
   hints: z.object({
     account_id: z.string().nullable(),
     last_four: z.string().nullable(),
@@ -29,6 +30,7 @@ export function StatementInspector({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(false);
   const [preview, setPreview] = useState<string | null>(null);
+  const [activity, setActivity] = useState<'empty' | 'movements' | 'unknown'>('unknown');
   const [cycle, setCycle] = useState<StatementHints['cycle']>(null);
   useEffect(() => {
     const controller = new AbortController();
@@ -45,6 +47,7 @@ export function StatementInspector({
           const result = inspection.parse(value);
           onHints(result.hints);
           setCycle(result.hints.cycle);
+          setActivity(result.activity ?? 'unknown');
         } else if (
           inspectionError.parse(value).code === 'PDF_PASSWORD_REQUIRED' ||
           inspectionError.parse(value).code === 'PDF_PASSWORD_INCORRECT'
@@ -72,6 +75,7 @@ export function StatementInspector({
       const result = inspection.parse(value);
       onHints(result.hints);
       setCycle(result.hints.cycle);
+      setActivity(result.activity ?? 'unknown');
       setNeedsPassword(false);
     } catch {
       setError(true);
@@ -134,6 +138,11 @@ export function StatementInspector({
       {cycle && (
         <p className='text-primary text-sm' role='status'>
           {t('cycleDetected', { cycle: t(`cycles.${cycle}`) })}
+        </p>
+      )}
+      {activity === 'empty' && (
+        <p role='status' className='text-brand-secondary text-sm'>
+          {t('emptyStatement')}
         </p>
       )}
       {busy && <InlineLoader />}

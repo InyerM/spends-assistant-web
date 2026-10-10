@@ -1237,7 +1237,11 @@
     "sourceUpload": "Uploaded file",
     "viewSourceEmail": "View original email",
     "pendingCapture": "Pending review",
-    "pendingCaptures": "{count, plural, one {# pending} other {# pending}}"
+    "pendingCaptures": "{count, plural, one {# pending} other {# pending}}",
+    "viewDocument": "View document",
+    "previewHint": "Review the original before extracting or reconciling.",
+    "previewError": "We could not open the file. Close this view and try again.",
+    "openOriginal": "Open original in another tab"
   },
   "financialChat": {
     "history": "Your conversations",
@@ -1379,7 +1383,12 @@
     "summaryHint": "See who you transact with most. This summary covers contacts and merchants across your confirmed history.",
     "summaryContacts": "Contacts and merchants",
     "summaryReviewed": "Reviewed transactions",
-    "topContacts": "Most frequent contacts"
+    "topContacts": "Most frequent contacts",
+    "topSpending": "Highest spending by currency",
+    "topTransactions": "Most movements with you",
+    "fullHistory": "All confirmed history",
+    "noSpending": "No associated expenses yet.",
+    "viewAll": "View contacts"
   },
   "statementReconciliation": {
     "title": "Reconcile statement",
@@ -1426,7 +1435,8 @@
     },
     "detectionError": "We could not detect these details. Choose the account and period manually.",
     "pdfTitle": "Original statement",
-    "openPdf": "Open PDF in another tab"
+    "openPdf": "Open PDF in another tab",
+    "emptyStatement": "The text indicates no movements. Check every PDF page; if there is nothing to reconcile, you can archive the document."
   },
   "planning": {
     "title": "Plan your money",
@@ -1476,11 +1486,19 @@
     "reviewCategories": "View categories",
     "addExpense": "Record expense",
     "useReceipt": "Use receipt",
-    "dismiss": "Continue later"
+    "dismiss": "Continue later",
+    "guided": "Guide me step by step",
+    "accountHint": "Create the account you use for expenses. Enter its currency and current balance. This button opens the form.",
+    "categoriesHint": "Review the available categories and create any you need. You can change them later.",
+    "expenseHint": "Record a real expense, paste a bank message or upload a receipt. Review before confirming; nothing saves automatically.",
+    "next": "Next",
+    "previous": "Previous",
+    "done": "Get started",
+    "guideError": "We could not open the guide. You can complete the steps with the buttons below."
   },
   "dashboardWidgets": {
     "title": "Customize home",
-    "hint": "Choose your cards and their order. Saved to your account.",
+    "hint": "Drag blocks or use the arrows. Changes are saved to your account.",
     "accounts": "Accounts",
     "trend": "Balance trend",
     "categories": "Spending by category",
@@ -1491,14 +1509,28 @@
     "up": "Move {name} up",
     "down": "Move {name} down",
     "error": "Could not save. Check the amounts, account and dates.",
-    "custom": "Custom charts"
+    "custom": "Custom charts",
+    "editView": "Edit home",
+    "editorHint": "Choose what to see and drag to reorder. You can also use the arrows.",
+    "contacts": "Top contacts and businesses",
+    "alerts": "Your money needs attention",
+    "requiresData": "Appears when you have data.",
+    "overBudget": "you exceeded the limit ({spent} of {limit}).",
+    "nearBudget": "you are nearing the limit ({spent} of {limit}).",
+    "goalReached": "You reached “{name}”.",
+    "goalNear": "“{name}” is at {progress}%."
   },
   "dictation": {
-    "start": "Dictate transaction",
+    "start": "Dictate",
     "stop": "Stop dictation",
     "listening": "Listening…",
     "hint": "Say the amount, account and destination. Review before analyzing; dictation uses your browser’s speech service.",
-    "failed": "Could not listen. Check microphone permission or type the transaction."
+    "failed": "Dictation could not start. Retry or type the movement.",
+    "permission": "The browser blocked your microphone. Allow access in this site’s settings.",
+    "microphone": "No microphone is available. Check your audio input or type the movement.",
+    "noSpeech": "No speech detected. Move closer to the microphone and try again.",
+    "language": "This browser does not support this language. Use system dictation or type.",
+    "service": "The browser speech service is unavailable. Retry or use system dictation; microphone permission may already be granted."
   },
   "locations": {
     "title": "Purchase locations",
@@ -1535,5 +1567,27 @@
     "empty": "No transactions match these filters.",
     "unknownAccount": "Previous account",
     "uncategorized": "Uncategorized"
+  },
+  "notificationPreferences": {
+    "title": "Notifications in Anotto",
+    "hint": "Choose the notices you receive inside the web app.",
+    "email": {
+      "title": "Received emails",
+      "hint": "A notice when an email arrives for review."
+    },
+    "budgets": {
+      "title": "Budget limits",
+      "hint": "Alerts at 80% and when you exceed your limit."
+    },
+    "goals": {
+      "title": "Savings goals",
+      "hint": "80% progress and completed goals."
+    },
+    "schedules": {
+      "title": "Scheduled expenses",
+      "hint": "Reminders and expenses recorded on the chosen date."
+    },
+    "required": "Failures requiring review always appear. This does not enable email, push or phone notifications.",
+    "error": "Could not save preferences. Try again."
   }
 }

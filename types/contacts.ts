@@ -45,3 +45,7 @@ export interface ContactScanPage {
   next: string | null;
   has_more: boolean;
 }
+
+export interface ContactInsights extends ContactList {
+  spending: Array<Contact & { currency: string; amount: number; expense_count: number }>;
+}

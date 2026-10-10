@@ -30,7 +30,9 @@ function date(value: string): string | null {
   const numeric = /^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/.exec(value.trim());
   const named = /^(\d{1,2})\s+(?:de\s+)?([a-z]+)\s+(?:de\s+)?(\d{4})$/.exec(value.trim());
   const day = Number(numeric?.[1] ?? named?.[1]);
-  const month = numeric ? Number(numeric[2]) : months.indexOf(named?.[2] ?? '') + 1;
+  const month = numeric
+    ? Number(numeric[2])
+    : months.findIndex((month) => month.startsWith(named?.[2] ?? '!')) + 1;
   const year = Number(numeric?.[3] ?? named?.[3]);
   if (!year || month < 1 || month > 12 || day < 1) return null;
   const candidate = new Date(Date.UTC(year, month - 1, day));
@@ -66,6 +68,19 @@ export function detectStatementHints(text: string, accounts: HintAccount[]): Sta
     );
   let start = range ? date(range[1]) : null;
   let end = range ? date(range[2]) : null;
+  if (!start || !end) {
+    const shared =
+      /(?:periodo|period)\s*(?:facturado|de facturacion|billed)?\s*[:.-]?\s*(\d{1,2})\s+([a-z]{3,})\.?\s*[-–a]+\s*(\d{1,2})\s+([a-z]{3,})\.?\s+(\d{4})/.exec(
+        normalized,
+      );
+    if (shared) {
+      const firstMonth = months.findIndex((month) => month.startsWith(shared[2]));
+      const lastMonth = months.findIndex((month) => month.startsWith(shared[4]));
+      const lastYear = Number(shared[5]);
+      start = date(`${shared[1]} ${shared[2]} ${lastYear - (firstMonth > lastMonth ? 1 : 0)}`);
+      end = date(`${shared[3]} ${shared[4]} ${lastYear}`);
+    }
+  }
   if (!start || !end || start > end || (Date.parse(end) - Date.parse(start)) / 86400000 > 366) {
     start = null;
     end = null;
@@ -83,7 +98,13 @@ export function detectStatementHints(text: string, accounts: HintAccount[]): Sta
       first.getUTCDate() === 1 &&
       last.getUTCDate() ===
         new Date(Date.UTC(last.getUTCFullYear(), last.getUTCMonth() + 1, 0)).getUTCDate();
-    cycle = whole && span === 1 ? 'monthly' : whole && span === 3 ? 'quarterly' : 'other';
+    const days = (last.getTime() - first.getTime()) / 86400000 + 1;
+    cycle =
+      (whole && span === 1) || (days >= 27 && days <= 32)
+        ? 'monthly'
+        : (whole && span === 3) || (days >= 88 && days <= 93)
+          ? 'quarterly'
+          : 'other';
   }
   return {
     account_id: unique?.id ?? null,
@@ -92,4 +113,21 @@ export function detectStatementHints(text: string, accounts: HintAccount[]): Sta
     period_end: end,
     cycle,
   };
+}
+
+export function classifyStatementActivity(text: string): 'empty' | 'movements' | 'unknown' {
+  const normalized = text
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
+  // A zero closing balance is not evidence of zero activity. Examine every page first.
+  if (/\b\d{1,2}[/-]\d{1,2}[/-]\d{2,4}[^\n]{0,160}(?:\$|cop|usd)\s*\d/.test(normalized))
+    return 'movements';
+  if (
+    /\b(?:sin movimientos|no registra movimientos|no hubo movimientos|no transactions|no activity)\b/.test(
+      normalized,
+    )
+  )
+    return 'empty';
+  return 'unknown';
 }

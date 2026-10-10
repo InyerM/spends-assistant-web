@@ -1,3 +1,8 @@
+vi.mock('@/components/planning/dashboard-controls', () => ({ DashboardControls: () => null }));
+vi.mock('@/components/planning/custom-chart-builder', () => ({ CustomChartBuilder: () => null }));
+vi.mock('@/components/settings/notification-preferences', () => ({
+  NotificationPreferences: () => null,
+}));
 import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import SettingsPage from '@/app/(dashboard)/settings/page';

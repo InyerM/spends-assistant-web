@@ -1,6 +1,12 @@
 import { useQuery, type UseQueryResult } from '@tanstack/react-query';
 import { useAuthStore } from '@/store/auth-store';
-import type { ContactList, ContactDetail, ContactScanPage, ContactSort } from '@/types/contacts';
+import type {
+  ContactList,
+  ContactDetail,
+  ContactScanPage,
+  ContactSort,
+  ContactInsights,
+} from '@/types/contacts';
 async function read<T>(url: string, signal?: AbortSignal): Promise<T> {
   const response = await fetch(url, { signal });
   if (!response.ok) throw new Error('Contacts unavailable');
@@ -57,11 +63,11 @@ export async function renameContact(id: string, name: string): Promise<void> {
   if (!response.ok) throw new Error('Contact update failed');
 }
 
-export function useContactSummary(): UseQueryResult<ContactList> {
+export function useContactSummary(): UseQueryResult<ContactInsights> {
   const owner = useAuthStore((state) => state.supabaseUser?.id);
   return useQuery({
     queryKey: ['contacts', owner, 'summary'],
     enabled: Boolean(owner),
-    queryFn: ({ signal }) => read<ContactList>('/api/contacts?summary=1', signal),
+    queryFn: ({ signal }) => read<ContactInsights>('/api/contacts?summary=1', signal),
   });
 }

@@ -11,6 +11,7 @@ import { useAppSettings } from '@/hooks/use-app-settings';
 
 export function HelpSection(): React.ReactElement {
   const t = useTranslations('helpCenter');
+  const onboarding = useTranslations('onboarding');
   const { data: appSettings } = useAppSettings();
 
   const { supportEmail, faqUrl } = resolveSupportLinks(
@@ -19,6 +20,9 @@ export function HelpSection(): React.ReactElement {
 
   return (
     <div className='space-y-5'>
+      <Button asChild variant='outline'>
+        <Link href='/dashboard?guide=1'>{onboarding('guided')}</Link>
+      </Button>
       <Card>
         <CardHeader>
           <CardTitle className='flex items-center gap-2'>

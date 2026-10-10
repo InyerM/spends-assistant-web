@@ -35,3 +35,30 @@ it('adds dictated text to a draft without submitting it and stops on unmount', (
   expect(instance?.stop).toHaveBeenCalled();
   delete (window as unknown as Record<string, unknown>).SpeechRecognition;
 });
+it('reports service failures separately from microphone permission and ignores intentional aborts', () => {
+  let instance: { onerror: ((event: { error: string }) => void) | null } | undefined;
+  class Speech {
+    onresult = null;
+    onerror = null;
+    onend = null;
+    lang = '';
+    continuous = false;
+    interimResults = false;
+    start = vi.fn();
+    stop = vi.fn();
+    constructor() {
+      // eslint-disable-next-line @typescript-eslint/no-this-alias
+      instance = this;
+    }
+  }
+  Object.defineProperty(window, 'SpeechRecognition', { value: Speech, configurable: true });
+  const hook = renderHook(() => useDictation('es-CO', vi.fn()));
+  act(() => hook.result.current.start());
+  act(() => instance?.onerror?.({ error: 'network' }));
+  expect(hook.result.current.error).toBe('network');
+  act(() => hook.result.current.start());
+  act(() => instance?.onerror?.({ error: 'aborted' }));
+  expect(hook.result.current.failed).toBe(false);
+  hook.unmount();
+  delete (window as unknown as Record<string, unknown>).SpeechRecognition;
+});

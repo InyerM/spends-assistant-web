@@ -64,10 +64,5 @@ it('returns a global top five summary independently of directory pagination', as
   rpc.mockResolvedValue({ data: { items: [], count: 100, scan: { total: 200 } }, error: null });
   const response = await GET(new Request('https://my.anotto.app/api/contacts?summary=1'));
   expect(response.status).toBe(200);
-  expect(rpc).toHaveBeenCalledWith('list_counterparties_sorted', {
-    p_query: '',
-    p_offset: 0,
-    p_limit: 5,
-    p_sort: 'most_transactions',
-  });
+  expect(rpc).toHaveBeenCalledWith('contact_insights');
 });

@@ -10,7 +10,7 @@ interface Recognition {
         resultIndex: number;
       }) => void)
     | null;
-  onerror: (() => void) | null;
+  onerror: ((event: { error: string }) => void) | null;
   onend: (() => void) | null;
   start: () => void;
   stop: () => void;
@@ -26,11 +26,12 @@ export function useDictation(
   supported: boolean;
   listening: boolean;
   failed: boolean;
+  error: string | null;
   start: () => void;
   stop: () => void;
 } {
   const [listening, setListening] = useState(false);
-  const [failed, setFailed] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const supported = useSyncExternalStore(
     () => (): void => {},
     (): boolean => {
@@ -62,7 +63,12 @@ export function useDictation(
     const host = window as SpeechWindow;
     const Constructor = host.SpeechRecognition ?? host.webkitSpeechRecognition;
     if (!Constructor) return;
-    recognition.current?.stop();
+    if (recognition.current) {
+      recognition.current.onend = null;
+      recognition.current.onerror = null;
+      recognition.current.onresult = null;
+      recognition.current.stop();
+    }
     const next = new Constructor();
     next.lang = language;
     next.continuous = false;
@@ -75,20 +81,20 @@ export function useDictation(
         .trim();
       if (text) callback.current(text);
     };
-    next.onerror = (): void => {
-      setFailed(true);
+    next.onerror = (event): void => {
+      if (event.error !== 'aborted') setError(event.error);
       setListening(false);
     };
     next.onend = (): void => setListening(false);
     recognition.current = next;
-    setFailed(false);
+    setError(null);
     try {
       next.start();
       setListening(true);
     } catch {
-      setFailed(true);
+      setError('start-failed');
       setListening(false);
     }
   }, [language]);
-  return { supported, listening, failed, start, stop };
+  return { supported, listening, failed: error !== null, error, start, stop };
 }

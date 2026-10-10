@@ -26,8 +26,8 @@ export function CustomChartBuilder(): React.ReactElement {
     });
   }
   return (
-    <details className='bg-card border-border rounded-xl border p-4'>
-      <summary className='cursor-pointer text-sm font-medium'>{t('title')}</summary>
+    <section className='space-y-3'>
+      <h2 className='text-base font-semibold'>{t('title')}</h2>
       <p className='text-muted-foreground mt-3 text-sm'>{t('hint')}</p>
       <div className='mt-3 space-y-2'>
         {charts.map((chart, index) => (
@@ -71,35 +71,49 @@ export function CustomChartBuilder(): React.ReactElement {
             <span>{t('name')}</span>
             <Input value={name} required maxLength={80} onChange={(e) => setName(e.target.value)} />
           </label>
-          <SearchableSelect
-            ariaLabel={t('currency')}
-            value={currency}
-            items={['COP', 'USD'].map((value) => ({ value, label: value }))}
-            onValueChange={(value) => setCurrency(value as CustomChart['currency'])}
-          />
-          <SearchableSelect
-            ariaLabel={t('type')}
-            value={type}
-            items={['expense', 'income'].map((value) => ({ value, label: t(value) }))}
-            onValueChange={(value) => setType(value as CustomChart['type'])}
-          />
-          <SearchableSelect
-            ariaLabel={t('group')}
-            value={group}
-            items={['category', 'account'].map((value) => ({ value, label: t(value) }))}
-            onValueChange={(value) => setGroup(value as CustomChart['group'])}
-          />
-          <SearchableSelect
-            placeholder={t('all')}
-            ariaLabel={t('filter')}
-            value={account}
-            items={[
-              { value: '', label: t('all') },
-              ...(accounts ?? []).map((a) => ({ value: a.id, label: a.name })),
-            ]}
-            onValueChange={setAccount}
-          />
-          <Button disabled={save.isPending || !name.trim()}>{t('add')}</Button>
+          <label className='space-y-1 text-sm'>
+            <span>{t('currency')}</span>
+            <SearchableSelect
+              ariaLabel={t('currency')}
+              value={currency}
+              items={['COP', 'USD'].map((value) => ({ value, label: value }))}
+              onValueChange={(value) => setCurrency(value as CustomChart['currency'])}
+            />
+          </label>
+          <label className='space-y-1 text-sm'>
+            <span>{t('type')}</span>
+            <SearchableSelect
+              ariaLabel={t('type')}
+              value={type}
+              items={['expense', 'income'].map((value) => ({ value, label: t(value) }))}
+              onValueChange={(value) => setType(value as CustomChart['type'])}
+            />
+          </label>
+          <label className='space-y-1 text-sm'>
+            <span>{t('group')}</span>
+            <SearchableSelect
+              ariaLabel={t('group')}
+              value={group}
+              items={['category', 'account'].map((value) => ({ value, label: t(value) }))}
+              onValueChange={(value) => setGroup(value as CustomChart['group'])}
+            />
+          </label>
+          <label className='space-y-1 text-sm'>
+            <span>{t('filter')}</span>
+            <SearchableSelect
+              placeholder={t('all')}
+              ariaLabel={t('filter')}
+              value={account}
+              items={[
+                { value: '', label: t('all') },
+                ...(accounts ?? []).map((a) => ({ value: a.id, label: a.name })),
+              ]}
+              onValueChange={setAccount}
+            />
+          </label>
+          <Button className='self-end' disabled={save.isPending || !name.trim()}>
+            {t('add')}
+          </Button>
         </form>
       )}
       {save.error && (
@@ -107,6 +121,6 @@ export function CustomChartBuilder(): React.ReactElement {
           {t('error')}
         </p>
       )}
-    </details>
+    </section>
   );
 }

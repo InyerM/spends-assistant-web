@@ -1,5 +1,6 @@
 'use client';
 import Link from 'next/link';
+import { useGuidedOnboarding } from '@/hooks/use-guided-onboarding';
 import { useTransactions } from '@/lib/api/queries/transaction.queries';
 import { useTranslations } from 'next-intl';
 import { Check, X } from 'lucide-react';
@@ -10,24 +11,38 @@ import { usePlanning } from '@/lib/api/queries/planning.queries';
 import { useSavePlanning } from '@/lib/api/mutations/planning.mutations';
 export function OnboardingCard({
   hasExpense,
+  force = false,
   onCreateAccount,
   onCreateExpense,
 }: {
   hasExpense: boolean;
+  force?: boolean;
   onCreateAccount: () => void;
   onCreateExpense: () => void;
 }): React.ReactElement | null {
   const { data: history } = useTransactions({ type: 'expense', limit: 1 });
   const recorded = hasExpense || Boolean(history?.count);
   const t = useTranslations('onboarding');
+  const guide = useGuidedOnboarding({
+    account: t('account'),
+    accountHint: t('accountHint'),
+    categories: t('categories'),
+    categoriesHint: t('categoriesHint'),
+    expense: t('expense'),
+    expenseHint: t('expenseHint'),
+    next: t('next'),
+    previous: t('previous'),
+    done: t('done'),
+  });
   const { data: accounts } = useAccounts();
   const { data: categories } = useCategories();
   const { data } = usePlanning();
   const save = useSavePlanning();
   if (
     !data ||
-    data.preferences.onboarding_dismissed === true ||
-    (accounts?.length && categories?.length && recorded)
+    (!force &&
+      (data.preferences.onboarding_dismissed === true ||
+        (accounts?.length && categories?.length && recorded)))
   )
     return null;
   const steps = [
@@ -35,7 +50,7 @@ export function OnboardingCard({
       name: t('account'),
       done: Boolean(accounts?.length),
       action: (
-        <Button variant='outline' onClick={onCreateAccount}>
+        <Button data-guide='account' variant='outline' onClick={onCreateAccount}>
           {t('createAccount')}
         </Button>
       ),
@@ -45,7 +60,9 @@ export function OnboardingCard({
       done: Boolean(categories?.length),
       action: (
         <Button asChild variant='outline'>
-          <Link href='/categories'>{t('reviewCategories')}</Link>
+          <Link data-guide='categories' href='/categories'>
+            {t('reviewCategories')}
+          </Link>
         </Button>
       ),
     },
@@ -54,7 +71,9 @@ export function OnboardingCard({
       done: recorded,
       action: (
         <div className='flex flex-wrap gap-2'>
-          <Button onClick={onCreateExpense}>{t('addExpense')}</Button>
+          <Button data-guide='expense' onClick={onCreateExpense}>
+            {t('addExpense')}
+          </Button>
           <Button asChild variant='outline'>
             <Link href='/documents'>{t('useReceipt')}</Link>
           </Button>
@@ -82,6 +101,14 @@ export function OnboardingCard({
           <X className='size-4' />
         </Button>
       </div>
+      <Button variant='outline' className='mt-4' onClick={() => void guide.start()}>
+        {t('guided')}
+      </Button>
+      {guide.failed && (
+        <p role='alert' className='text-warning mt-2 text-sm'>
+          {t('guideError')}
+        </p>
+      )}
       <div className='divide-border mt-4 divide-y'>
         {steps.map((step) => (
           <div key={step.name} className='flex flex-wrap items-center justify-between gap-3 py-3'>

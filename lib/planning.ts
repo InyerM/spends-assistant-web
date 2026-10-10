@@ -94,6 +94,8 @@ export const DASHBOARD_WIDGETS = [
   'budgets',
   'goals',
   'custom',
+  'contacts',
+  'alerts',
 ] as const;
 export type DashboardWidget = (typeof DASHBOARD_WIDGETS)[number];
 export function dashboardWidgets(value: unknown): DashboardWidget[] {
@@ -117,4 +119,18 @@ export function moveWidget(
   if (target < 0 || target >= result.length) return result;
   [result[index], result[target]] = [result[target], result[index]];
   return result;
+}
+
+export function reorderWidget(
+  widgets: DashboardWidget[],
+  from: string,
+  to: string,
+): DashboardWidget[] {
+  const source = widgets.indexOf(from as DashboardWidget);
+  const target = widgets.indexOf(to as DashboardWidget);
+  if (source < 0 || target < 0 || source === target) return widgets;
+  const next = [...widgets];
+  const [widget] = next.splice(source, 1);
+  next.splice(target, 0, widget);
+  return next;
 }

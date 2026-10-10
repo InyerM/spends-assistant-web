@@ -17,7 +17,10 @@ export function useSavePlanning(): ReturnType<typeof useMutation<unknown, Error,
       return response.json() as Promise<unknown>;
     },
     onSuccess: async (): Promise<void> => {
-      await client.invalidateQueries({ queryKey: ['planning'] });
+      await Promise.all([
+        client.invalidateQueries({ queryKey: ['planning'] }),
+        client.invalidateQueries({ queryKey: ['notifications'] }),
+      ]);
     },
   });
 }

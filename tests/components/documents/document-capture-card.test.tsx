@@ -36,4 +36,5 @@ it('identifies a forwarded attachment and opens its original email directly', ()
     '/inbox/mail-id',
   );
   expect(screen.getByText('pendingCapture')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'viewDocument' })).toBeVisible();
 });

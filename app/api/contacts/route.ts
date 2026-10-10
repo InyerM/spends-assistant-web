@@ -20,17 +20,19 @@ export async function GET(request: Request): Promise<Response> {
       page > 10000
     )
       return errorResponse('Invalid contact filters', 400);
+    if (summary) {
+      const { data, error } = await supabase.rpc('contact_insights');
+      return error
+        ? errorResponse('Contacts unavailable')
+        : Response.json(data, { headers: privateHeaders });
+    }
     const { data, error } = await supabase.rpc(
-      !summary && sort.data === 'recent' ? 'list_counterparties' : 'list_counterparties_sorted',
+      sort.data === 'recent' ? 'list_counterparties' : 'list_counterparties_sorted',
       {
-        p_query: summary ? '' : query,
-        p_offset: summary ? 0 : (page - 1) * 50,
-        p_limit: summary ? 5 : 50,
-        ...(summary
-          ? { p_sort: 'most_transactions' }
-          : sort.data === 'recent'
-            ? {}
-            : { p_sort: sort.data }),
+        p_query: query,
+        p_offset: (page - 1) * 50,
+        p_limit: 50,
+        ...(sort.data === 'recent' ? {} : { p_sort: sort.data }),
       },
     );
     if (error) return errorResponse('Contacts unavailable');

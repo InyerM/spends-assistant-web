@@ -1,14 +1,17 @@
 'use client';
-import { CustomChartBuilder } from '@/components/planning/custom-chart-builder';
+import { DashboardEditor } from '@/components/planning/dashboard-editor';
+import { TopContacts } from '@/components/dashboard/top-contacts';
+import { MoneyAlerts } from '@/components/dashboard/money-alerts';
 import { CustomCharts } from '@/components/planning/custom-charts';
 
 import { usePlanning } from '@/lib/api/queries/planning.queries';
 import { dashboardWidgets } from '@/lib/planning';
 import { PlanningOverview } from '@/components/planning/planning-overview';
 import { OnboardingCard } from '@/components/planning/onboarding-card';
-import { DashboardControls } from '@/components/planning/dashboard-controls';
+
 import { useTransactionFormStore } from '@/lib/stores/transaction-form.store';
 import { useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { startOfMonth, endOfMonth } from 'date-fns';
 import { BalanceOverview } from '@/components/dashboard/balance-overview';
@@ -34,6 +37,7 @@ function toStr(date: Date): string {
 
 export default function DashboardPage(): React.ReactElement {
   const t = useTranslations('dashboard');
+  const guideRequested = useSearchParams().get('guide') === '1';
   const { data: planning } = usePlanning();
   const widgets = dashboardWidgets(planning?.preferences.dashboard_widgets);
   const openNew = useTransactionFormStore((s) => s.openNew);
@@ -64,18 +68,21 @@ export default function DashboardPage(): React.ReactElement {
         <h1 className='text-foreground text-2xl font-semibold tracking-tight sm:text-3xl'>
           {t('overview')}
         </h1>
-        <PeriodSelector dateFrom={dateFrom} dateTo={dateTo} onChange={handlePeriodChange} />
+        <div className='flex flex-wrap items-center gap-2'>
+          <PeriodSelector dateFrom={dateFrom} dateTo={dateTo} onChange={handlePeriodChange} />
+          <DashboardEditor />
+        </div>
       </div>
 
       <SummaryCards transactions={transactions} isLoading={txLoading} />
 
       <OnboardingCard
+        force={guideRequested}
         hasExpense={transactions.some((tx) => tx.type === 'expense')}
         onCreateAccount={() => setCreateAccountOpen(true)}
         onCreateExpense={openNew}
       />
-      <DashboardControls />
-      <CustomChartBuilder />
+
       <div className='grid items-start gap-4 sm:gap-6 xl:grid-cols-2'>
         {widgets.map((id) => (
           <div
@@ -94,6 +101,8 @@ export default function DashboardPage(): React.ReactElement {
               <SpendingByCategory transactions={transactions} isLoading={txLoading} />
             )}
             {id === 'nature' && <SpendingNatureCards transactions={transactions} />}
+            {id === 'contacts' && <TopContacts />}
+            {id === 'alerts' && <MoneyAlerts />}
             {id === 'recent' && <RecentTransactions />}
             {id === 'budgets' && budgetMonth && <BudgetOverview month={budgetMonth} />}
             {id === 'goals' && <PlanningOverview />}

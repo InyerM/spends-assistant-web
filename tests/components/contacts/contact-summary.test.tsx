@@ -12,7 +12,9 @@ const contact = {
   movement_count: 50,
 };
 vi.mock('@/lib/api/queries/contacts.queries', () => ({
-  useContactSummary: () => ({ data: { items: [contact], count: 200, scan: { scanned: 1717 } } }),
+  useContactSummary: () => ({
+    data: { items: [contact], spending: [], count: 200, scan: { scanned: 1717 } },
+  }),
 }));
 it('shows the global catalog summary with labeled counts and opens the ranked contact', () => {
   const onSelect = vi.fn();

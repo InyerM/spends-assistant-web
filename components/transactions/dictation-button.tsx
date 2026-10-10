@@ -17,18 +17,44 @@ export function DictationButton({
     (text) => onChange([value.trim(), text].filter(Boolean).join(' ')),
   );
   if (!dictation.supported) return null;
+  const key =
+    dictation.error === 'not-allowed'
+      ? 'permission'
+      : dictation.error === 'audio-capture'
+        ? 'microphone'
+        : dictation.error === 'no-speech'
+          ? 'noSpeech'
+          : dictation.error === 'language-not-supported'
+            ? 'language'
+            : dictation.error === 'network' || dictation.error === 'service-not-allowed'
+              ? 'service'
+              : 'failed';
   return (
-    <div className='space-y-2'>
+    <div className='flex flex-wrap items-center gap-2'>
       <Button
         type='button'
-        variant='outline'
+        size='sm'
+        variant='ghost'
+        aria-pressed={dictation.listening}
+        className={dictation.listening ? 'text-brand bg-brand/10' : ''}
         onClick={dictation.listening ? dictation.stop : dictation.start}>
-        {dictation.listening ? <Square className='mr-2 size-4' /> : <Mic className='mr-2 size-4' />}
-        {dictation.listening ? t('stop') : t('start')}
+        {dictation.listening ? (
+          <Square className='size-4' aria-hidden='true' />
+        ) : (
+          <Mic className='size-4' aria-hidden='true' />
+        )}
+        {t(dictation.listening ? 'stop' : 'start')}
       </Button>
-      <p className='text-muted-foreground text-xs'>
-        {dictation.failed ? t('failed') : dictation.listening ? t('listening') : t('hint')}
-      </p>
+      {dictation.listening && (
+        <span role='status' className='text-brand text-xs'>
+          {t('listening')}
+        </span>
+      )}
+      {dictation.failed && (
+        <p role='alert' className='text-warning basis-full text-xs leading-5'>
+          {t(key)}
+        </p>
+      )}
     </div>
   );
 }

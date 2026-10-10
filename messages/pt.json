@@ -1120,7 +1120,11 @@
     "sourceUpload": "Arquivo enviado",
     "viewSourceEmail": "Ver e-mail original",
     "pendingCapture": "Revisão pendente",
-    "pendingCaptures": "{count, plural, one {# pendente} other {# pendentes}}"
+    "pendingCaptures": "{count, plural, one {# pendente} other {# pendentes}}",
+    "viewDocument": "Ver documento",
+    "previewHint": "Revise o arquivo original antes de extrair ou conciliar.",
+    "previewError": "Não foi possível abrir o arquivo. Feche esta visualização e tente novamente.",
+    "openOriginal": "Abrir original em outra aba"
   },
   "financialChat": {
     "history": "Suas conversas",
@@ -1262,7 +1266,12 @@
     "summaryHint": "Veja com quem você faz mais movimentações. Este resumo reúne contatos e estabelecimentos de todo o histórico confirmado.",
     "summaryContacts": "Contatos e estabelecimentos",
     "summaryReviewed": "Movimentos revisados",
-    "topContacts": "Contatos mais frequentes"
+    "topContacts": "Contatos mais frequentes",
+    "topSpending": "Maior gasto por moeda",
+    "topTransactions": "Mais movimentos com você",
+    "fullHistory": "Todo o histórico confirmado",
+    "noSpending": "Ainda não há despesas associadas.",
+    "viewAll": "Ver contatos"
   },
   "statementReconciliation": {
     "title": "Conciliar extrato",
@@ -1309,7 +1318,8 @@
     },
     "detectionError": "Não foi possível detectar esses dados. Escolha a conta e o período manualmente.",
     "pdfTitle": "Extrato original",
-    "openPdf": "Abrir PDF em outra aba"
+    "openPdf": "Abrir PDF em outra aba",
+    "emptyStatement": "O texto indica que não há movimentos. Verifique todas as páginas; se não houver nada a conciliar, você pode arquivar o documento."
   },
   "planning": {
     "title": "Planeje seu dinheiro",
@@ -1359,11 +1369,19 @@
     "reviewCategories": "Ver categorias",
     "addExpense": "Registrar despesa",
     "useReceipt": "Usar comprovante",
-    "dismiss": "Continuar depois"
+    "dismiss": "Continuar depois",
+    "guided": "Guie-me passo a passo",
+    "accountHint": "Crie a conta usada para despesas. Informe moeda e saldo atual. Este botão abre o formulário.",
+    "categoriesHint": "Revise as categorias disponíveis e crie as necessárias. Você pode alterá-las depois.",
+    "expenseHint": "Registre uma despesa real, cole uma mensagem bancária ou envie um recibo. Revise antes de confirmar; nada é salvo automaticamente.",
+    "next": "Próximo",
+    "previous": "Anterior",
+    "done": "Começar",
+    "guideError": "Não foi possível abrir o guia. Use os botões abaixo para completar os passos."
   },
   "dashboardWidgets": {
     "title": "Personalizar início",
-    "hint": "Escolha os cartões e sua ordem. Salvo na sua conta.",
+    "hint": "Arraste os blocos ou use as setas. As mudanças ficam salvas na sua conta.",
     "accounts": "Contas",
     "trend": "Evolução do saldo",
     "categories": "Despesas por categoria",
@@ -1374,14 +1392,28 @@
     "up": "Mover acima {name}",
     "down": "Mover abaixo {name}",
     "error": "Não foi possível salvar. Confira os valores, a conta e as datas.",
-    "custom": "Gráficos personalizados"
+    "custom": "Gráficos personalizados",
+    "editView": "Editar início",
+    "editorHint": "Escolha o que ver e arraste para reordenar. Também pode usar as setas.",
+    "contacts": "Top contatos e estabelecimentos",
+    "alerts": "Seu dinheiro precisa de atenção",
+    "requiresData": "Aparece quando houver dados.",
+    "overBudget": "você superou o limite ({spent} de {limit}).",
+    "nearBudget": "você está perto do limite ({spent} de {limit}).",
+    "goalReached": "Você alcançou «{name}».",
+    "goalNear": "«{name}» está em {progress}%."
   },
   "dictation": {
-    "start": "Ditar movimento",
+    "start": "Ditar",
     "stop": "Parar ditado",
     "listening": "Ouvindo…",
     "hint": "Diga o valor, a conta e o destino. Revise antes de analisar; o ditado usa o serviço de voz do navegador.",
-    "failed": "Não foi possível ouvir. Confira a permissão do microfone ou digite."
+    "failed": "Não foi possível iniciar o ditado. Tente novamente ou digite.",
+    "permission": "O navegador bloqueou o microfone. Permita o acesso nas configurações deste site.",
+    "microphone": "Nenhum microfone disponível. Verifique a entrada de áudio ou digite.",
+    "noSpeech": "Nenhuma voz detectada. Aproxime-se do microfone e tente novamente.",
+    "language": "Este navegador não reconhece este idioma. Use o ditado do sistema ou digite.",
+    "service": "O serviço de voz do navegador está indisponível. Tente novamente ou use o ditado do sistema; a permissão pode estar ativa."
   },
   "locations": {
     "title": "Locais de compras",
@@ -1418,5 +1450,27 @@
     "empty": "Nenhum movimento com esses filtros.",
     "unknownAccount": "Conta anterior",
     "uncategorized": "Sem categoria"
+  },
+  "notificationPreferences": {
+    "title": "Notificações no Anotto",
+    "hint": "Escolha os avisos recebidos dentro da web.",
+    "email": {
+      "title": "E-mails recebidos",
+      "hint": "Um aviso quando chegar um e-mail para revisar."
+    },
+    "budgets": {
+      "title": "Limites de orçamento",
+      "hint": "Avisos ao chegar a 80% ou superar seu limite."
+    },
+    "goals": {
+      "title": "Metas de economia",
+      "hint": "Progresso de 80% e metas alcançadas."
+    },
+    "schedules": {
+      "title": "Despesas programadas",
+      "hint": "Lembretes e despesas registradas na data escolhida."
+    },
+    "required": "Falhas que precisam de revisão sempre aparecem. Isso não ativa e-mail, push ou notificações do celular.",
+    "error": "Não foi possível salvar. Tente novamente."
   }
 }
