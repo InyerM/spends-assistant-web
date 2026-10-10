@@ -50,7 +50,13 @@ export function OnboardingCard({
       name: t('account'),
       done: Boolean(accounts?.length),
       action: (
-        <Button data-guide='account' variant='outline' onClick={onCreateAccount}>
+        <Button
+          data-guide='account'
+          variant='outline'
+          onClick={() => {
+            guide.stop();
+            onCreateAccount();
+          }}>
           {t('createAccount')}
         </Button>
       ),
@@ -60,7 +66,7 @@ export function OnboardingCard({
       done: Boolean(categories?.length),
       action: (
         <Button asChild variant='outline'>
-          <Link data-guide='categories' href='/categories'>
+          <Link data-guide='categories' href='/categories' onClick={guide.stop}>
             {t('reviewCategories')}
           </Link>
         </Button>
@@ -71,7 +77,12 @@ export function OnboardingCard({
       done: recorded,
       action: (
         <div className='flex flex-wrap gap-2'>
-          <Button data-guide='expense' onClick={onCreateExpense}>
+          <Button
+            data-guide='expense'
+            onClick={() => {
+              guide.stop();
+              onCreateExpense();
+            }}>
             {t('addExpense')}
           </Button>
           <Button asChild variant='outline'>

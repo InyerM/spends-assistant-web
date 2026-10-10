@@ -11,16 +11,14 @@ export function useGuidedOnboarding(labels: {
   next: string;
   previous: string;
   done: string;
-}): { start: () => Promise<void>; failed: boolean } {
+}): { start: () => Promise<void>; stop: () => void; failed: boolean } {
   const active = useRef<Driver | null>(null);
-  const detach = useRef<(() => void) | null>(null);
   const mounted = useRef(true);
   const [failed, setFailed] = useState(false);
   useEffect(() => {
     mounted.current = true;
     return (): void => {
       mounted.current = false;
-      detach.current?.();
       active.current?.destroy();
     };
   }, []);
@@ -36,19 +34,6 @@ export function useGuidedOnboarding(labels: {
         allowKeyboardControl: true,
         disableActiveInteraction: false,
         popoverClass: 'anotto-tour',
-        onHighlighted: (element): void => {
-          detach.current?.();
-          if (!element) return;
-          const release = (): void => {
-            active.current?.destroy();
-          };
-          element.addEventListener('click', release, { capture: true, once: true });
-          detach.current = (): void => element.removeEventListener('click', release, true);
-        },
-        onDestroyed: (): void => {
-          detach.current?.();
-          detach.current = null;
-        },
         nextBtnText: labels.next,
         prevBtnText: labels.previous,
         doneBtnText: labels.done,
@@ -72,5 +57,8 @@ export function useGuidedOnboarding(labels: {
       if (mounted.current) setFailed(true);
     }
   }
-  return { start, failed };
+  function stop(): void {
+    active.current?.destroy();
+  }
+  return { start, stop, failed };
 }
