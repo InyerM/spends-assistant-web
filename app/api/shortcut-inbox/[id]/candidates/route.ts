@@ -1,3 +1,5 @@
+import { inferForwardedAccountFromRules } from '@/lib/shortcut-inbox/create-draft';
+import type { AutomationRule } from '@/types/automation-rule';
 import type { NextRequest } from 'next/server';
 import { AuthError, errorResponse, getUserClient } from '@/lib/api/server';
 import {
@@ -61,7 +63,9 @@ export async function GET(request: NextRequest, context: Context): Promise<Respo
     if (evidence.amount && evidence.date && evidence.lastFour) {
       const { data: accounts, error: accountError } = await supabase
         .from('accounts')
-        .select('id,type,currency,last_four,bank_account_last_four,identifiers')
+        .select(
+          'id,name,institution,type,currency,is_active,last_four,bank_account_last_four,identifiers,deleted_at',
+        )
         .eq('user_id', userId)
         .is('deleted_at', null)
         .limit(1001);
@@ -71,6 +75,22 @@ export async function GET(request: NextRequest, context: Context): Promise<Respo
           (!bank || !row.currency || row.currency === bank.currency) &&
           accountIdentifiers(row).some((identifier) => identifier.last_four === evidence.lastFour),
       );
+      if (matching.length === 0 && accounts.length < 1001) {
+        const { data: rules, error: rulesError } = await supabase
+          .from('automation_rules')
+          .select('rule_type,is_active,condition_logic,conditions,actions')
+          .eq('user_id', userId)
+          .eq('is_active', true)
+          .is('deleted_at', null);
+        if (rulesError) return errorResponse('Candidate account lookup failed');
+        const ruleAccountId = inferForwardedAccountFromRules(
+          ownedInbox.raw_text,
+          accounts as Account[],
+          rules as AutomationRule[],
+        );
+        const ruleAccount = (accounts as Account[]).find((row) => row.id === ruleAccountId);
+        if (ruleAccount) matching.push(ruleAccount);
+      }
       if (accounts.length === 1001 || matching.length > 1) account = 'ambiguous';
       else if (matching.length === 0) account = 'missing';
       else {

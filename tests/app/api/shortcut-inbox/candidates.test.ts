@@ -21,6 +21,7 @@ function fakeDatabase(
   options: {
     inbox?: Row[];
     accounts?: Row[];
+    rules?: Row[];
     transactions?: Row[];
     failTransactions?: boolean;
     failInbox?: boolean;
@@ -32,6 +33,7 @@ function fakeDatabase(
       { id: 'account-a', user_id: 'owner-a', last_four: '1234', deleted_at: null },
       { id: 'account-b', user_id: 'owner-b', last_four: '1234', deleted_at: null },
     ],
+    automation_rules: options.rules ?? [],
     transactions: options.transactions ?? [
       {
         id: 'tx-exact',
@@ -217,6 +219,55 @@ describe('GET Shortcut inbox candidates', () => {
       'tx-other-payment',
     ]);
     expect(getUserClient).toHaveBeenCalledWith(expect.any(Request));
+  });
+
+  it('uses the current account-detection rule when a card alias is not saved on the account', async () => {
+    const db = fakeDatabase({
+      inbox: [
+        {
+          id: inboxId,
+          user_id: 'owner-a',
+          source: 'forwarded_email',
+          raw_text:
+            'From (unverified): alertas@notificacionesbancolombia.com\nBancolombia: Compraste $119.000,00 en Synthetic Store con tu T.Deb *9989, el 23/11/2024 a las 14:24.',
+        },
+      ],
+      accounts: [
+        {
+          id: 'account-a',
+          user_id: 'owner-a',
+          name: 'Bancolombia',
+          institution: 'bancolombia',
+          type: 'savings',
+          currency: 'COP',
+          is_active: true,
+          last_four: '1234',
+          deleted_at: null,
+        },
+      ],
+      rules: [
+        {
+          user_id: 'owner-a',
+          rule_type: 'account_detection',
+          is_active: true,
+          deleted_at: null,
+          condition_logic: 'or',
+          conditions: { raw_text_contains: ['*9989'] },
+          actions: { set_account: 'account-a' },
+        },
+      ],
+    });
+    getUserClient.mockResolvedValue({ supabase: db.supabase, userId: 'owner-a' });
+    const body = await (await GET(request() as never, context)).json();
+    expect(body.evidence.account).toBe('unique');
+    expect(body.candidates.map((row: { id: string }) => row.id)).toEqual([
+      'tx-exact',
+      'tx-other-payment',
+    ]);
+    expect(db.calls.find((call) => call.table === 'automation_rules')?.filters).toContainEqual([
+      'user_id',
+      'owner-a',
+    ]);
   });
 
   it('skips the amount/date/account query when the account suffix is absent', async () => {
