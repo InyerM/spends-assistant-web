@@ -1,5 +1,13 @@
 'use client';
+import { CustomChartBuilder } from '@/components/planning/custom-chart-builder';
+import { CustomCharts } from '@/components/planning/custom-charts';
 
+import { usePlanning } from '@/lib/api/queries/planning.queries';
+import { dashboardWidgets } from '@/lib/planning';
+import { PlanningOverview } from '@/components/planning/planning-overview';
+import { OnboardingCard } from '@/components/planning/onboarding-card';
+import { DashboardControls } from '@/components/planning/dashboard-controls';
+import { useTransactionFormStore } from '@/lib/stores/transaction-form.store';
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { startOfMonth, endOfMonth } from 'date-fns';
@@ -26,6 +34,9 @@ function toStr(date: Date): string {
 
 export default function DashboardPage(): React.ReactElement {
   const t = useTranslations('dashboard');
+  const { data: planning } = usePlanning();
+  const widgets = dashboardWidgets(planning?.preferences.dashboard_widgets);
+  const openNew = useTransactionFormStore((s) => s.openNew);
   const now = new Date();
   const [dateFrom, setDateFrom] = useState(() => toStr(startOfMonth(now)));
   const [dateTo, setDateTo] = useState(() => toStr(endOfMonth(now)));
@@ -58,31 +69,42 @@ export default function DashboardPage(): React.ReactElement {
 
       <SummaryCards transactions={transactions} isLoading={txLoading} />
 
-      <section aria-label={t('accounts')} className='space-y-3'>
-        <h2 className='text-muted-foreground text-sm font-medium'>{t('accounts')}</h2>
-        <BalanceOverview
-          onEditAccount={(account): void => setEditingAccount(account)}
-          onAddAccount={(): void => setCreateAccountOpen(true)}
-        />
-      </section>
-
-      <section aria-label={t('spendingAnalysis')} className='space-y-4 sm:space-y-6'>
-        <h2 className='text-muted-foreground text-sm font-medium'>{t('spendingAnalysis')}</h2>
-        <div className='grid items-start gap-4 sm:gap-6 xl:grid-cols-3'>
-          <BalanceTrendChart
-            className='xl:col-span-2'
-            transactions={transactions}
-            dateFrom={dateFrom}
-            dateTo={dateTo}
-          />
-          <SpendingByCategory transactions={transactions} isLoading={txLoading} />
-        </div>
-        <SpendingNatureCards transactions={transactions} />
-      </section>
-
-      <div className='grid items-start gap-4 sm:gap-6 lg:grid-cols-[repeat(auto-fit,minmax(min(100%,24rem),1fr))]'>
-        <RecentTransactions />
-        {budgetMonth && <BudgetOverview month={budgetMonth} />}
+      <OnboardingCard
+        hasExpense={transactions.some((tx) => tx.type === 'expense')}
+        onCreateAccount={() => setCreateAccountOpen(true)}
+        onCreateExpense={openNew}
+      />
+      <DashboardControls />
+      <CustomChartBuilder />
+      <div className='grid items-start gap-4 sm:gap-6 xl:grid-cols-2'>
+        {widgets.map((id) => (
+          <div
+            key={id}
+            className={id === 'accounts' || id === 'nature' ? 'min-w-0 xl:col-span-2' : 'min-w-0'}>
+            {id === 'accounts' && (
+              <BalanceOverview
+                onEditAccount={setEditingAccount}
+                onAddAccount={() => setCreateAccountOpen(true)}
+              />
+            )}
+            {id === 'trend' && (
+              <BalanceTrendChart transactions={transactions} dateFrom={dateFrom} dateTo={dateTo} />
+            )}
+            {id === 'categories' && (
+              <SpendingByCategory transactions={transactions} isLoading={txLoading} />
+            )}
+            {id === 'nature' && <SpendingNatureCards transactions={transactions} />}
+            {id === 'recent' && <RecentTransactions />}
+            {id === 'budgets' && budgetMonth && <BudgetOverview month={budgetMonth} />}
+            {id === 'goals' && <PlanningOverview />}
+            {id === 'custom' && (
+              <CustomCharts
+                transactions={transactions}
+                partial={(txResult?.count ?? 0) > transactions.length}
+              />
+            )}
+          </div>
+        ))}
       </div>
 
       <UsageCard />

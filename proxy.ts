@@ -6,6 +6,8 @@ import { needsEligibilityAttestation } from './lib/auth/eligibility';
 
 const PUBLIC_PATHS = ['/login', '/register', '/forgot-password', '/auth'];
 const MOBILE_BEARER_ROUTES: Record<string, readonly string[]> = {
+  '/api/purchase-locations': ['GET'],
+  '/api/planning': ['GET', 'POST'],
   '/api/api-keys': ['GET', 'POST', 'DELETE'],
   '/api/settings/sessions': ['GET'],
   '/api/settings/user-settings': ['GET', 'PATCH'],

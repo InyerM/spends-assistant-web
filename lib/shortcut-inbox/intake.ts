@@ -1,3 +1,8 @@
+export interface CaptureLocation {
+  latitude: number;
+  longitude: number;
+  captured_at: string;
+}
 export interface InboxRow {
   id: string;
   user_id: string;
@@ -5,6 +10,7 @@ export interface InboxRow {
   external_id: string | null;
   received_at: string;
   raw_text: string;
+  capture_location?: CaptureLocation | null;
   idempotency_key: string;
   status: string;
 }
@@ -52,15 +58,33 @@ function validTimestamp(value: unknown): value is string {
   );
 }
 
+export function validCaptureLocation(value: unknown): value is CaptureLocation {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  const row = value as Record<string, unknown>;
+  return (
+    typeof row.latitude === 'number' &&
+    Number.isFinite(row.latitude) &&
+    Math.abs(row.latitude) <= 90 &&
+    typeof row.longitude === 'number' &&
+    Number.isFinite(row.longitude) &&
+    Math.abs(row.longitude) <= 180 &&
+    validTimestamp(row.captured_at)
+  );
+}
+
 function validItem(value: unknown): value is {
   external_id?: string | null;
   received_at: string;
   raw_text: string;
+  capture_location?: CaptureLocation | null;
 } {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
   const row = value as Record<string, unknown>;
   return (
     validTimestamp(row.received_at) &&
+    (row.capture_location === undefined ||
+      row.capture_location === null ||
+      validCaptureLocation(row.capture_location)) &&
     typeof row.raw_text === 'string' &&
     row.raw_text.length <= MAX_TEXT_LENGTH &&
     normalizeText(row.raw_text).length > 0 &&
@@ -80,6 +104,14 @@ async function fingerprint(parts: string[]): Promise<string> {
 
 function equivalent(existing: InboxRow, incoming: NewInboxRow): boolean {
   return (
+    (incoming.capture_location === null ||
+      incoming.capture_location === undefined ||
+      (existing.capture_location !== null &&
+        existing.capture_location !== undefined &&
+        existing.capture_location.latitude === incoming.capture_location.latitude &&
+        existing.capture_location.longitude === incoming.capture_location.longitude &&
+        Date.parse(existing.capture_location.captured_at) ===
+          Date.parse(incoming.capture_location.captured_at))) &&
     existing.source === incoming.source &&
     existing.external_id === incoming.external_id &&
     new Date(existing.received_at).toISOString() === incoming.received_at &&
@@ -123,6 +155,15 @@ export async function ingestBatch(
       external_id: externalId,
       received_at: receivedAt,
       raw_text: item.raw_text,
+      ...(item.capture_location
+        ? {
+            capture_location: {
+              latitude: item.capture_location.latitude,
+              longitude: item.capture_location.longitude,
+              captured_at: item.capture_location.captured_at,
+            },
+          }
+        : {}),
       idempotency_key: key,
     };
     try {

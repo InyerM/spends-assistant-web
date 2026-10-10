@@ -21,16 +21,14 @@ const accountCreateSchema = z
   })
   .strict();
 
-export async function GET(): Promise<Response> {
+export async function GET(request?: NextRequest): Promise<Response> {
   try {
     const { supabase } = await getUserClient();
 
-    const { data, error } = await supabase
-      .from('accounts')
-      .select('*')
-      .eq('is_active', true)
-      .is('deleted_at', null)
-      .order('name');
+    let query = supabase.from('accounts').select('*').is('deleted_at', null).order('name');
+    if (request?.nextUrl.searchParams.get('include_inactive') !== '1')
+      query = query.eq('is_active', true);
+    const { data, error } = await query;
 
     if (error) return errorResponse(error.message, 400);
     return jsonResponse(data);

@@ -1,4 +1,6 @@
 'use client';
+import { DictationButton } from '@/components/transactions/dictation-button';
+import type { TransactionDraft } from '@/lib/stores/transaction-form.store';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
@@ -73,12 +75,14 @@ interface TransactionFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   transaction?: Transaction | null;
+  draft?: TransactionDraft | null;
 }
 
 export function TransactionForm({
   open,
   onOpenChange,
   transaction,
+  draft,
 }: TransactionFormProps): React.ReactElement {
   const t = useTranslations('transactions');
   const tCommon = useTranslations('common');
@@ -163,10 +167,12 @@ export function TransactionForm({
         account_id: '',
         category_id: undefined,
         transfer_to_account_id: undefined,
+        ...draft,
       });
-      ai.resetToPrompt();
+      if (draft) ai.setStep('form');
+      else ai.resetToPrompt();
     }
-  }, [open, transaction?.id, form]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [open, transaction?.id, draft, form]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const watchType = form.watch('type');
 
@@ -455,6 +461,8 @@ export function TransactionForm({
                   rows={3}
                   disabled={ai.isParsing}
                 />
+
+                <DictationButton value={ai.aiText} onChange={ai.setAiText} />
 
                 {ai.limitReached && (
                   <div className='border-destructive/30 bg-destructive/5 space-y-3 rounded-lg border p-4'>

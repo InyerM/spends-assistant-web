@@ -24,7 +24,13 @@ export function NotificationRow({
       )}
       <div className='min-w-0 flex-1'>
         <Link
-          href={notice.kind === 'email_received' ? '/inbox' : '/budgets'}
+          href={
+            notice.kind === 'email_received'
+              ? '/inbox'
+              : notice.kind.startsWith('budget_')
+                ? '/budgets'
+                : '/planning'
+          }
           className='focus-visible:ring-ring block rounded-sm focus-visible:ring-2'>
           <p
             className={

@@ -15,7 +15,9 @@ function inboxStore(supabase: SupabaseClient): InboxStore {
       const { data, error } = await supabase
         .from('shortcut_inbox_items')
         .insert(row)
-        .select('id,user_id,source,external_id,received_at,raw_text,idempotency_key,status')
+        .select(
+          'id,user_id,source,external_id,received_at,raw_text,idempotency_key,status,capture_location',
+        )
         .single();
       if (error?.code === '23505') return { duplicate: true };
       if (error) throw new Error('Inbox write failed');
@@ -24,7 +26,9 @@ function inboxStore(supabase: SupabaseClient): InboxStore {
     async findByKey(userId, key): Promise<InboxRow | null> {
       const { data, error } = await supabase
         .from('shortcut_inbox_items')
-        .select('id,user_id,source,external_id,received_at,raw_text,idempotency_key,status')
+        .select(
+          'id,user_id,source,external_id,received_at,raw_text,idempotency_key,status,capture_location',
+        )
         .eq('user_id', userId)
         .eq('idempotency_key', key)
         .maybeSingle();

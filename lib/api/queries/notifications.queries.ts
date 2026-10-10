@@ -9,7 +9,15 @@ import { useAuthStore } from '@/store/auth-store';
 
 export interface OwnerNotification {
   id: string;
-  kind: 'email_received' | 'budget_near' | 'budget_exceeded';
+  kind:
+    | 'email_received'
+    | 'budget_near'
+    | 'budget_exceeded'
+    | 'goal_near'
+    | 'goal_reached'
+    | 'scheduled_due'
+    | 'scheduled_posted'
+    | 'scheduled_review';
   source_id: string;
   label: string;
   created_at: string;

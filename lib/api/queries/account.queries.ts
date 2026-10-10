@@ -35,3 +35,14 @@ export function useAccount(id: string): ReturnType<typeof useQuery<Account>> {
     enabled: !!id,
   });
 }
+
+export function useAllChartAccounts(): ReturnType<typeof useQuery<Account[]>> {
+  return useQuery({
+    queryKey: [...accountKeys.all, 'chart-history'],
+    queryFn: async () => {
+      const response = await fetch('/api/accounts?include_inactive=1');
+      if (!response.ok) throw new Error('Account history unavailable');
+      return response.json() as Promise<Account[]>;
+    },
+  });
+}

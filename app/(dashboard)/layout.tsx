@@ -18,7 +18,7 @@ export default function DashboardLayout({
 }: Readonly<{ children: React.ReactNode }>): React.ReactNode {
   const t = useTranslations('nav');
   const pathname = usePathname();
-  const { open, transaction, setOpen, openNew } = useTransactionFormStore();
+  const { open, transaction, draft, setOpen, openNew } = useTransactionFormStore();
 
   const showFab = FAB_PAGES.some((p) => pathname === p || pathname.startsWith(p + '/'));
 
@@ -48,7 +48,7 @@ export default function DashboardLayout({
         </div>
       )}
 
-      <TransactionForm open={open} onOpenChange={setOpen} transaction={transaction} />
+      <TransactionForm open={open} onOpenChange={setOpen} transaction={transaction} draft={draft} />
     </AuthGuard>
   );
 }

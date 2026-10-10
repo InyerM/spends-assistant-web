@@ -160,3 +160,14 @@ describe('POST /api/accounts', () => {
     expect(body.error).toContain('Account limit reached');
   });
 });
+
+describe('historical dashboard account metadata', () => {
+  it('can include inactive owner accounts without changing the default account selector', async () => {
+    const { getUserClient } = await import('@/lib/api/server');
+    const db = createChainableQuery([]);
+    vi.mocked(getUserClient).mockResolvedValue({ supabase: db, userId: 'owner' } as never);
+    await GET(new NextRequest('https://my.anotto.app/api/accounts?include_inactive=1'));
+    expect(db._chain.eq).not.toHaveBeenCalledWith('is_active', true);
+    expect(db._chain.is).toHaveBeenCalledWith('deleted_at', null);
+  });
+});
