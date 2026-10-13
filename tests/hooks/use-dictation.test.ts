@@ -62,3 +62,44 @@ it('reports service failures separately from microphone permission and ignores i
   hook.unmount();
   delete (window as unknown as Record<string, unknown>).SpeechRecognition;
 });
+it('replaces the provisional transcript with the full hypothesis and stops after silence', () => {
+  vi.useFakeTimers();
+  let recognition: Speech | undefined;
+  class Speech {
+    continuous = false;
+    interimResults = false;
+    lang = '';
+    onresult: ((event: unknown) => void) | null = null;
+    onerror = null;
+    onend = null;
+    onspeechend: (() => void) | null = null;
+    onspeechstart: (() => void) | null = null;
+    start = vi.fn();
+    stop = vi.fn();
+    constructor() {
+      // eslint-disable-next-line @typescript-eslint/no-this-alias
+      recognition = this;
+    }
+  }
+  Object.defineProperty(window, 'SpeechRecognition', { value: Speech, configurable: true });
+  const onText = vi.fn();
+  const hook = renderHook(() => useDictation('es-CO', onText));
+  act(() => hook.result.current.start());
+  expect(recognition?.interimResults).toBe(true);
+  expect(recognition?.continuous).toBe(true);
+  act(() =>
+    recognition?.onresult?.({ results: [[{ transcript: 'pagué veinte' }]], resultIndex: 0 }),
+  );
+  act(() =>
+    recognition?.onresult?.({ results: [[{ transcript: 'pagué veinte mil' }]], resultIndex: 0 }),
+  );
+  expect(onText.mock.calls.map((call) => call[0])).toEqual(['pagué veinte', 'pagué veinte mil']);
+  act(() => recognition?.onspeechend?.());
+  act(() => {
+    vi.advanceTimersByTime(1800);
+  });
+  expect(recognition?.stop).toHaveBeenCalled();
+  hook.unmount();
+  delete (window as unknown as Record<string, unknown>).SpeechRecognition;
+  vi.useRealTimers();
+});

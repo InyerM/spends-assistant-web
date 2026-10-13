@@ -1,0 +1,3 @@
+# Design explorations are served locally and must never enter deployment artifacts.
+docs/design/**
+scripts/design-preview.ts

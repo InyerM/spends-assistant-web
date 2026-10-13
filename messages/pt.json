@@ -1439,6 +1439,13 @@
     "usage": "Plano e uso"
   },
   "dictation": {
+    "connecting": "Conectando microfone…",
+    "liveListening": "Ouvindo · preenchendo o texto",
+    "finalizing": "Finalizando a transcrição…",
+    "ready": "Ditado pronto para revisar",
+    "liveHint": "Até 60 s. Para após uma pausa. A IA revisa o áudio sem guardá-lo; um ditado usa uma análise.",
+    "unrelated": "Não identificamos uma movimentação de dinheiro. Revise o texto ou diga: “Paguei 20 reais no almoço”.",
+    "unclear": "Não identificamos a movimentação com clareza. Complete o que aconteceu e o valor antes de analisar.",
     "start": "Ditar",
     "stop": "Parar ditado",
     "listening": "Ouvindo…",

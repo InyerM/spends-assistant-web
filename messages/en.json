@@ -1556,6 +1556,13 @@
     "usage": "Plan and usage"
   },
   "dictation": {
+    "connecting": "Connecting microphone…",
+    "liveListening": "Listening · filling in your text",
+    "finalizing": "Finishing the transcript…",
+    "ready": "Dictation ready to review",
+    "liveHint": "Up to 60s. Stops after a pause. AI reviews the audio without storing it; one dictation uses one analysis.",
+    "unrelated": "We could not identify a money movement. Review the text or try: “I paid 20 dollars for lunch.”",
+    "unclear": "We could not identify the movement clearly. Add what happened and the amount before analyzing.",
     "start": "Dictate",
     "stop": "Stop dictation",
     "listening": "Listening…",

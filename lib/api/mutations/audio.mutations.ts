@@ -1,6 +1,17 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 export function useTranscribeAudio(): ReturnType<
-  typeof useMutation<string, Error, { data: string; format: string; language: string }>
+  typeof useMutation<
+    { text: string; relevance: 'financial' | 'unrelated' | 'unclear' },
+    Error,
+    {
+      data: string;
+      format: string;
+      language: string;
+      session_id: string;
+      sequence: number;
+      final: boolean;
+    }
+  >
 > {
   const client = useQueryClient();
   return useMutation({
@@ -17,8 +28,10 @@ export function useTranscribeAudio(): ReturnType<
         throw new Error(
           response.status === 428 ? 'consent' : response.status === 429 ? 'quota' : 'service',
         );
-      const result = (await response.json()) as { text: string };
-      return result.text;
+      return (await response.json()) as {
+        text: string;
+        relevance: 'financial' | 'unrelated' | 'unclear';
+      };
     },
   });
 }

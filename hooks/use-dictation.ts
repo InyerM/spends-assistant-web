@@ -12,6 +12,8 @@ interface Recognition {
     | null;
   onerror: ((event: { error: string }) => void) | null;
   onend: (() => void) | null;
+  onspeechend?: (() => void) | null;
+  onspeechstart?: (() => void) | null;
   start: () => void;
   stop: () => void;
 }
@@ -41,13 +43,17 @@ export function useDictation(
     (): boolean => false,
   );
   const recognition = useRef<Recognition | null>(null);
+  const silence = useRef<ReturnType<typeof setTimeout> | null>(null);
   const callback = useRef(onText);
   useEffect((): void => {
     callback.current = onText;
   }, [onText]);
   useEffect(() => {
     return (): void => {
+      if (silence.current) clearTimeout(silence.current);
       if (recognition.current) {
+        recognition.current.onspeechend = null;
+        recognition.current.onspeechstart = null;
         recognition.current.onend = null;
         recognition.current.onresult = null;
         recognition.current.onerror = null;
@@ -56,6 +62,7 @@ export function useDictation(
     };
   }, []);
   const stop = useCallback(() => {
+    if (silence.current) clearTimeout(silence.current);
     recognition.current?.stop();
     setListening(false);
   }, []);
@@ -63,7 +70,10 @@ export function useDictation(
     const host = window as SpeechWindow;
     const Constructor = host.SpeechRecognition ?? host.webkitSpeechRecognition;
     if (!Constructor) return;
+    if (silence.current) clearTimeout(silence.current);
     if (recognition.current) {
+      recognition.current.onspeechend = null;
+      recognition.current.onspeechstart = null;
       recognition.current.onend = null;
       recognition.current.onerror = null;
       recognition.current.onresult = null;
@@ -71,15 +81,21 @@ export function useDictation(
     }
     const next = new Constructor();
     next.lang = language;
-    next.continuous = false;
-    next.interimResults = false;
+    next.continuous = true;
+    next.interimResults = true;
     next.onresult = (event): void => {
       const text = Array.from(event.results)
-        .slice(event.resultIndex)
         .map((result) => result[0].transcript)
         .join(' ')
         .trim();
       if (text) callback.current(text);
+    };
+    next.onspeechstart = (): void => {
+      if (silence.current) clearTimeout(silence.current);
+    };
+    next.onspeechend = (): void => {
+      if (silence.current) clearTimeout(silence.current);
+      silence.current = setTimeout(stop, 1800);
     };
     next.onerror = (event): void => {
       if (event.error !== 'aborted') setError(event.error);
@@ -95,6 +111,6 @@ export function useDictation(
       setError('start-failed');
       setListening(false);
     }
-  }, [language]);
+  }, [language, stop]);
   return { supported, listening, failed: error !== null, error, start, stop };
 }

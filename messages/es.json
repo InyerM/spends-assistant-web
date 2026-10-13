@@ -1553,6 +1553,13 @@
     "usage": "Plan y uso"
   },
   "dictation": {
+    "connecting": "Conectando micrófono…",
+    "liveListening": "Escuchando · el texto se está completando",
+    "finalizing": "Terminando la transcripción…",
+    "ready": "Dictado listo para revisar",
+    "liveHint": "Hasta 60 s. Se detiene tras una pausa. La IA revisa el audio sin guardarlo; un dictado consume un análisis.",
+    "unrelated": "No identificamos un movimiento de dinero. Revisa el texto o dicta, por ejemplo: «Pagué 20.000 pesos en almuerzo».",
+    "unclear": "No pudimos identificar el movimiento con claridad. Completa qué hiciste y el importe antes de analizar.",
     "start": "Dictar",
     "stop": "Detener dictado",
     "listening": "Escuchando…",

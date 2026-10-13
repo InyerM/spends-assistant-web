@@ -99,6 +99,7 @@ export function TransactionForm({
   const resolveDuplicate = useResolveDuplicate();
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [addAnother, setAddAnother] = useState(false);
+  const [isDictating, setIsDictating] = useState(false);
   const addAnotherRef = useRef(false);
   const [duplicateConflict, setDuplicateConflict] = useState<{
     match: Transaction;
@@ -488,10 +489,14 @@ export function TransactionForm({
                     />
                     <div className='border-border bg-muted/20 flex flex-wrap items-start gap-1 border-t p-2'>
                       <ReceiptUploadButton
-                        disabled={ai.isParsing}
+                        disabled={ai.isParsing || isDictating}
                         onUploaded={() => onOpenChange(false)}
                       />
-                      <DictationButton value={ai.aiText} onChange={ai.setAiText} />
+                      <DictationButton
+                        value={ai.aiText}
+                        onChange={ai.setAiText}
+                        onBusyChange={setIsDictating}
+                      />
                     </div>
                   </div>
                 </div>
@@ -545,7 +550,8 @@ export function TransactionForm({
                     <Button
                       type='button'
                       variant='ghost'
-                      className='text-muted-foreground hover:text-foreground -ml-2'
+                      className='text-muted-foreground hover:text-foreground -ml-2 min-h-11 px-2'
+                      disabled={isDictating}
                       onClick={ai.handleCreateManually}>
                       {t('orCreateManually')}
                     </Button>
@@ -556,8 +562,8 @@ export function TransactionForm({
                             <Button
                               variant='ai'
                               onClick={ai.handleParse}
-                              disabled={ai.isParsing || !ai.aiText.trim()}
-                              className='cursor-pointer px-5'>
+                              disabled={ai.isParsing || isDictating || !ai.aiText.trim()}
+                              className='min-h-11 cursor-pointer px-3 sm:px-5'>
                               {ai.isParsing ? (
                                 <>
                                   <InlineLoader className='mr-2' />
