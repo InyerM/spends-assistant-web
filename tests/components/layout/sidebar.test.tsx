@@ -2,6 +2,10 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Sidebar } from '@/components/layout/sidebar';
 
+vi.mock('@/hooks/use-document-availability', () => ({ useDocumentAvailability: () => true }));
+vi.mock('@/lib/api/queries/inbox-pending.queries', () => ({
+  usePendingInboxCount: () => ({ data: 3 }),
+}));
 vi.mock('@/lib/api/queries/document-pending.queries', () => ({
   usePendingDocumentCount: () => ({ data: 2 }),
 }));
@@ -62,29 +66,13 @@ describe('Sidebar navigation', () => {
     expect(screen.queryByRole('button', { name: 'accounts' })).not.toBeInTheDocument();
   });
 
-  it('preserves independently toggled groups when navigation changes', () => {
-    const view = render(<Sidebar />);
-    fireEvent.click(screen.getByRole('button', { name: 'wealthGroup' }));
-    fireEvent.click(screen.getByRole('button', { name: 'planningGroup' }));
-    navigation.pathname = '/documents';
-    view.rerender(<Sidebar />);
-    expect(screen.getByRole('button', { name: 'wealthGroup' })).toHaveAttribute(
-      'aria-expanded',
-      'false',
-    );
-    expect(screen.getByRole('button', { name: 'planningGroup' })).toHaveAttribute(
-      'aria-expanded',
-      'true',
-    );
-    expect(screen.getByRole('button', { name: 'reviewGroup' })).toHaveAttribute(
-      'aria-expanded',
-      'false',
-    );
-    fireEvent.click(screen.getByRole('button', { name: 'reviewGroup' }));
-    expect(screen.getByRole('button', { name: 'planningGroup' })).toHaveAttribute(
-      'aria-expanded',
-      'true',
-    );
+  it('keeps review visible and configuration modules out of primary navigation', () => {
+    render(<Sidebar />);
+    expect(screen.getByRole('button', { name: 'emailInbox' })).toBeVisible();
+    expect(screen.getByRole('button', { name: 'documents' })).toBeVisible();
+    expect(screen.getByRole('button', { name: 'settings' })).toBeVisible();
+    expect(screen.queryByRole('button', { name: 'categories' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'automation' })).not.toBeInTheDocument();
   });
 
   it('keeps the collapse control inside the brand header with a full touch target', () => {

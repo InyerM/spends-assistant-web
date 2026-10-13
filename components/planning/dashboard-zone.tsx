@@ -2,6 +2,7 @@
 import { useTranslations } from 'next-intl';
 import { GripVertical, X, Expand, ArrowUp, ArrowDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { WidgetCell } from './widget-cell';
 import { SearchableSelect } from '@/components/shared/searchable-select';
 import { DASHBOARD_WIDGETS, type DashboardWidget } from '@/lib/planning';
 import {
@@ -41,16 +42,12 @@ export function DashboardZone({
       }}
       onDrop={drop}>
       <h2 className='text-muted-foreground mb-3 text-sm font-medium'>{t(`zones.${zone}`)}</h2>
-      <div className='grid grid-cols-1 items-start gap-4 xl:grid-cols-12'>
+      <div className='grid auto-rows-[8px] grid-cols-1 items-start gap-4 xl:grid-cols-12'>
         {rows.map((item) => (
-          <div
+          <WidgetCell
             key={item.id}
-            data-widget={item.id}
-            className={`min-w-0 xl:col-span-(--widget-width) ${editing ? '' : 'has-[>.widget-frame:empty]:hidden'}`}
-            style={{ '--widget-width': item.width } as React.CSSProperties}
-            onDragOver={(event) => {
-              if (editing) event.preventDefault();
-            }}
+            item={item}
+            editing={editing}
             onDrop={(event) => drop(event, item.id)}>
             {editing && (
               <div className='border-primary/30 bg-primary/5 mb-2 flex flex-wrap items-center gap-2 rounded-lg border px-2 py-1'>
@@ -86,7 +83,7 @@ export function DashboardZone({
                   <ArrowDown className='size-4' />
                 </Button>
                 <span role='status' className='text-muted-foreground text-xs tabular-nums'>
-                  {item.width} × {item.height}
+                  {item.width} · {item.id === 'trend' ? item.height : t('autoHeight')}
                 </span>
                 <Button
                   size='icon'
@@ -115,25 +112,23 @@ export function DashboardZone({
                       onChange(resizeWidget(items, item.id, Number(value), item.height))
                     }
                   />
-                  <SearchableSelect
-                    ariaLabel={t('height')}
-                    value={String(item.height)}
-                    items={[2, 3, 4, 6, 8].map((x) => ({
-                      value: String(x),
-                      label: t('rows', { count: x }),
-                    }))}
-                    onValueChange={(value) =>
-                      onChange(resizeWidget(items, item.id, item.width, Number(value)))
-                    }
-                  />
+                  {item.id === 'trend' && (
+                    <SearchableSelect
+                      ariaLabel={t('height')}
+                      value={String(item.height)}
+                      items={[2, 3, 4, 6, 8].map((x) => ({
+                        value: String(x),
+                        label: t('rows', { count: x }),
+                      }))}
+                      onValueChange={(value) =>
+                        onChange(resizeWidget(items, item.id, item.width, Number(value)))
+                      }
+                    />
+                  )}
                 </div>
               </div>
             )}
-            <div
-              className='widget-frame min-w-0 overflow-auto'
-              style={{ height: item.height * 80 }}>
-              {renderWidget(item.id)}
-            </div>
+            <div className='widget-frame min-w-0'>{renderWidget(item.id)}</div>
             {editing && (
               <button
                 type='button'
@@ -156,7 +151,9 @@ export function DashboardZone({
                       Number(node.dataset.width) +
                         Math.round((event.clientX - Number(node.dataset.startX)) / 64),
                       Number(node.dataset.height) +
-                        Math.round((event.clientY - Number(node.dataset.startY)) / 56),
+                        (item.id === 'trend'
+                          ? Math.round((event.clientY - Number(node.dataset.startY)) / 56)
+                          : 0),
                     ),
                   );
                 }}
@@ -164,7 +161,7 @@ export function DashboardZone({
                 <Expand className='size-3' />
               </button>
             )}
-          </div>
+          </WidgetCell>
         ))}
         {editing && !rows.length && (
           <p className='text-muted-foreground col-span-full py-12 text-center text-sm'>

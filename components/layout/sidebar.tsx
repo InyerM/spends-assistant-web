@@ -5,15 +5,15 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/use-auth';
-import { useEmailForwardingRoute } from '@/lib/api/queries/email-forwarding.queries';
+import { useDocumentAvailability } from '@/hooks/use-document-availability';
+import { usePendingInboxCount } from '@/lib/api/queries/inbox-pending.queries';
+import { workspacePathActive } from '@/lib/workspace-navigation';
 import { useUiStore } from '@/store/ui-store';
 import type { LucideIcon } from 'lucide-react';
 import {
   LayoutDashboard,
   ArrowRightLeft,
   Wallet,
-  Tags,
-  Zap,
   PanelLeftClose,
   PanelLeftOpen,
   LogOut,
@@ -27,8 +27,6 @@ import {
   Target,
   ChevronDown,
   MessageCircle,
-  Users,
-  MapPin,
 } from 'lucide-react';
 import { AnottoWordmark } from '@/components/layout/anotto-wordmark';
 import { Button } from '@/components/ui/button';
@@ -57,27 +55,12 @@ const quickLinks: NavItem[] = [
   { titleKey: 'dashboard', href: '/dashboard', icon: LayoutDashboard },
   { titleKey: 'transactions', href: '/transactions', icon: ArrowRightLeft },
   { titleKey: 'financialChat', href: '/chat', icon: MessageCircle },
+  { titleKey: 'emailInbox', href: '/inbox', icon: Mail },
+  { titleKey: 'documents', href: '/documents', icon: Files },
+  { titleKey: 'settings', href: '/settings', icon: Settings },
 ];
 
 const navGroups: { titleKey: string; items: NavItem[] }[] = [
-  {
-    titleKey: 'reviewGroup',
-    items: [
-      { titleKey: 'documents', href: '/documents', icon: Files },
-      { titleKey: 'emailInbox', href: '/inbox', icon: Mail },
-    ],
-  },
-  {
-    titleKey: 'planningGroup',
-    items: [
-      { titleKey: 'personalPlanning', href: '/planning', icon: TrendingUp },
-      { titleKey: 'budgets', href: '/budgets', icon: Target },
-      { titleKey: 'purchaseLocations', href: '/locations', icon: MapPin },
-      { titleKey: 'contacts', href: '/contacts', icon: Users },
-      { titleKey: 'categories', href: '/categories', icon: Tags },
-      { titleKey: 'automation', href: '/automation', icon: Zap },
-    ],
-  },
   {
     titleKey: 'wealthGroup',
     items: [
@@ -110,9 +93,8 @@ export function Sidebar({ className, onClose }: SidebarProps): React.ReactElemen
   const { data: pendingDocuments = 0 } = usePendingDocumentCount();
   const tDocuments = useTranslations('documents');
   const { user, signOut } = useAuth();
-  const { data: forwardingRoute } = useEmailForwardingRoute();
-  const emailInboxReady =
-    forwardingRoute?.status === 'active' && Boolean(forwardingRoute.user_confirmed_at);
+  const documentsAvailable = useDocumentAvailability();
+  const { data: pendingInbox = 0 } = usePendingInboxCount();
   const sidebarCollapsed = useUiStore((state) => state.sidebarCollapsed);
   const toggleCollapsed = useUiStore((state) => state.toggleSidebarCollapsed);
   const isCollapsed = !onClose && sidebarCollapsed;
@@ -139,7 +121,7 @@ export function Sidebar({ className, onClose }: SidebarProps): React.ReactElemen
   };
 
   const isActivePath = (href: string): boolean => {
-    return pathname === href || pathname.startsWith(href + '/');
+    return workspacePathActive(pathname, href);
   };
 
   const avatarUrl = user?.user_metadata.avatar_url as string | undefined;
@@ -173,15 +155,13 @@ export function Sidebar({ className, onClose }: SidebarProps): React.ReactElemen
             {pendingDocuments}
           </span>
         ) : null}
-        {item.href === '/inbox' &&
-        emailInboxReady &&
-        (notifications?.pending_email_count ?? 0) > 0 ? (
+        {item.href === '/inbox' && pendingInbox > 0 ? (
           <span
             className='bg-brand/15 text-brand ml-auto rounded-full px-2 text-xs tabular-nums'
-            aria-label={tNotifications('pendingEmails', {
-              count: notifications?.pending_email_count ?? 0,
+            aria-label={t('pendingReviews', {
+              count: pendingInbox,
             })}>
-            {notifications?.pending_email_count}
+            {pendingInbox}
           </span>
         ) : null}
       </Button>
@@ -221,10 +201,15 @@ export function Sidebar({ className, onClose }: SidebarProps): React.ReactElemen
       <nav
         aria-label={t('primaryNavigation')}
         className='flex-1 space-y-1 overflow-y-auto px-3 py-4'>
-        {quickLinks.map(renderNavItem)}
+        {quickLinks
+          .filter(
+            (item) =>
+              item.href !== '/documents' || documentsAvailable || pathname.startsWith('/documents'),
+          )
+          .map(renderNavItem)}
         <div className='border-border my-3 border-t' />
         {navGroups.map((group) => {
-          const items = group.items.filter((item) => item.href !== '/inbox' || emailInboxReady);
+          const items = group.items;
           const groupStateKey = group.titleKey;
           const isOpen =
             groupOverrides[groupStateKey] ?? items.some((item) => isActivePath(item.href));

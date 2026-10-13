@@ -7,6 +7,10 @@ import { NotificationCenter } from '@/components/notifications/notification-cent
 const routeToKey: Record<string, string> = {
   '/dashboard': 'dashboard',
   '/notifications': 'notifications',
+  '/transactions/shortcut-inbox': 'emailInbox',
+  '/chat': 'financialChat',
+  '/budgets': 'budgets',
+  '/planning': 'personalPlanning',
   '/transactions': 'transactions',
   '/documents': 'documents',
   '/inbox': 'emailInbox',

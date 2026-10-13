@@ -7,9 +7,8 @@ import {
   LayoutDashboard,
   ArrowRightLeft,
   Wallet,
-  Tags,
+  MessageCircle,
   MoreHorizontal,
-  Zap,
   Settings,
   LogOut,
   Files,
@@ -27,7 +26,8 @@ import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/hooks/use-auth';
-import { useEmailForwardingRoute } from '@/lib/api/queries/email-forwarding.queries';
+import { useDocumentAvailability } from '@/hooks/use-document-availability';
+import { workspacePathActive } from '@/lib/workspace-navigation';
 import type { LucideIcon } from 'lucide-react';
 
 interface NavItem {
@@ -39,8 +39,8 @@ interface NavItem {
 const mainItems: NavItem[] = [
   { titleKey: 'home', href: '/dashboard', icon: LayoutDashboard },
   { titleKey: 'transactions', href: '/transactions', icon: ArrowRightLeft },
-  { titleKey: 'accounts', href: '/accounts', icon: Wallet },
-  { titleKey: 'categories', href: '/categories', icon: Tags },
+  { titleKey: 'financialChat', href: '/chat', icon: MessageCircle },
+  { titleKey: 'emailInbox', href: '/inbox', icon: Mail },
 ];
 
 const moreItems: NavItem[] = [
@@ -48,17 +48,16 @@ const moreItems: NavItem[] = [
   { titleKey: 'notifications', href: '/notifications', icon: Bell },
   { titleKey: 'documents', href: '/documents', icon: Files },
   { titleKey: 'budgets', href: '/budgets', icon: Target },
-  { titleKey: 'emailInbox', href: '/inbox', icon: Mail },
+  { titleKey: 'accounts', href: '/accounts', icon: Wallet },
   { titleKey: 'investments', href: '/investments', icon: TrendingUp },
   { titleKey: 'loans', href: '/loans', icon: Landmark },
   { titleKey: 'receivables', href: '/receivables', icon: HandCoins },
   { titleKey: 'reliefFunds', href: '/relief-funds', icon: HeartHandshake },
-  { titleKey: 'automation', href: '/automation', icon: Zap },
   { titleKey: 'settings', href: '/settings', icon: Settings },
 ];
 
 function isActivePath(pathname: string, href: string): boolean {
-  return pathname === href || pathname.startsWith(href + '/');
+  return workspacePathActive(pathname, href);
 }
 
 export function BottomNav(): React.ReactElement {
@@ -67,9 +66,7 @@ export function BottomNav(): React.ReactElement {
   const t = useTranslations('nav');
   const tCommon = useTranslations('common');
   const { user, signOut } = useAuth();
-  const { data: forwardingRoute } = useEmailForwardingRoute();
-  const emailInboxReady =
-    forwardingRoute?.status === 'active' && Boolean(forwardingRoute.user_confirmed_at);
+  const documentsAvailable = useDocumentAvailability();
   const [moreOpen, setMoreOpen] = useState(false);
 
   const avatarUrl = user?.user_metadata.avatar_url as string | undefined;
@@ -142,7 +139,7 @@ export function BottomNav(): React.ReactElement {
             </div>
             <div className='border-border mb-2 border-t' />
             {moreItems
-              .filter((item) => item.href !== '/inbox' || emailInboxReady)
+              .filter((item) => item.href !== '/documents' || documentsAvailable)
               .map((item) => {
                 const active = isActivePath(pathname, item.href);
                 return (

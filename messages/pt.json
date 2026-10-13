@@ -57,7 +57,7 @@
     "home": "Início",
     "more": "Mais",
     "documents": "Documentos",
-    "emailInbox": "Email",
+    "emailInbox": "Para revisar",
     "investments": "Investimentos",
     "loans": "Empréstimos",
     "receivables": "Dinheiro emprestado",
@@ -70,7 +70,7 @@
     "primaryNavigation": "Navegação principal",
     "reviewGroup": "Para revisar",
     "planningGroup": "Organizar",
-    "wealthGroup": "Seu dinheiro",
+    "wealthGroup": "Patrimônio",
     "planLabel": "Plano",
     "free": "Grátis",
     "pro": "Pro",
@@ -82,7 +82,8 @@
     "notifications": "Notificações",
     "contacts": "Contatos e estabelecimentos",
     "personalPlanning": "Planeje seu dinheiro",
-    "purchaseLocations": "Locais de compras"
+    "purchaseLocations": "Locais de compras",
+    "pendingReviews": "{count} movimentos para revisar"
   },
   "budgets": {
     "eyebrow": "Plano mensal",
@@ -225,7 +226,7 @@
     "showFullMessage": "Ver mensagem completa",
     "hideFullMessage": "Ocultar mensagem completa",
     "backToDashboard": "Painel",
-    "emailTitle": "Caixa de email",
+    "emailTitle": "Para revisar",
     "emailSubtitle": "Avisos bancários recebidos para revisar movimentações.",
     "verificationRequired": "Verifique o endereço de encaminhamento do Gmail antes de abrir esta caixa.",
     "openForwardingSettings": "Configurar encaminhamento de email",
@@ -247,7 +248,7 @@
     "luloCaution": "Confira o extrato do cartão antes de registrar uma movimentação.",
     "luloZeroCaution": "Um aviso de valor zero não comprova uma cobrança.",
     "backToTransactions": "Transações",
-    "title": "Caixa de entrada dos Atalhos",
+    "title": "Para revisar",
     "subtitle": "Revise as mensagens capturadas antes de criar qualquer lançamento financeiro. A recepção não altera transações nem saldos.",
     "exportJson": "Exportar JSON",
     "statusFilter": "Estado da revisão",
@@ -378,7 +379,9 @@
     "kind_security": "Segurança",
     "kind_spam": "Possível spam",
     "kind_uncertain": "Por classificar",
-    "kind_financial_document": "Outros documentos financeiros"
+    "kind_financial_document": "Outros documentos financeiros",
+    "description": "Revise movimentos recebidos por e-mail ou atalhos antes de confirmar.",
+    "configureSources": "Configurar fontes"
   },
   "transactions": {
     "originalEvidence": "Origem da transação",
@@ -1436,16 +1439,25 @@
     "resize": "Redimensionar {name}",
     "dropHere": "Arraste um widget aqui",
     "summary": "Resumo financeiro",
-    "usage": "Plano e uso"
+    "usage": "Plano e uso",
+    "templates": {
+      "title": "Modelos",
+      "balanced": "Equilibrado",
+      "spending": "Controle de gastos",
+      "saving": "Economia e metas",
+      "activity": "Atividade diária",
+      "detail": "Visão detalhada"
+    },
+    "autoHeight": "Altura automática"
   },
   "dictation": {
     "connecting": "Conectando microfone…",
-    "liveListening": "Ouvindo · preenchendo o texto",
+    "liveListening": "Ouvindo…",
     "finalizing": "Finalizando a transcrição…",
     "ready": "Ditado pronto para revisar",
     "liveHint": "Até 60 s. Para após uma pausa. A IA revisa o áudio sem guardá-lo; um ditado usa uma análise.",
-    "unrelated": "Não identificamos uma movimentação de dinheiro. Revise o texto ou diga: “Paguei 20 reais no almoço”.",
-    "unclear": "Não identificamos a movimentação com clareza. Complete o que aconteceu e o valor antes de analisar.",
+    "unrelated": "Revise o ditado antes de analisar.",
+    "unclear": "Complete o movimento e o valor.",
     "start": "Ditar",
     "stop": "Parar ditado",
     "listening": "Ouvindo…",
@@ -1520,5 +1532,79 @@
     },
     "required": "Falhas que precisam de revisão sempre aparecem. Isso não ativa e-mail, push ou notificações do celular.",
     "error": "Não foi possível salvar. Tente novamente."
+  },
+  "settingsHub": {
+    "groups": {
+      "money": "Meu dinheiro",
+      "organize": "Organizar",
+      "connections": "Conexões",
+      "account": "Sua conta",
+      "support": "Plano e ajuda"
+    },
+    "rows": {
+      "accounts": {
+        "title": "Contas",
+        "description": "Consulte saldos e gerencie contas."
+      },
+      "budgets": {
+        "title": "Orçamentos",
+        "description": "Defina limites e revise seus gastos."
+      },
+      "planning": {
+        "title": "Metas e gastos programados",
+        "description": "Organize economias e pagamentos recorrentes."
+      },
+      "categories": {
+        "title": "Categorias",
+        "description": "Organize receitas e despesas."
+      },
+      "automation": {
+        "title": "Automações",
+        "description": "Aplique categorias e notas a novos movimentos."
+      },
+      "contacts": {
+        "title": "Contatos e estabelecimentos",
+        "description": "Veja para quem paga e onde compra."
+      },
+      "locations": {
+        "title": "Locais de compra",
+        "description": "Explore locais de compra salvos."
+      },
+      "documents": {
+        "title": "Documentos",
+        "description": "Revise recibos e confira extratos."
+      },
+      "email": {
+        "title": "E-mail bancário",
+        "description": "Conecte avisos dos seus bancos."
+      },
+      "shortcuts": {
+        "title": "Atalhos",
+        "description": "Receba movimentos dos seus atalhos."
+      },
+      "profile": {
+        "title": "Perfil",
+        "description": "Edite seus dados pessoais."
+      },
+      "security": {
+        "title": "Segurança",
+        "description": "Gerencie o acesso à sua conta."
+      },
+      "preferences": {
+        "title": "Preferências",
+        "description": "Idioma, notificações e permissões de IA."
+      },
+      "plan": {
+        "title": "Plano e uso",
+        "description": "Consulte sua assinatura e análises disponíveis."
+      },
+      "help": {
+        "title": "Ajuda",
+        "description": "Tire dúvidas e fale com suporte."
+      }
+    },
+    "documentSetup": "Envie recibos para revisar seus dados antes de criar um movimento. Use extratos para conferir transações existentes: comparar não altera saldos. Ao ativar Documentos, ele aparece na navegação.",
+    "activateDocuments": "Ativar documentos",
+    "setupError": "Não foi possível ativar Documentos. Tente novamente."
   }
 }

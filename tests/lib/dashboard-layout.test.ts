@@ -22,3 +22,13 @@ it('migrates legacy order, sanitizes dimensions and moves widgets between zones 
   ).toEqual([{ id: 'recent', zone: 'activity', width: 4, height: 8 }]);
   expect(dashboardLayout([], ['accounts'])).toEqual([]);
 });
+it('packs natural content heights into grid rows without clipping', async () => {
+  const { widgetRowSpan } = await import('@/lib/dashboard-layout');
+  expect(widgetRowSpan(160)).toBe(8);
+  expect(widgetRowSpan(484)).toBe(21);
+  for (const height of [1, 160, 321, 484]) {
+    const rows = widgetRowSpan(height);
+    expect(rows * 24 - 16).toBeGreaterThanOrEqual(height);
+    expect(rows * 24 - 16 - height).toBeLessThan(24);
+  }
+});

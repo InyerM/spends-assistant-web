@@ -21,6 +21,7 @@ import {
   placeWidget,
   type WidgetPlacement,
 } from '@/lib/dashboard-layout';
+import { DashboardTemplates } from './dashboard-templates';
 import { WidgetPreview } from './widget-preview';
 import { CustomChartBuilder } from './custom-chart-builder';
 export function DashboardEditor({
@@ -78,6 +79,24 @@ export function DashboardEditor({
             <p className='text-muted-foreground text-xs'>
               {t('selected', { count: items.length })}
             </p>
+            <DashboardTemplates
+              disabled={blocked}
+              available={DASHBOARD_WIDGETS.filter((id) =>
+                id === 'budgets'
+                  ? Boolean(budgets?.length)
+                  : id === 'goals'
+                    ? Boolean(data?.goals.length || data?.schedules.length)
+                    : id === 'alerts'
+                      ? Boolean(budgets?.length || data?.goals.length)
+                      : id === 'custom'
+                        ? Boolean(
+                            Array.isArray(data?.preferences.dashboard_custom_charts) &&
+                            data.preferences.dashboard_custom_charts.length,
+                          )
+                        : true,
+              )}
+              onApply={onDraft}
+            />
             {DASHBOARD_ZONES.map((zone) => (
               <section key={zone} className='space-y-2'>
                 <h3 className='font-semibold'>{t(`zones.${zone}`)}</h3>
@@ -114,7 +133,7 @@ export function DashboardEditor({
                             size='icon'
                             variant='ghost'
                             className='size-8 shrink-0'
-                            disabled={blocked}
+                            disabled={blocked || !available}
                             aria-label={t(selected ? 'remove' : 'add', { name: t(id) })}
                             onClick={() =>
                               onDraft(

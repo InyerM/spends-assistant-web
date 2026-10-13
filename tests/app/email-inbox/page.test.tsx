@@ -6,21 +6,22 @@ const { route } = vi.hoisted(() => ({ route: vi.fn() }));
 
 vi.mock('@/lib/api/queries/email-forwarding.queries', () => ({ useEmailForwardingRoute: route }));
 vi.mock('@/app/(dashboard)/transactions/shortcut-inbox/page', () => ({
-  default: ({ source }: { source: string }) => <div data-testid='inbox-list'>{source}</div>,
+  default: ({ source }: { source?: string }) => (
+    <div data-testid='inbox-list'>{source ?? 'all-sources'}</div>
+  ),
 }));
 vi.mock('next-intl', () => ({ useTranslations: () => (key: string) => key }));
 
 describe('email inbox page', () => {
   afterEach(() => cleanup());
 
-  it('keeps the inbox closed until forwarding has been verified', () => {
+  it('keeps shortcuts review available before forwarding verification', () => {
     route.mockReturnValue({
       data: { status: 'active', user_confirmed_at: null },
       isLoading: false,
     });
     render(<EmailInboxPage />);
-    expect(screen.getByText('verificationRequired')).toBeInTheDocument();
-    expect(screen.queryByTestId('inbox-list')).not.toBeInTheDocument();
+    expect(screen.getByTestId('inbox-list')).toHaveTextContent('all-sources');
   });
 
   it('opens the owner inbox after verification', () => {
@@ -29,6 +30,6 @@ describe('email inbox page', () => {
       isLoading: false,
     });
     render(<EmailInboxPage />);
-    expect(screen.getByTestId('inbox-list')).toHaveTextContent('forwarded_email');
+    expect(screen.getByTestId('inbox-list')).toHaveTextContent('all-sources');
   });
 });

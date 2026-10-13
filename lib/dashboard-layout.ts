@@ -79,3 +79,7 @@ export function resizeWidget(
     x.id === id ? { ...x, width: bound(width, 6, 4, 12), height: bound(height, 4, 2, 8) } : x,
   );
 }
+
+export function widgetRowSpan(height: number): number {
+  return Math.max(1, Math.ceil((height + 16) / 24));
+}

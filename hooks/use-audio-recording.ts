@@ -73,7 +73,7 @@ export function useAudioRecording(
         MediaRecorder.isTypeSupported(type),
       );
       if (!mime) throw new Error('unsupported');
-      const next = new MediaRecorder(captured, { mimeType: mime, audioBitsPerSecond: 64000 });
+      const next = new MediaRecorder(captured, { mimeType: mime, audioBitsPerSecond: 128000 });
       recorder.current = next;
       const chunks: Blob[] = [];
       let bytes = 0;
@@ -82,7 +82,7 @@ export function useAudioRecording(
         lastPreview = Date.now(),
         empty = false;
       const deliver = (final: boolean, captured: Blob | null = null): void => {
-        const pcm = captured ?? activity.current?.snapshot();
+        const pcm = final ? captured : (captured ?? activity.current?.snapshot());
         if (!final && (!pcm || !activity.current?.hasSpeech())) return;
         const blob = pcm ?? new Blob(chunks, { type: mime });
         if (!blob.size || empty) {
@@ -138,15 +138,17 @@ export function useAudioRecording(
         }
       };
       next.onstop = (): void => {
-        const finalAudio = activity.current?.snapshot() ?? null;
         release();
         setRecording(false);
-        if (id === generation.current) deliver(true, finalAudio);
+        if (id === generation.current) deliver(true);
       };
       next.onerror = (): void => {
         cancel();
         setError('microphone');
       };
+      next.start(1000);
+      setRecording(true);
+      setAcquiring(false);
       const monitor = watchVoiceActivity(captured, (noSpeech) => {
         empty = noSpeech;
         if (next.state === 'recording') next.stop();
@@ -158,15 +160,12 @@ export function useAudioRecording(
         captured.getTracks().forEach((track) => track.stop());
         return false;
       }
-      next.start(1000);
-      setRecording(true);
-      setAcquiring(false);
       timer.current = setTimeout(() => {
         next.stop();
       }, 60000);
       return true;
     } catch {
-      release();
+      cancel();
       setRecording(false);
       setAcquiring(false);
       setError('microphone');

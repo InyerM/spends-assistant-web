@@ -10,7 +10,7 @@ import SettingsPage from '@/app/(dashboard)/settings/page';
 const navigation = vi.hoisted(() => ({ tab: 'security', replace: vi.fn() }));
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ replace: navigation.replace }),
-  useSearchParams: () => new URLSearchParams({ tab: navigation.tab }),
+  useSearchParams: () => new URLSearchParams(navigation.tab ? { tab: navigation.tab } : {}),
 }));
 vi.mock('next-intl', () => ({ useTranslations: () => (key: string) => key }));
 vi.mock('@/hooks/use-user-settings', () => ({
@@ -39,6 +39,18 @@ vi.mock('@/components/settings/ai-consent-tab', () => ({
 }));
 
 describe('grouped settings', () => {
+  it('shows grouped module rows on the default settings page', () => {
+    navigation.tab = '';
+    render(<SettingsPage />);
+    expect(screen.getByRole('link', { name: /rows.categories.title/ })).toHaveAttribute(
+      'href',
+      '/categories',
+    );
+    expect(screen.getByRole('link', { name: /rows.automation.title/ })).toHaveAttribute(
+      'href',
+      '/automation',
+    );
+  });
   afterEach(cleanup);
   beforeEach(() => {
     navigation.tab = 'security';
@@ -47,23 +59,17 @@ describe('grouped settings', () => {
 
   it('keeps the old security link in the account group', () => {
     render(<SettingsPage />);
-    expect(screen.getByRole('tab', { name: 'accountGroup' })).toHaveAttribute(
-      'data-state',
-      'active',
-    );
+    expect(screen.getByRole('link', { name: 'title' })).toHaveAttribute('href', '/settings');
     expect(screen.getByText('Profile details')).toBeVisible();
     expect(screen.getByText('Security details')).toBeVisible();
     expect(screen.getByText('Delete account details')).toBeVisible();
-    expect(screen.getAllByRole('tab')).toHaveLength(5);
+    expect(screen.queryByRole('tab')).not.toBeInTheDocument();
   });
 
   it('shows forwarding and API keys together for an old email link', () => {
     navigation.tab = 'email-forwarding';
     render(<SettingsPage />);
-    expect(screen.getByRole('tab', { name: 'connections' })).toHaveAttribute(
-      'data-state',
-      'active',
-    );
+    expect(screen.getByRole('link', { name: 'title' })).toHaveAttribute('href', '/settings');
     expect(screen.getByText('Email details')).toBeVisible();
     expect(screen.getByText('API details')).toBeVisible();
   });

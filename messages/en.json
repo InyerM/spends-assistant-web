@@ -57,7 +57,7 @@
     "home": "Home",
     "more": "More",
     "documents": "Documents",
-    "emailInbox": "Email",
+    "emailInbox": "To review",
     "investments": "Investments",
     "loans": "Loans",
     "receivables": "Money lent",
@@ -70,7 +70,7 @@
     "primaryNavigation": "Primary navigation",
     "reviewGroup": "Review",
     "planningGroup": "Organize",
-    "wealthGroup": "Your money",
+    "wealthGroup": "Wealth",
     "planLabel": "Plan",
     "free": "Free",
     "pro": "Pro",
@@ -82,7 +82,8 @@
     "notifications": "Notifications",
     "contacts": "Contacts and merchants",
     "personalPlanning": "Plan your money",
-    "purchaseLocations": "Purchase locations"
+    "purchaseLocations": "Purchase locations",
+    "pendingReviews": "{count} movements to review"
   },
   "budgets": {
     "eyebrow": "Monthly plan",
@@ -251,7 +252,7 @@
     "showFullMessage": "Show full message",
     "hideFullMessage": "Hide full message",
     "backToDashboard": "Dashboard",
-    "emailTitle": "Email inbox",
+    "emailTitle": "To review",
     "emailSubtitle": "Bank emails collected for transaction review.",
     "verificationRequired": "Verify your Gmail forwarding address before opening the email inbox.",
     "openForwardingSettings": "Set up email forwarding",
@@ -273,7 +274,7 @@
     "luloCaution": "Verify against the card statement before a financial decision.",
     "luloZeroCaution": "No charge inferred from a zero-amount notice.",
     "backToTransactions": "Transactions",
-    "title": "Shortcut inbox",
+    "title": "To review",
     "subtitle": "Review captured messages before any financial entry is created. Intake never changes transactions or balances.",
     "exportJson": "Export JSON",
     "statusFilter": "Review status",
@@ -407,7 +408,9 @@
     "kind_security": "Security",
     "kind_spam": "Possible spam",
     "kind_uncertain": "Unclassified",
-    "kind_financial_document": "Other financial documents"
+    "kind_financial_document": "Other financial documents",
+    "description": "Review movements received through email or shortcuts before confirming them.",
+    "configureSources": "Configure sources"
   },
   "transactions": {
     "originalEvidence": "Original evidence",
@@ -1553,16 +1556,25 @@
     "resize": "Resize {name}",
     "dropHere": "Drag a widget here",
     "summary": "Money summary",
-    "usage": "Plan and usage"
+    "usage": "Plan and usage",
+    "templates": {
+      "title": "Templates",
+      "balanced": "Balanced",
+      "spending": "Spending control",
+      "saving": "Savings and goals",
+      "activity": "Daily activity",
+      "detail": "Detailed view"
+    },
+    "autoHeight": "Automatic height"
   },
   "dictation": {
     "connecting": "Connecting microphone…",
-    "liveListening": "Listening · filling in your text",
+    "liveListening": "Listening…",
     "finalizing": "Finishing the transcript…",
     "ready": "Dictation ready to review",
     "liveHint": "Up to 60s. Stops after a pause. AI reviews the audio without storing it; one dictation uses one analysis.",
-    "unrelated": "We could not identify a money movement. Review the text or try: “I paid 20 dollars for lunch.”",
-    "unclear": "We could not identify the movement clearly. Add what happened and the amount before analyzing.",
+    "unrelated": "Review the dictation before analyzing.",
+    "unclear": "Add the movement and amount.",
     "start": "Dictate",
     "stop": "Stop dictation",
     "listening": "Listening…",
@@ -1637,5 +1649,79 @@
     },
     "required": "Failures requiring review always appear. This does not enable email, push or phone notifications.",
     "error": "Could not save preferences. Try again."
+  },
+  "settingsHub": {
+    "groups": {
+      "money": "My money",
+      "organize": "Organize",
+      "connections": "Connections",
+      "account": "Your account",
+      "support": "Plan and help"
+    },
+    "rows": {
+      "accounts": {
+        "title": "Accounts",
+        "description": "Check balances and manage accounts."
+      },
+      "budgets": {
+        "title": "Budgets",
+        "description": "Set limits and review spending."
+      },
+      "planning": {
+        "title": "Goals and scheduled expenses",
+        "description": "Plan savings and recurring payments."
+      },
+      "categories": {
+        "title": "Categories",
+        "description": "Organize income and expenses."
+      },
+      "automation": {
+        "title": "Automations",
+        "description": "Apply categories and notes to new movements."
+      },
+      "contacts": {
+        "title": "Contacts and merchants",
+        "description": "See who you pay and where you shop."
+      },
+      "locations": {
+        "title": "Purchase locations",
+        "description": "Explore saved purchase locations."
+      },
+      "documents": {
+        "title": "Documents",
+        "description": "Review receipts and reconcile statements."
+      },
+      "email": {
+        "title": "Bank email",
+        "description": "Connect notices from your banks."
+      },
+      "shortcuts": {
+        "title": "Shortcuts",
+        "description": "Receive movements from your shortcuts."
+      },
+      "profile": {
+        "title": "Profile",
+        "description": "Edit your personal information."
+      },
+      "security": {
+        "title": "Security",
+        "description": "Manage access to your account."
+      },
+      "preferences": {
+        "title": "Preferences",
+        "description": "Language, notifications and AI permissions."
+      },
+      "plan": {
+        "title": "Plan and usage",
+        "description": "Check your subscription and available analyses."
+      },
+      "help": {
+        "title": "Help",
+        "description": "Get answers and contact support."
+      }
+    },
+    "documentSetup": "Upload receipts to review their data before creating a movement. Use statements to check existing transactions: comparing does not change balances. Activating Documents adds it to navigation.",
+    "activateDocuments": "Activate documents",
+    "setupError": "Could not activate Documents. Try again."
   }
 }

@@ -354,10 +354,11 @@ export default function ShortcutInboxPage({
           <h1 className='text-foreground text-3xl font-semibold tracking-tight'>
             {t(source ? 'emailTitle' : 'title')}
           </h1>
-          <p className='text-muted-foreground max-w-2xl text-sm'>
-            {t(source ? 'emailSubtitle' : 'subtitle')}
-          </p>
+          <p className='text-muted-foreground max-w-2xl text-sm'>{t('description')}</p>
         </div>
+        <Button asChild variant='ghost' size='sm'>
+          <Link href='/settings?tab=connections'>{t('configureSources')}</Link>
+        </Button>
         {!source && (
           <Button asChild variant='outline'>
             <a href='/api/shortcut-inbox/export' download>
@@ -419,7 +420,7 @@ export default function ShortcutInboxPage({
           </Select>
         </div>
 
-        {source === 'forwarded_email' && (
+        {
           <div className='min-w-0 space-y-2'>
             <label className='block text-sm font-medium'>{t('kindFilter')}</label>
             <Select
@@ -442,7 +443,7 @@ export default function ShortcutInboxPage({
               </SelectContent>
             </Select>
           </div>
-        )}
+        }
 
         <div className='min-w-0 space-y-2'>
           <label className='block text-sm font-medium'>{t('sortLabel')}</label>
@@ -462,7 +463,7 @@ export default function ShortcutInboxPage({
           </Select>
         </div>
 
-        {source === 'forwarded_email' && (
+        {
           <div className='flex min-w-0 flex-wrap items-start gap-2'>
             <div className='w-full space-y-2 text-sm'>
               <p className='font-medium'>{t('receivedPeriod')}</p>
@@ -492,7 +493,7 @@ export default function ShortcutInboxPage({
             )}
             <p className='text-muted-foreground w-full text-xs'>{t('receivedDateHint')}</p>
           </div>
-        )}
+        }
       </div>
       {(error || inbox.isError) && (
         <p role='alert' className='text-destructive text-sm'>
@@ -537,7 +538,7 @@ export default function ShortcutInboxPage({
                       <Badge variant='outline'>
                         {item.source === 'forwarded_email' ? t('forwardedSource') : item.source}
                       </Badge>
-                      {source === 'forwarded_email' && (
+                      {item.source === 'forwarded_email' && (
                         <Badge
                           variant='outline'
                           className={

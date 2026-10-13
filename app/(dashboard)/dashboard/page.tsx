@@ -93,7 +93,12 @@ export default function DashboardPage(): React.ReactElement {
           <DashboardZone
             key={zone}
             zone={zone}
-            items={layout}
+            items={layout.filter(
+              (item) =>
+                item.id !== 'custom' ||
+                (Array.isArray(planning?.preferences.dashboard_custom_charts) &&
+                  planning.preferences.dashboard_custom_charts.length > 0),
+            )}
             editing={draftLayout !== null}
             onChange={setDraftLayout}
             renderWidget={(id) => (

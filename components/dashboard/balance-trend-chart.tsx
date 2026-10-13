@@ -141,7 +141,8 @@ export function BalanceTrendChart({
         </p>
 
         <div
-          className='mt-6 h-[240px] w-full sm:h-[280px]'
+          className='mt-6 w-full'
+          style={{ height: 'var(--widget-chart-height, 280px)' }}
           role='img'
           aria-label={`${t('balanceTrend')}: ${formatCurrency(endBalance, 'COP', locale)}`}>
           <ResponsiveContainer width='100%' height='100%'>

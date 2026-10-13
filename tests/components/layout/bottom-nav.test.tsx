@@ -1,3 +1,4 @@
+vi.mock('@/hooks/use-document-availability', () => ({ useDocumentAvailability: () => true }));
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { NextIntlClientProvider } from 'next-intl';
@@ -28,7 +29,6 @@ describe('mobile workspace navigation', () => {
   it.each([
     ['receivables', '/receivables'],
     ['reliefFunds', '/relief-funds'],
-    ['emailInbox', '/inbox'],
     ['notifications', '/notifications'],
   ] as const)('exposes and opens %s in the More sheet', (key, href) => {
     render(
@@ -73,15 +73,15 @@ describe('mobile workspace navigation', () => {
     expect(scrollArea).not.toContainElement(screen.getByRole('heading', { name: es.nav.more }));
     expect(scrollArea).not.toContainElement(screen.getByRole('button', { name: 'Close' }));
   });
-  it('keeps the email inbox unavailable before forwarding verification', () => {
+  it('keeps the unified review queue available before email setup', () => {
     verified = false;
     render(
       <NextIntlClientProvider locale='es' messages={es}>
         <BottomNav />
       </NextIntlClientProvider>,
     );
+    expect(screen.getByRole('button', { name: es.nav.emailInbox })).toBeVisible();
     fireEvent.click(screen.getByRole('button', { name: es.nav.more }));
-    expect(screen.queryByRole('button', { name: es.nav.emailInbox })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: es.nav.notifications })).toBeVisible();
   });
 });
