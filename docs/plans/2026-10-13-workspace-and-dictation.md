@@ -83,3 +83,11 @@ shared the same quota session, and unrelated speech produced the compact prompt.
 consumed three units and the synthetic owner was deleted; both 1440px and 390px checks passed. The
 component regression test renders DictationButton without an application-level provider so that
 missing-context crashes remain detectable.
+
+## Final release
+
+Web deployment `dpl_4kMg2JNaW6R3BEN4tTRno3W9YLbr` reached READY at https://my.anotto.app. A fresh
+authenticated synthetic-owner production smoke check confirmed the transaction composer and Dictate
+control render, grouped Settings rows work, and the unified To review page opens. The owner was
+deleted successfully. Application commit: `0835299`; backend prompt commit: `5319afd`. The final
+full web suite remained 231 files / 1,311 passing tests after the tooltip-context fix.
