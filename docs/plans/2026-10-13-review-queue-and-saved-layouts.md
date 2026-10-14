@@ -72,3 +72,16 @@ the UI; the owner's transaction count remained zero.
 The complete local browser check also verified both pending widgets, settings icons, account
 linking, account creation, named-layout reload and zero financial posting. It reported no page
 errors and confirmed synthetic-owner cleanup.
+
+## Production release
+
+Released on 2026-10-13 at https://my.anotto.app. Vercel deployment
+`dpl_2DFD6hTtjuUCku54rvYdoN8PjxRN` reached READY with application commit `f4968c9`. Deployment
+inspection: https://vercel.com/inyerms-projects/spends-assistant-web/2DFD6hTtjuUCku54rvYdoN8PjxRN.
+
+Authenticated production Playwright verified three-source queue/count agreement, source-action
+placement, own-account identifier linking, credit-card creation, immediate review counter updates,
+large amounts at three viewport sizes, optional pending widgets, named-layout save and reload, and
+settings icons. No page errors occurred, account setup posted zero financial transactions, and the
+disposable synthetic owner was deleted. Private QA fixtures and reports remain outside the
+repository.
