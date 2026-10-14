@@ -21,7 +21,7 @@ describe('email inbox page', () => {
       isLoading: false,
     });
     render(<EmailInboxPage />);
-    expect(screen.getByTestId('inbox-list')).toHaveTextContent('all-sources');
+    expect(screen.getByTestId('inbox-list')).toHaveTextContent('all');
   });
 
   it('opens the owner inbox after verification', () => {
@@ -30,6 +30,6 @@ describe('email inbox page', () => {
       isLoading: false,
     });
     render(<EmailInboxPage />);
-    expect(screen.getByTestId('inbox-list')).toHaveTextContent('all-sources');
+    expect(screen.getByTestId('inbox-list')).toHaveTextContent('all');
   });
 });

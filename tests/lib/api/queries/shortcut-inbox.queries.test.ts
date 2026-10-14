@@ -48,3 +48,12 @@ it('sends oldest-first received ordering before pagination', async () => {
     new URL(fetcher.mock.calls[0][0] as string, 'https://example.test').searchParams.get('sort'),
   ).toBe('oldest');
 });
+
+it('requests the unified source explicitly instead of the legacy shortcuts-only default', async () => {
+  const fetcher = vi.fn().mockResolvedValue(Response.json({ data: [], count: 0 }));
+  vi.stubGlobal('fetch', fetcher);
+  await fetchShortcutInbox({ page: 1, status: 'pending', source: 'all', search: '' });
+  expect(
+    new URL(fetcher.mock.calls[0][0] as string, 'https://example.test').searchParams.get('source'),
+  ).toBe('all');
+});

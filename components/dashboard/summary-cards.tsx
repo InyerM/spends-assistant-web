@@ -50,6 +50,12 @@ export function SummaryCards({ transactions, isLoading }: SummaryCardsProps): Re
     },
   ];
 
+  const maxCharacters = Math.max(
+    ...cards.map(
+      (card) => `${card.prefix ?? ''}${formatCurrency(Math.abs(card.value), 'COP', locale)}`.length,
+    ),
+  );
+
   if (isLoading) {
     return (
       <>
@@ -77,7 +83,8 @@ export function SummaryCards({ transactions, isLoading }: SummaryCardsProps): Re
                   <Icon className={`h-4 w-4 ${card.iconColor}`} />
                 </div>
                 <span className='text-muted-foreground text-xs'>{card.label}</span>
-                <span className={`ml-auto text-sm font-bold ${card.colorClass}`}>
+                <span
+                  className={`ml-auto min-w-0 text-right text-sm font-bold [overflow-wrap:anywhere] ${card.colorClass}`}>
                   {card.prefix ?? ''}
                   {formatCurrency(Math.abs(card.value), 'COP', locale)}
                 </span>
@@ -88,28 +95,36 @@ export function SummaryCards({ transactions, isLoading }: SummaryCardsProps): Re
       </Card>
 
       {/* Desktop: 3 individual cards */}
-      <div className='hidden gap-4 sm:grid sm:grid-cols-3'>
-        {cards.map((card) => {
-          const Icon = card.icon;
-          return (
-            <Card key={card.label} className='border-border bg-card'>
-              <CardContent className='flex flex-row-reverse items-start justify-between gap-3 p-5 sm:p-6'>
-                <div
-                  className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${card.iconBg}`}>
-                  <Icon className={`h-4 w-4 ${card.iconColor}`} />
-                </div>
-                <div className='min-w-0'>
-                  <p className='text-muted-foreground mb-3 text-sm'>{card.label}</p>
-                  <p
-                    className={`text-2xl font-semibold tracking-tight tabular-nums lg:text-3xl ${card.colorClass}`}>
-                    {card.prefix ?? ''}
-                    {formatCurrency(Math.abs(card.value), 'COP', locale)}
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
+      <div className='@container hidden sm:block'>
+        <div className='grid grid-cols-1 gap-4 @min-[640px]:grid-cols-3'>
+          {cards.map((card) => {
+            const Icon = card.icon;
+            return (
+              <Card key={card.label} className='border-border bg-card @container min-w-0'>
+                <CardContent className='min-w-0 space-y-3 p-5 sm:p-6'>
+                  <div className='flex min-w-0 items-center justify-between gap-3'>
+                    <p className='text-muted-foreground text-sm'>{card.label}</p>
+                    <div
+                      className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${card.iconBg}`}>
+                      <Icon className={`h-4 w-4 ${card.iconColor}`} />
+                    </div>
+                  </div>
+                  <div className='min-w-0'>
+                    <p
+                      data-summary-value
+                      style={{
+                        fontSize: `clamp(0.875rem, calc((100cqi - 3rem) / ${maxCharacters * 0.64}), 1.875rem)`,
+                      }}
+                      className={`max-w-full font-semibold tracking-tight [overflow-wrap:anywhere] tabular-nums ${card.colorClass}`}>
+                      {card.prefix ?? ''}
+                      {formatCurrency(Math.abs(card.value), 'COP', locale)}
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
       </div>
     </>
   );

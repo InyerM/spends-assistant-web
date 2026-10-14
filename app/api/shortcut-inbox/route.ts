@@ -127,7 +127,7 @@ export async function GET(request: NextRequest): Promise<Response> {
     const status = params.get('status');
     if (itemId) query = query.eq('id', itemId);
     if (source === 'forwarded_email') query = query.eq('source', source);
-    else query = query.neq('source', 'forwarded_email');
+    else if (source !== 'all') query = query.neq('source', 'forwarded_email');
     if (
       !itemId &&
       status &&

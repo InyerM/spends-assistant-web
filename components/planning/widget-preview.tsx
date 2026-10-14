@@ -1,23 +1,37 @@
 'use client';
 import { useTranslations } from 'next-intl';
-import { ChartColumn, Wallet, Bell, Users, Target, List, PieChart } from 'lucide-react';
+import {
+  ChartColumn,
+  Wallet,
+  Bell,
+  Users,
+  Target,
+  List,
+  PieChart,
+  Inbox,
+  Files,
+} from 'lucide-react';
 import type { DashboardWidget } from '@/lib/planning';
 export function WidgetPreview({ id }: { id: DashboardWidget }): React.ReactElement {
   const t = useTranslations('dashboardWidgets');
   const Icon =
-    id === 'accounts'
-      ? Wallet
-      : id === 'alerts'
-        ? Bell
-        : id === 'contacts'
-          ? Users
-          : id === 'goals'
-            ? Target
-            : id === 'recent'
-              ? List
-              : id === 'categories'
-                ? PieChart
-                : ChartColumn;
+    id === 'reviewInbox'
+      ? Inbox
+      : id === 'reviewDocuments'
+        ? Files
+        : id === 'accounts'
+          ? Wallet
+          : id === 'alerts'
+            ? Bell
+            : id === 'contacts'
+              ? Users
+              : id === 'goals'
+                ? Target
+                : id === 'recent'
+                  ? List
+                  : id === 'categories'
+                    ? PieChart
+                    : ChartColumn;
   return (
     <div
       className='bg-background flex h-20 items-center gap-3 overflow-hidden rounded-lg px-3'

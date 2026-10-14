@@ -318,7 +318,7 @@
     "countPage": "{count} mensagens · Página {page} de {totalPages}",
     "previousPage": "Página anterior",
     "nextPage": "Próxima página",
-    "searchPlaceholder": "Buscar remetente, loja ou texto do e-mail",
+    "searchPlaceholder": "Buscar remetente, estabelecimento ou texto da mensagem",
     "searchAction": "Buscar",
     "clearSearch": "Limpar busca",
     "analysisRunning": "Analisando sugestões. Você já pode revisar e editar os dados originais.",
@@ -381,7 +381,17 @@
     "kind_uncertain": "Por classificar",
     "kind_financial_document": "Outros documentos financeiros",
     "description": "Revise movimentos recebidos por e-mail ou atalhos antes de confirmar.",
-    "configureSources": "Configurar fontes"
+    "configureSources": "Configurar fontes",
+    "unknownAccount": {
+      "title": "Conta não vinculada · •{suffix}",
+      "hint": "Se for sua, crie uma conta ou vincule este identificador a uma existente.",
+      "create": "Criar conta",
+      "link": "Vincular a uma existente",
+      "choose": "Escolha sua conta",
+      "confirm": "•{suffix} será salvo como identificador de {name}. Confira se corresponde à conta.",
+      "confirmLink": "Confirmar vínculo",
+      "error": "Não foi possível vincular o identificador. Tente novamente."
+    }
   },
   "transactions": {
     "originalEvidence": "Origem da transação",
@@ -1448,7 +1458,20 @@
       "activity": "Atividade diária",
       "detail": "Visão detalhada"
     },
-    "autoHeight": "Altura automática"
+    "autoHeight": "Altura automática",
+    "savedLayouts": {
+      "title": "Meus layouts",
+      "name": "Nome do layout",
+      "save": "Salvar layout",
+      "hint": "Até cinco layouts. Aplicar muda a prévia; pressione Salvar para usar na página inicial.",
+      "delete": "Excluir layout {name}"
+    },
+    "reviewInbox": "Inbox para revisar",
+    "reviewDocuments": "Documentos pendentes",
+    "reviewPending": "Para revisar",
+    "reviewClear": "Em dia",
+    "reviewUnavailable": "Indisponível",
+    "reviewViewMore": "Ver mais"
   },
   "dictation": {
     "connecting": "Conectando microfone…",

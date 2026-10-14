@@ -1,4 +1,5 @@
 'use client';
+import { UnrecognizedAccountNotice } from '@/components/transactions/unrecognized-account-notice';
 
 import { extractEmailEventEvidence } from '@/lib/shortcut-inbox/email-event-evidence';
 
@@ -295,6 +296,10 @@ export function ShortcutCreateForm({
           {t('optionsFailed')}
         </p>
       )}
+      <UnrecognizedAccountNotice
+        rawText={rawText}
+        onSelected={(accountId) => changeDraft({ accountId })}
+      />
       <ShortcutCreateFields
         draft={draft}
         accounts={accountsQuery.data ?? []}

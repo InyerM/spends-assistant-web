@@ -20,6 +20,8 @@ export const WIDGET_ZONES: Record<DashboardWidget, DashboardZone> = {
   custom: 'activity',
   contacts: 'activity',
   alerts: 'overview',
+  reviewInbox: 'overview',
+  reviewDocuments: 'overview',
 };
 const bound = (value: unknown, fallback: number, min: number, max: number): number =>
   typeof value === 'number' && Number.isFinite(value)

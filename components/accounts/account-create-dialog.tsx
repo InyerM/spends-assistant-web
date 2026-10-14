@@ -30,7 +30,7 @@ import { useCreateAccount } from '@/lib/api/mutations/account.mutations';
 import { ACCOUNT_TYPES } from '@/lib/utils/account-translations';
 import { AccountIdentifierEditor } from './account-identifier-editor';
 import { primarySuffix } from '@/lib/accounts/identifiers';
-import type { AccountIdentifier } from '@/types/account';
+import type { Account, AccountIdentifier } from '@/types/account';
 
 const formSchema = z.object({
   name: z.string().min(1, 'Name is required'),
@@ -51,11 +51,17 @@ type FormValues = z.infer<typeof formSchema>;
 interface AccountCreateDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  initialIdentifier?: AccountIdentifier;
+  initialCurrency?: string;
+  onCreated?: (account: Account) => void;
 }
 
 export function AccountCreateDialog({
   open,
   onOpenChange,
+  initialIdentifier,
+  initialCurrency = 'COP',
+  onCreated,
 }: AccountCreateDialogProps): React.ReactElement {
   const t = useTranslations('accounts');
   const tCommon = useTranslations('common');
@@ -63,7 +69,7 @@ export function AccountCreateDialog({
   const [wasOpen, setWasOpen] = useState(false);
   if (open !== wasOpen) {
     setWasOpen(open);
-    if (open) setIdentifiers([]);
+    if (open) setIdentifiers(initialIdentifier ? [initialIdentifier] : []);
   }
   const createMutation = useCreateAccount();
 
@@ -85,15 +91,15 @@ export function AccountCreateDialog({
     if (open) {
       form.reset({
         name: '',
-        type: 'checking',
+        type: initialIdentifier?.kind === 'credit_card' ? 'credit_card' : 'checking',
         institution: '',
-        last_four: '',
-        currency: 'COP',
+        last_four: initialIdentifier?.last_four ?? '',
+        currency: initialCurrency,
         color: '',
         icon: '',
       });
     }
-  }, [open, form]);
+  }, [open, form, initialIdentifier?.kind, initialIdentifier?.last_four, initialCurrency]);
 
   async function onSubmit(values: FormValues): Promise<void> {
     try {
@@ -102,7 +108,8 @@ export function AccountCreateDialog({
         last_four: primarySuffix({ type: values.type, last_four: null, identifiers }),
         identifiers,
       };
-      await createMutation.mutateAsync(payload);
+      const created = await createMutation.mutateAsync(payload);
+      onCreated?.(created);
       toast.success(t('accountCreated'));
       completeOnboardingStep('account');
       onOpenChange(false);

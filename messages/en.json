@@ -347,7 +347,7 @@
     "countPage": "{count} messages · Page {page} of {totalPages}",
     "previousPage": "Previous page",
     "nextPage": "Next page",
-    "searchPlaceholder": "Search sender, merchant or email text",
+    "searchPlaceholder": "Search sender, merchant or message text",
     "searchAction": "Search",
     "clearSearch": "Clear search",
     "analysisRunning": "Analyzing suggestions. You can review and edit the original details now.",
@@ -410,7 +410,17 @@
     "kind_uncertain": "Unclassified",
     "kind_financial_document": "Other financial documents",
     "description": "Review movements received through email or shortcuts before confirming them.",
-    "configureSources": "Configure sources"
+    "configureSources": "Configure sources",
+    "unknownAccount": {
+      "title": "Unlinked account · •{suffix}",
+      "hint": "If it is yours, create an account or link this identifier to an existing one.",
+      "create": "Create account",
+      "link": "Link to an existing account",
+      "choose": "Choose your account",
+      "confirm": "•{suffix} will be saved as an identifier for {name}. Check that it belongs to that account.",
+      "confirmLink": "Confirm link",
+      "error": "Could not link the identifier. Try again."
+    }
   },
   "transactions": {
     "originalEvidence": "Original evidence",
@@ -1565,7 +1575,20 @@
       "activity": "Daily activity",
       "detail": "Detailed view"
     },
-    "autoHeight": "Automatic height"
+    "autoHeight": "Automatic height",
+    "savedLayouts": {
+      "title": "My layouts",
+      "name": "Layout name",
+      "save": "Save layout",
+      "hint": "Up to five layouts. Applying changes the preview; press Save to use it on Home.",
+      "delete": "Delete layout {name}"
+    },
+    "reviewInbox": "Inbox to review",
+    "reviewDocuments": "Pending documents",
+    "reviewPending": "To review",
+    "reviewClear": "Up to date",
+    "reviewUnavailable": "Unavailable",
+    "reviewViewMore": "View more"
   },
   "dictation": {
     "connecting": "Connecting microphone…",

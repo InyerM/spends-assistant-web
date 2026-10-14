@@ -1,4 +1,5 @@
 'use client';
+import { UnrecognizedAccountNotice } from '@/components/transactions/unrecognized-account-notice';
 
 import { reviewCandidateSuggestions } from '@/lib/shortcut-inbox/candidates';
 import type { CandidateReview } from '@/lib/api/mutations/shortcut-inbox.mutations';
@@ -125,7 +126,7 @@ export default function ShortcutInboxPage({
   source,
   itemId,
 }: {
-  source?: 'forwarded_email';
+  source?: 'forwarded_email' | 'all';
   itemId?: string;
 }): React.ReactElement {
   const t = useTranslations('shortcutInbox');
@@ -252,6 +253,7 @@ export default function ShortcutInboxPage({
         inbox.refetch(),
         queryClient.invalidateQueries({ queryKey: ['documents'] }),
         queryClient.invalidateQueries({ queryKey: ['notifications'] }),
+        queryClient.invalidateQueries({ queryKey: ['shortcut-inbox', 'pending-count'] }),
       ]);
     } catch {
       setError(t('saveFailed'));
@@ -312,6 +314,7 @@ export default function ShortcutInboxPage({
       setReviewCandidate(null);
       setOpenCandidateId(null);
       void queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      void queryClient.invalidateQueries({ queryKey: ['shortcut-inbox', 'pending-count'] });
     } catch {
       setMatchErrorId(inboxId);
     } finally {
@@ -329,6 +332,7 @@ export default function ShortcutInboxPage({
         body: JSON.stringify({ decision_id: decisionId }),
       });
       if (!response.ok) throw new Error('Match reversal failed');
+      void queryClient.invalidateQueries({ queryKey: ['shortcut-inbox', 'pending-count'] });
       setReverseInboxId(null);
       setPage(1);
       setFilter('pending');
@@ -351,15 +355,17 @@ export default function ShortcutInboxPage({
               {t(itemId ? 'backToInbox' : source ? 'backToDashboard' : 'backToTransactions')}
             </Link>
           </Button>
-          <h1 className='text-foreground text-3xl font-semibold tracking-tight'>
-            {t(source ? 'emailTitle' : 'title')}
-          </h1>
+          <div className='flex flex-wrap items-center gap-3'>
+            <h1 className='text-foreground text-3xl font-semibold tracking-tight'>
+              {t(source ? 'emailTitle' : 'title')}
+            </h1>
+            <Button asChild variant='outline' size='sm'>
+              <Link href='/settings?tab=connections'>{t('configureSources')}</Link>
+            </Button>
+          </div>
           <p className='text-muted-foreground max-w-2xl text-sm'>{t('description')}</p>
         </div>
-        <Button asChild variant='ghost' size='sm'>
-          <Link href='/settings?tab=connections'>{t('configureSources')}</Link>
-        </Button>
-        {!source && (
+        {source !== 'forwarded_email' && (
           <Button asChild variant='outline'>
             <a href='/api/shortcut-inbox/export' download>
               <Download /> {t('exportJson')}
@@ -577,6 +583,9 @@ export default function ShortcutInboxPage({
                     rawText={item.raw_text}
                     inboxId={item.id}
                   />
+                  {item.status === 'pending' && createInboxId !== item.id && (
+                    <UnrecognizedAccountNotice rawText={item.raw_text} />
+                  )}
                   {hasAttachments && (
                     <div className='border-border space-y-2 rounded-lg border p-3'>
                       <p className='text-muted-foreground text-sm'>{t('pdfReviewHint')}</p>
@@ -737,6 +746,9 @@ export default function ShortcutInboxPage({
                           },
                         }));
                         void queryClient.invalidateQueries({ queryKey: ['notifications'] });
+                        void queryClient.invalidateQueries({
+                          queryKey: ['shortcut-inbox', 'pending-count'],
+                        });
                         void queryClient.invalidateQueries({ queryKey: ['transactions'] });
                         void queryClient.invalidateQueries({ queryKey: ['accounts'] });
                         void queryClient.invalidateQueries({ queryKey: ['budgets'] });

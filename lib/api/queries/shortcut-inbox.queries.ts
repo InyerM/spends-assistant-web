@@ -7,7 +7,7 @@ interface InboxFilters {
   kind?: EmailMessageKind;
   item_id?: string;
   status: string;
-  source?: 'forwarded_email';
+  source?: 'forwarded_email' | 'all';
   search: string;
   date_from?: string;
   date_to?: string;

@@ -21,6 +21,7 @@ import {
   placeWidget,
   type WidgetPlacement,
 } from '@/lib/dashboard-layout';
+import { SavedDashboardLayouts } from './saved-dashboard-layouts';
 import { DashboardTemplates } from './dashboard-templates';
 import { WidgetPreview } from './widget-preview';
 import { CustomChartBuilder } from './custom-chart-builder';
@@ -79,6 +80,7 @@ export function DashboardEditor({
             <p className='text-muted-foreground text-xs'>
               {t('selected', { count: items.length })}
             </p>
+            <SavedDashboardLayouts items={items} blocked={blocked} onApply={onDraft} />
             <DashboardTemplates
               disabled={blocked}
               available={DASHBOARD_WIDGETS.filter((id) =>

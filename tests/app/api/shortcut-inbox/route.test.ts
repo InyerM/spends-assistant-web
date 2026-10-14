@@ -515,3 +515,22 @@ it('filters a message kind independently from its review status', async () => {
   expect(db.filters).toContainEqual(['message_kind', 'promotion']);
   expect((await response.json()).data).toEqual([db.rows[0]]);
 });
+
+it('lists all pending owner sources explicitly so the unified badge and list agree', async () => {
+  const db = fakeDatabase();
+  db.rows.push(
+    ...['forwarded_email', 'sms-shortcut', 'apple-pay'].map((source, index) => ({
+      id: `pending-${index}`,
+      user_id: 'owner-a',
+      source,
+      status: 'pending',
+    })),
+  );
+  db.rows.push({ id: 'foreign', user_id: 'owner-b', source: 'forwarded_email', status: 'pending' });
+  getUserClient.mockResolvedValue({ supabase: db.supabase, userId: 'owner-a' });
+  const response = await GET(
+    new Request('https://example.test/api/shortcut-inbox?source=all&status=pending') as never,
+  );
+  expect(response.status).toBe(200);
+  expect((await response.json()).data).toHaveLength(3);
+});

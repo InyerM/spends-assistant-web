@@ -1079,3 +1079,40 @@ it('checks existing transactions when opening analysis even before AI completes'
   );
   expect(await screen.findByText('Already recorded purchase')).toBeInTheDocument();
 });
+
+it('refreshes pending-count metadata after review without invalidating all inbox lists', async () => {
+  cleanup();
+  const invalidation = vi.spyOn(QueryClient.prototype, 'invalidateQueries');
+  const item = {
+    id: 'metadata-review',
+    source: 'sms-shortcut',
+    raw_text: 'Synthetic review message',
+    status: 'pending',
+    received_at: '2026-10-08T12:00:00Z',
+    created_at: '2026-10-08T12:00:00Z',
+    external_id: null,
+  };
+  let reviewed = false;
+  vi.stubGlobal(
+    'fetch',
+    vi.fn().mockImplementation((_url: string, init?: RequestInit) => {
+      if (init?.method === 'PATCH') {
+        reviewed = true;
+        return Promise.resolve(Response.json({ status: 'non_transaction' }));
+      }
+      return Promise.resolve(
+        Response.json({ data: reviewed ? [] : [item], count: reviewed ? 0 : 1 }),
+      );
+    }),
+  );
+  renderPage();
+  await screen.findByText('Synthetic review message');
+  fireEvent.click(screen.getByRole('button', { name: 'Mark non-transaction' }));
+  await waitFor(() =>
+    expect(invalidation).toHaveBeenCalledWith({ queryKey: ['shortcut-inbox', 'pending-count'] }),
+  );
+  expect(invalidation).not.toHaveBeenCalledWith({ queryKey: ['shortcut-inbox'] });
+  invalidation.mockRestore();
+  cleanup();
+  vi.unstubAllGlobals();
+});

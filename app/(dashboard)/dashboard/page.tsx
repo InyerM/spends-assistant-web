@@ -2,6 +2,7 @@
 import { DashboardZone } from '@/components/planning/dashboard-zone';
 import { DASHBOARD_ZONES, dashboardLayout, type WidgetPlacement } from '@/lib/dashboard-layout';
 import { DashboardEditor } from '@/components/planning/dashboard-editor';
+import { PendingReviewWidget } from '@/components/dashboard/pending-review-widget';
 import { TopContacts } from '@/components/dashboard/top-contacts';
 import { MoneyAlerts } from '@/components/dashboard/money-alerts';
 import { CustomCharts } from '@/components/planning/custom-charts';
@@ -106,6 +107,8 @@ export default function DashboardPage(): React.ReactElement {
                 {id === 'summary' && (
                   <SummaryCards transactions={transactions} isLoading={txLoading} />
                 )}
+                {id === 'reviewInbox' && <PendingReviewWidget kind='inbox' />}
+                {id === 'reviewDocuments' && <PendingReviewWidget kind='documents' />}
                 {id === 'usage' && <UsageCard />}
                 {id === 'accounts' && (
                   <BalanceOverview

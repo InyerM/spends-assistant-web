@@ -347,7 +347,7 @@
     "countPage": "{count} mensajes · Página {page} de {totalPages}",
     "previousPage": "Página anterior",
     "nextPage": "Página siguiente",
-    "searchPlaceholder": "Buscar remitente, comercio o texto del correo",
+    "searchPlaceholder": "Buscar remitente, comercio o texto del mensaje",
     "searchAction": "Buscar",
     "clearSearch": "Limpiar búsqueda",
     "analysisRunning": "Analizando sugerencias. Ya puedes revisar y editar los datos originales.",
@@ -396,7 +396,7 @@
     "cancelSenderConfirmation": "Cancelar",
     "confirmingSender": "Guardando…",
     "confirmSender": "Confirmar remitente",
-    "kindFilter": "Tipo de correo",
+    "kindFilter": "Tipo de mensaje",
     "allKinds": "Todos los tipos",
     "allStatuses": "Todos los estados",
     "kind_purchase": "Compras y pagos",
@@ -410,7 +410,17 @@
     "kind_uncertain": "Por clasificar",
     "kind_financial_document": "Otros documentos financieros",
     "description": "Revisa los movimientos recibidos por correo o atajos antes de confirmarlos.",
-    "configureSources": "Configurar fuentes"
+    "configureSources": "Configurar fuentes",
+    "unknownAccount": {
+      "title": "Cuenta sin vincular · •{suffix}",
+      "hint": "Si es tuya, puedes crear una cuenta o vincular este identificador a una existente.",
+      "create": "Crear cuenta",
+      "link": "Vincular a una existente",
+      "choose": "Elige tu cuenta",
+      "confirm": "Se guardará •{suffix} como identificador de {name}. Comprueba que corresponde a esa cuenta.",
+      "confirmLink": "Confirmar vínculo",
+      "error": "No pudimos vincular el identificador. Inténtalo de nuevo."
+    }
   },
   "transactions": {
     "originalEvidence": "Origen de la transacción",
@@ -1562,7 +1572,20 @@
       "activity": "Actividad diaria",
       "detail": "Vista detallada"
     },
-    "autoHeight": "Altura automática"
+    "autoHeight": "Altura automática",
+    "savedLayouts": {
+      "title": "Mis distribuciones",
+      "name": "Nombre de la distribución",
+      "save": "Guardar distribución",
+      "hint": "Hasta cinco distribuciones. Aplicar cambia la vista previa; pulsa Guardar para usarla en Inicio.",
+      "delete": "Eliminar distribución {name}"
+    },
+    "reviewInbox": "Inbox por revisar",
+    "reviewDocuments": "Documentos pendientes",
+    "reviewPending": "Por revisar",
+    "reviewClear": "Al día",
+    "reviewUnavailable": "No disponible",
+    "reviewViewMore": "Ver más"
   },
   "dictation": {
     "connecting": "Conectando micrófono…",

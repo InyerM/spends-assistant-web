@@ -98,10 +98,13 @@ export const DASHBOARD_WIDGETS = [
   'contacts',
   'alerts',
   'usage',
+  'reviewInbox',
+  'reviewDocuments',
 ] as const;
 export type DashboardWidget = (typeof DASHBOARD_WIDGETS)[number];
 export function dashboardWidgets(value: unknown): DashboardWidget[] {
-  if (!Array.isArray(value)) return [...DASHBOARD_WIDGETS];
+  if (!Array.isArray(value))
+    return DASHBOARD_WIDGETS.filter((id) => id !== 'reviewInbox' && id !== 'reviewDocuments');
   return [
     ...new Set(
       value.filter(

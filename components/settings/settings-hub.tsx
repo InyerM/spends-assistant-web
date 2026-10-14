@@ -20,6 +20,9 @@ export function SettingsHub(): React.ReactElement {
                 key={row.id}
                 href={row.href}
                 className='hover:bg-card-overlay focus-visible:ring-ring flex min-h-16 items-center gap-4 px-5 py-4 focus-visible:ring-2'>
+                <span className='bg-brand/10 text-brand flex size-10 shrink-0 items-center justify-center rounded-xl'>
+                  <row.icon className='size-5' aria-hidden='true' />
+                </span>
                 <span className='min-w-0 flex-1'>
                   <span className='block text-sm font-medium'>{t(`rows.${row.id}.title`)}</span>
                   <span className='text-muted-foreground mt-1 block text-xs'>
