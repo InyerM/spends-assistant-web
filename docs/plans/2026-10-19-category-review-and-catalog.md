@@ -26,11 +26,24 @@
   personalized category rows changed**, catalog size **94**. The audit compares full transaction
   snapshots and customized category snapshots in the same transaction as the migrations.
 - Worker release: `a1aa9d42-4752-41ca-8b91-e8ba2b3fbf05`.
+- Source commits: backend `01c3160`, web `a1feb8c`.
+- Web production deployment: `dpl_EzLajd4VzJ462aovYzEeMTJTExmd`, READY and aliased to
+  [my.anotto.app](https://my.anotto.app) on 2026-10-19.
 - Backend full suite: 129 files / 934 tests passed. Web full suite before the final dialog lifecycle
   regression: 249 files / 1,352 tests passed. Focused follow-up checks cover that regression,
   statement payment decisions, review API ownership and multilingual editing.
 - Security checks cover consent, quotas, same-owner evidence, allowed category type, stale metadata,
   strict request fields and immutable financial evidence.
+- Final focused checks: 6 backend tests and 9 web tests passed; TypeScript, lint and the production
+  build passed. Lint retains the existing React Hook Form compiler compatibility warning.
+- Real-provider browser checks verified that an edited birthday-gift purpose selects Gifts instead
+  of the contact's previous Restaurants category, and that saving preserves the original amount and
+  bank message. Statement creation exposes the pending fields and requires an explicit payment
+  origin decision. Disposable owners are removed after every browser run.
+- Production browser smoke passed on 2026-10-19 at 18:25 America/Bogota: all 94 categories had three
+  translations, edited-purpose AI classification and per-row save succeeded, card-payment review and
+  explicit refund selection succeeded, the loaded 390px transaction view had no horizontal overflow,
+  there were no browser runtime errors, and disposable-user cleanup succeeded.
 
 ## Verification boundaries
 
