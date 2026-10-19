@@ -1,8 +1,12 @@
 import { z } from 'zod';
 import { AuthError, errorResponse, getUserClient, applyAutomationRules } from '@/lib/api/server';
 import { hasSameRequestOrigin } from '@/lib/api/request-origin';
-import { workerConfig } from '@/lib/config';
-import { forwardAiConsentError } from '@/lib/ai-consent';
+import { requestCategoryReview } from '@/lib/api/category-review-server';
+import { isCardPayment } from '@/lib/category-review';
+const schema = z.object({
+  locale: z.enum(['es', 'en', 'pt']).default('es'),
+  account_id: z.uuid().optional(),
+});
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string; observationId: string }> },
@@ -12,7 +16,12 @@ export async function POST(
     if (!accessToken && !hasSameRequestOrigin(request))
       return errorResponse('Invalid request origin', 403);
     const { id, observationId } = await params;
-    if (!z.uuid().safeParse(id).success || !z.uuid().safeParse(observationId).success)
+    const body = schema.safeParse(await request.json().catch(() => ({})));
+    if (
+      !z.uuid().safeParse(id).success ||
+      !z.uuid().safeParse(observationId).success ||
+      !body.success
+    )
       return errorResponse('Invalid observation', 400);
     const [doc, row] = await Promise.all([
       supabase
@@ -49,56 +58,88 @@ export async function POST(
     )
       return errorResponse('Verified statement fields required', 409);
     const type = Number(movement.amount) > 0 ? 'income' : 'expense';
+    const scope = await supabase
+      .from('statement_currency_scopes')
+      .select('account_id')
+      .eq('document_id', id)
+      .eq('user_id', userId)
+      .eq('currency', movement.currency)
+      .maybeSingle();
+    const legacy = scope.data
+      ? null
+      : await supabase
+          .from('statement_reconciliation_scopes')
+          .select('account_id')
+          .eq('document_id', id)
+          .eq('user_id', userId)
+          .maybeSingle();
+    const scopedAccount = scope.data?.account_id ?? legacy?.data?.account_id;
+    if (!scopedAccount || (body.data.account_id && body.data.account_id !== scopedAccount))
+      return errorResponse('Review the statement account first', 409);
+    const account = await supabase
+      .from('accounts')
+      .select('id,type')
+      .eq('id', scopedAccount)
+      .eq('user_id', userId)
+      .is('deleted_at', null)
+      .maybeSingle();
+    if (account.error || !account.data) return errorResponse('Account not found', 404);
     const token = accessToken ?? (await supabase.auth.getSession()).data.session?.access_token;
     if (!token) return errorResponse('Unauthorized', 401);
-    const response = await fetch(`${workerConfig.url}/parse`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({
-        text: `Statement ${type}. Currency: ${movement.currency}. Date: ${movement.occurred_at_text}. Amount: ${Math.abs(Number(movement.amount))}. ${movement.description}\n${movement.source_excerpt}`,
-      }),
-      signal: AbortSignal.timeout(60000),
+    const proposal = await requestCategoryReview(token, {
+      locale: body.data.locale,
+      type,
+      account_type: account.data.type,
+      description: String(movement.description ?? '').slice(0, 500),
+      excerpt: String(movement.source_excerpt ?? '').slice(0, 3000),
+      history: [],
     });
-    if (!response.ok)
-      return (await forwardAiConsentError(response)) ?? errorResponse('Analysis unavailable', 503);
-    const result = (await response.json()) as {
-      parsed?: { description?: string };
-      resolved?: { category_id?: string };
-    };
-    const description =
-      typeof result.parsed?.description === 'string'
-        ? result.parsed.description.slice(0, 500)
-        : movement.description;
+    if (proposal instanceof Response) return proposal;
+    const cardPayment =
+      type === 'income' && isCardPayment(String(account.data.type), String(movement.description));
     const processed = await applyAutomationRules(supabase, {
       type,
       amount: Math.abs(Number(movement.amount)),
       date: movement.occurred_at_text,
-      description,
-      account_id: '',
+      description: proposal.description,
+      account_id: scopedAccount,
+      currency: movement.currency,
       source: 'statement',
       raw_text: movement.source_excerpt,
-      category_id: result.resolved?.category_id,
+      category_id: proposal.category_id ?? undefined,
     });
     let categoryId: string | null = null;
-    if (processed.category_id) {
+    if (processed.category_id && !cardPayment && proposal.kind !== 'own_transfer') {
       const category = await supabase
         .from('categories')
-        .select('id,type')
+        .select('id,type,slug')
         .eq('id', processed.category_id)
         .eq('type', type)
         .eq('is_active', true)
         .is('deleted_at', null)
         .maybeSingle();
-      if (!category.error && category.data) categoryId = category.data.id;
+      if (
+        !category.error &&
+        category.data &&
+        !['uncategorized', 'uncategorized-income'].includes(String(category.data.slug))
+      )
+        categoryId = String(category.data.id);
     }
+    const automated = categoryId && processed.category_id !== proposal.category_id;
     return Response.json(
       {
+        ...proposal,
         category_id: categoryId,
         description: processed.description,
-        source:
-          Array.isArray(processed.applied_rules) && processed.applied_rules.length
-            ? 'automation'
-            : 'ai',
+        kind: cardPayment ? 'own_transfer' : proposal.kind,
+        reason_code: cardPayment
+          ? 'card_payment'
+          : categoryId
+            ? 'category_suggested'
+            : proposal.kind === 'own_transfer'
+              ? 'transfer_review'
+              : 'insufficient_context',
+        source: automated ? 'automation' : cardPayment ? 'evidence' : 'ai',
       },
       { headers: { 'Cache-Control': 'private, no-store' } },
     );

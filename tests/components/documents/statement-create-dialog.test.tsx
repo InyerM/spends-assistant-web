@@ -60,3 +60,26 @@ it('analyzes when opened, fills category and preserves a description edited whil
   expect(screen.getByDisplayValue('My reviewed description')).toBeVisible();
   expect(create).not.toHaveBeenCalled();
 });
+it('requires a card payment explanation before a positive card entry can become income', () => {
+  render(
+    <StatementCreateDialog
+      documentId='doc'
+      row={{
+        id: 'row',
+        description: 'ABONO SUCURSAL VIRTUAL',
+        amount: 5,
+        currency: 'USD',
+        occurred_at_text: '2026-09-01',
+        status: 'pending',
+      }}
+      accounts={[{ id: 'card', type: 'credit_card', currency: 'USD', is_active: true } as never]}
+      account='card'
+      disabled={false}
+    />,
+  );
+  fireEvent.click(screen.getByRole('button', { name: 'createMissing' }));
+  fireEvent.click(screen.getByRole('checkbox', { name: 'createConfirmation' }));
+  expect(screen.getByRole('button', { name: 'createAndReconcile' })).toBeDisabled();
+  fireEvent.click(screen.getByRole('button', { name: 'confirmOtherIncome' }));
+  expect(screen.getByRole('button', { name: 'createAndReconcile' })).toBeEnabled();
+});

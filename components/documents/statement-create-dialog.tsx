@@ -1,6 +1,8 @@
 'use client';
 import { useRef, useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
+import { StatementAnalysisFeedback } from './statement-analysis-feedback';
+import { isCardPayment } from '@/lib/category-review';
 import { AiFieldStatus } from '@/components/shared/ai-field-status';
 import { AiConsentNotice } from '@/components/ai-consent-notice';
 import { AiConsentRequiredError } from '@/lib/ai-consent';
@@ -47,10 +49,13 @@ export function StatementCreateDialog({
     [category, setCategory] = useState(''),
     [transfer, setTransfer] = useState(false),
     [other, setOther] = useState(''),
+    [resolution, setResolution] = useState<'unconfirmed' | 'transfer' | 'refund' | 'other'>(
+      'unconfirmed',
+    ),
     [key] = useState(() => crypto.randomUUID());
   const categories = useCategories(),
     create = useCreateStatementTransaction(documentId);
-  const analyze = useAnalyzeStatementMovement(documentId, row.id);
+  const analyze = useAnalyzeStatementMovement(documentId, row.id, account, locale);
   const categoryEdited = useRef(false),
     descriptionEdited = useRef(false);
   function runAnalysis(): void {
@@ -63,6 +68,20 @@ export function StatementCreateDialog({
   }
   const own = accounts.find((a) => a.id === account);
   const amount = row.amount ?? 0;
+  const cardPayment =
+    amount > 0 &&
+    own?.type === 'credit_card' &&
+    (isCardPayment(own.type, row.description ?? '') || analyze.data?.kind === 'own_transfer');
+  function resolvePayment(choice: 'transfer' | 'refund' | 'other'): void {
+    setResolution(choice);
+    if (choice === 'refund' && !descriptionEdited.current) setDescription(t('refundDescription'));
+    setTransfer(choice === 'transfer');
+    categoryEdited.current = true;
+    setCategory(
+      choice === 'refund' ? (categories.data?.find((c) => c.slug === 'refunds')?.id ?? '') : '',
+    );
+  }
+
   return (
     <>
       <Button
@@ -106,18 +125,15 @@ export function StatementCreateDialog({
               <Sparkles className='size-4' />
               {t('analyzeMovement')}
             </Button>
-            {(analyze.isPending || analyze.data) && (
-              <AiFieldStatus
-                state={
-                  analyze.isPending
-                    ? 'analyzing'
-                    : analyze.data.source === 'automation'
-                      ? 'automation'
-                      : 'suggested'
-                }
-              />
-            )}
           </div>
+          <StatementAnalysisFeedback
+            pending={analyze.isPending}
+            result={analyze.data}
+            cardPayment={cardPayment}
+            disabled={create.isPending}
+            resolution={resolution}
+            onResolve={resolvePayment}
+          />
           {analyze.error instanceof AiConsentRequiredError ? (
             <AiConsentNotice scope={analyze.error.scope} />
           ) : (
@@ -127,8 +143,17 @@ export function StatementCreateDialog({
               </p>
             )
           )}
-          <label className='space-y-1 text-sm'>
-            {t('description')}
+          <label
+            className={`space-y-1 text-sm ${analyze.isPending || analyze.data?.description ? 'ai-field' : ''}`}
+            data-ai-state={
+              analyze.isPending ? 'analyzing' : analyze.data?.description ? 'suggested' : undefined
+            }>
+            <span className='flex flex-wrap items-center justify-between gap-2'>
+              {t('description')}
+              {(analyze.isPending || analyze.data?.description) && (
+                <AiFieldStatus state={analyze.isPending ? 'analyzing' : 'suggested'} />
+              )}
+            </span>
             <Input
               value={description}
               disabled={create.isPending}
@@ -145,6 +170,8 @@ export function StatementCreateDialog({
               disabled={create.isPending}
               onCheckedChange={(value) => {
                 setTransfer(value === true);
+                if (cardPayment) setResolution(value === true ? 'transfer' : 'unconfirmed');
+                categoryEdited.current = true;
                 setCategory('');
               }}
             />
@@ -162,21 +189,54 @@ export function StatementCreateDialog({
               disabled={create.isPending}
             />
           ) : (
-            <SearchableSelect
-              ariaLabel={t('category')}
-              value={category}
-              onValueChange={(value) => {
-                categoryEdited.current = true;
-                setCategory(value);
-              }}
-              placeholder={t('category')}
-              disabled={create.isPending}
-              items={buildCategoryItems(categories.data ?? [], amount > 0 ? 'income' : 'expense', {
-                locale: locale as 'en' | 'es' | 'pt',
-                allPrefix: (name) => name,
-              })}
-            />
+            <div
+              className={analyze.isPending || analyze.data?.category_id ? 'ai-field' : 'space-y-1'}
+              data-ai-state={
+                analyze.isPending
+                  ? 'analyzing'
+                  : analyze.data?.category_id
+                    ? 'suggested'
+                    : undefined
+              }>
+              <span className='flex flex-wrap items-center justify-between gap-2 text-sm'>
+                {t('category')}
+                {(analyze.isPending || analyze.data?.category_id) && (
+                  <AiFieldStatus
+                    state={
+                      analyze.isPending
+                        ? 'analyzing'
+                        : analyze.data.source === 'automation'
+                          ? 'automation'
+                          : 'suggested'
+                    }
+                  />
+                )}
+              </span>
+              <SearchableSelect
+                ariaLabel={t('category')}
+                value={category}
+                onValueChange={(value) => {
+                  categoryEdited.current = true;
+                  setCategory(value);
+                }}
+                placeholder={t('category')}
+                disabled={create.isPending}
+                items={buildCategoryItems(
+                  categories.data ?? [],
+                  amount > 0 ? 'income' : 'expense',
+                  {
+                    locale: locale as 'en' | 'es' | 'pt',
+                    allPrefix: (name) => name,
+                  },
+                )}
+              />
+            </div>
           )}
+          {transfer &&
+            !accounts.some(
+              (a) =>
+                a.id !== account && a.is_active && !a.deleted_at && a.currency === row.currency,
+            ) && <p className='text-muted-foreground text-xs'>{t('otherCurrencyTransferHint')}</p>}
           <label className='flex items-start gap-2 text-sm'>
             <Checkbox
               checked={confirmed}
@@ -202,7 +262,8 @@ export function StatementCreateDialog({
                 analyze.isPending ||
                 !confirmed ||
                 !description.trim() ||
-                (transfer && !other)
+                (transfer && !other) ||
+                (cardPayment && resolution === 'unconfirmed')
               }
               onClick={() =>
                 create.mutate(

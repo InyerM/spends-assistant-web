@@ -767,7 +767,14 @@
     "spendingNatureHelp": "Clasifica qué tan esencial es este gasto: Deseo (discrecional), Necesidad (necesario), Obligatorio (mandatorio)",
     "noResultsDescription": "Prueba con otro nombre o limpia los filtros.",
     "loadError": "No se pudieron cargar tus categorías. Inténtalo de nuevo.",
-    "showCategory": "Ver {name}"
+    "showCategory": "Ver {name}",
+    "otherLanguages": "Nombres en otros idiomas",
+    "language": {
+      "es": "Español",
+      "en": "Inglés",
+      "pt": "Portugués"
+    },
+    "catalogGuidance": "Las categorías describen el motivo de un movimiento. Los pagos entre tus propias cuentas se registran como transferencias; una devolución puede usar Devoluciones y reembolsos."
   },
   "automation": {
     "title": "Reglas de Automatización",
@@ -1503,7 +1510,19 @@
     "chooseCurrencyScope": "Selecciona una cuenta en {currency} y el período para comparar estos movimientos.",
     "setupCurrency": "Configurar {currency} en una cuenta",
     "useExistingAccount": "Usar una cuenta existente",
-    "enableCurrencyHint": "Elige la cuenta del extracto y habilita su saldo en {currency}. Sus movimientos actuales se conservarán."
+    "enableCurrencyHint": "Elige la cuenta del extracto y habilita su saldo en {currency}. Sus movimientos actuales se conservarán.",
+    "analyzingFields": "Revisando descripción y categoría…",
+    "analysisSuggested": "Sugerencia lista para revisar",
+    "analysisNeedsCategory": "La categoría necesita tu revisión",
+    "cardPaymentTitle": "Revisa qué tipo de abono es",
+    "cardPaymentHint": "Este abono a la tarjeta parece un pago. Si salió de otra cuenta tuya, vincúlala como transferencia. Si fue una devolución del comercio, usa devoluciones y reembolsos.",
+    "confirmOwnPayment": "Es un pago entre mis cuentas",
+    "confirmRefund": "Es una devolución",
+    "confirmOtherIncome": "Es otro ingreso",
+    "otherCurrencyTransferHint": "Selecciona la cuenta de origen en la misma moneda. Si el pago tuvo conversión, revisa las dos partidas y el tipo de cambio antes de registrarlo.",
+    "transferReviewTitle": "Revisa si es una transferencia",
+    "transferReviewHint": "Este movimiento puede ser entre tus cuentas. Vincula la otra cuenta para registrarlo como transferencia.",
+    "refundDescription": "Devolución a la tarjeta"
   },
   "planning": {
     "title": "Planifica tu dinero",
@@ -1814,6 +1833,25 @@
     "queueError": "No pudimos cargar las sugerencias. Vuelve a intentarlo al recargar.",
     "reviewSuggestions": "Revisar sugerencias",
     "showUncategorized": "Ver sin categoría",
-    "queueSuggestion": "{count, plural, one {# movimiento pendiente} other {# movimientos pendientes}} · Sugerencia: {category}"
+    "queueSuggestion": "{count, plural, one {# movimiento pendiente} other {# movimientos pendientes}} · Sugerencia: {category}",
+    "historyBasis": "La categoría parte de un movimiento que ya revisaste de este contacto. Compara su descripción y sus notas con cada movimiento pendiente.",
+    "basisTitle": "Ver movimientos de referencia ({count})",
+    "editMovement": "Editar",
+    "selectMovement": "Seleccionar {description}",
+    "categoryLabel": "Categoría para este movimiento",
+    "descriptionLabel": "Descripción",
+    "notesLabel": "Notas o motivo",
+    "reviewWithAi": "Revisar esta fila con IA",
+    "explainWithAi": "Explicar sugerencia con IA",
+    "analyzingContext": "Revisando notas y categorías…",
+    "viewOriginal": "Ver movimiento original",
+    "useProposal": "Usar propuesta",
+    "explanationUnavailable": "No pudimos preparar la explicación. Puedes revisar y editar los datos manualmente.",
+    "originalPreserved": "Puedes cambiar la categoría, la descripción y las notas. El mensaje bancario original se conserva.",
+    "saveReviewed": "{count, plural, one {Guardar # movimiento revisado} other {Guardar # movimientos revisados}}",
+    "reviewInstructions": "Revisa el contexto y elige qué movimientos actualizar. Cada uno puede tener una categoría distinta.",
+    "nothingToReview": "No quedan movimientos para revisar en esta sugerencia.",
+    "retry": "Reintentar",
+    "categoryNeedsReview": "Revisa la categoría de esta propuesta"
   }
 }

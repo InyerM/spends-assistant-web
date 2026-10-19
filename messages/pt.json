@@ -733,7 +733,14 @@
     "spendingNatureHelp": "Classifique quão essencial é este gasto: Desejo (discricionário), Necessidade (necessário), Obrigatório (mandatório)",
     "noResultsDescription": "Tente outro nome ou limpe os filtros.",
     "loadError": "Não foi possível carregar suas categorias. Tente novamente.",
-    "showCategory": "Ver {name}"
+    "showCategory": "Ver {name}",
+    "otherLanguages": "Nomes em outros idiomas",
+    "language": {
+      "es": "Espanhol",
+      "en": "Inglês",
+      "pt": "Português"
+    },
+    "catalogGuidance": "As categorias descrevem o motivo de um movimento. Pagamentos entre suas contas são transferências; devoluções podem usar Devoluções e reembolsos."
   },
   "automation": {
     "title": "Regras de Automação",
@@ -1389,7 +1396,19 @@
     "chooseCurrencyScope": "Selecione uma conta em {currency} e o período para comparar estes movimentos.",
     "setupCurrency": "Configurar {currency} em uma conta",
     "useExistingAccount": "Usar uma conta existente",
-    "enableCurrencyHint": "Escolha a conta do extrato e ative seu saldo em {currency}. Os movimentos existentes serão preservados."
+    "enableCurrencyHint": "Escolha a conta do extrato e ative seu saldo em {currency}. Os movimentos existentes serão preservados.",
+    "analyzingFields": "Revisando descrição e categoria…",
+    "analysisSuggested": "Sugestão pronta para revisar",
+    "analysisNeedsCategory": "A categoria precisa da sua revisão",
+    "cardPaymentTitle": "Confira o tipo de crédito",
+    "cardPaymentHint": "Este crédito no cartão parece um pagamento. Se veio de outra conta sua, vincule como transferência. Para uma devolução do estabelecimento, use Devoluções e reembolsos.",
+    "confirmOwnPayment": "Pagamento entre minhas contas",
+    "confirmRefund": "Devolução do estabelecimento",
+    "confirmOtherIncome": "Outra receita",
+    "otherCurrencyTransferHint": "Selecione a conta de origem na mesma moeda. Se houve conversão, revise os dois lançamentos e a taxa de câmbio antes de registrar.",
+    "transferReviewTitle": "Confira se é uma transferência",
+    "transferReviewHint": "Este movimento pode ser entre suas contas. Vincule a outra conta para registrar como transferência.",
+    "refundDescription": "Reembolso no cartão"
   },
   "planning": {
     "title": "Planeje seu dinheiro",
@@ -1700,6 +1719,25 @@
     "queueError": "Não foi possível carregar as sugestões. Recarregue para tentar novamente.",
     "reviewSuggestions": "Revisar sugestões",
     "showUncategorized": "Ver sem categoria",
-    "queueSuggestion": "{count, plural, one {# movimento pendente} other {# movimentos pendentes}} · Sugestão: {category}"
+    "queueSuggestion": "{count, plural, one {# movimento pendente} other {# movimentos pendentes}} · Sugestão: {category}",
+    "historyBasis": "A categoria vem de um movimento que você já revisou deste contato. Compare a descrição e as notas com cada movimento pendente.",
+    "basisTitle": "Ver movimentos de referência ({count})",
+    "editMovement": "Editar",
+    "selectMovement": "Selecionar {description}",
+    "categoryLabel": "Categoria deste movimento",
+    "descriptionLabel": "Descrição",
+    "notesLabel": "Notas ou motivo",
+    "reviewWithAi": "Revisar esta linha com IA",
+    "explainWithAi": "Explicar sugestão com IA",
+    "analyzingContext": "Revisando notas e categorias…",
+    "viewOriginal": "Ver movimento original",
+    "useProposal": "Usar proposta",
+    "explanationUnavailable": "Não foi possível preparar a explicação. Você pode revisar e editar os dados manualmente.",
+    "originalPreserved": "Você pode alterar categoria, descrição e notas. A mensagem bancária original é preservada.",
+    "saveReviewed": "{count, plural, one {Salvar # movimento revisado} other {Salvar # movimentos revisados}}",
+    "reviewInstructions": "Revise o contexto e escolha os movimentos a atualizar. Cada um pode ter uma categoria diferente.",
+    "nothingToReview": "Não há movimentos restantes para revisar nesta sugestão.",
+    "retry": "Tentar novamente",
+    "categoryNeedsReview": "Revise a categoria desta proposta"
   }
 }

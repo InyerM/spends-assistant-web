@@ -193,6 +193,7 @@ export default function CategoriesPage(): React.ReactElement {
           </div>
         </div>
 
+        <p className='text-muted-foreground max-w-3xl text-sm'>{t('catalogGuidance')}</p>
         {isError ? (
           <div role='alert' className='border-border bg-card space-y-3 rounded-2xl border p-6'>
             <p>{t('loadError')}</p>

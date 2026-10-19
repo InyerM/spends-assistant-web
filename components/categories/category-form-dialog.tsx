@@ -1,4 +1,5 @@
 'use client';
+import { localizedCategoryPayload } from '@/lib/categories/localized-edit';
 
 import { useEffect, useCallback } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
@@ -40,7 +41,14 @@ import { Info } from 'lucide-react';
 import type { Category, CategoryType } from '@/types';
 
 const formSchema = z.object({
-  name: z.string().min(1, 'Name is required'),
+  name: z.string().min(1, 'Name is required').max(100),
+  translations: z
+    .object({
+      en: z.string().max(100).optional(),
+      es: z.string().max(100).optional(),
+      pt: z.string().max(100).optional(),
+    })
+    .optional(),
   slug: z.string().min(1, 'Slug is required'),
   type: z.enum(['expense', 'income', 'transfer']),
   parent_id: z.string().optional(),
@@ -129,7 +137,8 @@ export function CategoryFormDialog({
     if (open) {
       if (editingCategory) {
         form.reset({
-          name: editingCategory.name,
+          name: editingCategory.translations?.[locale] ?? editingCategory.name,
+          translations: editingCategory.translations ?? {},
           slug: editingCategory.slug,
           type: editingCategory.type,
           parent_id: editingCategory.parent_id ?? undefined,
@@ -140,6 +149,7 @@ export function CategoryFormDialog({
       } else {
         form.reset({
           name: '',
+          translations: {},
           slug: '',
           type: defaultType ?? 'expense',
           parent_id: defaultParentId ?? undefined,
@@ -155,7 +165,13 @@ export function CategoryFormDialog({
     try {
       const payload = {
         ...values,
-        parent_id: values.parent_id === 'none' ? undefined : values.parent_id,
+        ...localizedCategoryPayload(
+          editingCategory ?? undefined,
+          locale,
+          values.name,
+          values.translations,
+        ),
+        parent_id: values.parent_id === 'none' ? null : values.parent_id,
       };
       if (editingCategory) {
         await updateMutation.mutateAsync({ id: editingCategory.id, ...payload });
@@ -205,6 +221,32 @@ export function CategoryFormDialog({
                 </FormItem>
               )}
             />
+
+            <details className='space-y-3'>
+              <summary className='text-muted-foreground cursor-pointer text-sm'>
+                {t('otherLanguages')}
+              </summary>
+              <div className='mt-3 space-y-3'>
+                {(['es', 'en', 'pt'] as const)
+                  .filter((language) => language !== locale)
+                  .map((language) => (
+                    <FormField
+                      key={language}
+                      control={form.control}
+                      name={`translations.${language}`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>{t(`language.${language}`)}</FormLabel>
+                          <FormControl>
+                            <Input {...field} value={field.value ?? ''} maxLength={100} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  ))}
+              </div>
+            </details>
 
             <FormField
               control={form.control}

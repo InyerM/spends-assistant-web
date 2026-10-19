@@ -23,10 +23,11 @@ export interface CategoryWithChildren extends Category {
 }
 
 export interface CreateCategoryInput {
+  translations?: Record<string, string>;
   name: string;
   slug: string;
   type: CategoryType;
-  parent_id?: string;
+  parent_id?: string | null;
   icon?: string;
   color?: string;
   spending_nature?: SpendingNature;

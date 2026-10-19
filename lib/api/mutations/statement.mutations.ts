@@ -64,31 +64,30 @@ export function useCreateStatementTransaction(
   });
 }
 
+import type { CategoryReview } from '@/lib/category-review';
+export type StatementAnalysis = CategoryReview & {
+  source: 'automation' | 'ai' | 'evidence';
+  reason_code: string;
+};
 export function useAnalyzeStatementMovement(
   documentId: string,
   observationId: string,
-): ReturnType<
-  typeof useMutation<
-    { category_id: string | null; description: string; source: 'automation' | 'ai' },
-    Error,
-    void
-  >
-> {
+  accountId?: string,
+  locale = 'es',
+): ReturnType<typeof useMutation<StatementAnalysis, Error, void>> {
   return useMutation({
-    mutationFn: async () => {
+    mutationFn: async (): Promise<StatementAnalysis> => {
       const response = await fetch(
         `/api/documents/${documentId}/observations/${observationId}/analyze`,
-        { method: 'POST' },
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ account_id: accountId, locale }),
+        },
       );
-      if (!response.ok) {
-        const consent = await aiConsentErrorFromResponse(response);
-        throw consent ?? new Error('Analysis unavailable');
-      }
-      return response.json() as Promise<{
-        category_id: string | null;
-        description: string;
-        source: 'automation' | 'ai';
-      }>;
+      if (!response.ok)
+        throw (await aiConsentErrorFromResponse(response)) ?? new Error('Analysis unavailable');
+      return response.json() as Promise<StatementAnalysis>;
     },
   });
 }

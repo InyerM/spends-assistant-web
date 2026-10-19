@@ -4,12 +4,27 @@ export interface CategoryFollowup {
   contact_name: string;
   category_id: string;
   category_name: string;
+  source?: {
+    id: string;
+    type: 'expense' | 'income';
+    description: string;
+    notes: string | null;
+    excerpt?: string | null;
+  };
+  evidence?: Array<{
+    id: string;
+    description: string;
+    notes: string | null;
+    category_id: string;
+    category_name: string;
+  }>;
   rows: Array<{
     id: string;
     category_id: string | null;
     category_name: string | null;
     is_uncategorized?: boolean;
     description: string;
+    notes?: string | null;
     date: string;
     amount: number;
     currency: string;

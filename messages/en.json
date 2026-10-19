@@ -767,7 +767,14 @@
     "spendingNatureHelp": "Classify how essential this spending is: Want (discretionary), Need (necessary), Must (mandatory)",
     "noResultsDescription": "Try another name or clear your filters.",
     "loadError": "Your categories could not load. Try again.",
-    "showCategory": "Show {name}"
+    "showCategory": "Show {name}",
+    "otherLanguages": "Names in other languages",
+    "language": {
+      "es": "Spanish",
+      "en": "English",
+      "pt": "Portuguese"
+    },
+    "catalogGuidance": "Categories describe the purpose of a transaction. Payments between your own accounts are transfers; merchant refunds can use Refunds and reimbursements."
   },
   "automation": {
     "title": "Automation Rules",
@@ -1506,7 +1513,19 @@
     "chooseCurrencyScope": "Select a {currency} account and period to compare these movements.",
     "setupCurrency": "Set up {currency} on an account",
     "useExistingAccount": "Use an existing account",
-    "enableCurrencyHint": "Choose the statement account and enable its {currency} balance. Existing transactions will be preserved."
+    "enableCurrencyHint": "Choose the statement account and enable its {currency} balance. Existing transactions will be preserved.",
+    "analyzingFields": "Reviewing description and category…",
+    "analysisSuggested": "Suggestion ready to review",
+    "analysisNeedsCategory": "The category needs your review",
+    "cardPaymentTitle": "Check the kind of credit",
+    "cardPaymentHint": "This card credit looks like a payment. If it came from another account you own, link it as a transfer. For a merchant refund, use Refunds and reimbursements.",
+    "confirmOwnPayment": "Payment between my accounts",
+    "confirmRefund": "Merchant refund",
+    "confirmOtherIncome": "Other income",
+    "otherCurrencyTransferHint": "Choose the source account in the same currency. If a conversion was involved, review both entries and the exchange rate before recording it.",
+    "transferReviewTitle": "Check whether this is a transfer",
+    "transferReviewHint": "This transaction may be between your own accounts. Link the other account to record it as a transfer.",
+    "refundDescription": "Refund to card"
   },
   "planning": {
     "title": "Plan your money",
@@ -1817,6 +1836,25 @@
     "queueError": "We could not load suggestions. Reload to try again.",
     "reviewSuggestions": "Review suggestions",
     "showUncategorized": "View uncategorized",
-    "queueSuggestion": "{count, plural, one {# transaction to review} other {# transactions to review}} · Suggested: {category}"
+    "queueSuggestion": "{count, plural, one {# transaction to review} other {# transactions to review}} · Suggested: {category}",
+    "historyBasis": "The category comes from a transaction you already reviewed for this contact. Compare its description and notes with each pending transaction.",
+    "basisTitle": "View reference transactions ({count})",
+    "editMovement": "Edit",
+    "selectMovement": "Select {description}",
+    "categoryLabel": "Category for this transaction",
+    "descriptionLabel": "Description",
+    "notesLabel": "Notes or purpose",
+    "reviewWithAi": "Review this row with AI",
+    "explainWithAi": "Explain suggestion with AI",
+    "analyzingContext": "Reviewing notes and categories…",
+    "viewOriginal": "View original transaction",
+    "useProposal": "Use proposal",
+    "explanationUnavailable": "We could not prepare the explanation. You can review and edit the details manually.",
+    "originalPreserved": "You can change the category, description and notes. The original bank message is preserved.",
+    "saveReviewed": "{count, plural, one {Save # reviewed transaction} other {Save # reviewed transactions}}",
+    "reviewInstructions": "Review the context and select the transactions to update. Each can have a different category.",
+    "nothingToReview": "There are no remaining transactions to review for this suggestion.",
+    "retry": "Try again",
+    "categoryNeedsReview": "Review the category for this proposal"
   }
 }

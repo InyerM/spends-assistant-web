@@ -1,13 +1,11 @@
 'use client';
-import { useCategories } from '@/lib/api/queries/category.queries';
-import { getCategoryName } from '@/lib/i18n/get-category-name';
-import type { Locale } from '@/i18n/config';
+import { useIsMutating } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
-import { useTranslations, useLocale } from 'next-intl';
+import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 import { useCategoryFollowupStore } from '@/lib/stores/category-followup.store';
 import { useCategoryFollowup } from '@/lib/api/queries/category-followup.queries';
-import { useApplyCategoryFollowup } from '@/lib/api/mutations/category-followup.mutations';
+import { useCategories } from '@/lib/api/queries/category.queries';
 import {
   Dialog,
   DialogContent,
@@ -15,122 +13,81 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/components/ui/dialog';
-import { Checkbox } from '@/components/ui/checkbox';
+import { CategoryReviewEditor } from './category-review-editor';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { InlineLoader } from '@/components/shared/loader';
 export function CategoryFollowup(): React.ReactElement | null {
-  const { data: categories } = useCategories();
+  const busy = useIsMutating({ mutationKey: ['category-review'] }) > 0;
   const { transactionId, revision, direct, clear } = useCategoryFollowupStore();
   const query = useCategoryFollowup(transactionId, revision),
-    apply = useApplyCategoryFollowup(transactionId);
-  const [open, setOpen] = useState(false),
-    [selected, setSelected] = useState<string[]>([]);
-  const t = useTranslations('categoryFollowup'),
-    locale = useLocale();
+    categories = useCategories();
+  const [open, setOpen] = useState(false);
+  const t = useTranslations('categoryFollowup');
   useEffect(() => {
-    if (!transactionId || !query.data?.rows.length) return;
-    if (direct) return;
+    if (!transactionId || !query.data?.rows.length || direct) return;
     const id = toast(t('offer', { name: query.data.contact_name, count: query.data.rows.length }), {
       duration: 12000,
-      action: {
-        label: t('review'),
-        onClick: () => {
-          setSelected([]);
-          setOpen(true);
-        },
-      },
+      action: { label: t('review'), onClick: () => setOpen(true) },
     });
     return (): void => {
       toast.dismiss(id);
     };
   }, [transactionId, revision, direct, query.data, t]);
-  if (!query.data?.rows.length) return null;
-  const localizedName = (id: string | null, fallback: string): string => {
-    const category = categories?.find((c) => c.id === id);
-    return category ? getCategoryName(category, locale as Locale) : fallback;
-  };
-  const data = {
-    ...query.data,
-    rows: direct
-      ? query.data.rows.filter((row) => row.is_uncategorized ?? !row.category_id)
-      : query.data.rows,
-  };
+  if (!transactionId) return null;
+  const data = query.data
+    ? {
+        ...query.data,
+        rows: direct
+          ? query.data.rows.filter((r) => r.is_uncategorized ?? !r.category_id)
+          : query.data.rows,
+      }
+    : null;
   return (
     <Dialog
       open={direct || open}
       onOpenChange={(value) => {
-        if (!apply.isPending) {
+        if (!busy) {
           setOpen(value);
-          if (!value) {
-            setSelected([]);
-            clear();
-          }
+          if (!value) clear();
         }
       }}>
-      <DialogContent className='max-h-[85dvh] overflow-y-auto sm:max-w-xl'>
+      <DialogContent
+        showCloseButton={!busy}
+        onEscapeKeyDown={(event) => {
+          if (busy) event.preventDefault();
+        }}
+        onInteractOutside={(event) => {
+          if (busy) event.preventDefault();
+        }}
+        className='max-h-[85dvh] overflow-y-auto sm:max-w-2xl'>
         <DialogHeader>
-          <DialogTitle>{t('title', { name: data.contact_name })}</DialogTitle>
-          <DialogDescription>
-            {t('hint', { category: localizedName(data.category_id, data.category_name) })}
-          </DialogDescription>
+          <DialogTitle>
+            {data ? t('title', { name: data.contact_name }) : t('reviewTitle')}
+          </DialogTitle>
+          <DialogDescription>{t('reviewInstructions')}</DialogDescription>
         </DialogHeader>
-        {data.rows.map((row) => (
-          <label
-            key={row.id}
-            className='border-border flex items-start gap-3 border-t py-3 text-sm'>
-            <Checkbox
-              checked={selected.includes(row.id)}
-              disabled={apply.isPending}
-              onCheckedChange={(value) =>
-                setSelected((current) =>
-                  value === true ? [...current, row.id] : current.filter((id) => id !== row.id),
-                )
-              }
-            />
-            <span className='min-w-0 flex-1'>
-              <span className='block break-words'>{row.description}</span>
-              <span className='text-muted-foreground block text-xs'>
-                {row.date} ·{' '}
-                {new Intl.NumberFormat(locale, {
-                  style: 'currency',
-                  currency: row.currency,
-                }).format(row.amount)}
-              </span>
-              <span className='text-muted-foreground text-xs'>
-                {localizedName(row.category_id, row.category_name ?? t('uncategorized'))} →{' '}
-                {localizedName(data.category_id, data.category_name)}
-              </span>
-            </span>
-          </label>
-        ))}
-        {data.rows.length === 100 && <p className='text-muted-foreground text-xs'>{t('limit')}</p>}
-        {apply.error && (
-          <p role='alert' className='text-destructive text-sm'>
-            {t('changed')}
-          </p>
+        {query.isPending ? (
+          <Skeleton className='h-40 w-full' />
+        ) : query.error ? (
+          <div>
+            <p role='alert'>{t('explanationUnavailable')}</p>
+            <Button onClick={() => void query.refetch()}>{t('retry')}</Button>
+          </div>
+        ) : data?.rows.length ? (
+          <CategoryReviewEditor
+            key={`${transactionId}:${revision}`}
+            sourceId={transactionId}
+            data={data}
+            categories={categories.data ?? []}
+            onComplete={() => {
+              setOpen(false);
+              clear();
+              toast.success(t('updated'));
+            }}
+          />
+        ) : (
+          <p className='text-muted-foreground text-sm'>{t('nothingToReview')}</p>
         )}
-        <Button
-          disabled={apply.isPending || !selected.length}
-          onClick={() =>
-            apply.mutate(
-              {
-                category_id: data.category_id,
-                targets: data.rows
-                  .filter((row) => selected.includes(row.id))
-                  .map(({ id, category_id }) => ({ id, category_id })),
-              },
-              {
-                onSuccess: () => {
-                  setOpen(false);
-                  clear();
-                  toast.success(t('updated'));
-                },
-              },
-            )
-          }>
-          {apply.isPending && <InlineLoader />}
-          {t('apply', { count: selected.length })}
-        </Button>
       </DialogContent>
     </Dialog>
   );
