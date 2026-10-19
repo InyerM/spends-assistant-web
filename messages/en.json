@@ -1471,7 +1471,13 @@
     "cancelCreate": "Cancel",
     "createAndReconcile": "Create and reconcile",
     "createDuplicate": "A possible existing movement was found. Close and compare again before creating.",
-    "createFailed": "Could not create. Refresh and review the account, period and movement."
+    "createFailed": "Could not create. Refresh and review the account, period and movement.",
+    "currencySections": "Statement currencies",
+    "createCurrencyAccount": "Create {currency} account",
+    "analyzeMovement": "Analyze with AI",
+    "analysisOptional": "Suggestion unavailable. Choose the category and continue.",
+    "detectedPeriod": "PDF period: {from} → {to}",
+    "chooseCurrencyScope": "Select a {currency} account and period to compare these movements."
   },
   "planning": {
     "title": "Plan your money",

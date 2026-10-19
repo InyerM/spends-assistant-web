@@ -31,6 +31,7 @@ export function StatementInspector({
   const [error, setError] = useState(false);
   const [preview, setPreview] = useState<string | null>(null);
   const [activity, setActivity] = useState<'empty' | 'movements' | 'unknown'>('unknown');
+  const [period, setPeriod] = useState<{ from: string; to: string } | null>(null);
   const [cycle, setCycle] = useState<StatementHints['cycle']>(null);
   useEffect(() => {
     const controller = new AbortController();
@@ -46,6 +47,8 @@ export function StatementInspector({
         if (response.ok) {
           const result = inspection.parse(value);
           onHints(result.hints);
+          if (result.hints.period_start && result.hints.period_end)
+            setPeriod({ from: result.hints.period_start, to: result.hints.period_end });
           setCycle(result.hints.cycle);
           setActivity(result.activity ?? 'unknown');
         } else if (
@@ -74,6 +77,8 @@ export function StatementInspector({
       if (!response.ok) throw new Error('Inspection failed');
       const result = inspection.parse(value);
       onHints(result.hints);
+      if (result.hints.period_start && result.hints.period_end)
+        setPeriod({ from: result.hints.period_start, to: result.hints.period_end });
       setCycle(result.hints.cycle);
       setActivity(result.activity ?? 'unknown');
       setNeedsPassword(false);
@@ -134,6 +139,11 @@ export function StatementInspector({
           </div>
           <p className='text-muted-foreground text-xs'>{t('passwordHint')}</p>
         </form>
+      )}
+      {period && (
+        <p className='text-muted-foreground text-xs'>
+          {t('detectedPeriod', { from: period.from, to: period.to })}
+        </p>
       )}
       {cycle && (
         <p className='text-primary text-sm' role='status'>

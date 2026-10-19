@@ -1,11 +1,8 @@
+import { buildStatementMetadata, resolveStatementMetadata } from '@/lib/statement-metadata';
 import { z } from 'zod';
-import { AuthError, errorResponse, getUserClient } from '@/lib/api/server';
+import { AuthError, errorResponse, getAdminClient, getUserClient } from '@/lib/api/server';
 import { PdfTextError, readPdfText } from '@/lib/pdf-text';
-import {
-  detectStatementHints,
-  classifyStatementActivity,
-  type HintAccount,
-} from '@/lib/statement-hints';
+import type { HintAccount } from '@/lib/statement-hints';
 const headers = { 'Cache-Control': 'private, no-store' };
 interface Context {
   params: Promise<{ id: string }>;
@@ -24,7 +21,7 @@ export async function POST(request: Request, { params }: Context): Promise<Respo
       return errorResponse('Invalid PDF inspection request', 400);
     const document = await supabase
       .from('documents')
-      .select('file_path,mime_type,document_type')
+      .select('file_path,mime_type,document_type,statement_metadata')
       .eq('id', id)
       .eq('user_id', userId)
       .maybeSingle();
@@ -32,6 +29,7 @@ export async function POST(request: Request, { params }: Context): Promise<Respo
       file_path: string;
       mime_type: string;
       document_type: string;
+      statement_metadata?: unknown;
     } | null;
     if (document.error) throw new Error('Document unavailable');
     if (
@@ -41,26 +39,33 @@ export async function POST(request: Request, { params }: Context): Promise<Respo
       !stored.file_path.startsWith(`${userId}/`)
     )
       return errorResponse('Statement not found', 404);
-    const [file, accounts] = await Promise.all([
-      supabase.storage.from('documents').download(stored.file_path),
-      supabase
-        .from('accounts')
-        .select('id,is_active,last_four,bank_account_last_four,identifiers')
-        .eq('user_id', userId)
-        .is('deleted_at', null),
-    ]);
-    if (file.error || accounts.error) throw new Error('Inspection unavailable');
+    const accounts = await supabase
+      .from('accounts')
+      .select('id,is_active,last_four,bank_account_last_four,identifiers')
+      .eq('user_id', userId)
+      .is('deleted_at', null);
+    if (accounts.error) throw new Error('Inspection unavailable');
+    const cached = resolveStatementMetadata(
+      stored.statement_metadata,
+      accounts.data as HintAccount[],
+    );
+    if (cached) return Response.json(cached, { headers });
+    const file = await supabase.storage.from('documents').download(stored.file_path);
+    if (file.error) throw new Error('Inspection unavailable');
     const pdf = await readPdfText(
       new Uint8Array(await file.data.arrayBuffer()),
       body.data.password,
     );
-    return Response.json(
-      {
-        hints: detectStatementHints(pdf.pages.join('\n'), accounts.data as HintAccount[]),
-        activity: classifyStatementActivity(pdf.pages.join('\n')),
-      },
-      { headers },
-    );
+    const metadata = buildStatementMetadata(pdf.pages);
+    const cache = await getAdminClient().rpc('cache_statement_metadata', {
+      p_document_id: id,
+      p_owner_id: userId,
+      p_metadata: metadata,
+    });
+    if (cache.error) throw new Error('Inspection unavailable');
+    return Response.json(resolveStatementMetadata(metadata, accounts.data as HintAccount[]), {
+      headers,
+    });
   } catch (error) {
     if (error instanceof AuthError) return errorResponse('Unauthorized', 401);
     if (error instanceof PdfTextError)

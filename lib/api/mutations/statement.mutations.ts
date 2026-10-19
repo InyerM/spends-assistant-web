@@ -1,3 +1,4 @@
+import { aiConsentErrorFromResponse } from '@/lib/ai-consent';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 export function useSaveStatementReconciliation(
   documentId: string,
@@ -51,6 +52,35 @@ export function useCreateStatementTransaction(
           client.invalidateQueries({ queryKey: [key] }),
         ),
       );
+    },
+  });
+}
+
+export function useAnalyzeStatementMovement(
+  documentId: string,
+  observationId: string,
+): ReturnType<
+  typeof useMutation<
+    { category_id: string | null; description: string; source: 'automation' | 'ai' },
+    Error,
+    void
+  >
+> {
+  return useMutation({
+    mutationFn: async () => {
+      const response = await fetch(
+        `/api/documents/${documentId}/observations/${observationId}/analyze`,
+        { method: 'POST' },
+      );
+      if (!response.ok) {
+        const consent = await aiConsentErrorFromResponse(response);
+        throw consent ?? new Error('Analysis unavailable');
+      }
+      return response.json() as Promise<{
+        category_id: string | null;
+        description: string;
+        source: 'automation' | 'ai';
+      }>;
     },
   });
 }

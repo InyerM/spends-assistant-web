@@ -1,6 +1,7 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 vi.mock('@/lib/api/server', () => ({
   getUserClient: vi.fn(),
+  getAdminClient: () => ({ rpc: vi.fn().mockResolvedValue({ error: null }) }),
   AuthError: class extends Error {},
   errorResponse: (error: string, status = 500) => Response.json({ error }, { status }),
 }));
@@ -91,4 +92,32 @@ it('rejects foreign storage paths and unauthenticated readers', async () => {
     ).status,
   ).toBe(401);
   expect(download).not.toHaveBeenCalled();
+});
+it('reuses saved inspection metadata without reopening or unlocking the original PDF', async () => {
+  Object.assign(doc, {
+    statement_metadata: {
+      version: 1,
+      hints: {
+        account_id: null,
+        last_four: '2651',
+        period_start: '2026-09-01',
+        period_end: '2026-09-30',
+        cycle: 'monthly',
+      },
+      activity: 'movements',
+      currencies: ['COP', 'USD'],
+    },
+  });
+  const response = await POST(
+    new Request('https://my.anotto.app/api/inspect', { method: 'POST', body: '{}' }),
+    context,
+  );
+  expect(response.status).toBe(200);
+  expect(await response.json()).toMatchObject({
+    currencies: ['COP', 'USD'],
+    hints: { account_id: 'a' },
+  });
+  expect(download).not.toHaveBeenCalled();
+  expect(readPdfText).not.toHaveBeenCalled();
+  delete (doc as typeof doc & { statement_metadata?: unknown }).statement_metadata;
 });

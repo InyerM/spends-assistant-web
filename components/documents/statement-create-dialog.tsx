@@ -1,8 +1,14 @@
 'use client';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
-import { Plus } from 'lucide-react';
-import { useCreateStatementTransaction } from '@/lib/api/mutations/statement.mutations';
+import { AiFieldStatus } from '@/components/shared/ai-field-status';
+import { AiConsentNotice } from '@/components/ai-consent-notice';
+import { AiConsentRequiredError } from '@/lib/ai-consent';
+import { Plus, Sparkles } from 'lucide-react';
+import {
+  useAnalyzeStatementMovement,
+  useCreateStatementTransaction,
+} from '@/lib/api/mutations/statement.mutations';
 import { useCategories } from '@/lib/api/queries/category.queries';
 import { Button } from '@/components/ui/button';
 import {
@@ -44,11 +50,29 @@ export function StatementCreateDialog({
     [key] = useState(() => crypto.randomUUID());
   const categories = useCategories(),
     create = useCreateStatementTransaction(documentId);
+  const analyze = useAnalyzeStatementMovement(documentId, row.id);
+  const categoryEdited = useRef(false),
+    descriptionEdited = useRef(false);
+  function runAnalysis(): void {
+    analyze.mutate(undefined, {
+      onSuccess: (result) => {
+        if (!categoryEdited.current && result.category_id) setCategory(result.category_id);
+        if (!descriptionEdited.current && result.description) setDescription(result.description);
+      },
+    });
+  }
   const own = accounts.find((a) => a.id === account);
   const amount = row.amount ?? 0;
   return (
     <>
-      <Button size='sm' variant='outline' disabled={disabled} onClick={() => setOpen(true)}>
+      <Button
+        size='sm'
+        variant='outline'
+        disabled={disabled}
+        onClick={() => {
+          setOpen(true);
+          if (!analyze.data && !analyze.isPending) runAnalysis();
+        }}>
         <Plus className='size-4' />
         {t('createMissing')}
       </Button>
@@ -73,12 +97,45 @@ export function StatementCreateDialog({
             </p>
             <p className='text-muted-foreground text-xs'>{t('statementSource')}</p>
           </div>
+          <div className='flex items-center justify-between gap-2'>
+            <Button
+              size='sm'
+              variant='ai'
+              disabled={analyze.isPending || create.isPending}
+              onClick={runAnalysis}>
+              <Sparkles className='size-4' />
+              {t('analyzeMovement')}
+            </Button>
+            {(analyze.isPending || analyze.data) && (
+              <AiFieldStatus
+                state={
+                  analyze.isPending
+                    ? 'analyzing'
+                    : analyze.data.source === 'automation'
+                      ? 'automation'
+                      : 'suggested'
+                }
+              />
+            )}
+          </div>
+          {analyze.error instanceof AiConsentRequiredError ? (
+            <AiConsentNotice scope={analyze.error.scope} />
+          ) : (
+            analyze.error && (
+              <p role='status' className='text-muted-foreground text-xs'>
+                {t('analysisOptional')}
+              </p>
+            )
+          )}
           <label className='space-y-1 text-sm'>
             {t('description')}
             <Input
               value={description}
               disabled={create.isPending}
-              onChange={(event) => setDescription(event.target.value)}
+              onChange={(event) => {
+                descriptionEdited.current = true;
+                setDescription(event.target.value);
+              }}
               maxLength={500}
             />
           </label>
@@ -108,7 +165,10 @@ export function StatementCreateDialog({
             <SearchableSelect
               ariaLabel={t('category')}
               value={category}
-              onValueChange={setCategory}
+              onValueChange={(value) => {
+                categoryEdited.current = true;
+                setCategory(value);
+              }}
               placeholder={t('category')}
               disabled={create.isPending}
               items={buildCategoryItems(categories.data ?? [], amount > 0 ? 'income' : 'expense', {
@@ -138,7 +198,11 @@ export function StatementCreateDialog({
             </Button>
             <Button
               disabled={
-                create.isPending || !confirmed || !description.trim() || (transfer && !other)
+                create.isPending ||
+                analyze.isPending ||
+                !confirmed ||
+                !description.trim() ||
+                (transfer && !other)
               }
               onClick={() =>
                 create.mutate(

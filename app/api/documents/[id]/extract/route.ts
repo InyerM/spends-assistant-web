@@ -1,3 +1,4 @@
+import { buildStatementMetadata } from '@/lib/statement-metadata';
 import { readPdfText, PdfTextError } from '@/lib/pdf-text';
 import type { NextRequest } from 'next/server';
 import { AuthError, errorResponse, getAdminClient, getUserClient } from '@/lib/api/server';
@@ -75,6 +76,14 @@ export async function POST(
       const pdf = isPdf
         ? await readPdfText(bytes, typeof password === 'string' ? password : undefined)
         : null;
+      if (pdf) {
+        const cache = await getAdminClient().rpc('cache_statement_metadata', {
+          p_document_id: id,
+          p_owner_id: userId,
+          p_metadata: buildStatementMetadata(pdf.pages),
+        });
+        if (cache.error) throw new Error('Could not cache statement metadata');
+      }
       const response = await fetch(
         `${workerConfig.url}${isPdf ? '/documents/extract-text' : '/vision/extract'}`,
         {

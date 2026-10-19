@@ -1,8 +1,14 @@
 import { afterEach, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import type { Account } from '@/types';
 import { StatementReconciliation } from '@/components/documents/statement-reconciliation';
 vi.mock('@/components/documents/statement-inspector', () => ({
   StatementInspector: () => <div>PDF inspection</div>,
+}));
+vi.mock('@/components/documents/statement-create-dialog', () => ({
+  StatementCreateDialog: ({ row }: { row: { currency: string } }) => (
+    <button>Create {row.currency}</button>
+  ),
 }));
 const invalidate = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
 vi.mock('next-intl', () => ({
@@ -28,6 +34,14 @@ vi.mock('@tanstack/react-query', () => ({
       scope: { account_id: 'bank', period_start: '2026-09-01', period_end: '2026-09-30' },
       rows: [
         {
+          id: 'usd-row',
+          amount: 5,
+          currency: 'USD',
+          occurred_at_text: '2026-09-01',
+          status: 'pending',
+          description: 'Dollar payment',
+        },
+        {
           id: 'row',
           amount: -100,
           currency: 'COP',
@@ -42,6 +56,14 @@ vi.mock('@tanstack/react-query', () => ({
           occurred_at_text: null,
           status: 'pending',
           description: 'Unknown row',
+        },
+      ],
+      scopes: [
+        {
+          account_id: 'usd',
+          currency: 'USD',
+          period_start: '2026-09-01',
+          period_end: '2026-09-30',
         },
       ],
       transactions: [
@@ -83,7 +105,12 @@ afterEach(() => {
 it('shows both differences, blocks incomplete evidence and confirms only the selected link', async () => {
   const fetch = vi.fn().mockResolvedValue(Response.json({ success: true }));
   vi.stubGlobal('fetch', fetch);
-  render(<StatementReconciliation documentId='doc' accounts={[]} />);
+  render(
+    <StatementReconciliation
+      documentId='doc'
+      accounts={[{ id: 'bank', currency: 'COP', is_active: true } as Account]}
+    />,
+  );
   expect(screen.getByText('Statement lunch')).toBeInTheDocument();
   expect(screen.getByText('App only')).toBeInTheDocument();
   expect(screen.getByText('unverifiedHint')).toBeInTheDocument();
@@ -100,4 +127,22 @@ it('shows both differences, blocks incomplete evidence and confirms only the sel
   });
   await waitFor(() => expect(invalidate).toHaveBeenCalledWith({ queryKey: ['transactions'] }));
   expect(screen.queryByRole('button', { name: /create/i })).not.toBeInTheDocument();
+});
+it('separates dollar movements and their account without mixing the pesos list', () => {
+  render(
+    <StatementReconciliation
+      documentId='doc'
+      accounts={
+        [
+          { id: 'bank', currency: 'COP', is_active: true },
+          { id: 'usd', currency: 'USD', is_active: true },
+        ] as Account[]
+      }
+    />,
+  );
+  expect(screen.getByText('Statement lunch')).toBeVisible();
+  fireEvent.click(screen.getByRole('button', { name: 'USD · 1' }));
+  expect(screen.getByText('Dollar payment')).toBeVisible();
+  expect(screen.queryByText('Statement lunch')).not.toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Create USD' })).toBeVisible();
 });

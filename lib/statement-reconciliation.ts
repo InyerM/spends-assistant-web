@@ -31,6 +31,8 @@ export interface StatementScope {
 }
 export interface StatementReview {
   scope: StatementScope | null;
+  scopes?: Array<StatementScope & { currency: string }>;
+  metadata?: { currencies?: string[] };
   rows: StatementRow[];
   transactions: StatementTransaction[];
   proofs: StatementProof[];

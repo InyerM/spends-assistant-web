@@ -69,3 +69,14 @@ it('does not treat a zero balance as proof that a statement has no movements', (
   ).toBe('empty');
   expect(classifyStatementActivity('Unrecognized statement content')).toBe('unknown');
 });
+it('reads the billed period when adjacent PDF column headings interrupt the label', () => {
+  const result = detectStatementHints(
+    'Moneda: PESOS\nDeuda a la fecha de corte: Periodo facturado Pago Total:\n17 ago - 15 sep. 2026 $ 0,00',
+    [],
+  );
+  expect(result).toMatchObject({
+    period_start: '2026-08-17',
+    period_end: '2026-09-15',
+    cycle: 'monthly',
+  });
+});

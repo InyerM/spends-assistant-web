@@ -45,6 +45,10 @@ export function detectStatementHints(text: string, accounts: HintAccount[]): Sta
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase();
+  const periodText = normalized.replace(
+    /(periodo\s*(?:facturado|de facturacion|billed)?)[^\n]{0,120}\n\s*(?=\d{1,2}\s+[a-z]{3})/g,
+    '$1 ',
+  );
   const ids = new Set<string>();
   for (const match of normalized.matchAll(
     /(?:cuenta|account|tarjeta)(?:\s+(?:de|ahorros?|corriente|credito|numero|no\.?|nro\.?|number|ending|terminada|en))*\s*[:#*•.-]?\s*(\d[\d -]{3,24})/g,
@@ -71,7 +75,7 @@ export function detectStatementHints(text: string, accounts: HintAccount[]): Sta
   if (!start || !end) {
     const shared =
       /(?:periodo|period)\s*(?:facturado|de facturacion|billed)?\s*[:.-]?\s*(\d{1,2})\s+([a-z]{3,})\.?\s*[-–a]+\s*(\d{1,2})\s+([a-z]{3,})\.?\s+(\d{4})/.exec(
-        normalized,
+        periodText,
       );
     if (shared) {
       const firstMonth = months.findIndex((month) => month.startsWith(shared[2]));

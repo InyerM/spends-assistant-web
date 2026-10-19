@@ -1354,7 +1354,13 @@
     "cancelCreate": "Cancelar",
     "createAndReconcile": "Criar e conciliar",
     "createDuplicate": "Possível movimento existente. Feche e compare novamente antes de criar.",
-    "createFailed": "Não foi possível registrar. Atualize e revise a conta, o período e o movimento."
+    "createFailed": "Não foi possível registrar. Atualize e revise a conta, o período e o movimento.",
+    "currencySections": "Moedas do extrato",
+    "createCurrencyAccount": "Criar conta em {currency}",
+    "analyzeMovement": "Analisar com IA",
+    "analysisOptional": "Sugestão indisponível. Escolha a categoria e continue.",
+    "detectedPeriod": "Período do PDF: {from} → {to}",
+    "chooseCurrencyScope": "Selecione uma conta em {currency} e o período para comparar estes movimentos."
   },
   "planning": {
     "title": "Planeje seu dinheiro",
