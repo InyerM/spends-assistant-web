@@ -1,5 +1,7 @@
 'use client';
 import Link from 'next/link';
+import { StatementCreateDialog } from './statement-create-dialog';
+import type { Account } from '@/types';
 import { useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
@@ -13,11 +15,15 @@ import {
 import type { compareStatement, StatementTransaction } from '@/lib/statement-reconciliation';
 export function StatementDifferences({
   comparison,
+  documentId,
+  accounts,
   transactions,
   account,
   busy,
   submit,
 }: {
+  documentId?: string;
+  accounts?: Account[];
   comparison: ReturnType<typeof compareStatement>;
   transactions: StatementTransaction[];
   account: string;
@@ -64,7 +70,7 @@ export function StatementDifferences({
                     {row.occurred_at_text ?? t('unknown')}
                   </p>
                   <p
-                    className={`text-sm font-semibold tabular-nums ${row.amount !== null && row.amount > 0 ? 'text-primary' : 'text-destructive'}`}>
+                    className={`text-sm font-semibold tabular-nums ${row.amount !== null && row.amount > 0 ? 'text-success' : 'text-destructive'}`}>
                     {row.amount !== null && row.amount > 0 ? '+' : ''}
                     {money(row.amount, row.currency)}
                   </p>
@@ -112,6 +118,21 @@ export function StatementDifferences({
                     {t(row.amount === null || !row.occurred_at_text ? 'needsFields' : 'noMatch')}
                   </p>
                 )}
+                {documentId &&
+                  accounts &&
+                  ids.length === 0 &&
+                  row.amount !== null &&
+                  row.amount !== 0 &&
+                  row.occurred_at_text &&
+                  row.currency && (
+                    <StatementCreateDialog
+                      documentId={documentId}
+                      row={row}
+                      accounts={accounts}
+                      account={account}
+                      disabled={busy}
+                    />
+                  )}
               </div>
             );
           })}
@@ -134,7 +155,7 @@ export function StatementDifferences({
                   className={
                     tx.type === 'income' ||
                     (tx.type === 'transfer' && tx.transfer_to_account_id === account)
-                      ? 'text-primary'
+                      ? 'text-success'
                       : 'text-destructive'
                   }>
                   {money(

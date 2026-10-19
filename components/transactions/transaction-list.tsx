@@ -268,7 +268,11 @@ function TransactionRow({
             {tx.type === 'expense' ? '-' : tx.type === 'income' ? '+' : ''}
             {formatCurrency(tx.amount, 'COP', locale)}
           </p>
-          <p className='text-muted-foreground text-xs'>{formatTimeForDisplay(tx.time)}</p>
+          <p className='text-muted-foreground text-xs'>
+            {tx.parsed_data?.time_unknown === true && /^00:00(?::00)?$/.test(tx.time)
+              ? '—'
+              : formatTimeForDisplay(tx.time)}
+          </p>
         </div>
       </button>
 

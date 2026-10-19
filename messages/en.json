@@ -420,7 +420,9 @@
       "confirm": "•{suffix} will be saved as an identifier for {name}. Check that it belongs to that account.",
       "confirmLink": "Confirm link",
       "error": "Could not link the identifier. Try again."
-    }
+    },
+    "savingReview": "Saving review…",
+    "confirmedMovement": "Confirmed movement"
   },
   "transactions": {
     "originalEvidence": "Original evidence",
@@ -618,7 +620,8 @@
     "uploadingReceipt": "Uploading…",
     "receiptUploadFailed": "Could not upload the receipt. Try again.",
     "aiInputDescription": "Paste a bank message or describe your expense. Review the details before saving.",
-    "aiInputLabel": "Message or description"
+    "aiInputLabel": "Message or description",
+    "sourceStatement": "Statement"
   },
   "accounts": {
     "title": "Accounts",
@@ -1431,7 +1434,7 @@
     "exactHint": "Account, date, currency, amount and direction match. Review the description before confirming.",
     "confirm": "Confirm match",
     "needsFields": "Verified fields are missing for this movement.",
-    "noMatch": "No exact match. No transaction will be created.",
+    "noMatch": "No exact match. You can review and record this movement.",
     "none": "No differences in this list.",
     "unknown": "Unverified",
     "loadError": "Could not load reconciliation.",
@@ -1456,7 +1459,19 @@
     "openPdf": "Open PDF in another tab",
     "emptyStatement": "The text indicates no movements. Check every PDF page; if there is nothing to reconcile, you can archive the document.",
     "unverifiedRows": "Needs verification · {count}",
-    "unverifiedHint": "These rows have incomplete data. They are not confirmed differences; check them against the PDF before reconciliation."
+    "unverifiedHint": "These rows have incomplete data. They are not confirmed differences; check them against the PDF before reconciliation.",
+    "createMissing": "Create transaction",
+    "createHint": "Check this movement against the PDF. Confirming posts it to your account and reconciles it with this statement.",
+    "statementSource": "Source: statement · No time in the document",
+    "description": "Description",
+    "ownTransfer": "This is a payment or transfer between my accounts",
+    "otherAccount": "Other account",
+    "category": "Category",
+    "createConfirmation": "I confirm this movement is not recorded and its details match the PDF.",
+    "cancelCreate": "Cancel",
+    "createAndReconcile": "Create and reconcile",
+    "createDuplicate": "A possible existing movement was found. Close and compare again before creating.",
+    "createFailed": "Could not create. Refresh and review the account, period and movement."
   },
   "planning": {
     "title": "Plan your money",
@@ -1588,7 +1603,11 @@
     "reviewPending": "To review",
     "reviewClear": "Up to date",
     "reviewUnavailable": "Unavailable",
-    "reviewViewMore": "View more"
+    "reviewViewMore": "View more",
+    "dropPreview": "Drop position preview",
+    "budgetExceededShort": "Over budget",
+    "budgetNearShort": "Near the limit",
+    "goalAlertsShort": "Goals nearing completion"
   },
   "dictation": {
     "connecting": "Connecting microphone…",
@@ -1746,5 +1765,16 @@
     "documentSetup": "Upload receipts to review their data before creating a movement. Use statements to check existing transactions: comparing does not change balances. Activating Documents adds it to navigation.",
     "activateDocuments": "Activate documents",
     "setupError": "Could not activate Documents. Try again."
+  },
+  "categoryFollowup": {
+    "offer": "{name} has {count, plural, one {# movement} other {# movements}} with another category or no category.",
+    "review": "Review contact",
+    "title": "Categories for {name}",
+    "hint": "Select movements that also belong to “{category}”. Each payment may have a different purpose.",
+    "uncategorized": "Uncategorized",
+    "limit": "Up to 100 movements shown. Review further history from the contact afterward.",
+    "changed": "Some details changed. Close and review again before applying.",
+    "updated": "Categories updated",
+    "apply": "Categorize {count} selected"
   }
 }

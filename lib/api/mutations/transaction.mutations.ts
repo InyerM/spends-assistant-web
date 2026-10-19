@@ -1,3 +1,4 @@
+import { useCategoryFollowupStore } from '@/lib/stores/category-followup.store';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { transactionKeys } from '@/lib/api/queries/transaction.queries';
 import { accountKeys } from '@/lib/api/queries/account.queries';
@@ -165,7 +166,8 @@ export function useCreateTransaction(): ReturnType<
 
   return useMutation({
     mutationFn: createTransaction,
-    onSuccess: () => {
+    onSuccess: (transaction) => {
+      if (transaction.category_id) useCategoryFollowupStore.getState().offer(transaction.id);
       void queryClient.invalidateQueries({ queryKey: transactionKeys.all });
       void queryClient.invalidateQueries({ queryKey: accountKeys.all });
       void queryClient.invalidateQueries({ queryKey: usageKeys.all });
@@ -181,7 +183,8 @@ export function useUpdateTransaction(): ReturnType<
 
   return useMutation({
     mutationFn: updateTransaction,
-    onSuccess: () => {
+    onSuccess: (transaction) => {
+      if (transaction.category_id) useCategoryFollowupStore.getState().offer(transaction.id);
       void queryClient.invalidateQueries({ queryKey: transactionKeys.all });
       void queryClient.invalidateQueries({ queryKey: accountKeys.all });
       void queryClient.invalidateQueries({ queryKey: usageKeys.all });

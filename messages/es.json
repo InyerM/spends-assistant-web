@@ -420,7 +420,9 @@
       "confirm": "Se guardará •{suffix} como identificador de {name}. Comprueba que corresponde a esa cuenta.",
       "confirmLink": "Confirmar vínculo",
       "error": "No pudimos vincular el identificador. Inténtalo de nuevo."
-    }
+    },
+    "savingReview": "Guardando revisión…",
+    "confirmedMovement": "Movimiento confirmado"
   },
   "transactions": {
     "originalEvidence": "Origen de la transacción",
@@ -618,7 +620,8 @@
     "uploadingReceipt": "Subiendo…",
     "receiptUploadFailed": "No pudimos subir el comprobante. Reintenta.",
     "aiInputDescription": "Pega un mensaje bancario o describe tu gasto. Revisa los datos antes de guardarlo.",
-    "aiInputLabel": "Mensaje o descripción"
+    "aiInputLabel": "Mensaje o descripción",
+    "sourceStatement": "Extracto"
   },
   "accounts": {
     "title": "Cuentas",
@@ -1428,7 +1431,7 @@
     "exactHint": "Coinciden cuenta, fecha, moneda, importe y dirección. Revisa la descripción antes de confirmar.",
     "confirm": "Confirmar coincidencia",
     "needsFields": "Faltan datos verificables para conciliar este movimiento.",
-    "noMatch": "Sin coincidencia exacta. No se creará ninguna transacción.",
+    "noMatch": "Sin coincidencia exacta. Puedes revisar y registrar este movimiento.",
     "none": "Sin diferencias en esta lista.",
     "unknown": "Sin verificar",
     "loadError": "No pudimos cargar la conciliación.",
@@ -1453,7 +1456,19 @@
     "openPdf": "Abrir PDF en otra pestaña",
     "emptyStatement": "El texto indica que no hay movimientos. Verifica todas las páginas del PDF; si no hay nada para conciliar, puedes archivar el documento.",
     "unverifiedRows": "Por verificar · {count}",
-    "unverifiedHint": "Estas filas tienen datos incompletos. No cuentan como diferencias confirmadas: compáralas con el PDF antes de conciliarlas."
+    "unverifiedHint": "Estas filas tienen datos incompletos. No cuentan como diferencias confirmadas: compáralas con el PDF antes de conciliarlas.",
+    "createMissing": "Crear transacción",
+    "createHint": "Revisa este movimiento con el PDF. Al confirmar se registrará en tu cuenta y quedará conciliado con este extracto.",
+    "statementSource": "Origen: extracto · Sin hora en el documento",
+    "description": "Descripción",
+    "ownTransfer": "Es un pago o transferencia entre mis cuentas",
+    "otherAccount": "La otra cuenta",
+    "category": "Categoría",
+    "createConfirmation": "Confirmo que este movimiento no está registrado y que los datos coinciden con el PDF.",
+    "cancelCreate": "Cancelar",
+    "createAndReconcile": "Crear y conciliar",
+    "createDuplicate": "Encontramos un posible movimiento existente. Cierra y vuelve a comparar antes de crear.",
+    "createFailed": "No se pudo registrar. Actualiza y revisa la cuenta, el período y el movimiento."
   },
   "planning": {
     "title": "Planifica tu dinero",
@@ -1585,7 +1600,11 @@
     "reviewPending": "Por revisar",
     "reviewClear": "Al día",
     "reviewUnavailable": "No disponible",
-    "reviewViewMore": "Ver más"
+    "reviewViewMore": "Ver más",
+    "dropPreview": "Vista previa de posición",
+    "budgetExceededShort": "Límite superado",
+    "budgetNearShort": "Cerca del límite",
+    "goalAlertsShort": "Metas cerca de completarse"
   },
   "dictation": {
     "connecting": "Conectando micrófono…",
@@ -1743,5 +1762,16 @@
     "documentSetup": "Sube comprobantes para revisar sus datos antes de crear un movimiento. Usa los extractos para contrastar transacciones existentes: comparar no cambia tus saldos. Al activar Documentos, aparecerá en la navegación.",
     "activateDocuments": "Activar documentos",
     "setupError": "No pudimos activar Documentos. Inténtalo de nuevo."
+  },
+  "categoryFollowup": {
+    "offer": "Hay {count, plural, one {# movimiento} other {# movimientos}} de {name} con otra categoría o sin categorizar.",
+    "review": "Revisar contacto",
+    "title": "Categorías de {name}",
+    "hint": "Selecciona los movimientos que también correspondan a «{category}». Cada envío puede tener un propósito distinto.",
+    "uncategorized": "Sin categoría",
+    "limit": "Se muestran hasta 100 movimientos. Después puedes revisar más desde el contacto.",
+    "changed": "Algún dato cambió. Cierra y vuelve a revisar antes de aplicar.",
+    "updated": "Categorías actualizadas",
+    "apply": "Categorizar {count, plural, one {# seleccionado} other {# seleccionados}}"
   }
 }

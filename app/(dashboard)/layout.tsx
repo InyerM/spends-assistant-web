@@ -1,5 +1,6 @@
 'use client';
 
+import { CategoryFollowup } from '@/components/transactions/category-followup';
 import { AutomaticOnboarding } from '@/components/planning/automatic-onboarding';
 import { useTranslations } from 'next-intl';
 import { usePathname } from 'next/navigation';
@@ -36,6 +37,7 @@ export default function DashboardLayout({
       </div>
 
       <AutomaticOnboarding />
+      <CategoryFollowup />
       <BottomNav />
 
       {showFab && (

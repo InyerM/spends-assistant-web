@@ -1,4 +1,7 @@
 'use client';
+import { useCategoryFollowupStore } from '@/lib/stores/category-followup.store';
+import { CompletedInboxCard } from '@/components/transactions/completed-inbox-card';
+import { InlineLoader } from '@/components/shared/loader';
 import { UnrecognizedAccountNotice } from '@/components/transactions/unrecognized-account-notice';
 
 import { reviewCandidateSuggestions } from '@/lib/shortcut-inbox/candidates';
@@ -189,6 +192,7 @@ export default function ShortcutInboxPage({
   );
   const count = inbox.data?.count ?? 0;
   const loading = inbox.isPending;
+  const [postingId, setPostingId] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [consentRequired, setConsentRequired] = useState<AiConsentScope | null>(null);
@@ -209,7 +213,9 @@ export default function ShortcutInboxPage({
   const [reverseBusyId, setReverseBusyId] = useState<string | null>(null);
   const [reverseErrorId, setReverseErrorId] = useState<string | null>(null);
   const [createInboxId, setCreateInboxId] = useState<string | null>(null);
-  const [analysisById, setAnalysisById] = useState<Record<string, ForwardedEmailAnalysis>>({});
+  const [analysisById, setAnalysisById] = useState<Partial<Record<string, ForwardedEmailAnalysis>>>(
+    {},
+  );
   const [analysisBusyIds, setAnalysisBusyIds] = useState<Set<string>>(() => new Set());
   const analysisMutation = useAnalyzeForwardedEmail();
 
@@ -536,311 +542,346 @@ export default function ShortcutInboxPage({
             const luloPreview = previewLuloNotice(item.source, item.raw_text, item.received_at);
             const hasAttachments = Boolean(item.attachments?.length);
             const historicalLulo = item.source === 'lulo-email-backfill';
+            const rowBusy =
+              busyId === item.id ||
+              matchBusyId === item.id ||
+              reverseBusyId === item.id ||
+              postingId === item.id;
+            if (item.status === 'created' && item.match)
+              return (
+                <CompletedInboxCard
+                  key={item.id}
+                  item={item}
+                  description={analysisById[item.id]?.description}
+                />
+              );
             return (
               <Card key={item.id} id={`inbox-${item.id}`}>
-                <CardContent className='space-y-4 py-4'>
-                  <div className='flex flex-wrap items-center justify-between gap-2 text-xs'>
-                    <div className='flex flex-wrap items-center gap-2'>
-                      <Badge variant='outline'>
-                        {item.source === 'forwarded_email' ? t('forwardedSource') : item.source}
-                      </Badge>
-                      {item.source === 'forwarded_email' && (
-                        <Badge
-                          variant='outline'
-                          className={
-                            item.message_kind === 'spam'
-                              ? 'border-destructive/30 bg-destructive/10 text-destructive'
-                              : item.message_kind === 'purchase' || item.message_kind === 'income'
-                                ? 'border-success/30 bg-success/10 text-success'
-                                : item.message_kind === 'statement' ||
-                                    item.message_kind === 'security'
-                                  ? 'border-brand-secondary/30 bg-brand-secondary/10 text-brand-secondary'
-                                  : 'border-border bg-muted/30 text-muted-foreground'
-                          }>
-                          {t(`kind_${item.message_kind ?? 'uncertain'}`)}
+                <CardContent className='py-4'>
+                  {rowBusy && (
+                    <p
+                      role='status'
+                      aria-label={t('savingReview')}
+                      className='text-muted-foreground mb-3 flex items-center gap-2 text-sm'>
+                      <InlineLoader />
+                      {t('savingReview')}
+                    </p>
+                  )}
+                  <fieldset disabled={rowBusy} aria-busy={rowBusy} className='min-w-0 space-y-4'>
+                    <div className='flex flex-wrap items-center justify-between gap-2 text-xs'>
+                      <div className='flex flex-wrap items-center gap-2'>
+                        <Badge variant='outline'>
+                          {item.source === 'forwarded_email' ? t('forwardedSource') : item.source}
                         </Badge>
-                      )}
-                      <Badge
-                        variant={item.status === 'pending' ? 'secondary' : 'outline'}
-                        className={
-                          item.status === 'pending'
-                            ? 'border-brand-secondary/30 bg-brand-secondary/15 text-brand-secondary'
-                            : item.status === 'created' || item.status === 'matched'
-                              ? 'border-success/30 bg-success/10 text-success'
-                              : item.status === 'dismissed'
+                        {item.source === 'forwarded_email' && (
+                          <Badge
+                            variant='outline'
+                            className={
+                              item.message_kind === 'spam'
                                 ? 'border-destructive/30 bg-destructive/10 text-destructive'
-                                : 'border-border bg-muted text-muted-foreground'
-                        }>
-                        {item.status === 'non_transaction' ? t('nonTransaction') : t(item.status)}
-                      </Badge>
-                    </div>
-                    <time className='text-muted-foreground' dateTime={item.received_at}>
-                      {formatDate(item.received_at)}
-                    </time>
-                  </div>
-                  <ForwardedEmailEvidence
-                    source={item.source}
-                    rawText={item.raw_text}
-                    inboxId={item.id}
-                  />
-                  {item.status === 'pending' && createInboxId !== item.id && (
-                    <UnrecognizedAccountNotice rawText={item.raw_text} />
-                  )}
-                  {hasAttachments && (
-                    <div className='border-border space-y-2 rounded-lg border p-3'>
-                      <p className='text-muted-foreground text-sm'>{t('pdfReviewHint')}</p>
-                      <div className='flex flex-wrap gap-2'>
-                        {item.attachments?.map((attachment) => (
-                          <Button key={attachment.id} variant='outline' size='sm' asChild>
-                            <Link href={`/documents#document-${attachment.id}`}>
-                              <FileText className='size-4' />
-                              {attachment.file_name}
-                            </Link>
-                          </Button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  {luloPreview && <LuloPreview preview={luloPreview} />}
-                  {(item.status === 'matched' || item.status === 'created') && item.match && (
-                    <Button
-                      asChild
-                      variant='ghost'
-                      size='sm'
-                      className='text-success hover:text-success -ml-2'>
-                      <Link href={`/transactions/${item.match.transaction_id}`}>
-                        {t(
-                          item.status === 'created'
-                            ? 'viewCreatedTransaction'
-                            : 'viewMatchedTransaction',
+                                : item.message_kind === 'purchase' || item.message_kind === 'income'
+                                  ? 'border-success/30 bg-success/10 text-success'
+                                  : item.message_kind === 'statement' ||
+                                      item.message_kind === 'security'
+                                    ? 'border-brand-secondary/30 bg-brand-secondary/10 text-brand-secondary'
+                                    : 'border-border bg-muted/30 text-muted-foreground'
+                            }>
+                            {t(`kind_${item.message_kind ?? 'uncertain'}`)}
+                          </Badge>
                         )}
-                      </Link>
-                    </Button>
-                  )}
-                  <div className='border-border flex flex-wrap gap-2 border-t pt-3'>
-                    {item.status === 'matched' && item.match && (
+                        <Badge
+                          variant={item.status === 'pending' ? 'secondary' : 'outline'}
+                          className={
+                            item.status === 'pending'
+                              ? 'border-brand-secondary/30 bg-brand-secondary/15 text-brand-secondary'
+                              : item.status === 'created' || item.status === 'matched'
+                                ? 'border-success/30 bg-success/10 text-success'
+                                : item.status === 'dismissed'
+                                  ? 'border-destructive/30 bg-destructive/10 text-destructive'
+                                  : 'border-border bg-muted text-muted-foreground'
+                          }>
+                          {item.status === 'non_transaction' ? t('nonTransaction') : t(item.status)}
+                        </Badge>
+                      </div>
+                      <time className='text-muted-foreground' dateTime={item.received_at}>
+                        {formatDate(item.received_at)}
+                      </time>
+                    </div>
+                    <ForwardedEmailEvidence
+                      source={item.source}
+                      rawText={item.raw_text}
+                      inboxId={item.id}
+                    />
+                    {item.status === 'pending' && createInboxId !== item.id && (
+                      <UnrecognizedAccountNotice rawText={item.raw_text} />
+                    )}
+                    {hasAttachments && (
+                      <div className='border-border space-y-2 rounded-lg border p-3'>
+                        <p className='text-muted-foreground text-sm'>{t('pdfReviewHint')}</p>
+                        <div className='flex flex-wrap gap-2'>
+                          {item.attachments?.map((attachment) => (
+                            <Button key={attachment.id} variant='outline' size='sm' asChild>
+                              <Link href={`/documents#document-${attachment.id}`}>
+                                <FileText className='size-4' />
+                                {attachment.file_name}
+                              </Link>
+                            </Button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {luloPreview && <LuloPreview preview={luloPreview} />}
+                    {(item.status === 'matched' || item.status === 'created') && item.match && (
                       <Button
+                        asChild
+                        variant='ghost'
                         size='sm'
-                        variant='outline'
-                        onClick={(): void => {
-                          setReverseErrorId(null);
-                          setReverseInboxId(reverseInboxId === item.id ? null : item.id);
-                        }}>
-                        {t('reviewReversal')}
+                        className='text-success hover:text-success -ml-2'>
+                        <Link href={`/transactions/${item.match.transaction_id}`}>
+                          {t(
+                            item.status === 'created'
+                              ? 'viewCreatedTransaction'
+                              : 'viewMatchedTransaction',
+                          )}
+                        </Link>
                       </Button>
                     )}
-                    {item.status === 'pending' && !hasAttachments && (
-                      <InboxAction help={t('matchesHelp')}>
+                    <fieldset
+                      disabled={
+                        rowBusy || candidateBusyId === item.id || analysisBusyIds.has(item.id)
+                      }
+                      className='border-border flex flex-wrap gap-2 border-t pt-3'>
+                      {item.status === 'matched' && item.match && (
                         <Button
                           size='sm'
                           variant='outline'
-                          onClick={(): void => void showCandidates(item.id)}>
-                          {openCandidateId === item.id ? t('hideCandidates') : t('showCandidates')}
-                        </Button>
-                      </InboxAction>
-                    )}
-                    {item.status === 'pending' && !historicalLulo && !hasAttachments && (
-                      <InboxAction help={t('analyzeHelp')}>
-                        <Button
-                          size='sm'
-                          disabled={analysisBusyIds.has(item.id)}
-                          onClick={(): void => void openCreateReview(item)}>
-                          {t(item.source === 'forwarded_email' ? 'reanalyzeEmail' : 'createNew')}
-                        </Button>
-                      </InboxAction>
-                    )}
-                    {item.status !== 'pending' &&
-                      item.status !== 'matched' &&
-                      item.status !== 'created' && (
-                        <Button
-                          size='sm'
-                          variant='outline'
-                          disabled={busyId === item.id}
-                          onClick={(): void => void review(item.id, 'pending')}>
-                          {t('returnToPending')}
+                          onClick={(): void => {
+                            setReverseErrorId(null);
+                            setReverseInboxId(reverseInboxId === item.id ? null : item.id);
+                          }}>
+                          {t('reviewReversal')}
                         </Button>
                       )}
-                    {item.status !== 'non_transaction' &&
-                      item.status !== 'matched' &&
-                      item.status !== 'created' && (
-                        <InboxAction help={t('nonTransactionHelp')}>
+                      {item.status === 'pending' && !hasAttachments && (
+                        <InboxAction help={t('matchesHelp')}>
+                          <Button
+                            size='sm'
+                            variant='outline'
+                            onClick={(): void => void showCandidates(item.id)}>
+                            {openCandidateId === item.id
+                              ? t('hideCandidates')
+                              : t('showCandidates')}
+                          </Button>
+                        </InboxAction>
+                      )}
+                      {item.status === 'pending' && !historicalLulo && !hasAttachments && (
+                        <InboxAction help={t('analyzeHelp')}>
+                          <Button
+                            size='sm'
+                            disabled={analysisBusyIds.has(item.id)}
+                            onClick={(): void => void openCreateReview(item)}>
+                            {t(item.source === 'forwarded_email' ? 'reanalyzeEmail' : 'createNew')}
+                          </Button>
+                        </InboxAction>
+                      )}
+                      {item.status !== 'pending' &&
+                        item.status !== 'matched' &&
+                        item.status !== 'created' && (
                           <Button
                             size='sm'
                             variant='outline'
                             disabled={busyId === item.id}
-                            onClick={(): void => void review(item.id, 'non_transaction')}>
-                            {t('markNonTransaction')}
+                            onClick={(): void => void review(item.id, 'pending')}>
+                            {t('returnToPending')}
                           </Button>
-                        </InboxAction>
-                      )}
-                    {item.status !== 'dismissed' &&
-                      item.status !== 'matched' &&
-                      item.status !== 'created' && (
-                        <InboxAction help={t('dismissHelp')}>
+                        )}
+                      {item.status !== 'non_transaction' &&
+                        item.status !== 'matched' &&
+                        item.status !== 'created' && (
+                          <InboxAction help={t('nonTransactionHelp')}>
+                            <Button
+                              size='sm'
+                              variant='outline'
+                              disabled={busyId === item.id}
+                              onClick={(): void => void review(item.id, 'non_transaction')}>
+                              {t('markNonTransaction')}
+                            </Button>
+                          </InboxAction>
+                        )}
+                      {item.status !== 'dismissed' &&
+                        item.status !== 'matched' &&
+                        item.status !== 'created' && (
+                          <InboxAction help={t('dismissHelp')}>
+                            <Button
+                              size='sm'
+                              variant='destructive'
+                              disabled={busyId === item.id}
+                              onClick={(): void => void review(item.id, 'dismissed')}>
+                              {t('dismiss')}
+                            </Button>
+                          </InboxAction>
+                        )}
+                    </fieldset>
+                    {item.status === 'matched' && item.match && reverseInboxId === item.id && (
+                      <div className='bg-muted space-y-2 rounded-md p-3 text-sm'>
+                        <p>{t('reversalCaution')}</p>
+                        {reverseErrorId === item.id && <p role='alert'>{t('reversalFailed')}</p>}
+                        <div className='flex flex-wrap gap-2'>
                           <Button
                             size='sm'
-                            variant='destructive'
-                            disabled={busyId === item.id}
-                            onClick={(): void => void review(item.id, 'dismissed')}>
-                            {t('dismiss')}
+                            disabled={reverseBusyId === item.id}
+                            onClick={(): void =>
+                              void reverseMatch(item.id, item.match!.decision_id)
+                            }>
+                            {t('reverseMatch')}
                           </Button>
-                        </InboxAction>
-                      )}
-                  </div>
-                  {item.status === 'matched' && item.match && reverseInboxId === item.id && (
-                    <div className='bg-muted space-y-2 rounded-md p-3 text-sm'>
-                      <p>{t('reversalCaution')}</p>
-                      {reverseErrorId === item.id && <p role='alert'>{t('reversalFailed')}</p>}
-                      <div className='flex flex-wrap gap-2'>
-                        <Button
-                          size='sm'
-                          disabled={reverseBusyId === item.id}
-                          onClick={(): void => void reverseMatch(item.id, item.match!.decision_id)}>
-                          {t('reverseMatch')}
-                        </Button>
-                        <Button
-                          size='sm'
-                          variant='outline'
-                          disabled={reverseBusyId === item.id}
-                          onClick={(): void => setReverseInboxId(null)}>
-                          {t('cancelReversal')}
-                        </Button>
+                          <Button
+                            size='sm'
+                            variant='outline'
+                            disabled={reverseBusyId === item.id}
+                            onClick={(): void => setReverseInboxId(null)}>
+                            {t('cancelReversal')}
+                          </Button>
+                        </div>
                       </div>
-                    </div>
-                  )}
-                  {createInboxId === item.id && item.status === 'pending' && !historicalLulo && (
-                    <ShortcutCreateForm
-                      inboxId={item.id}
-                      rawText={item.raw_text}
-                      receivedAt={item.received_at}
-                      preview={luloPreview}
-                      analysis={analysisById[item.id]}
-                      analyzing={analysisBusyIds.has(item.id)}
-                      onReview={(review): void => {
-                        setReviewById((current) => ({
-                          ...current,
-                          [item.id]: review ?? undefined,
-                        }));
-                        if (review) setOpenCandidateId(item.id);
-                      }}
-                      onCancel={(): void => setCreateInboxId(null)}
-                      onCreated={(transactionId, decisionId): void => {
-                        setCreateInboxId(null);
-                        setOpenCandidateId(null);
-                        setCompletedById((current) => ({
-                          ...current,
-                          [item.id]: {
-                            viewKey,
-                            item: {
-                              ...item,
-                              status: 'created',
-                              ...(transactionId
-                                ? {
-                                    match: {
-                                      transaction_id: transactionId,
-                                      decision_id: decisionId ?? '',
-                                    },
-                                  }
-                                : {}),
+                    )}
+                    {createInboxId === item.id && item.status === 'pending' && !historicalLulo && (
+                      <ShortcutCreateForm
+                        onBusyChange={(busy) => setPostingId(busy ? item.id : null)}
+                        inboxId={item.id}
+                        rawText={item.raw_text}
+                        receivedAt={item.received_at}
+                        preview={luloPreview}
+                        analysis={analysisById[item.id]}
+                        analyzing={analysisBusyIds.has(item.id)}
+                        onReview={(review): void => {
+                          setReviewById((current) => ({
+                            ...current,
+                            [item.id]: review ?? undefined,
+                          }));
+                          if (review) setOpenCandidateId(item.id);
+                        }}
+                        onCancel={(): void => setCreateInboxId(null)}
+                        onCreated={(transactionId, decisionId): void => {
+                          if (transactionId)
+                            useCategoryFollowupStore.getState().offer(transactionId);
+                          setCreateInboxId(null);
+                          setOpenCandidateId(null);
+                          setCompletedById((current) => ({
+                            ...current,
+                            [item.id]: {
+                              viewKey,
+                              item: {
+                                ...item,
+                                status: 'created',
+                                ...(transactionId
+                                  ? {
+                                      match: {
+                                        transaction_id: transactionId,
+                                        decision_id: decisionId ?? '',
+                                      },
+                                    }
+                                  : {}),
+                              },
                             },
-                          },
-                        }));
-                        void queryClient.invalidateQueries({ queryKey: ['notifications'] });
-                        void queryClient.invalidateQueries({
-                          queryKey: ['shortcut-inbox', 'pending-count'],
-                        });
-                        void queryClient.invalidateQueries({ queryKey: ['transactions'] });
-                        void queryClient.invalidateQueries({ queryKey: ['accounts'] });
-                        void queryClient.invalidateQueries({ queryKey: ['budgets'] });
-                        void queryClient.invalidateQueries({ queryKey: ['documents'] });
-                      }}
-                    />
-                  )}
-                  {openCandidateId === item.id && (
-                    <div className='border-border bg-muted/20 space-y-3 rounded-lg border p-4 text-sm'>
-                      {candidateBusyId === item.id && <p>{t('candidateLoading')}</p>}
-                      {candidateErrorId === item.id && <p role='alert'>{t('candidateFailed')}</p>}
-                      {candidateResult && (
-                        <>
-                          <p className='text-muted-foreground'>{t('candidateCaution')}</p>
-                          {candidateResult.candidates.length === 0 && <p>{t('noCandidates')}</p>}
-                          {candidateResult.candidates.map((candidate) => (
-                            <div
-                              key={candidate.id}
-                              className='border-border space-y-2 border-t pt-3'>
-                              <div className='flex min-w-0 flex-wrap items-center gap-2'>
-                                <Badge variant='outline'>
-                                  {candidate.strength === 'strong'
-                                    ? t('strongSignal')
-                                    : t('possibleMatch')}
-                                </Badge>
-                                <span className='min-w-0 font-medium break-words'>
-                                  {candidate.description}
-                                </span>
-                              </div>
-                              <p className='text-muted-foreground'>
-                                {candidate.date} ·{' '}
-                                {new Intl.NumberFormat(undefined, {
-                                  style: 'currency',
-                                  currency: 'COP',
-                                  maximumFractionDigits: 2,
-                                }).format(candidate.amount)}
-                              </p>
-                              {item.status === 'pending' &&
-                                (reviewCandidate?.inboxId === item.id &&
-                                reviewCandidate.transactionId === candidate.id ? (
-                                  <div className='bg-muted space-y-2 rounded-md p-3'>
-                                    <p>{t('matchConfirmCaution')}</p>
-                                    {matchErrorId === item.id && (
-                                      <p role='alert'>{t('matchFailed')}</p>
-                                    )}
-                                    <div className='flex flex-wrap gap-2'>
-                                      <Button
-                                        size='sm'
-                                        disabled={matchBusyId === item.id}
-                                        onClick={(): void =>
-                                          void acknowledgeMatch(item.id, candidate.id)
-                                        }>
-                                        {t('acknowledgeMatch')}
-                                      </Button>
-                                      <Button
-                                        size='sm'
-                                        variant='outline'
-                                        disabled={matchBusyId === item.id}
-                                        onClick={(): void => setReviewCandidate(null)}>
-                                        {t('cancelMatch')}
-                                      </Button>
+                          }));
+                          void queryClient.invalidateQueries({ queryKey: ['notifications'] });
+                          void queryClient.invalidateQueries({
+                            queryKey: ['shortcut-inbox', 'pending-count'],
+                          });
+                          void queryClient.invalidateQueries({ queryKey: ['transactions'] });
+                          void queryClient.invalidateQueries({ queryKey: ['accounts'] });
+                          void queryClient.invalidateQueries({ queryKey: ['budgets'] });
+                          void queryClient.invalidateQueries({ queryKey: ['documents'] });
+                        }}
+                      />
+                    )}
+                    {openCandidateId === item.id && (
+                      <div className='border-border bg-muted/20 space-y-3 rounded-lg border p-4 text-sm'>
+                        {candidateBusyId === item.id && <p>{t('candidateLoading')}</p>}
+                        {candidateErrorId === item.id && <p role='alert'>{t('candidateFailed')}</p>}
+                        {candidateResult && (
+                          <>
+                            <p className='text-muted-foreground'>{t('candidateCaution')}</p>
+                            {candidateResult.candidates.length === 0 && <p>{t('noCandidates')}</p>}
+                            {candidateResult.candidates.map((candidate) => (
+                              <div
+                                key={candidate.id}
+                                className='border-border space-y-2 border-t pt-3'>
+                                <div className='flex min-w-0 flex-wrap items-center gap-2'>
+                                  <Badge variant='outline'>
+                                    {candidate.strength === 'strong'
+                                      ? t('strongSignal')
+                                      : t('possibleMatch')}
+                                  </Badge>
+                                  <span className='min-w-0 font-medium break-words'>
+                                    {candidate.description}
+                                  </span>
+                                </div>
+                                <p className='text-muted-foreground'>
+                                  {candidate.date} ·{' '}
+                                  {new Intl.NumberFormat(undefined, {
+                                    style: 'currency',
+                                    currency: 'COP',
+                                    maximumFractionDigits: 2,
+                                  }).format(candidate.amount)}
+                                </p>
+                                {item.status === 'pending' &&
+                                  (reviewCandidate?.inboxId === item.id &&
+                                  reviewCandidate.transactionId === candidate.id ? (
+                                    <div className='bg-muted space-y-2 rounded-md p-3'>
+                                      <p>{t('matchConfirmCaution')}</p>
+                                      {matchErrorId === item.id && (
+                                        <p role='alert'>{t('matchFailed')}</p>
+                                      )}
+                                      <div className='flex flex-wrap gap-2'>
+                                        <Button
+                                          size='sm'
+                                          disabled={matchBusyId === item.id}
+                                          onClick={(): void =>
+                                            void acknowledgeMatch(item.id, candidate.id)
+                                          }>
+                                          {t('acknowledgeMatch')}
+                                        </Button>
+                                        <Button
+                                          size='sm'
+                                          variant='outline'
+                                          disabled={matchBusyId === item.id}
+                                          onClick={(): void => setReviewCandidate(null)}>
+                                          {t('cancelMatch')}
+                                        </Button>
+                                      </div>
                                     </div>
-                                  </div>
-                                ) : (
-                                  <Button
-                                    size='sm'
-                                    variant='outline'
-                                    onClick={(): void =>
-                                      setReviewCandidate({
-                                        inboxId: item.id,
-                                        transactionId: candidate.id,
-                                      })
-                                    }>
-                                    {t('reviewMatch')}
-                                  </Button>
-                                ))}
-                              <p className='text-muted-foreground'>
-                                {candidate.signals
-                                  .map((signal) =>
-                                    signal === 'exact_raw_text'
-                                      ? t('exactRawText')
-                                      : t('sameAmountDateAccount'),
-                                  )
-                                  .join('; ')}
-                              </p>
-                            </div>
-                          ))}
-                          {candidateResult.at_limit && <p>{t('candidateLimit')}</p>}
-                        </>
-                      )}
-                    </div>
-                  )}
+                                  ) : (
+                                    <Button
+                                      size='sm'
+                                      variant='outline'
+                                      onClick={(): void =>
+                                        setReviewCandidate({
+                                          inboxId: item.id,
+                                          transactionId: candidate.id,
+                                        })
+                                      }>
+                                      {t('reviewMatch')}
+                                    </Button>
+                                  ))}
+                                <p className='text-muted-foreground'>
+                                  {candidate.signals
+                                    .map((signal) =>
+                                      signal === 'exact_raw_text'
+                                        ? t('exactRawText')
+                                        : t('sameAmountDateAccount'),
+                                    )
+                                    .join('; ')}
+                                </p>
+                              </div>
+                            ))}
+                            {candidateResult.at_limit && <p>{t('candidateLimit')}</p>}
+                          </>
+                        )}
+                      </div>
+                    )}
+                  </fieldset>
                 </CardContent>
               </Card>
             );

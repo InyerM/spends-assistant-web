@@ -391,7 +391,9 @@
       "confirm": "•{suffix} será salvo como identificador de {name}. Confira se corresponde à conta.",
       "confirmLink": "Confirmar vínculo",
       "error": "Não foi possível vincular o identificador. Tente novamente."
-    }
+    },
+    "savingReview": "Salvando revisão…",
+    "confirmedMovement": "Movimento confirmado"
   },
   "transactions": {
     "originalEvidence": "Origem da transação",
@@ -584,7 +586,8 @@
     "uploadingReceipt": "Enviando…",
     "receiptUploadFailed": "Não foi possível enviar o comprovante. Tente novamente.",
     "aiInputDescription": "Cole uma mensagem bancária ou descreva seu gasto. Confira os dados antes de salvar.",
-    "aiInputLabel": "Mensagem ou descrição"
+    "aiInputLabel": "Mensagem ou descrição",
+    "sourceStatement": "Extrato"
   },
   "accounts": {
     "title": "Contas",
@@ -1314,7 +1317,7 @@
     "exactHint": "Conta, data, moeda, valor e direção coincidem. Revise a descrição antes de confirmar.",
     "confirm": "Confirmar correspondência",
     "needsFields": "Faltam dados verificáveis para conciliar este movimento.",
-    "noMatch": "Sem correspondência exata. Nenhuma transação será criada.",
+    "noMatch": "Sem correspondência exata. Você pode revisar e registrar este movimento.",
     "none": "Sem diferenças nesta lista.",
     "unknown": "Não verificado",
     "loadError": "Não foi possível carregar a conciliação.",
@@ -1339,7 +1342,19 @@
     "openPdf": "Abrir PDF em outra aba",
     "emptyStatement": "O texto indica que não há movimentos. Verifique todas as páginas; se não houver nada a conciliar, você pode arquivar o documento.",
     "unverifiedRows": "A verificar · {count}",
-    "unverifiedHint": "Estas linhas têm dados incompletos. Não são diferenças confirmadas; confira no PDF antes de conciliar."
+    "unverifiedHint": "Estas linhas têm dados incompletos. Não são diferenças confirmadas; confira no PDF antes de conciliar.",
+    "createMissing": "Criar transação",
+    "createHint": "Confira este movimento no PDF. A confirmação registra na conta e concilia com o extrato.",
+    "statementSource": "Origem: extrato · Sem horário no documento",
+    "description": "Descrição",
+    "ownTransfer": "É um pagamento ou transferência entre minhas contas",
+    "otherAccount": "Outra conta",
+    "category": "Categoria",
+    "createConfirmation": "Confirmo que o movimento não está registrado e que os dados correspondem ao PDF.",
+    "cancelCreate": "Cancelar",
+    "createAndReconcile": "Criar e conciliar",
+    "createDuplicate": "Possível movimento existente. Feche e compare novamente antes de criar.",
+    "createFailed": "Não foi possível registrar. Atualize e revise a conta, o período e o movimento."
   },
   "planning": {
     "title": "Planeje seu dinheiro",
@@ -1471,7 +1486,11 @@
     "reviewPending": "Para revisar",
     "reviewClear": "Em dia",
     "reviewUnavailable": "Indisponível",
-    "reviewViewMore": "Ver mais"
+    "reviewViewMore": "Ver mais",
+    "dropPreview": "Prévia da posição",
+    "budgetExceededShort": "Limite ultrapassado",
+    "budgetNearShort": "Perto do limite",
+    "goalAlertsShort": "Metas perto da conclusão"
   },
   "dictation": {
     "connecting": "Conectando microfone…",
@@ -1629,5 +1648,16 @@
     "documentSetup": "Envie recibos para revisar seus dados antes de criar um movimento. Use extratos para conferir transações existentes: comparar não altera saldos. Ao ativar Documentos, ele aparece na navegação.",
     "activateDocuments": "Ativar documentos",
     "setupError": "Não foi possível ativar Documentos. Tente novamente."
+  },
+  "categoryFollowup": {
+    "offer": "Há {count, plural, one {# movimento} other {# movimentos}} de {name} com outra categoria ou sem categoria.",
+    "review": "Revisar contato",
+    "title": "Categorias de {name}",
+    "hint": "Selecione os movimentos que também pertencem a “{category}”. Cada pagamento pode ter um propósito diferente.",
+    "uncategorized": "Sem categoria",
+    "limit": "Até 100 movimentos exibidos. Revise o restante no contato depois.",
+    "changed": "Alguns dados mudaram. Feche e revise novamente.",
+    "updated": "Categorias atualizadas",
+    "apply": "Categorizar {count, plural, one {# selecionado} other {# selecionados}}"
   }
 }

@@ -48,6 +48,7 @@ export function ShortcutCreateForm({
   analysis,
   analyzing = false,
   onCreated,
+  onBusyChange,
   onReview,
   onCancel,
 }: {
@@ -58,6 +59,7 @@ export function ShortcutCreateForm({
   analysis?: ForwardedEmailAnalysis;
   analyzing?: boolean;
   onCreated: (transactionId?: string, decisionId?: string) => void;
+  onBusyChange?: (busy: boolean) => void;
   onReview?: (review: CandidateReview | null) => void;
   onCancel: () => void;
 }): React.ReactElement {
@@ -222,6 +224,7 @@ export function ShortcutCreateForm({
       return;
     }
     setError(null);
+    onBusyChange?.(true);
     try {
       const result = await createMutation.mutateAsync({
         inboxId,
@@ -253,6 +256,8 @@ export function ShortcutCreateForm({
       }
     } catch {
       setError(t('createFailed'));
+    } finally {
+      onBusyChange?.(false);
     }
   };
 

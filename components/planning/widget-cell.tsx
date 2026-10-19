@@ -5,11 +5,13 @@ export function WidgetCell({
   item,
   children,
   onDrop,
+  onDragOver,
   editing,
 }: {
   item: WidgetPlacement;
   children: React.ReactNode;
   onDrop: (event: React.DragEvent) => void;
+  onDragOver?: (event: React.DragEvent) => void;
   editing: boolean;
 }): React.ReactElement {
   const content = useRef<HTMLDivElement>(null);
@@ -35,7 +37,10 @@ export function WidgetCell({
         } as React.CSSProperties
       }
       onDragOver={(event) => {
-        if (editing) event.preventDefault();
+        if (editing) {
+          event.preventDefault();
+          onDragOver?.(event);
+        }
       }}
       onDrop={onDrop}>
       <div ref={content}>{children}</div>

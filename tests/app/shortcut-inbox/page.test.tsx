@@ -1116,3 +1116,74 @@ it('refreshes pending-count metadata after review without invalidating all inbox
   cleanup();
   vi.unstubAllGlobals();
 });
+
+it('blocks competing row actions and announces a pending dismiss request', async () => {
+  cleanup();
+  let finish!: (response: Response) => void;
+  const pending = new Promise<Response>((resolve) => {
+    finish = resolve;
+  });
+  vi.stubGlobal(
+    'fetch',
+    vi.fn((url: string, init?: RequestInit) => {
+      if (init?.method === 'PATCH') return pending;
+      return Promise.resolve(
+        Response.json({
+          data: [
+            {
+              id: 'loading-row',
+              source: 'sms-shortcut',
+              raw_text: 'Synthetic notification',
+              received_at: '2026-10-19T12:00:00Z',
+              status: 'pending',
+            },
+          ],
+          count: 1,
+        }),
+      );
+    }),
+  );
+  renderPage();
+  fireEvent.click(await screen.findByRole('button', { name: 'Dismiss' }));
+  expect(screen.getByRole('button', { name: 'Create new transaction' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: 'Show possible matches' })).toBeDisabled();
+  expect(screen.getByRole('status', { name: 'savingReview' })).toBeVisible();
+  finish(Response.json({ success: true }));
+  await waitFor(() =>
+    expect(screen.queryByRole('status', { name: 'savingReview' })).not.toBeInTheDocument(),
+  );
+  cleanup();
+  vi.unstubAllGlobals();
+});
+
+it('collapses a created notification into a transaction summary', async () => {
+  cleanup();
+  vi.stubGlobal(
+    'fetch',
+    vi.fn().mockResolvedValue(
+      Response.json({
+        data: [
+          {
+            id: 'done',
+            source: 'forwarded_email',
+            raw_text: 'Synthetic purchase. A very long original message with legal footer.',
+            received_at: '2026-10-19T12:00:00Z',
+            status: 'created',
+            match: { transaction_id: 'tx', decision_id: 'decision' },
+          },
+        ],
+        count: 1,
+      }),
+    ),
+  );
+  renderPage();
+  expect(await screen.findByRole('link', { name: 'viewCreatedTransaction' })).toHaveAttribute(
+    'href',
+    '/transactions/tx',
+  );
+  expect(
+    screen.queryByText(/A very long original message with legal footer/),
+  ).not.toBeInTheDocument();
+  cleanup();
+  vi.unstubAllGlobals();
+});

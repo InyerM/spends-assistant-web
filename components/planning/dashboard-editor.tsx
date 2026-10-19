@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { SlidersHorizontal, GripVertical, Plus, Check, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -41,6 +41,18 @@ export function DashboardEditor({
   );
   const save = useSavePlanning();
   const [open, setOpen] = useState(false);
+  const [reveal, setReveal] = useState<string | null>(null);
+  useEffect(() => {
+    if (!reveal) return;
+    const frame = requestAnimationFrame(() => {
+      document.querySelector(`[data-widget="${reveal}"]`)?.scrollIntoView({
+        block: 'center',
+        behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth',
+      });
+      setReveal(null);
+    });
+    return (): void => cancelAnimationFrame(frame);
+  }, [reveal, draft]);
   const blocked = isPending || !data || save.isPending;
   const items =
     draft ??
@@ -118,7 +130,11 @@ export function DashboardEditor({
                         key={id}
                         className={`rounded-xl border p-2 ${selected ? 'border-primary/50' : 'border-border'}`}
                         draggable={!blocked && available}
-                        onDragStart={(event) => event.dataTransfer.setData('text/plain', id)}>
+                        onDragStart={(event) => {
+                          event.dataTransfer.setData('text/plain', id);
+                          event.dataTransfer.setData(`application/x-anotto-widget-${id}`, id);
+                          event.dataTransfer.effectAllowed = 'move';
+                        }}>
                         <WidgetPreview id={id} />
                         {!available && (
                           <p className='text-muted-foreground mt-1 text-[11px]'>
@@ -137,13 +153,14 @@ export function DashboardEditor({
                             className='size-8 shrink-0'
                             disabled={blocked || !available}
                             aria-label={t(selected ? 'remove' : 'add', { name: t(id) })}
-                            onClick={() =>
+                            onClick={() => {
                               onDraft(
                                 selected
                                   ? items.filter((x) => x.id !== id)
                                   : placeWidget(items, id, zone),
-                              )
-                            }>
+                              );
+                              if (!selected) setReveal(id);
+                            }}>
                             {selected ? (
                               <Check className='text-primary size-4' />
                             ) : (

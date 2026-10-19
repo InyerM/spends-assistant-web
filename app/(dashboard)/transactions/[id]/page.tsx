@@ -64,7 +64,11 @@ export default function TransactionDetailPage(): React.ReactElement {
                     {transaction.description}
                   </CardTitle>
                   <p className='text-muted-foreground mt-1 text-sm'>
-                    {transaction.date} · {transaction.time}
+                    {transaction.date}
+                    {transaction.parsed_data?.time_unknown === true &&
+                    /^00:00(?::00)?$/.test(transaction.time)
+                      ? ''
+                      : ` · ${transaction.time}`}
                   </p>
                 </div>
               </div>
@@ -90,7 +94,9 @@ export default function TransactionDetailPage(): React.ReactElement {
               </div>
               <div>
                 <dt className='text-muted-foreground'>{t('source')}</dt>
-                <dd>{transaction.source}</dd>
+                <dd>
+                  {transaction.source === 'statement' ? t('sourceStatement') : transaction.source}
+                </dd>
               </div>
               {transaction.notes && (
                 <div className='sm:col-span-2'>

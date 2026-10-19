@@ -141,7 +141,7 @@ function StatementReviewPanel({
       {data.scope && !scopeChanged && (
         <>
           <div role='status' className='flex flex-wrap gap-2'>
-            <Badge className='bg-primary/10 text-primary'>
+            <Badge className='bg-success/10 text-success'>
               {t('matched', { count: data.proofs.filter((p) => p.valid).length })}
             </Badge>
             <Badge variant='outline' className='border-warning/30 text-warning'>
@@ -158,7 +158,7 @@ function StatementReviewPanel({
               <Link
                 className={
                   proof.valid
-                    ? 'text-primary flex items-center gap-2 text-sm'
+                    ? 'text-success flex items-center gap-2 text-sm'
                     : 'text-warning flex items-center gap-2 text-sm'
                 }
                 href={`/transactions/${proof.transaction_id}`}>
@@ -180,6 +180,8 @@ function StatementReviewPanel({
             </div>
           ))}
           <StatementDifferences
+            documentId={documentId}
+            accounts={accounts}
             comparison={comparison}
             transactions={data.transactions}
             account={account}
