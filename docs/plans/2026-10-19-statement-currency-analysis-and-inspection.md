@@ -51,3 +51,16 @@ Focused regression checks cover dollar grounding, expanded summary descriptions,
 currency posting/proofs, metadata-only inspection, interrupted period headers, category proposals,
 protection of reviewed amounts/dates and preservation of edits during AI analysis. Final suite
 counts and deployment evidence are recorded after release.
+
+## Production verification
+
+Web commit `b4cee64` reached Vercel READY in deployment `dpl_9cNZGrRcwMvn1ZZimetgwRGCF67w` on
+2026-10-19 and serves https://my.anotto.app.
+[Deployment inspection](https://vercel.com/inyerms-projects/spends-assistant-web/9cNZGrRcwMvn1ZZimetgwRGCF67w).
+
+An authenticated read-only production browser check of the authorized statement passed cached
+inspection without another password prompt and visibility of its USD movement, with no page errors.
+A production request analyzing the verified COP fee returned HTTP 200 with both a category and a
+description proposal; the response contained neither an amount nor a date override. The retained
+private diagnostic PDF, decoded pages, extraction output, metadata identifiers and access token were
+removed after verification.
