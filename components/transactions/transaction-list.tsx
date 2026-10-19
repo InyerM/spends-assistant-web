@@ -1,4 +1,5 @@
 'use client';
+import { transactionCurrencyTotals } from '@/lib/transactions/currency-totals';
 
 import { useStatementProofs } from '@/lib/api/queries/statement.queries';
 import { useMemo, useState } from 'react';
@@ -41,7 +42,7 @@ interface DateGroup {
   date: string;
   displayDate: string;
   transactions: Transaction[];
-  total: number;
+  totals: Array<{ currency: string; amount: number }>;
 }
 
 function formatDateLabel(dateStr: string, locale: string): string {
@@ -50,15 +51,6 @@ function formatDateLabel(dateStr: string, locale: string): string {
   return new Intl.DateTimeFormat(locale, { month: 'long', day: 'numeric', year: 'numeric' }).format(
     date,
   );
-}
-
-function computeDayTotal(transactions: Transaction[]): number {
-  let total = 0;
-  for (const tx of transactions) {
-    if (tx.type === 'expense') total -= tx.amount;
-    else if (tx.type === 'income') total += tx.amount;
-  }
-  return total;
 }
 
 function buildDateGroups(
@@ -91,7 +83,7 @@ function buildDateGroups(
         date,
         displayDate: formatDateLabel(date, locale),
         transactions: sorted,
-        total: computeDayTotal(sorted),
+        totals: transactionCurrencyTotals(sorted),
       };
     });
 }
@@ -266,7 +258,7 @@ function TransactionRow({
         <div className='shrink-0 text-right'>
           <p className={`text-sm font-semibold tabular-nums ${config.colorClass}`}>
             {tx.type === 'expense' ? '-' : tx.type === 'income' ? '+' : ''}
-            {formatCurrency(tx.amount, 'COP', locale)}
+            {formatCurrency(tx.amount, tx.currency ?? 'COP', locale)}
           </p>
           <p className='text-muted-foreground text-xs'>
             {tx.parsed_data?.time_unknown === true && /^00:00(?::00)?$/.test(tx.time)
@@ -409,11 +401,17 @@ export function TransactionList({
           style={{ contentVisibility: 'auto', containIntrinsicSize: '0 200px' }}>
           <div className='border-border bg-card-overlay/50 flex items-center justify-between gap-3 border-b px-3 py-3 sm:px-5'>
             <span className='text-muted-foreground text-sm font-medium'>{group.displayDate}</span>
-            <span
-              className={`text-sm font-semibold tabular-nums ${group.total >= 0 ? 'text-success' : 'text-destructive'}`}>
-              {group.total >= 0 ? '+' : ''}
-              {formatCurrency(group.total, 'COP', locale)}
-            </span>
+            <div className='flex flex-wrap justify-end gap-2'>
+              {group.totals.map((total) => (
+                <span
+                  key={total.currency}
+                  className={`text-sm font-semibold tabular-nums ${total.amount >= 0 ? 'text-success' : 'text-destructive'}`}>
+                  {total.amount >= 0 ? '+' : ''}
+                  {formatCurrency(total.amount, total.currency, locale)}{' '}
+                  <span className='text-muted-foreground text-xs'>{total.currency}</span>
+                </span>
+              ))}
+            </div>
           </div>
 
           <div className='divide-border divide-y'>

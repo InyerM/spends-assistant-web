@@ -1,3 +1,4 @@
+import { useCategoryFollowupStore } from '@/lib/stores/category-followup.store';
 import { aiConsentErrorFromResponse } from '@/lib/ai-consent';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 export function useSaveStatementReconciliation(
@@ -46,11 +47,18 @@ export function useCreateStatementTransaction(
       }
       return response.json() as Promise<{ transaction_id: string }>;
     },
-    onSuccess: async () => {
+    onSuccess: async (result) => {
+      useCategoryFollowupStore.getState().offer(result.transaction_id);
       await Promise.all(
-        ['documents', 'transactions', 'accounts', 'budgets', 'usage'].map((key) =>
-          client.invalidateQueries({ queryKey: [key] }),
-        ),
+        [
+          'category-suggestions',
+          'contacts',
+          'documents',
+          'transactions',
+          'accounts',
+          'budgets',
+          'usage',
+        ].map((key) => client.invalidateQueries({ queryKey: [key] })),
       );
     },
   });

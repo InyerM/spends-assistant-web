@@ -142,6 +142,11 @@ export function DuplicateWarningDialog({
           <ComparisonCard
             label={t('existing')}
             amount={existingTransaction.amount}
+            currency={
+              existingTransaction.currency ??
+              accounts?.find((a) => a.id === existingTransaction.account_id)?.currency ??
+              'COP'
+            }
             description={existingTransaction.description}
             date={existingTransaction.date}
             account={getAccountName(existingTransaction.account_id)}
@@ -152,6 +157,7 @@ export function DuplicateWarningDialog({
           <ComparisonCard
             label={tCommon('new')}
             amount={newInput.amount}
+            currency={accounts?.find((a) => a.id === newInput.account_id)?.currency ?? 'COP'}
             description={newInput.description}
             date={newInput.date}
             account={getAccountName(newInput.account_id)}
@@ -184,6 +190,7 @@ export function DuplicateWarningDialog({
 function ComparisonCard({
   label,
   amount,
+  currency,
   description,
   date,
   account,
@@ -194,6 +201,7 @@ function ComparisonCard({
 }: {
   label: string;
   amount: number;
+  currency: string;
   description: string;
   date: string;
   account: string;
@@ -211,7 +219,7 @@ function ComparisonCard({
       }`}>
       <span className='text-muted-foreground mb-1 block text-xs font-medium'>{label}</span>
       <p className='text-base leading-tight font-semibold'>
-        {formatCurrency(amount, 'COP', locale)}
+        {formatCurrency(amount, currency, locale)}
       </p>
       <p className='mt-0.5 truncate text-xs'>{description}</p>
       <div className='text-muted-foreground mt-1.5 space-y-0 text-[11px] leading-snug'>

@@ -112,3 +112,27 @@ export function useSetAccountBalance(): ReturnType<
     },
   });
 }
+
+export function useEnableAccountCurrency(): ReturnType<
+  typeof useMutation<Account, Error, { id: string; currency: string }>
+> {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, currency }) => {
+      const response = await fetch(`/api/accounts/${id}/currencies`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ currency }),
+      });
+      if (!response.ok) throw new Error('Account currency could not be enabled');
+      return response.json() as Promise<Account>;
+    },
+    onSuccess: async () => {
+      await Promise.all(
+        ['accounts', 'documents', 'usage'].map((key) =>
+          client.invalidateQueries({ queryKey: [key] }),
+        ),
+      );
+    },
+  });
+}

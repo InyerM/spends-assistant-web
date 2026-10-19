@@ -390,6 +390,7 @@ export function useDocumentBatchReview({
             date: draft.date,
             time: draft.time || '00:00',
             amount: Number(draft.amount),
+            currency: draft.currency,
             description: draft.description.trim(),
             type: draft.type,
             account_id: draft.accountId,

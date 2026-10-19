@@ -1,5 +1,7 @@
 'use client';
 
+import { CategorySuggestions } from '@/components/transactions/category-suggestions';
+import { useCategories } from '@/lib/api/queries/category.queries';
 import { useState, useCallback, useMemo } from 'react';
 import { useTranslations } from 'next-intl';
 import { useSearchParams, useRouter } from 'next/navigation';
@@ -35,6 +37,7 @@ function getInitialDates(): { date_from: string; date_to: string } {
 }
 
 export default function TransactionsPage(): React.ReactElement {
+  const { data: allCategories } = useCategories();
   const t = useTranslations('transactions');
   const tCommon = useTranslations('common');
   const searchParams = useSearchParams();
@@ -43,8 +46,9 @@ export default function TransactionsPage(): React.ReactElement {
   const importIdParam = searchParams.get('import_id');
 
   const [filters, setFilters] = useState<ListFilters>(() => ({
-    ...getInitialDates(),
+    ...(searchParams.get('account_id') ? {} : getInitialDates()),
     ...(importIdParam ? { import_id: importIdParam } : {}),
+    ...(searchParams.get('account_id') ? { account_id: searchParams.get('account_id')! } : {}),
   }));
   const [importOpen, setImportOpen] = useState(false);
   const [selectMode, setSelectMode] = useState(false);
@@ -215,6 +219,16 @@ export default function TransactionsPage(): React.ReactElement {
         </div>
       )}
 
+      <CategorySuggestions
+        onUncategorized={() =>
+          setFilters({
+            category_ids:
+              allCategories
+                ?.filter((c) => ['uncategorized', 'uncategorized-income'].includes(c.slug))
+                .map((c) => c.id) ?? [],
+          })
+        }
+      />
       <TransactionFiltersBar filters={effectiveFilters} onFiltersChange={setFilters} />
 
       <TransactionList

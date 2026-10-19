@@ -1,4 +1,7 @@
 'use client';
+import { useCategories } from '@/lib/api/queries/category.queries';
+import { getCategoryName } from '@/lib/i18n/get-category-name';
+import type { Locale } from '@/i18n/config';
 import { useEffect, useState } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
 import { toast } from 'sonner';
@@ -16,8 +19,9 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import { InlineLoader } from '@/components/shared/loader';
 export function CategoryFollowup(): React.ReactElement | null {
-  const { transactionId, clear } = useCategoryFollowupStore();
-  const query = useCategoryFollowup(transactionId),
+  const { data: categories } = useCategories();
+  const { transactionId, revision, direct, clear } = useCategoryFollowupStore();
+  const query = useCategoryFollowup(transactionId, revision),
     apply = useApplyCategoryFollowup(transactionId);
   const [open, setOpen] = useState(false),
     [selected, setSelected] = useState<string[]>([]);
@@ -25,6 +29,7 @@ export function CategoryFollowup(): React.ReactElement | null {
     locale = useLocale();
   useEffect(() => {
     if (!transactionId || !query.data?.rows.length) return;
+    if (direct) return;
     const id = toast(t('offer', { name: query.data.contact_name, count: query.data.rows.length }), {
       duration: 12000,
       action: {
@@ -38,22 +43,36 @@ export function CategoryFollowup(): React.ReactElement | null {
     return (): void => {
       toast.dismiss(id);
     };
-  }, [transactionId, query.data, t]);
+  }, [transactionId, revision, direct, query.data, t]);
   if (!query.data?.rows.length) return null;
-  const data = query.data;
+  const localizedName = (id: string | null, fallback: string): string => {
+    const category = categories?.find((c) => c.id === id);
+    return category ? getCategoryName(category, locale as Locale) : fallback;
+  };
+  const data = {
+    ...query.data,
+    rows: direct
+      ? query.data.rows.filter((row) => row.is_uncategorized ?? !row.category_id)
+      : query.data.rows,
+  };
   return (
     <Dialog
-      open={open}
+      open={direct || open}
       onOpenChange={(value) => {
         if (!apply.isPending) {
           setOpen(value);
-          if (!value) clear();
+          if (!value) {
+            setSelected([]);
+            clear();
+          }
         }
       }}>
       <DialogContent className='max-h-[85dvh] overflow-y-auto sm:max-w-xl'>
         <DialogHeader>
           <DialogTitle>{t('title', { name: data.contact_name })}</DialogTitle>
-          <DialogDescription>{t('hint', { category: data.category_name })}</DialogDescription>
+          <DialogDescription>
+            {t('hint', { category: localizedName(data.category_id, data.category_name) })}
+          </DialogDescription>
         </DialogHeader>
         {data.rows.map((row) => (
           <label
@@ -78,7 +97,8 @@ export function CategoryFollowup(): React.ReactElement | null {
                 }).format(row.amount)}
               </span>
               <span className='text-muted-foreground text-xs'>
-                {row.category_name ?? t('uncategorized')} → {data.category_name}
+                {localizedName(row.category_id, row.category_name ?? t('uncategorized'))} →{' '}
+                {localizedName(data.category_id, data.category_name)}
               </span>
             </span>
           </label>

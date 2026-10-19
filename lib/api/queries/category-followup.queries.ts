@@ -8,6 +8,7 @@ export interface CategoryFollowup {
     id: string;
     category_id: string | null;
     category_name: string | null;
+    is_uncategorized?: boolean;
     description: string;
     date: string;
     amount: number;
@@ -16,15 +17,41 @@ export interface CategoryFollowup {
 }
 export function useCategoryFollowup(
   id: string | null,
+  revision = 0,
 ): ReturnType<typeof useQuery<CategoryFollowup | null>> {
   const owner = useAuthStore((state) => state.supabaseUser?.id);
   return useQuery({
-    queryKey: ['category-followup', owner, id],
+    queryKey: ['category-followup', owner, id, revision],
     enabled: Boolean(owner && id),
     queryFn: async () => {
       const response = await fetch(`/api/transactions/${id}/category-followup`);
       if (!response.ok) throw new Error('Category history unavailable');
       return response.json() as Promise<CategoryFollowup | null>;
+    },
+  });
+}
+
+export interface CategorySuggestion {
+  contact_id: string;
+  contact_name: string;
+  transaction_id: string;
+  category_id: string;
+  category_name: string;
+  count: number;
+}
+export function useCategorySuggestions(
+  contactId?: string,
+): ReturnType<typeof useQuery<CategorySuggestion[]>> {
+  const owner = useAuthStore((state) => state.supabaseUser?.id);
+  return useQuery({
+    queryKey: ['category-suggestions', owner, contactId],
+    enabled: Boolean(owner),
+    queryFn: async () => {
+      const response = await fetch(
+        `/api/transactions/category-suggestions${contactId ? `?contact_id=${contactId}` : ''}`,
+      );
+      if (!response.ok) throw new Error('Category suggestions unavailable');
+      return response.json() as Promise<CategorySuggestion[]>;
     },
   });
 }

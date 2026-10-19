@@ -1,10 +1,15 @@
 import { create } from 'zustand';
 export const useCategoryFollowupStore = create<{
   transactionId: string | null;
-  offer: (id: string) => void;
+  revision: number;
+  direct: boolean;
+  offer: (id: string, direct?: boolean) => void;
   clear: () => void;
 }>((set) => ({
   transactionId: null,
-  offer: (transactionId): void => set({ transactionId }),
+  revision: 0,
+  direct: false,
+  offer: (transactionId, direct = false): void =>
+    set((state) => ({ transactionId, direct, revision: state.revision + 1 })),
   clear: (): void => set({ transactionId: null }),
 }));

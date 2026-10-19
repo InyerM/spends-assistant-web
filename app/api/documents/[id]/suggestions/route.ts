@@ -51,14 +51,23 @@ export async function GET(
     if (observations.some((observation) => observation.status === 'pending')) {
       const { data: history, error: historyError } = await supabase
         .from('transactions')
-        .select('description,type,category_id')
+        .select('description,type,category_id,category:categories(slug)')
         .eq('user_id', userId)
         .is('deleted_at', null)
         .not('category_id', 'is', null)
         .order('date', { ascending: false })
         .limit(2000);
       if (historyError) return errorResponse('Failed to load category history');
-      merchantHistory = (history as typeof merchantHistory | null) ?? [];
+      merchantHistory = (
+        (history as unknown as Array<{
+          description: string;
+          type: string;
+          category_id: string | null;
+          category?: { slug: string } | null;
+        }> | null) ?? []
+      ).filter(
+        (row) => !['uncategorized', 'uncategorized-income'].includes(row.category?.slug ?? ''),
+      );
     }
     const transactionCache = new Map<string, StoredTransaction[]>();
     const limitedKeys = new Set<string>();

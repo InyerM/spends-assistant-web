@@ -14,7 +14,7 @@ const accountCreateSchema = z
       .nullable()
       .optional(),
     identifiers: accountIdentifiersSchema.optional(),
-    currency: z.string().length(3).optional(),
+    currency: z.enum(['COP', 'USD']).optional(),
     balance: z.number().optional(),
     color: z.string().max(7).nullable().optional(),
     icon: z.string().max(50).nullable().optional(),
@@ -52,6 +52,7 @@ export async function POST(request: NextRequest): Promise<Response> {
         .select('id', { count: 'exact', head: true })
         .eq('is_active', true)
         .eq('is_default', false)
+        .is('parent_account_id', null)
         .is('deleted_at', null),
       supabase.from('app_settings').select('value').eq('key', 'free_accounts_limit').maybeSingle(),
     ]);

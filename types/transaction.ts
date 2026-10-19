@@ -21,6 +21,7 @@ export interface Transaction {
   date: string;
   time: string;
   amount: number;
+  currency?: string;
   description: string;
   notes: string | null;
   category_id: string | null;
@@ -50,6 +51,7 @@ export interface CreateTransactionInput {
   date: string;
   time: string;
   amount: number;
+  currency?: string;
   description: string;
   notes?: string;
   category_id?: string;

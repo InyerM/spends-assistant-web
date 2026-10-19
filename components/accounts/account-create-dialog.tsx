@@ -41,7 +41,7 @@ const formSchema = z.object({
     .regex(/^\d{4}$/, 'Must be exactly 4 digits')
     .or(z.literal(''))
     .optional(),
-  currency: z.string(),
+  currency: z.enum(['COP', 'USD']),
   color: z.string().optional(),
   icon: z.string().optional(),
 });
@@ -94,7 +94,7 @@ export function AccountCreateDialog({
         type: initialIdentifier?.kind === 'credit_card' ? 'credit_card' : 'checking',
         institution: '',
         last_four: initialIdentifier?.last_four ?? '',
-        currency: initialCurrency,
+        currency: initialCurrency === 'USD' ? 'USD' : 'COP',
         color: '',
         icon: '',
       });
@@ -120,7 +120,7 @@ export function AccountCreateDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className='border-border bg-card sm:max-w-[425px]'>
+      <DialogContent className='border-border bg-card max-h-[90dvh] overflow-y-auto sm:max-w-[425px]'>
         <DialogHeader>
           <DialogTitle>{t('newAccount')}</DialogTitle>
         </DialogHeader>
@@ -179,6 +179,27 @@ export function AccountCreateDialog({
                   <FormControl>
                     <Input placeholder={t('institutionPlaceholder')} {...field} />
                   </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name='currency'
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t('currency')}</FormLabel>
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <FormControl>
+                      <SelectTrigger className='w-full'>
+                        <SelectValue />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value='COP'>COP · {t('pesos')}</SelectItem>
+                      <SelectItem value='USD'>USD · {t('dollars')}</SelectItem>
+                    </SelectContent>
+                  </Select>
                   <FormMessage />
                 </FormItem>
               )}

@@ -222,14 +222,20 @@ export async function POST(request: Request, context: Context): Promise<Response
         if (proposedHistory?.category_id && uuid.test(proposedHistory.category_id)) {
           const { data: category, error: categoryError } = await supabase
             .from('categories')
-            .select('id')
+            .select('id,slug')
             .eq('user_id', userId)
             .eq('id', proposedHistory.category_id)
             .eq('type', 'expense')
             .eq('is_active', true)
             .maybeSingle();
           if (categoryError) return errorResponse('Email history category lookup failed');
-          if (category) {
+          if (
+            category &&
+            !(
+              typeof category.slug === 'string' &&
+              ['uncategorized', 'uncategorized-income'].includes(category.slug)
+            )
+          ) {
             validRuleCategory = category.id;
             recipientHistory = proposedHistory;
           }

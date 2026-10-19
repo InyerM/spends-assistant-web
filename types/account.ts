@@ -23,6 +23,7 @@ export interface Account {
   last_four: string | null;
   bank_account_last_four?: string | null;
   identifiers?: AccountIdentifier[];
+  parent_account_id?: string | null;
   currency: string;
   balance: number;
   is_active: boolean;

@@ -205,6 +205,26 @@ describe('applyAutomationRules', () => {
     return { from: vi.fn().mockReturnValue(chain), _chain: chain };
   }
 
+  it('preserves an explicitly reviewed USD account against legacy alias detection', async () => {
+    const sb = createRulesSupabase([
+      createMockAutomationRule({
+        rule_type: 'account_detection',
+        conditions: { raw_text_contains: ['8887'] },
+        actions: { set_account: 'cop-ledger' },
+      }),
+    ]);
+    const result = await applyAutomationRules(sb as never, {
+      description: 'Dollar purchase',
+      amount: 5,
+      account_id: 'usd-ledger',
+      currency: 'USD',
+      source: 'web',
+      type: 'expense',
+      raw_text: 'Card 8887',
+    });
+    expect(result.account_id).toBe('usd-ledger');
+  });
+
   it('applies matching rule actions', async () => {
     const rules = [
       createMockAutomationRule({

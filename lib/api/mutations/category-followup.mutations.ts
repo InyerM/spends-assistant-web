@@ -20,9 +20,14 @@ export function useApplyCategoryFollowup(
     },
     onSuccess: async () => {
       await Promise.all(
-        ['transactions', 'contacts', 'contact-detail', 'budgets', 'category-followup'].map((key) =>
-          client.invalidateQueries({ queryKey: [key] }),
-        ),
+        [
+          'transactions',
+          'contacts',
+          'contact-detail',
+          'budgets',
+          'category-followup',
+          'category-suggestions',
+        ].map((key) => client.invalidateQueries({ queryKey: [key] })),
       );
     },
   });

@@ -8,13 +8,12 @@ import { CheckCheck, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { StatementDifferences } from '@/components/documents/statement-differences';
-import { DocumentAccountSelect } from '@/components/documents/document-review-selects';
+import { StatementAccountSetup } from './statement-account-setup';
 import { PeriodSelector } from '@/components/transactions/period-selector';
 import { InlineLoader } from '@/components/shared/loader';
 import { compareStatement, type StatementReview } from '@/lib/statement-reconciliation';
 import { StatementInspector } from '@/components/documents/statement-inspector';
 import type { StatementHints } from '@/lib/statement-hints';
-import { AccountCreateDialog } from '@/components/accounts/account-create-dialog';
 import type { Account } from '@/types';
 
 export function StatementReviewPanel({
@@ -30,7 +29,6 @@ export function StatementReviewPanel({
 }): React.ReactElement {
   const t = useTranslations('statementReconciliation');
   const save = useSaveStatementReconciliation(documentId);
-  const [createAccount, setCreateAccount] = useState(false);
   const [account, setAccount] = useState(data.scope?.account_id ?? '');
   const [from, setFrom] = useState(data.scope?.period_start ?? '');
   const [to, setTo] = useState(data.scope?.period_end ?? '');
@@ -78,28 +76,13 @@ export function StatementReviewPanel({
       <div className='bg-card-overlay grid gap-3 rounded-xl p-4 sm:grid-cols-2'>
         <div className='space-y-1'>
           <p className='text-sm font-medium'>{t('account')}</p>
-          <DocumentAccountSelect
+          <StatementAccountSetup
+            accounts={accounts}
+            currency={currency}
             value={account}
-            accounts={accounts.filter((a) => a.is_active && a.currency === currency)}
-            label={t('account')}
             disabled={busy || hasLinks}
             onChange={setAccount}
           />
-          {!hasLinks && !account && (
-            <Button size='sm' variant='ghost' onClick={() => setCreateAccount(true)}>
-              {t('createCurrencyAccount', { currency })}
-            </Button>
-          )}
-          {createAccount && (
-            <AccountCreateDialog
-              open={createAccount}
-              onOpenChange={setCreateAccount}
-              initialCurrency={currency}
-              onCreated={(created) => {
-                if (created.currency === currency) setAccount(created.id);
-              }}
-            />
-          )}
         </div>
         <div className='min-w-0 space-y-1'>
           <p className='text-sm font-medium'>{t('period')}</p>

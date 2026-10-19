@@ -198,6 +198,7 @@ export async function applyAutomationRules(
     [];
 
   for (const rule of rules as AutomationRule[]) {
+    if (transaction.currency === 'USD' && rule.rule_type === 'account_detection') continue;
     const logic = ((rule.condition_logic as string | undefined) ?? 'or') as 'and' | 'or';
     if (matchesConditions(result, rule.conditions, logic)) {
       const actions = { ...rule.actions };

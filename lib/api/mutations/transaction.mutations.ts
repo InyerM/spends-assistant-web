@@ -95,6 +95,7 @@ export async function createTransaction(input: CreateTransactionInput): Promise<
   }
   const transaction = (await res.json()) as Transaction;
   finishAttempt(input, 'create');
+  if (transaction.category_id) useCategoryFollowupStore.getState().offer(transaction.id);
   return transaction;
 }
 
@@ -112,6 +113,7 @@ export async function forceCreateTransaction(input: CreateTransactionInput): Pro
   }
   const transaction = (await res.json()) as Transaction;
   finishAttempt(input, 'force');
+  if (transaction.category_id) useCategoryFollowupStore.getState().offer(transaction.id);
   return transaction;
 }
 
@@ -132,6 +134,7 @@ export async function replaceTransaction(
   }
   const transaction = (await res.json()) as Transaction;
   finishAttempt(input, `replace:${replaceId}`);
+  if (transaction.category_id) useCategoryFollowupStore.getState().offer(transaction.id);
   return transaction;
 }
 
@@ -148,7 +151,9 @@ export async function updateTransaction({
     const error = await res.json();
     throw new Error((error as { error: string }).error || 'Failed to update transaction');
   }
-  return res.json() as Promise<Transaction>;
+  const transaction = (await res.json()) as Transaction;
+  if (transaction.category_id) useCategoryFollowupStore.getState().offer(transaction.id);
+  return transaction;
 }
 
 export async function deleteTransaction(id: string): Promise<void> {
@@ -166,8 +171,9 @@ export function useCreateTransaction(): ReturnType<
 
   return useMutation({
     mutationFn: createTransaction,
-    onSuccess: (transaction) => {
-      if (transaction.category_id) useCategoryFollowupStore.getState().offer(transaction.id);
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['category-suggestions'] });
+
       void queryClient.invalidateQueries({ queryKey: transactionKeys.all });
       void queryClient.invalidateQueries({ queryKey: accountKeys.all });
       void queryClient.invalidateQueries({ queryKey: usageKeys.all });
@@ -183,8 +189,9 @@ export function useUpdateTransaction(): ReturnType<
 
   return useMutation({
     mutationFn: updateTransaction,
-    onSuccess: (transaction) => {
-      if (transaction.category_id) useCategoryFollowupStore.getState().offer(transaction.id);
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['category-suggestions'] });
+
       void queryClient.invalidateQueries({ queryKey: transactionKeys.all });
       void queryClient.invalidateQueries({ queryKey: accountKeys.all });
       void queryClient.invalidateQueries({ queryKey: usageKeys.all });
@@ -216,6 +223,8 @@ export function useBulkUpdateTransactions(): ReturnType<
   return useMutation({
     mutationFn: bulkUpdateTransactions,
     onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['category-suggestions'] });
+      void queryClient.invalidateQueries({ queryKey: ['category-followup'] });
       void queryClient.invalidateQueries({ queryKey: transactionKeys.all });
       void queryClient.invalidateQueries({ queryKey: accountKeys.all });
       void queryClient.invalidateQueries({ queryKey: usageKeys.all });
@@ -245,6 +254,8 @@ export function useBulkDeleteTransactions(): ReturnType<
   return useMutation({
     mutationFn: bulkDeleteTransactions,
     onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['category-suggestions'] });
+      void queryClient.invalidateQueries({ queryKey: ['category-followup'] });
       void queryClient.invalidateQueries({ queryKey: transactionKeys.all });
       void queryClient.invalidateQueries({ queryKey: accountKeys.all });
       void queryClient.invalidateQueries({ queryKey: usageKeys.all });
@@ -259,6 +270,8 @@ export function useDeleteTransaction(): ReturnType<typeof useMutation<void, Erro
   return useMutation({
     mutationFn: deleteTransaction,
     onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['category-suggestions'] });
+      void queryClient.invalidateQueries({ queryKey: ['category-followup'] });
       void queryClient.invalidateQueries({ queryKey: transactionKeys.all });
       void queryClient.invalidateQueries({ queryKey: accountKeys.all });
       void queryClient.invalidateQueries({ queryKey: usageKeys.all });
@@ -288,6 +301,8 @@ export function useResolveDuplicate(): ReturnType<
   return useMutation({
     mutationFn: ({ id, action }) => resolveDuplicate(id, action),
     onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['category-suggestions'] });
+      void queryClient.invalidateQueries({ queryKey: ['category-followup'] });
       void queryClient.invalidateQueries({ queryKey: transactionKeys.all });
       void queryClient.invalidateQueries({ queryKey: accountKeys.all });
       void queryClient.invalidateQueries({ queryKey: usageKeys.all });
@@ -360,6 +375,8 @@ export function useImportTransactions(): ReturnType<
   return useMutation({
     mutationFn: importTransactions,
     onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['category-suggestions'] });
+      void queryClient.invalidateQueries({ queryKey: ['category-followup'] });
       void queryClient.invalidateQueries({ queryKey: transactionKeys.all });
       void queryClient.invalidateQueries({ queryKey: accountKeys.all });
       void queryClient.invalidateQueries({ queryKey: usageKeys.all });

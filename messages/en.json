@@ -689,7 +689,33 @@
     "adjustmentCreated": "Adjustment transaction created ({amount})",
     "enterValidNumber": "Enter a valid number",
     "failedToCreateAdjustment": "Failed to create adjustment",
-    "balanceAdjustment": "Balance adjustment"
+    "balanceAdjustment": "Balance adjustment",
+    "overviewHint": "Review your balances and activity by currency.",
+    "addCurrency": "Add {currency}",
+    "enableCurrency": "Enable {currency}",
+    "enableCurrencyConfirm": "Does this account also support {currency}?",
+    "separateBalances": "Each currency keeps its own balance. Amounts are not converted or added across currencies.",
+    "cancelCurrency": "Cancel",
+    "currencyError": "We could not enable this currency. Try again.",
+    "balanceCurrency": "Balance currency",
+    "activityTitle": "Activity over the last 6 months",
+    "activityIncome": "Income",
+    "activityExpenses": "Expenses",
+    "activityCount": "Transactions",
+    "monthlyActivity": "Monthly income and expenses",
+    "topCategories": "Where you spend most",
+    "uncategorized": "Uncategorized",
+    "noExpenses": "No expenses in this period.",
+    "activityHint": "Amounts in {currency}. Transfers between your accounts do not count as income or expenses.",
+    "showChartData": "View chart data",
+    "month": "Month",
+    "activityUnavailable": "We could not load activity. Reload to try again.",
+    "recentMovements": "Recent transactions",
+    "viewAllMovements": "View all",
+    "loadingActivity": "Loading transactions…",
+    "pesos": "Colombian pesos",
+    "dollars": "US dollars",
+    "viewAccount": "View account"
   },
   "categories": {
     "title": "Categories",
@@ -1477,7 +1503,10 @@
     "analyzeMovement": "Analyze with AI",
     "analysisOptional": "Suggestion unavailable. Choose the category and continue.",
     "detectedPeriod": "PDF period: {from} → {to}",
-    "chooseCurrencyScope": "Select a {currency} account and period to compare these movements."
+    "chooseCurrencyScope": "Select a {currency} account and period to compare these movements.",
+    "setupCurrency": "Set up {currency} on an account",
+    "useExistingAccount": "Use an existing account",
+    "enableCurrencyHint": "Choose the statement account and enable its {currency} balance. Existing transactions will be preserved."
   },
   "planning": {
     "title": "Plan your money",
@@ -1781,6 +1810,13 @@
     "limit": "Up to 100 movements shown. Review further history from the contact afterward.",
     "changed": "Some details changed. Close and review again before applying.",
     "updated": "Categories updated",
-    "apply": "Categorize {count} selected"
+    "apply": "Categorize {count} selected",
+    "reviewTitle": "Bring your categories up to date",
+    "queueCount": "{count, plural, one {# uncategorized transaction has a suggestion from your history.} other {# uncategorized transactions have suggestions from your history.}}",
+    "queueEmpty": "Review your uncategorized transactions. Suggestions appear when the same contact has categorized history.",
+    "queueError": "We could not load suggestions. Reload to try again.",
+    "reviewSuggestions": "Review suggestions",
+    "showUncategorized": "View uncategorized",
+    "queueSuggestion": "{count, plural, one {# transaction to review} other {# transactions to review}} · Suggested: {category}"
   }
 }

@@ -1,4 +1,5 @@
 'use client';
+import { Check } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
@@ -57,9 +58,15 @@ export function StatementCurrencyReview({
           {currencies.map((currency) => (
             <Button
               key={currency}
-              variant={selected === currency ? 'secondary' : 'outline'}
+              variant='outline'
+              className={
+                selected === currency
+                  ? 'border-success bg-success/15 text-success dark:border-success dark:bg-success/15 dark:text-success hover:bg-success/20 font-semibold'
+                  : 'text-muted-foreground hover:text-foreground'
+              }
               aria-pressed={selected === currency}
               onClick={() => setSelected(currency)}>
+              {selected === currency && <Check className='size-4' aria-hidden='true' />}
               {currency} ·{' '}
               {
                 data.rows.filter((row) => row.currency === currency && row.status !== 'rejected')

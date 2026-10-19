@@ -1,267 +1,144 @@
 'use client';
-
 import { use, useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useTranslations, useLocale } from 'next-intl';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
-import { useAccount } from '@/lib/api/queries/account.queries';
-import { useTransactions } from '@/lib/api/queries/transaction.queries';
-import { useCategories } from '@/lib/api/queries/category.queries';
+import { ArrowLeft, Pencil, Trash2, Check, Wallet } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
+import { useAccount, useAccounts } from '@/lib/api/queries/account.queries';
 import { useDeleteAccount } from '@/lib/api/mutations/account.mutations';
 import { AccountEditDialog } from '@/components/accounts/account-edit-dialog';
 import { ConfirmDeleteDialog } from '@/components/shared/confirm-delete-dialog';
+import { EnableCurrency } from '@/components/accounts/enable-currency';
+import { AccountOverview } from '@/components/accounts/account-overview';
+import { AccountRecords } from '@/components/accounts/account-records';
+import { groupAccounts } from '@/lib/accounts/currency-groups';
 import { formatCurrency } from '@/lib/utils/formatting';
-import { formatDateForDisplay, formatTimeForDisplay } from '@/lib/utils/date';
-import { getCategoryName as getTranslatedCategoryName } from '@/lib/i18n/get-category-name';
-import type { Locale } from '@/i18n/config';
-import {
-  ArrowLeft,
-  Pencil,
-  Trash2,
-  ArrowDownLeft,
-  ArrowUpRight,
-  ArrowRightLeft,
-  Landmark,
-  PiggyBank,
-  CreditCard,
-  Banknote,
-  TrendingUp,
-  Bitcoin,
-  HandCoins,
-} from 'lucide-react';
-import type { LucideIcon } from 'lucide-react';
-import type { AccountType, TransactionType } from '@/types';
-import { Badge } from '@/components/ui/badge';
-
-const ACCOUNT_TYPE_ICONS: Record<AccountType, LucideIcon> = {
-  checking: Landmark,
-  savings: PiggyBank,
-  credit_card: CreditCard,
-  cash: Banknote,
-  investment: TrendingUp,
-  crypto: Bitcoin,
-  credit: HandCoins,
-};
-
-function AccountTypeIcon({
-  type,
-  className,
-}: {
-  type: AccountType;
-  className?: string;
-}): React.ReactElement {
-  const Icon = ACCOUNT_TYPE_ICONS[type];
-  return <Icon className={className} />;
-}
-
-const typeConfig: Record<TransactionType, { icon: typeof ArrowDownLeft; colorClass: string }> = {
-  expense: { icon: ArrowUpRight, colorClass: 'text-destructive' },
-  income: { icon: ArrowDownLeft, colorClass: 'text-success' },
-  transfer: { icon: ArrowRightLeft, colorClass: 'text-transfer' },
-};
-
 export default function AccountDetailPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }): React.ReactElement {
   const { id } = use(params);
-  const t = useTranslations('accounts');
-  const tCommon = useTranslations('common');
-  const locale = useLocale();
-  const router = useRouter();
-  const { data: account, isLoading } = useAccount(id);
-  const { data: txResult } = useTransactions({ account_id: id, limit: 100 });
-  const { data: categories } = useCategories();
-  const [editOpen, setEditOpen] = useState(false);
-  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
-  const deleteMutation = useDeleteAccount();
-
-  async function handleDelete(): Promise<void> {
-    if (!account) return;
-    try {
-      await deleteMutation.mutateAsync(account.id);
-      toast.success(t('accountDeleted'));
-      setConfirmDeleteOpen(false);
-      router.push('/accounts');
-    } catch {
-      toast.error(t('failedToDelete'));
-    }
-  }
-
-  const getCategoryName = (categoryId: string | null): string | null => {
-    if (!categoryId || !categories) return null;
-    const cat = categories.find((c) => c.id === categoryId);
-    if (!cat) return null;
-    return getTranslatedCategoryName(cat, locale as Locale);
-  };
-
-  if (isLoading) {
+  const t = useTranslations('accounts'),
+    common = useTranslations('common'),
+    locale = useLocale(),
+    router = useRouter();
+  const query = useAccount(id);
+  const { data: accounts } = useAccounts();
+  const [active, setActive] = useState<string | null>(null);
+  const [edit, setEdit] = useState(false),
+    [remove, setRemove] = useState(false);
+  const deletion = useDeleteAccount();
+  const account = query.data;
+  const group = groupAccounts(accounts ?? []).find((g) => g.ledgers.some((a) => a.id === id));
+  const ledgers = group?.ledgers ?? (account ? [account] : []);
+  const selected = ledgers.find((a) => a.id === (active ?? id)) ?? account;
+  const root = group?.account ?? account;
+  if (query.isLoading)
     return (
-      <div className='mx-auto w-full max-w-7xl space-y-6 p-4 sm:p-6 lg:p-8'>
-        <Skeleton className='h-8 w-48' />
-        <Skeleton className='h-24 w-full' />
-        <Skeleton className='h-64 w-full' />
+      <div className='mx-auto max-w-7xl p-6'>
+        <Skeleton className='h-96 w-full' />
       </div>
     );
-  }
-
-  if (!account) {
-    return (
-      <div className='p-4 sm:p-6'>
-        <p className='text-muted-foreground'>{t('accountNotFound')}</p>
-      </div>
-    );
-  }
-
-  const transactions = txResult?.data ?? [];
-
+  if (!selected || !root) return <p className='p-6'>{t('accountNotFound')}</p>;
   return (
     <div className='mx-auto w-full max-w-7xl space-y-6 p-4 sm:p-6 lg:p-8'>
-      <div className='flex items-center justify-between'>
-        <div className='flex items-center gap-3'>
-          <Button
-            variant='ghost'
-            size='icon'
-            className='cursor-pointer'
-            onClick={(): void => router.back()}>
-            <ArrowLeft className='h-5 w-5' />
-          </Button>
-          <h2 className='text-foreground text-xl font-semibold tracking-tight sm:text-2xl'>
-            {t('accountDetail')}
-          </h2>
+      <Link
+        href='/accounts'
+        className='text-muted-foreground inline-flex items-center gap-2 text-sm'>
+        <ArrowLeft className='size-4' />
+        {t('title')}
+      </Link>
+      <header className='flex flex-wrap items-start justify-between gap-4'>
+        <div className='min-w-0'>
+          <h1 className='text-2xl font-semibold tracking-tight wrap-anywhere'>{root.name}</h1>
+          <p className='text-muted-foreground mt-1 text-sm'>
+            {[root.institution, root.last_four ? `•••• ${root.last_four}` : null]
+              .filter(Boolean)
+              .join(' · ')}
+          </p>
         </div>
         <div className='flex gap-2'>
-          <Button
-            variant='outline'
-            className='cursor-pointer'
-            aria-label={tCommon('edit')}
-            onClick={(): void => setEditOpen(true)}>
-            <Pencil className='h-4 w-4 sm:mr-2' />
-            <span className='hidden sm:inline'>{tCommon('edit')}</span>
+          <Button variant='outline' size='sm' onClick={() => setEdit(true)}>
+            <Pencil className='size-4' />
+            {common('edit')}
           </Button>
-          <Button
-            variant='outline'
-            className='text-destructive cursor-pointer'
-            onClick={(): void => setConfirmDeleteOpen(true)}>
-            <Trash2 className='h-4 w-4 sm:mr-2' />
-            <span className='hidden sm:inline'>{tCommon('delete')}</span>
-          </Button>
-        </div>
-      </div>
-
-      <Card className='border-border bg-card'>
-        <CardContent className='flex items-center gap-4 p-6'>
-          <AccountTypeIcon type={account.type} className='text-muted-foreground h-10 w-10' />
-          <div>
-            <p className='text-foreground text-lg font-semibold'>{account.name}</p>
-            <p className='text-muted-foreground text-sm capitalize'>
-              {account.type.replace('_', ' ')}
-              {account.institution ? ` · ${account.institution}` : ''}
-              {account.last_four ? ` · •••• ${account.last_four}` : ''}
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Tabs defaultValue='balance'>
-        <TabsList>
-          <TabsTrigger value='balance' className='cursor-pointer'>
-            {t('balanceTab')}
-          </TabsTrigger>
-          <TabsTrigger value='records' className='cursor-pointer'>
-            {t('recordsTab')}
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value='balance' className='mt-4'>
-          <Card className='border-border bg-card'>
-            <CardContent className='p-6'>
-              <p className='text-muted-foreground text-sm'>{t('currentBalance')}</p>
-              <p
-                className={`text-3xl font-semibold tracking-tight tabular-nums ${account.balance >= 0 ? 'text-success' : 'text-destructive'}`}>
-                {formatCurrency(account.balance, account.currency, locale)}
-              </p>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value='records' className='mt-4'>
-          <p className='text-muted-foreground mb-4 text-sm'>
-            {t('transactionsFound', { count: transactions.length })}
-          </p>
-          {transactions.length === 0 ? (
-            <p className='text-muted-foreground py-8 text-center text-sm'>
-              {t('noTransactionsForAccount')}
-            </p>
-          ) : (
-            <div className='space-y-0.5'>
-              {transactions.map((tx) => {
-                const config = typeConfig[tx.type];
-                const Icon = config.icon;
-                const categoryName = getCategoryName(tx.category_id);
-
-                return (
-                  <div
-                    key={tx.id}
-                    className='hover:bg-card-overlay flex items-center gap-3 rounded-lg p-3'>
-                    <div
-                      className={`bg-card-overlay flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${config.colorClass}`}>
-                      <Icon className='h-4 w-4' />
-                    </div>
-                    <div className='min-w-0 flex-1'>
-                      <p className='text-foreground truncate text-sm font-medium'>
-                        {tx.description}
-                      </p>
-                      <div className='text-muted-foreground flex items-center gap-1.5 text-xs'>
-                        <span>{formatDateForDisplay(tx.date)}</span>
-                        {categoryName && (
-                          <>
-                            <span>·</span>
-                            <Badge variant='secondary' className='h-5 px-1.5 text-[10px]'>
-                              {categoryName}
-                            </Badge>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                    <div className='shrink-0 text-right'>
-                      <p className={`text-sm font-semibold ${config.colorClass}`}>
-                        {tx.type === 'expense' ? '-' : tx.type === 'income' ? '+' : ''}
-                        {formatCurrency(tx.amount, 'COP', locale)}
-                      </p>
-                      <p className='text-muted-foreground text-xs'>
-                        {formatTimeForDisplay(tx.time)}
-                      </p>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+          {!selected.is_default && (
+            <Button
+              variant='ghost'
+              size='icon'
+              aria-label={common('delete')}
+              onClick={() => setRemove(true)}>
+              <Trash2 className='text-muted-foreground size-4' />
+            </Button>
           )}
-        </TabsContent>
-      </Tabs>
-
-      <AccountEditDialog account={account} open={editOpen} onOpenChange={setEditOpen} />
-
-      <ConfirmDeleteDialog
-        open={confirmDeleteOpen}
-        onOpenChange={setConfirmDeleteOpen}
-        title={t('deleteAccount')}
-        description={
-          <p className='text-muted-foreground text-sm'>
-            {t('deleteAccountConfirm', {
-              name: account.name,
-            })}
+        </div>
+      </header>
+      <section className='border-border bg-card space-y-5 rounded-xl border p-5 sm:p-6'>
+        <div className='flex flex-wrap items-center justify-between gap-3'>
+          <div role='group' aria-label={t('balanceCurrency')} className='flex flex-wrap gap-2'>
+            {ledgers.map((a) => (
+              <Button
+                key={a.id}
+                size='sm'
+                variant='outline'
+                aria-pressed={selected.id === a.id}
+                className={
+                  selected.id === a.id
+                    ? 'border-success bg-success/15 text-success dark:border-success dark:bg-success/15 dark:text-success font-semibold'
+                    : ''
+                }
+                onClick={() => setActive(a.id)}>
+                {selected.id === a.id && <Check className='size-4' />}
+                {a.currency}
+              </Button>
+            ))}
+          </div>
+          {['COP', 'USD']
+            .filter((c) => !ledgers.some((a) => a.currency === c))
+            .map((currency) => (
+              <EnableCurrency
+                key={currency}
+                account={root}
+                currency={currency}
+                onEnabled={(a) => setActive(a.id)}
+              />
+            ))}
+        </div>
+        <div className='min-w-0'>
+          <p className='text-muted-foreground flex items-center gap-2 text-sm'>
+            <Wallet className='size-4' />
+            {t('currentBalance')} · {selected.currency}
           </p>
-        }
-        confirmText={account.name}
-        onConfirm={handleDelete}
-        isPending={deleteMutation.isPending}
+          <p
+            className={`mt-2 text-2xl font-semibold tracking-tight wrap-anywhere tabular-nums sm:text-3xl ${selected.balance < 0 ? 'text-destructive' : 'text-success'}`}>
+            {formatCurrency(selected.balance, selected.currency, locale)}
+          </p>
+          <p className='text-muted-foreground mt-2 text-xs'>{t('separateBalances')}</p>
+        </div>
+      </section>
+      <AccountOverview key={selected.id} account={selected} />
+      <AccountRecords account={selected} />
+      <AccountEditDialog account={selected} open={edit} onOpenChange={setEdit} />
+      <ConfirmDeleteDialog
+        open={remove}
+        onOpenChange={setRemove}
+        title={t('deleteAccount')}
+        description={<p>{t('deleteAccountConfirm', { name: selected.name })}</p>}
+        confirmText={selected.name}
+        isPending={deletion.isPending}
+        onConfirm={async () => {
+          try {
+            await deletion.mutateAsync(selected.id);
+            toast.success(t('accountDeleted'));
+            router.push('/accounts');
+          } catch {
+            toast.error(t('failedToDelete'));
+          }
+        }}
       />
     </div>
   );

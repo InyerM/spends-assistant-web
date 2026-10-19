@@ -7,7 +7,7 @@ import type { TransactionDraft } from '@/lib/stores/transaction-form.store';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { toast } from 'sonner';
 import { TransactionOrigin } from '@/components/transactions/transaction-origin';
 import { Button } from '@/components/ui/button';
@@ -215,6 +215,7 @@ export function TransactionForm({
     try {
       await createMutation.mutateAsync({
         ...fields,
+        currency: accounts?.find((a) => a.id === fields.account_id)?.currency ?? 'COP',
         source: 'web-ai',
         raw_text: ai.aiText,
         confidence: ai.parseResult?.parsed.confidence,
@@ -261,6 +262,7 @@ export function TransactionForm({
     try {
       await createMutation.mutateAsync({
         ...fields,
+        currency: accounts?.find((a) => a.id === fields.account_id)?.currency ?? 'COP',
         source: 'web-ai',
         raw_text: ai.aiText,
         confidence: ai.parseResult?.parsed.confidence,
@@ -312,6 +314,8 @@ export function TransactionForm({
 
   // --- Form submit ---
 
+  const selectedAccountId = useWatch({ control: form.control, name: 'account_id' });
+
   async function onSubmit(values: FormValues): Promise<void> {
     try {
       if (isEditing) {
@@ -324,6 +328,7 @@ export function TransactionForm({
       } else {
         await createMutation.mutateAsync({
           ...values,
+          currency: accounts?.find((a) => a.id === values.account_id)?.currency ?? 'COP',
           source: ai.aiSource ? 'web-ai' : 'web',
           category_id: values.category_id ?? undefined,
           transfer_to_account_id: values.transfer_to_account_id ?? undefined,
@@ -935,7 +940,10 @@ export function TransactionForm({
                       className={isAiSuggested(field.name) ? 'ai-field' : undefined}
                       data-ai-state={isAiSuggested(field.name) ? 'suggested' : undefined}>
                       {isAiSuggested(field.name) && <AiFieldStatus />}
-                      <FormLabel>{t('amountCop')}</FormLabel>
+                      <FormLabel>
+                        {t('amount')} (
+                        {accounts?.find((a) => a.id === selectedAccountId)?.currency ?? 'COP'})
+                      </FormLabel>
                       <FormControl>
                         <Input
                           type='number'

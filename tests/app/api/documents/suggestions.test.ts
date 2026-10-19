@@ -90,7 +90,7 @@ describe('GET document reconciliation suggestions', () => {
     const historyTail = { is: () => ({ not: () => ({ order: () => ({ limit: historyQuery }) }) }) };
     const transactionBuilder = {
       select: (columns: string) =>
-        columns === 'description,type,category_id'
+        columns === 'description,type,category_id,category:categories(slug)'
           ? { eq: () => historyTail }
           : { eq: transactionEq },
     };
@@ -285,6 +285,25 @@ describe('GET document reconciliation suggestions', () => {
       evidenceCount: 3,
     });
     expect(body.data[0].category_suggestion.accountId).toBeUndefined();
+  });
+
+  it('does not treat the uncategorized placeholder as a merchant recommendation', async () => {
+    observationQuery.mockResolvedValue({
+      data: [{ ...observation, description: 'SUPERMERCADO MERCAMAS' }],
+      error: null,
+    });
+    historyQuery.mockResolvedValue({
+      data: [1, 2, 3].map(() => ({
+        description: 'SUPERMERCADO MERCAMAS',
+        type: 'expense',
+        category_id: 'none',
+        category: { slug: 'uncategorized' },
+      })),
+      error: null,
+    });
+    const response = await request();
+    expect(response.status).toBe(200);
+    expect((await response.json()).data[0].category_suggestion).toBeNull();
   });
 
   it('uses the description when OCR names the bank as counterparty', async () => {

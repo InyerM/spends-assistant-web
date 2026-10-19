@@ -689,7 +689,33 @@
     "adjustmentCreated": "Transacción de ajuste creada ({amount})",
     "enterValidNumber": "Ingresa un número válido",
     "failedToCreateAdjustment": "Error al crear ajuste",
-    "balanceAdjustment": "Ajuste de saldo"
+    "balanceAdjustment": "Ajuste de saldo",
+    "overviewHint": "Consulta tus saldos y movimientos por moneda.",
+    "addCurrency": "Añadir {currency}",
+    "enableCurrency": "Habilitar {currency}",
+    "enableCurrencyConfirm": "¿Esta cuenta también maneja {currency}?",
+    "separateBalances": "Cada moneda mantiene su propio saldo. Los importes no se convierten ni se suman entre monedas.",
+    "cancelCurrency": "Cancelar",
+    "currencyError": "No pudimos habilitar esta moneda. Vuelve a intentarlo.",
+    "balanceCurrency": "Moneda del saldo",
+    "activityTitle": "Actividad de los últimos 6 meses",
+    "activityIncome": "Ingresos",
+    "activityExpenses": "Gastos",
+    "activityCount": "Movimientos",
+    "monthlyActivity": "Ingresos y gastos por mes",
+    "topCategories": "Dónde gastas más",
+    "uncategorized": "Sin categoría",
+    "noExpenses": "No hay gastos en este período.",
+    "activityHint": "Importes en {currency}. Las transferencias entre tus cuentas no cuentan como ingresos ni gastos.",
+    "showChartData": "Ver datos del gráfico",
+    "month": "Mes",
+    "activityUnavailable": "No pudimos cargar la actividad. Recarga para volver a intentarlo.",
+    "recentMovements": "Movimientos recientes",
+    "viewAllMovements": "Ver todos",
+    "loadingActivity": "Cargando movimientos…",
+    "pesos": "Pesos colombianos",
+    "dollars": "Dólares estadounidenses",
+    "viewAccount": "Ver cuenta"
   },
   "categories": {
     "title": "Categorías",
@@ -1474,7 +1500,10 @@
     "analyzeMovement": "Analizar con IA",
     "analysisOptional": "No pudimos completar la sugerencia. Puedes elegir la categoría y continuar.",
     "detectedPeriod": "Período del PDF: {from} → {to}",
-    "chooseCurrencyScope": "Selecciona una cuenta en {currency} y el período para comparar estos movimientos."
+    "chooseCurrencyScope": "Selecciona una cuenta en {currency} y el período para comparar estos movimientos.",
+    "setupCurrency": "Configurar {currency} en una cuenta",
+    "useExistingAccount": "Usar una cuenta existente",
+    "enableCurrencyHint": "Elige la cuenta del extracto y habilita su saldo en {currency}. Sus movimientos actuales se conservarán."
   },
   "planning": {
     "title": "Planifica tu dinero",
@@ -1778,6 +1807,13 @@
     "limit": "Se muestran hasta 100 movimientos. Después puedes revisar más desde el contacto.",
     "changed": "Algún dato cambió. Cierra y vuelve a revisar antes de aplicar.",
     "updated": "Categorías actualizadas",
-    "apply": "Categorizar {count, plural, one {# seleccionado} other {# seleccionados}}"
+    "apply": "Categorizar {count, plural, one {# seleccionado} other {# seleccionados}}",
+    "reviewTitle": "Pon al día tus categorías",
+    "queueCount": "{count, plural, one {# movimiento sin categoría tiene una sugerencia de tu historial.} other {# movimientos sin categoría tienen sugerencias de tu historial.}}",
+    "queueEmpty": "Revisa tus movimientos sin categoría. Las sugerencias aparecerán cuando haya historial del mismo contacto.",
+    "queueError": "No pudimos cargar las sugerencias. Vuelve a intentarlo al recargar.",
+    "reviewSuggestions": "Revisar sugerencias",
+    "showUncategorized": "Ver sin categoría",
+    "queueSuggestion": "{count, plural, one {# movimiento pendiente} other {# movimientos pendientes}} · Sugerencia: {category}"
   }
 }

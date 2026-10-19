@@ -1,4 +1,5 @@
 'use client';
+import { CategorySuggestions } from '@/components/transactions/category-suggestions';
 import { useState } from 'react';
 import Link from 'next/link';
 import { useLocale, useTranslations } from 'next-intl';
@@ -97,6 +98,7 @@ export function ContactDetailDialog({
                 </div>
               ))}
             </div>
+            <CategorySuggestions contactId={contact.id} />
             <h3 className='font-medium'>{t('categoryHistory')}</h3>
             <div className='space-y-3'>
               {data.categories.map((category) => (

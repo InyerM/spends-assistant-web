@@ -130,7 +130,7 @@ export function RecentTransactions(): React.ReactElement {
                       <p
                         className={`text-sm font-semibold whitespace-nowrap tabular-nums ${config.colorClass}`}>
                         {tx.type === 'expense' ? '-' : tx.type === 'income' ? '+' : ''}
-                        {formatCurrency(tx.amount, 'COP', locale)}
+                        {formatCurrency(tx.amount, tx.currency ?? 'COP', locale)}
                       </p>
                       <p className='text-muted-foreground text-xs'>
                         {formatTimeForDisplay(tx.time)}
