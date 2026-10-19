@@ -35,6 +35,8 @@ Backend migrations:
   cross-currency sums.
 - `20261019000080_manual_currency_posting.sql`: manual, document and scheduled posting use the
   reviewed account currency; supplied mismatches fail.
+- `20261019000110_account_incoming_activity.sql`: include incoming internal transfers in movement
+  counts while keeping them out of income/expense totals.
 - `20261019000100_currency_safe_account_detection.sql`: legacy alias detection only manages COP
   ledgers; USD account selection is explicitly reviewed, and manual USD drafts skip alias-only
   account overrides.
@@ -59,9 +61,16 @@ recent dashboard movements.
   compare statement, post USD, one grouped account, desktop and 390px web viewports, zero page
   errors. The synthetic owner was deleted afterward.
 - Production database verification after backfill: zero active expenses/income with a null category.
-  Eight migrations applied. No credentials, PDFs or private exports are included.
+  Nine migrations applied. No credentials, PDFs or private exports are included.
 
 ## Release
 
-Publication and production smoke verification are recorded after deployment. Native mobile
-implementation and exchange-rate conversion are outside this release.
+- Backend commits: `763ee87` and `9ad3578`; web application commit: `131b581`.
+- Production deployment: `dpl_C6VspjaWzZSW8raEW84gwgmhbvR2`, READY, aliased to https://my.anotto.app
+  on 2026-10-19.
+- Production browser smoke passed the disposable-owner flow above at desktop and 390px widths, with
+  zero page errors and confirmed cleanup.
+- Final focused SQL regression: 6 files / 26 tests; incoming activity extension: 1 test. Final
+  focused web regression: 4 files / 62 tests plus 2 owner-read route tests.
+
+Native mobile implementation and exchange-rate conversion are outside this release.
