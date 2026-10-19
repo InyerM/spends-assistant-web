@@ -50,3 +50,16 @@ drag silhouettes, disabled pending inbox actions, compact created-message summar
 contact-category cleanup and statement creation with valid reconciliation evidence. No page errors
 occurred; the synthetic owner and fixtures were deleted. Typecheck, lint and the production build
 passed. The browser-host origin check also has a regression test rejecting a foreign origin.
+
+## Release evidence
+
+- Web commit: `904d862`; database migration/test commit: `57a6977`.
+- Vercel deployment `dpl_Ecyk3oH7UStrN8tTGKaPsLUfnLna` reached READY on 2026-10-19 and serves
+  https://my.anotto.app.
+  [Deployment inspection](https://vercel.com/inyerms-projects/spends-assistant-web/Ecyk3oH7UStrN8tTGKaPsLUfnLna).
+- Authenticated production Playwright passed all seven interaction checks: compact notifications,
+  add scrolling, drop preview, busy inbox controls, completed summaries, selected
+  historical-category updates and atomic statement creation with reconciliation. It reported no page
+  errors and confirmed disposable-owner cleanup.
+- The production check used synthetic financial fixtures only. No private exports, PDFs,
+  screenshots, credentials or test reports were committed.
