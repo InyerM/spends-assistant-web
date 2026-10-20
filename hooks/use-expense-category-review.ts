@@ -6,7 +6,11 @@ import {
   useAnalyzeExpenseCategories,
   useApplyExpenseCategory,
 } from '@/lib/api/mutations/expense-category-review.mutations';
-import type { ExpenseReviewResult, ExpenseReviewRow } from '@/types/expense-category-review';
+import type {
+  ExpenseReviewChanges,
+  ExpenseReviewResult,
+  ExpenseReviewRow,
+} from '@/types/expense-category-review';
 interface Filters {
   scope: 'uncategorized' | 'all';
   search: string;
@@ -25,7 +29,7 @@ interface ExpenseCategoryReviewState {
   save: ReturnType<typeof useApplyExpenseCategory>;
   busy: boolean;
   analyze: () => void;
-  apply: (row: ExpenseReviewRow, categoryId: string) => void;
+  apply: (row: ExpenseReviewRow, changes: ExpenseReviewChanges) => void;
 }
 export function useExpenseCategoryReview(): ExpenseCategoryReviewState {
   const locale = useLocale(),
@@ -74,10 +78,10 @@ export function useExpenseCategoryReview(): ExpenseCategoryReviewState {
       },
     );
   }
-  function apply(row: ExpenseReviewRow, categoryId: string): void {
-    if (busy || !categoryId || categoryId === row.category_id) return;
+  function apply(row: ExpenseReviewRow, changes: ExpenseReviewChanges): void {
+    if (busy || !Object.keys(changes).length) return;
     save.mutate(
-      { row, categoryId },
+      { row, changes },
       {
         onSuccess: () => {
           setReviews((prev) => {

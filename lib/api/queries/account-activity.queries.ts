@@ -1,13 +1,22 @@
 import { useQuery } from '@tanstack/react-query';
 import { useAuthStore } from '@/store/auth-store';
 export interface AccountActivity {
-  months: Array<{ month: string; income: number; expenses: number; count: number }>;
+  months: Array<{
+    month: string;
+    income: number;
+    expenses: number;
+    count: number;
+    transfers_in?: number;
+    transfers_out?: number;
+  }>;
   categories: Array<{
     category_id: string | null;
     name: string | null;
     translations: Record<string, string> | null;
     amount: number;
   }>;
+  transfers_in?: number;
+  transfers_out?: number;
   count: number;
   income: number;
   expenses: number;

@@ -20,3 +20,9 @@ export interface ExpenseReviewResult {
   proposal?: CategoryReview;
   error?: Error;
 }
+
+export interface ExpenseReviewChanges {
+  category_id?: string;
+  description?: string;
+  notes?: string | null;
+}

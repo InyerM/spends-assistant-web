@@ -4,7 +4,11 @@ import {
   analyzeExistingTransaction,
   TransactionAnalysisError,
 } from './existing-transaction-review.mutations';
-import type { ExpenseReviewResult, ExpenseReviewRow } from '@/types/expense-category-review';
+import type {
+  ExpenseReviewChanges,
+  ExpenseReviewResult,
+  ExpenseReviewRow,
+} from '@/types/expense-category-review';
 interface AnalysisInput {
   ids: string[];
   locale: string;
@@ -49,17 +53,17 @@ export function useAnalyzeExpenseCategories(): ReturnType<
   });
 }
 export function useApplyExpenseCategory(): ReturnType<
-  typeof useMutation<void, Error, { row: ExpenseReviewRow; categoryId: string }>
+  typeof useMutation<void, Error, { row: ExpenseReviewRow; changes: ExpenseReviewChanges }>
 > {
   const client = useQueryClient();
   return useMutation({
     mutationKey: ['expense-category-review'],
-    mutationFn: async ({ row, categoryId }) => {
+    mutationFn: async ({ row, changes }) => {
       const response = await fetch(`/api/transactions/${row.id}/category-review`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          category_id: categoryId,
+          changes,
           expected: {
             category_id: row.category_id,
             description: row.description,
@@ -74,6 +78,7 @@ export function useApplyExpenseCategory(): ReturnType<
       await Promise.all(
         [
           'transactions',
+          'accounts',
           'expense-category-review',
           'category-suggestions',
           'category-followup',

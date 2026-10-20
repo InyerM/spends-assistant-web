@@ -61,5 +61,46 @@ it('shows the AI reason, allows a different category, and writes only after expl
   fireEvent.change(screen.getByLabelText('proposed'), { target: { value: 'food' } });
   expect(change).toHaveBeenCalledWith('food');
   fireEvent.click(screen.getByRole('button', { name: 'applyFor' }));
-  expect(apply).toHaveBeenCalledWith('streaming');
+  expect(apply).toHaveBeenCalledWith({ category_id: 'streaming', description: 'Music' });
+});
+
+it('allows reviewing wording and notes without changing the category or posting facts', () => {
+  const apply = vi.fn();
+  render(
+    <ExpenseCategoryReviewRow
+      row={
+        {
+          id: 'tx',
+          description: 'Original',
+          notes: 'Keep my note',
+          category_id: 'streaming',
+          amount: 18500,
+          date: '2026-10-19',
+          currency: 'COP',
+        } as ExpenseReviewRow
+      }
+      categories={[]}
+      selected={false}
+      disabled={false}
+      analyzing={false}
+      result={{
+        id: 'tx',
+        proposal: {
+          category_id: 'streaming',
+          description: 'Clear title',
+          notes: 'Suggested note',
+          explanation: 'Evidence.',
+          kind: 'expense',
+          evidence_ids: [],
+        },
+      }}
+      onSelect={vi.fn()}
+      onChoice={vi.fn()}
+      onApply={apply}
+    />,
+  );
+  fireEvent.change(screen.getByLabelText('descriptionField'), { target: { value: 'My title' } });
+  fireEvent.click(screen.getByRole('checkbox', { name: 'applyNotes' }));
+  fireEvent.click(screen.getByRole('button', { name: 'applyFor' }));
+  expect(apply).toHaveBeenCalledWith({ description: 'My title' });
 });

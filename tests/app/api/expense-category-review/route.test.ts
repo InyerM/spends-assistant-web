@@ -100,3 +100,28 @@ it('saves only an explicitly selected category through owner-scoped stale-checke
   mocks.rpc.mockResolvedValueOnce({ error: { code: '23514' } });
   expect((await send(body)).status).toBe(409);
 });
+it('saves selected wording and notes without requiring a category and rejects financial fields', async () => {
+  const expected = {
+    category_id: category,
+    description: 'Original',
+    notes: 'Old note',
+    account_id: id,
+  };
+  const send = (changes: unknown) =>
+    POST(
+      new Request('https://app.test/api/transactions/' + id + '/category-review', {
+        method: 'POST',
+        body: JSON.stringify({ changes, expected }),
+      }),
+      { params: Promise.resolve({ id }) },
+    );
+  expect((await send({ description: 'Clear title', notes: null })).status).toBe(200);
+  expect(mocks.rpc).toHaveBeenCalledWith('review_expense_metadata', {
+    p_transaction: id,
+    p_changes: { description: 'Clear title', notes: null },
+    p_expected: expected,
+  });
+  expect((await send({ amount: 1, description: 'Unsafe' })).status).toBe(400);
+  expect((await send({})).status).toBe(400);
+  expect((await send({ description: '' })).status).toBe(400);
+});

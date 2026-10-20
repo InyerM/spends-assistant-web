@@ -1,15 +1,25 @@
 import { z } from 'zod';
 import { AuthError, errorResponse, getUserClient } from '@/lib/api/server';
 import { hasSameRequestOrigin } from '@/lib/api/request-origin';
-const schema = z.strictObject({
-  category_id: z.uuid(),
-  expected: z.strictObject({
-    category_id: z.uuid().nullable(),
-    description: z.string(),
-    notes: z.string().nullable(),
-    account_id: z.uuid(),
-  }),
-});
+const schema = z
+  .strictObject({
+    category_id: z.uuid().optional(),
+    changes: z
+      .strictObject({
+        category_id: z.uuid().optional(),
+        description: z.string().trim().min(1).max(500).optional(),
+        notes: z.string().max(1500).nullable().optional(),
+      })
+      .refine((value) => Object.keys(value).length > 0)
+      .optional(),
+    expected: z.strictObject({
+      category_id: z.uuid().nullable(),
+      description: z.string(),
+      notes: z.string().nullable(),
+      account_id: z.uuid(),
+    }),
+  })
+  .refine((value) => Boolean(value.category_id) !== Boolean(value.changes));
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
@@ -22,11 +32,17 @@ export async function POST(
     const body = schema.safeParse(await request.json().catch(() => null));
     if (!z.uuid().safeParse(id).success || !body.success)
       return errorResponse('Invalid category review', 400);
-    const { error } = await supabase.rpc('review_expense_category', {
-      p_transaction: id,
-      p_category: body.data.category_id,
-      p_expected: body.data.expected,
-    });
+    const { error } = body.data.changes
+      ? await supabase.rpc('review_expense_metadata', {
+          p_transaction: id,
+          p_changes: body.data.changes,
+          p_expected: body.data.expected,
+        })
+      : await supabase.rpc('review_expense_category', {
+          p_transaction: id,
+          p_category: body.data.category_id,
+          p_expected: body.data.expected,
+        });
     if (error) return errorResponse('Review changed; refresh before applying', 409);
     return Response.json({ updated: true });
   } catch (error) {
