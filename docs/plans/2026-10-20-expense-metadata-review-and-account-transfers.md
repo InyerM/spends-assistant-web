@@ -44,3 +44,20 @@ confirmation and separate transfer flows preserve the existing accounting meanin
   `/tmp/anotto-review-fields-mobile.png`.
 - Production build passed (`/tmp/anotto-review-fields-build-final.log`). Backend migration/test
   commit: `301206a`.
+
+## Production confirmation — 2026-10-20
+
+- Web runtime commit `5ac317b`; backend migration/test commit `301206a`.
+- Vercel deployment `dpl_8x5WGMqCjKELj5sopYqghSvoT5mb` reached READY and is aliased to
+  https://my.anotto.app (`/tmp/anotto-review-fields-vercel-deploy.log`).
+- Production Chrome verified that a USD 5 converted card payment appears as Payments received and a
+  visible monthly transfer bar while income remains zero.
+- Production Chrome analyzed an expense with the real provider, edited description and notes, opted
+  out of the category, and confirmed only the selected changes. The category, amounts, currency,
+  date, accounts, original text, balances and valid statement evidence were preserved. The metadata
+  audit was present.
+- Mobile review had no horizontal overflow and the browser reported no runtime errors. The
+  disposable owner was deleted (`/tmp/anotto-metadata-flow-production.log`).
+- Production screenshots: `/tmp/anotto-account-transfer-production.png`,
+  `/tmp/anotto-metadata-review-production-mobile.png`. The task-local development server was stopped
+  after verification.
