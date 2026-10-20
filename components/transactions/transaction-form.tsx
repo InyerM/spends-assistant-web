@@ -16,6 +16,9 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ConfirmDeleteDialog } from '@/components/shared/confirm-delete-dialog';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { ExistingTransactionAnalysis } from './existing-transaction-analysis';
+import { useExistingTransactionAnalysis } from '@/hooks/use-existing-transaction-analysis';
+import { DuplicateReference } from './duplicate-reference';
 import { Sparkles, AlertTriangle, Pencil, Zap } from 'lucide-react';
 import { InlineLoader } from '@/components/shared/loader';
 import {
@@ -46,7 +49,6 @@ import {
   useCreateTransaction,
   useUpdateTransaction,
   useDeleteTransaction,
-  useResolveDuplicate,
   DuplicateError,
   ReviewAutomationRuleError,
   ReviewTransactionError,
@@ -96,7 +98,6 @@ export function TransactionForm({
   const createMutation = useCreateTransaction();
   const updateMutation = useUpdateTransaction();
   const deleteMutation = useDeleteTransaction();
-  const resolveDuplicate = useResolveDuplicate();
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [addAnother, setAddAnother] = useState(false);
   const [isDictating, setIsDictating] = useState(false);
@@ -138,6 +139,8 @@ export function TransactionForm({
       transfer_to_account_id: undefined,
     },
   });
+
+  const existingAnalysis = useExistingTransactionAnalysis(transaction, form, open);
 
   // Reset state when dialog opens/closes
   useEffect(() => {
@@ -803,52 +806,18 @@ export function TransactionForm({
               )}
 
             {isEditing && transaction.duplicate_status === 'pending_review' && (
-              <div className='border-warning/30 bg-warning/5 flex items-start gap-3 rounded-lg border p-3'>
-                <AlertTriangle className='text-warning mt-0.5 h-4 w-4 shrink-0' />
-                <div className='flex-1'>
-                  <p className='text-sm font-medium'>{t('duplicateWarning')}</p>
-                  <p className='text-muted-foreground text-xs'>{t('duplicateFlagged')}</p>
-                  <div className='mt-2 flex gap-2'>
-                    <Button
-                      type='button'
-                      size='sm'
-                      variant='outline'
-                      disabled={resolveDuplicate.isPending}
-                      onClick={(): void => {
-                        resolveDuplicate.mutate(
-                          { id: transaction.id, action: 'keep' },
-                          {
-                            onSuccess: () => {
-                              toast.success(t('markedAsNotDuplicate'));
-                              onOpenChange(false);
-                            },
-                          },
-                        );
-                      }}>
-                      {t('keepBoth')}
-                    </Button>
-                    <Button
-                      type='button'
-                      size='sm'
-                      variant='ghost'
-                      className='text-destructive'
-                      disabled={resolveDuplicate.isPending}
-                      onClick={(): void => {
-                        resolveDuplicate.mutate(
-                          { id: transaction.id, action: 'delete' },
-                          {
-                            onSuccess: () => {
-                              toast.success(t('duplicateDeleted'));
-                              onOpenChange(false);
-                            },
-                          },
-                        );
-                      }}>
-                      {t('deleteThisOne')}
-                    </Button>
-                  </div>
-                </div>
-              </div>
+              <DuplicateReference
+                transaction={transaction}
+                onResolved={() => onOpenChange(false)}
+              />
+            )}
+
+            {isEditing && (
+              <ExistingTransactionAnalysis
+                analysis={existingAnalysis}
+                categories={categories ?? []}
+                disabled={updateMutation.isPending}
+              />
             )}
 
             {ai.aiSource && (
@@ -965,9 +934,20 @@ export function TransactionForm({
                   name='description'
                   render={({ field }): React.ReactElement => (
                     <FormItem
-                      className={isAiSuggested(field.name) ? 'ai-field' : undefined}
-                      data-ai-state={isAiSuggested(field.name) ? 'suggested' : undefined}>
-                      {isAiSuggested(field.name) && <AiFieldStatus />}
+                      className={
+                        existingAnalysis.fieldState(field.name) || isAiSuggested(field.name)
+                          ? 'ai-field'
+                          : undefined
+                      }
+                      data-ai-state={
+                        existingAnalysis.fieldState(field.name) ??
+                        (isAiSuggested(field.name) ? 'suggested' : undefined)
+                      }>
+                      {(existingAnalysis.fieldState(field.name) || isAiSuggested(field.name)) && (
+                        <AiFieldStatus
+                          state={existingAnalysis.fieldState(field.name) ?? 'suggested'}
+                        />
+                      )}
                       <FormLabel>{t('description')}</FormLabel>
                       <FormControl>
                         <Textarea
@@ -1035,9 +1015,20 @@ export function TransactionForm({
                   name='category_id'
                   render={({ field }): React.ReactElement => (
                     <FormItem
-                      className={isAiSuggested(field.name) ? 'ai-field' : undefined}
-                      data-ai-state={isAiSuggested(field.name) ? 'suggested' : undefined}>
-                      {isAiSuggested(field.name) && <AiFieldStatus />}
+                      className={
+                        existingAnalysis.fieldState(field.name) || isAiSuggested(field.name)
+                          ? 'ai-field'
+                          : undefined
+                      }
+                      data-ai-state={
+                        existingAnalysis.fieldState(field.name) ??
+                        (isAiSuggested(field.name) ? 'suggested' : undefined)
+                      }>
+                      {(existingAnalysis.fieldState(field.name) || isAiSuggested(field.name)) && (
+                        <AiFieldStatus
+                          state={existingAnalysis.fieldState(field.name) ?? 'suggested'}
+                        />
+                      )}
                       <FormLabel>{t('category')}</FormLabel>
                       <FormControl>
                         <SearchableSelect
@@ -1062,9 +1053,20 @@ export function TransactionForm({
                   name='notes'
                   render={({ field }): React.ReactElement => (
                     <FormItem
-                      className={isAiSuggested(field.name) ? 'ai-field' : undefined}
-                      data-ai-state={isAiSuggested(field.name) ? 'suggested' : undefined}>
-                      {isAiSuggested(field.name) && <AiFieldStatus />}
+                      className={
+                        existingAnalysis.fieldState(field.name) || isAiSuggested(field.name)
+                          ? 'ai-field'
+                          : undefined
+                      }
+                      data-ai-state={
+                        existingAnalysis.fieldState(field.name) ??
+                        (isAiSuggested(field.name) ? 'suggested' : undefined)
+                      }>
+                      {(existingAnalysis.fieldState(field.name) || isAiSuggested(field.name)) && (
+                        <AiFieldStatus
+                          state={existingAnalysis.fieldState(field.name) ?? 'suggested'}
+                        />
+                      )}
                       <FormLabel>{t('notes')}</FormLabel>
                       <FormControl>
                         <Textarea placeholder={t('notesPlaceholder')} {...field} />
@@ -1107,7 +1109,11 @@ export function TransactionForm({
                     </Button>
                     <Button
                       type='submit'
-                      disabled={createMutation.isPending || updateMutation.isPending}>
+                      disabled={
+                        createMutation.isPending ||
+                        updateMutation.isPending ||
+                        existingAnalysis.mutation.isPending
+                      }>
                       {createMutation.isPending || updateMutation.isPending
                         ? tCommon('saving')
                         : isEditing

@@ -621,7 +621,20 @@
     "receiptUploadFailed": "Could not upload the receipt. Try again.",
     "aiInputDescription": "Paste a bank message or describe your expense. Review the details before saving.",
     "aiInputLabel": "Message or description",
-    "sourceStatement": "Statement"
+    "sourceStatement": "Statement",
+    "duplicateCompareHint": "Compare this movement with the reference before deciding.",
+    "viewDuplicate": "View possible duplicate",
+    "duplicateReferenceUnavailable": "The reference movement was deleted or is no longer available.",
+    "duplicateResolveFailed": "Could not save the review. Try again.",
+    "analyzeExisting": "Analyze with AI",
+    "existingAnalysisHint": "Review the description, category and notes with AI.",
+    "existingAnalyzing": "Analyzing fields…",
+    "existingAnalysisFailed": "Could not analyze this movement. You can keep editing it.",
+    "applyReviewedSuggestions": "Use selected suggestions",
+    "existingSuggestionsApplied": "Fields that were still unchanged were updated. Review the form and save to confirm.",
+    "existingNoChanges": "No changes suggested for these fields.",
+    "emptyReviewValue": "Empty",
+    "noCategory": "Uncategorized"
   },
   "accounts": {
     "title": "Accounts",
@@ -774,7 +787,15 @@
       "en": "English",
       "pt": "Portuguese"
     },
-    "catalogGuidance": "Categories describe the purpose of a transaction. Payments between your own accounts are transfers; merchant refunds can use Refunds and reimbursements."
+    "catalogGuidance": "Categories describe the purpose of a transaction. Payments between your own accounts are transfers; merchant refunds can use Refunds and reimbursements.",
+    "collectionLabel": "Category collection",
+    "usualCategories": "Usual categories",
+    "moreCategories": "More categories",
+    "collectionHint": "Find the categories you use and the ones you created here. Open More categories for other options.",
+    "searchAllCategories": "Search includes Usual categories and More categories.",
+    "usageUnavailable": "Usage is unavailable. Showing every category.",
+    "retryUsage": "Retry",
+    "starterHint": "A starter selection. Categories you use and create will appear here."
   },
   "automation": {
     "title": "Automation Rules",
@@ -1513,19 +1534,21 @@
     "chooseCurrencyScope": "Select a {currency} account and period to compare these movements.",
     "setupCurrency": "Set up {currency} on an account",
     "useExistingAccount": "Use an existing account",
-    "enableCurrencyHint": "Choose the statement account and enable its {currency} balance. Existing transactions will be preserved.",
+    "enableCurrencyHint": "Choose an account and enable its {currency} balance. Existing transactions will be preserved.",
     "analyzingFields": "Reviewing description and category…",
     "analysisSuggested": "Suggestion ready to review",
     "analysisNeedsCategory": "The category needs your review",
-    "cardPaymentTitle": "Check the kind of credit",
-    "cardPaymentHint": "This card credit looks like a payment. If it came from another account you own, link it as a transfer. For a merchant refund, use Refunds and reimbursements.",
+    "cardPaymentTitle": "Type of card credit",
+    "cardPaymentHint": "Choose where this credit came from to record it correctly.",
     "confirmOwnPayment": "Payment between my accounts",
     "confirmRefund": "Merchant refund",
     "confirmOtherIncome": "Other income",
     "otherCurrencyTransferHint": "Choose the source account in the same currency. If a conversion was involved, review both entries and the exchange rate before recording it.",
     "transferReviewTitle": "Check whether this is a transfer",
     "transferReviewHint": "This transaction may be between your own accounts. Link the other account to record it as a transfer.",
-    "refundDescription": "Refund to card"
+    "refundDescription": "Refund to card",
+    "cardPaymentDescription": "Credit card payment",
+    "noCurrencyAccounts": "You have no other available account in {currency}."
   },
   "planning": {
     "title": "Plan your money",

@@ -146,3 +146,25 @@ it('separates dollar movements and their account without mixing the pesos list',
   expect(screen.queryByText('Statement lunch')).not.toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Create USD' })).toBeVisible();
 });
+
+it('can compare an already saved scope without changing the period manually', async () => {
+  const fetch = vi.fn().mockResolvedValue(Response.json({ success: true }));
+  vi.stubGlobal('fetch', fetch);
+  render(
+    <StatementReconciliation
+      documentId='doc'
+      accounts={[{ id: 'bank', currency: 'COP', is_active: true } as Account]}
+    />,
+  );
+  const compare = screen.getByRole('button', { name: 'compare' });
+  expect(compare).toBeEnabled();
+  fireEvent.click(compare);
+  await waitFor(() => expect(fetch).toHaveBeenCalled());
+  expect(JSON.parse(fetch.mock.calls[0][1].body as string)).toEqual({
+    action: 'scope',
+    currency: 'COP',
+    account_id: 'bank',
+    period_start: '2026-09-01',
+    period_end: '2026-09-30',
+  });
+});

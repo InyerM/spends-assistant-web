@@ -587,7 +587,20 @@
     "receiptUploadFailed": "Não foi possível enviar o comprovante. Tente novamente.",
     "aiInputDescription": "Cole uma mensagem bancária ou descreva seu gasto. Confira os dados antes de salvar.",
     "aiInputLabel": "Mensagem ou descrição",
-    "sourceStatement": "Extrato"
+    "sourceStatement": "Extrato",
+    "duplicateCompareHint": "Compare este movimento com a referência antes de decidir.",
+    "viewDuplicate": "Ver possível duplicata",
+    "duplicateReferenceUnavailable": "O movimento de referência foi excluído ou não está mais disponível.",
+    "duplicateResolveFailed": "Não foi possível salvar a revisão. Tente novamente.",
+    "analyzeExisting": "Analisar com IA",
+    "existingAnalysisHint": "Revise a descrição, categoria e notas com IA.",
+    "existingAnalyzing": "Analisando campos…",
+    "existingAnalysisFailed": "Não foi possível analisar o movimento. Você pode continuar editando.",
+    "applyReviewedSuggestions": "Usar sugestões selecionadas",
+    "existingSuggestionsApplied": "Os campos que continuavam sem alterações foram atualizados. Revise o formulário e salve para confirmar.",
+    "existingNoChanges": "Nenhuma alteração sugerida para estes campos.",
+    "emptyReviewValue": "Vazio",
+    "noCategory": "Sem categoria"
   },
   "accounts": {
     "title": "Contas",
@@ -740,7 +753,15 @@
       "en": "Inglês",
       "pt": "Português"
     },
-    "catalogGuidance": "As categorias descrevem o motivo de um movimento. Pagamentos entre suas contas são transferências; devoluções podem usar Devoluções e reembolsos."
+    "catalogGuidance": "As categorias descrevem o motivo de um movimento. Pagamentos entre suas contas são transferências; devoluções podem usar Devoluções e reembolsos.",
+    "collectionLabel": "Lista de categorias",
+    "usualCategories": "Habituais",
+    "moreCategories": "Mais categorias",
+    "collectionHint": "Aqui estão as categorias que você usa e as que criou. Em Mais categorias, você encontra outras opções.",
+    "searchAllCategories": "A busca inclui Habituais e Mais categorias.",
+    "usageUnavailable": "Não foi possível consultar o uso. Exibimos todas as categorias.",
+    "retryUsage": "Tentar novamente",
+    "starterHint": "Uma seleção inicial. As categorias que você usar e criar aparecerão aqui."
   },
   "automation": {
     "title": "Regras de Automação",
@@ -1396,19 +1417,21 @@
     "chooseCurrencyScope": "Selecione uma conta em {currency} e o período para comparar estes movimentos.",
     "setupCurrency": "Configurar {currency} em uma conta",
     "useExistingAccount": "Usar uma conta existente",
-    "enableCurrencyHint": "Escolha a conta do extrato e ative seu saldo em {currency}. Os movimentos existentes serão preservados.",
+    "enableCurrencyHint": "Escolha uma conta e ative seu saldo em {currency}. Os movimentos existentes serão preservados.",
     "analyzingFields": "Revisando descrição e categoria…",
     "analysisSuggested": "Sugestão pronta para revisar",
     "analysisNeedsCategory": "A categoria precisa da sua revisão",
-    "cardPaymentTitle": "Confira o tipo de crédito",
-    "cardPaymentHint": "Este crédito no cartão parece um pagamento. Se veio de outra conta sua, vincule como transferência. Para uma devolução do estabelecimento, use Devoluções e reembolsos.",
+    "cardPaymentTitle": "Tipo de crédito no cartão",
+    "cardPaymentHint": "Escolha a origem do crédito para registrá-lo corretamente.",
     "confirmOwnPayment": "Pagamento entre minhas contas",
-    "confirmRefund": "Devolução do estabelecimento",
+    "confirmRefund": "Devolução de um estabelecimento",
     "confirmOtherIncome": "Outra receita",
     "otherCurrencyTransferHint": "Selecione a conta de origem na mesma moeda. Se houve conversão, revise os dois lançamentos e a taxa de câmbio antes de registrar.",
     "transferReviewTitle": "Confira se é uma transferência",
     "transferReviewHint": "Este movimento pode ser entre suas contas. Vincule a outra conta para registrar como transferência.",
-    "refundDescription": "Reembolso no cartão"
+    "refundDescription": "Reembolso no cartão",
+    "cardPaymentDescription": "Pagamento de cartão de crédito",
+    "noCurrencyAccounts": "Você não tem outra conta disponível em {currency}."
   },
   "planning": {
     "title": "Planeje seu dinheiro",

@@ -14,31 +14,41 @@ export function StatementAccountSetup({
   value,
   disabled,
   onChange,
+  label,
 }: {
   accounts: Account[];
   currency: string;
   value: string;
   disabled: boolean;
   onChange: (id: string) => void;
+  label?: string;
 }): React.ReactElement {
   const t = useTranslations('statementReconciliation');
   const [existing, setExisting] = useState('');
   const [create, setCreate] = useState(false);
   const [setup, setSetup] = useState(false);
-  const groups = groupAccounts(accounts.filter((a) => a.is_active));
+  const available = accounts.filter((a) => a.is_active && !a.deleted_at);
+  const ledgers = available.filter((a) => a.currency === currency);
+  const groups = groupAccounts(available);
   const candidates = groups
     .filter((g) => !g.ledgers.some((a) => a.currency === currency))
     .map((g) => g.account);
   const target = candidates.find((a) => a.id === existing);
   return (
     <div className='space-y-3'>
-      <DocumentAccountSelect
-        value={value}
-        accounts={accounts.filter((a) => a.is_active && a.currency === currency)}
-        label={t('account')}
-        disabled={disabled}
-        onChange={onChange}
-      />
+      {ledgers.length ? (
+        <DocumentAccountSelect
+          value={value}
+          accounts={ledgers}
+          label={label ?? t('account')}
+          disabled={disabled}
+          onChange={onChange}
+        />
+      ) : (
+        <p role='status' className='text-muted-foreground text-xs'>
+          {t('noCurrencyAccounts', { currency })}
+        </p>
+      )}
       {!disabled && (
         <>
           <Button

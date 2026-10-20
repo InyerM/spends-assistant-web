@@ -282,10 +282,10 @@ export function useDeleteTransaction(): ReturnType<typeof useMutation<void, Erro
 
 export async function resolveDuplicate(id: string, action: 'keep' | 'delete'): Promise<void> {
   if (action === 'keep') {
-    const res = await fetch(`/api/transactions/${id}`, {
-      method: 'PATCH',
+    const res = await fetch(`/api/transactions/${id}/duplicate-review`, {
+      method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ duplicate_status: 'confirmed' }),
+      body: JSON.stringify({ action: 'keep' }),
     });
     if (!res.ok) throw new Error('Failed to resolve duplicate');
   } else {

@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { useAuthStore } from '@/store/auth-store';
 import type { Category, CategoryWithChildren } from '@/types';
 
 export const categoryKeys = {
@@ -60,6 +61,20 @@ export function useAllCategoryTree(): ReturnType<typeof useQuery<CategoryWithChi
     queryFn: async () => {
       const categories = await fetchAllCategories();
       return buildCategoryTree(categories);
+    },
+  });
+}
+
+export function useCategoryUsage(): ReturnType<typeof useQuery<{ used_ids: string[] }>> {
+  const owner = useAuthStore((state) => state.supabaseUser?.id);
+  return useQuery({
+    queryKey: ['transactions', 'category-usage', owner],
+    enabled: Boolean(owner),
+    staleTime: 0,
+    queryFn: async () => {
+      const response = await fetch('/api/categories/usage');
+      if (!response.ok) throw new Error('Category usage unavailable');
+      return response.json() as Promise<{ used_ids: string[] }>;
     },
   });
 }

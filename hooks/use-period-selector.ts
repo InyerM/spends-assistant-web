@@ -62,7 +62,7 @@ export function usePeriodSelector({
   const monthShort = useMemo(() => getMonthShort(locale), [locale]);
   const dayHeaders = useMemo(() => getDayHeaders(locale), [locale]);
 
-  const [mode, setMode] = useState<PeriodMode>(() => detectMode(dateFrom, dateTo));
+  const mode = detectMode(dateFrom, dateTo);
   const [popoverTab, setPopoverTab] = useState<PeriodMode>(mode);
   const [pickerYear, setPickerYear] = useState(() => toDate(dateFrom).getFullYear());
   const [calendarMonth, setCalendarMonth] = useState(() => startOfMonth(toDate(dateFrom)));
@@ -112,7 +112,6 @@ export function usePeriodSelector({
     (m: number): void => {
       const d = new Date(pickerYear, m, 1);
       onChange(toStr(startOfMonth(d)), toStr(endOfMonth(d)));
-      setMode('month');
     },
     [pickerYear, onChange],
   );
@@ -123,7 +122,6 @@ export function usePeriodSelector({
         toStr(startOfWeek(day, { weekStartsOn: 1 })),
         toStr(endOfWeek(day, { weekStartsOn: 1 })),
       );
-      setMode('week');
     },
     [onChange],
   );
@@ -131,7 +129,6 @@ export function usePeriodSelector({
   const handleYearPick = useCallback(
     (y: number): void => {
       onChange(`${y}-01-01`, `${y}-12-31`);
-      setMode('year');
     },
     [onChange],
   );
@@ -139,14 +136,12 @@ export function usePeriodSelector({
   const handleCustomApply = useCallback((): void => {
     if (customFrom && customTo && customFrom <= customTo) {
       onChange(customFrom, customTo);
-      setMode('custom');
     }
   }, [customFrom, customTo, onChange]);
 
   const handleReset = useCallback((): void => {
     const now = new Date();
     onChange(toStr(startOfMonth(now)), toStr(endOfMonth(now)));
-    setMode('month');
   }, [onChange]);
 
   const handleOpenChange = useCallback(

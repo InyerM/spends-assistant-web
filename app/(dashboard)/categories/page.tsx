@@ -12,12 +12,14 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { SearchInput } from '@/components/shared/search-input';
 import { Switch } from '@/components/ui/switch';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useAllCategoryTree } from '@/lib/api/queries/category.queries';
+import { useAllCategoryTree, useCategoryUsage } from '@/lib/api/queries/category.queries';
 import {
   useUpdateCategory,
   useDeleteCategory,
   fetchCategoryWithCounts,
 } from '@/lib/api/mutations/category.mutations';
+import { categoryCollection, type CategoryCollection } from '@/lib/categories/collections';
+import { CategoryCollectionPicker } from '@/components/categories/category-collection-picker';
 import { CategoryFormDialog } from '@/components/categories/category-form-dialog';
 import { Plus, Pencil, Trash2, ChevronDown, ChevronRight, Eye, EyeOff } from 'lucide-react';
 import { TYPE_BADGE_VARIANT, SPENDING_NATURE_BADGE_VARIANT } from '@/lib/constants/badge-variants';
@@ -42,6 +44,8 @@ export default function CategoriesPage(): React.ReactElement {
   const tCommon = useTranslations('common');
   const locale = useLocale();
   const { data: categoryTree, isLoading, isError, refetch } = useAllCategoryTree();
+  const usage = useCategoryUsage();
+  const [collection, setCollection] = useState<CategoryCollection>('usual');
   const updateMutation = useUpdateCategory();
   const deleteMutation = useDeleteCategory();
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -124,7 +128,10 @@ export default function CategoriesPage(): React.ReactElement {
 
   // Filter tree based on showHidden toggle and search
   const filteredTree = useMemo(() => {
-    let tree = categoryTree;
+    let tree =
+      categoryTree && usage.data && !usage.isError && !search.trim()
+        ? categoryCollection(categoryTree, usage.data.used_ids, collection)
+        : categoryTree;
     if (!tree) return tree;
 
     // Visibility filter
@@ -160,7 +167,7 @@ export default function CategoriesPage(): React.ReactElement {
     }
 
     return tree;
-  }, [categoryTree, showHidden, search, locale]);
+  }, [categoryTree, showHidden, search, locale, collection, usage.data, usage.isError]);
 
   return (
     <TooltipProvider>
@@ -193,6 +200,14 @@ export default function CategoriesPage(): React.ReactElement {
           </div>
         </div>
 
+        <CategoryCollectionPicker
+          value={collection}
+          onChange={setCollection}
+          searching={Boolean(search.trim())}
+          unavailable={usage.isError}
+          starter={!usage.data?.used_ids.length}
+          onRetry={() => void usage.refetch()}
+        />
         <p className='text-muted-foreground max-w-3xl text-sm'>{t('catalogGuidance')}</p>
         {isError ? (
           <div role='alert' className='border-border bg-card space-y-3 rounded-2xl border p-6'>
@@ -205,7 +220,7 @@ export default function CategoriesPage(): React.ReactElement {
               {tCommon('tryAgain')}
             </Button>
           </div>
-        ) : isLoading ? (
+        ) : isLoading || usage.isPending ? (
           <div className='space-y-4'>
             {Array.from({ length: 6 }).map((_, i) => (
               <Skeleton key={i} className='h-16 w-full' />
@@ -229,6 +244,7 @@ export default function CategoriesPage(): React.ReactElement {
                 onClick={(): void => {
                   setSearch('');
                   setShowHidden(true);
+                  setCollection('more');
                 }}>
                 {tCommon('reset')}
               </Button>

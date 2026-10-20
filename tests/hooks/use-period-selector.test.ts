@@ -1,11 +1,21 @@
 import { describe, it, expect, vi } from 'vitest';
+import { useState } from 'react';
 import { renderHook, act } from '@testing-library/react';
 import { usePeriodSelector } from '@/hooks/use-period-selector';
 
 describe('usePeriodSelector', () => {
   function renderPeriod(dateFrom = '2024-06-01', dateTo = '2024-06-30', onChange = vi.fn()) {
     return {
-      ...renderHook(() => usePeriodSelector({ dateFrom, dateTo, onChange })),
+      ...renderHook(() => {
+        const [range, setRange] = useState({ dateFrom, dateTo });
+        return usePeriodSelector({
+          ...range,
+          onChange: (dateFrom, dateTo) => {
+            onChange(dateFrom, dateTo);
+            setRange({ dateFrom, dateTo });
+          },
+        });
+      }),
       onChange,
     };
   }
@@ -194,4 +204,16 @@ describe('usePeriodSelector', () => {
       expect(result.current.pickerYear).toBe(2023);
     });
   });
+});
+
+it('shows the full range when statement dates arrive after the initial monthly placeholder', () => {
+  const { result, rerender } = renderHook(
+    ({ dateFrom, dateTo }) =>
+      usePeriodSelector({ dateFrom, dateTo, onChange: vi.fn(), locale: 'es' }),
+    { initialProps: { dateFrom: '2026-10-01', dateTo: '2026-10-31' } },
+  );
+  rerender({ dateFrom: '2026-08-17', dateTo: '2026-09-15' });
+  expect(result.current.mode).toBe('custom');
+  expect(result.current.label).toContain('17');
+  expect(result.current.label).toContain('15');
 });

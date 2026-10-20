@@ -102,7 +102,7 @@ export function StatementReviewPanel({
         {!hasLinks && (
           <Button
             className='sm:col-span-2'
-            disabled={busy || !account || !from || !to || !scopeChanged}
+            disabled={busy || !account || !from || !to || from > to}
             onClick={() =>
               void submit({
                 action: 'scope',

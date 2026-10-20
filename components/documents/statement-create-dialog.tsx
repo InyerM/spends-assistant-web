@@ -23,7 +23,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { SearchableSelect } from '@/components/shared/searchable-select';
-import { DocumentAccountSelect } from './document-review-selects';
+import { StatementAccountSetup } from './statement-account-setup';
 import { buildCategoryItems } from '@/lib/utils/select-items';
 import { InlineLoader } from '@/components/shared/loader';
 import type { StatementRow } from '@/lib/statement-reconciliation';
@@ -58,11 +58,17 @@ export function StatementCreateDialog({
   const analyze = useAnalyzeStatementMovement(documentId, row.id, account, locale);
   const categoryEdited = useRef(false),
     descriptionEdited = useRef(false);
+  const resolutionRef = useRef(resolution);
   function runAnalysis(): void {
     analyze.mutate(undefined, {
       onSuccess: (result) => {
         if (!categoryEdited.current && result.category_id) setCategory(result.category_id);
-        if (!descriptionEdited.current && result.description) setDescription(result.description);
+        if (
+          !descriptionEdited.current &&
+          resolutionRef.current === 'unconfirmed' &&
+          result.description
+        )
+          setDescription(result.description);
       },
     });
   }
@@ -74,7 +80,15 @@ export function StatementCreateDialog({
     (isCardPayment(own.type, row.description ?? '') || analyze.data?.kind === 'own_transfer');
   function resolvePayment(choice: 'transfer' | 'refund' | 'other'): void {
     setResolution(choice);
-    if (choice === 'refund' && !descriptionEdited.current) setDescription(t('refundDescription'));
+    resolutionRef.current = choice;
+    if (!descriptionEdited.current)
+      setDescription(
+        choice === 'refund'
+          ? t('refundDescription')
+          : choice === 'transfer'
+            ? t('cardPaymentDescription')
+            : (row.description ?? ''),
+      );
     setTransfer(choice === 'transfer');
     categoryEdited.current = true;
     setCategory(
@@ -164,26 +178,27 @@ export function StatementCreateDialog({
               maxLength={500}
             />
           </label>
-          <label className='flex items-center gap-2 text-sm'>
-            <Checkbox
-              checked={transfer}
-              disabled={create.isPending}
-              onCheckedChange={(value) => {
-                setTransfer(value === true);
-                if (cardPayment) setResolution(value === true ? 'transfer' : 'unconfirmed');
-                categoryEdited.current = true;
-                setCategory('');
-              }}
-            />
-            {t('ownTransfer')}
-          </label>
+          {!cardPayment && (
+            <label className='flex items-center gap-2 text-sm'>
+              <Checkbox
+                checked={transfer}
+                disabled={create.isPending}
+                onCheckedChange={(value) => {
+                  setTransfer(value === true);
+                  categoryEdited.current = true;
+                  setCategory('');
+                }}
+              />
+              {t('ownTransfer')}
+            </label>
+          )}
           {transfer ? (
-            <DocumentAccountSelect
+            <StatementAccountSetup
+              currency={row.currency ?? own?.currency ?? 'COP'}
               value={other}
               onChange={setOther}
               accounts={accounts.filter(
-                (a) =>
-                  a.id !== account && a.is_active && !a.deleted_at && a.currency === row.currency,
+                (a) => (a.parent_account_id ?? a.id) !== (own?.parent_account_id ?? own?.id),
               )}
               label={t('otherAccount')}
               disabled={create.isPending}
@@ -232,11 +247,6 @@ export function StatementCreateDialog({
               />
             </div>
           )}
-          {transfer &&
-            !accounts.some(
-              (a) =>
-                a.id !== account && a.is_active && !a.deleted_at && a.currency === row.currency,
-            ) && <p className='text-muted-foreground text-xs'>{t('otherCurrencyTransferHint')}</p>}
           <label className='flex items-start gap-2 text-sm'>
             <Checkbox
               checked={confirmed}

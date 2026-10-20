@@ -382,9 +382,10 @@ describe('resolveDuplicate', () => {
 
     await resolveDuplicate('tx-1', 'keep');
     const fetchCall = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
-    expect(fetchCall[1].method).toBe('PATCH');
+    expect(fetchCall[1].method).toBe('POST');
     const body = JSON.parse(fetchCall[1].body as string);
-    expect(body.duplicate_status).toBe('confirmed');
+    expect(fetchCall[0]).toBe('/api/transactions/tx-1/duplicate-review');
+    expect(body.action).toBe('keep');
   });
 
   it('deletes duplicate', async () => {

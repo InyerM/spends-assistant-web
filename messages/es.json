@@ -621,7 +621,20 @@
     "receiptUploadFailed": "No pudimos subir el comprobante. Reintenta.",
     "aiInputDescription": "Pega un mensaje bancario o describe tu gasto. Revisa los datos antes de guardarlo.",
     "aiInputLabel": "Mensaje o descripción",
-    "sourceStatement": "Extracto"
+    "sourceStatement": "Extracto",
+    "duplicateCompareHint": "Compara este movimiento con la referencia antes de decidir.",
+    "viewDuplicate": "Ver posible duplicado",
+    "duplicateReferenceUnavailable": "El movimiento de referencia fue eliminado o ya no está disponible.",
+    "duplicateResolveFailed": "No pudimos guardar la revisión. Intenta de nuevo.",
+    "analyzeExisting": "Analizar con IA",
+    "existingAnalysisHint": "Revisa la descripción, categoría y notas con IA.",
+    "existingAnalyzing": "Analizando campos…",
+    "existingAnalysisFailed": "No pudimos analizar el movimiento. Puedes seguir editándolo.",
+    "applyReviewedSuggestions": "Usar sugerencias seleccionadas",
+    "existingSuggestionsApplied": "Se actualizaron los campos que seguían sin cambios. Revisa el formulario y guarda para confirmar.",
+    "existingNoChanges": "No hay cambios sugeridos en estos campos.",
+    "emptyReviewValue": "Vacío",
+    "noCategory": "Sin categoría"
   },
   "accounts": {
     "title": "Cuentas",
@@ -774,7 +787,15 @@
       "en": "Inglés",
       "pt": "Portugués"
     },
-    "catalogGuidance": "Las categorías describen el motivo de un movimiento. Los pagos entre tus propias cuentas se registran como transferencias; una devolución puede usar Devoluciones y reembolsos."
+    "catalogGuidance": "Las categorías describen el motivo de un movimiento. Los pagos entre tus propias cuentas se registran como transferencias; una devolución puede usar Devoluciones y reembolsos.",
+    "collectionLabel": "Lista de categorías",
+    "usualCategories": "Habituales",
+    "moreCategories": "Más categorías",
+    "collectionHint": "Aquí están las que ya usas y las que has creado. En Más categorías encontrarás otras opciones.",
+    "searchAllCategories": "La búsqueda incluye Habituales y Más categorías.",
+    "usageUnavailable": "No pudimos consultar el uso. Mostramos todas las categorías.",
+    "retryUsage": "Reintentar",
+    "starterHint": "Una selección para empezar. Las categorías que uses y las que crees aparecerán aquí."
   },
   "automation": {
     "title": "Reglas de Automatización",
@@ -1510,19 +1531,21 @@
     "chooseCurrencyScope": "Selecciona una cuenta en {currency} y el período para comparar estos movimientos.",
     "setupCurrency": "Configurar {currency} en una cuenta",
     "useExistingAccount": "Usar una cuenta existente",
-    "enableCurrencyHint": "Elige la cuenta del extracto y habilita su saldo en {currency}. Sus movimientos actuales se conservarán.",
+    "enableCurrencyHint": "Elige una cuenta y habilita su saldo en {currency}. Sus movimientos actuales se conservarán.",
     "analyzingFields": "Revisando descripción y categoría…",
     "analysisSuggested": "Sugerencia lista para revisar",
     "analysisNeedsCategory": "La categoría necesita tu revisión",
-    "cardPaymentTitle": "Revisa qué tipo de abono es",
-    "cardPaymentHint": "Este abono a la tarjeta parece un pago. Si salió de otra cuenta tuya, vincúlala como transferencia. Si fue una devolución del comercio, usa devoluciones y reembolsos.",
-    "confirmOwnPayment": "Es un pago entre mis cuentas",
-    "confirmRefund": "Es una devolución",
-    "confirmOtherIncome": "Es otro ingreso",
+    "cardPaymentTitle": "Tipo de abono",
+    "cardPaymentHint": "Elige el origen del abono para registrarlo correctamente.",
+    "confirmOwnPayment": "Pago entre mis cuentas",
+    "confirmRefund": "Devolución de un comercio",
+    "confirmOtherIncome": "Otro ingreso",
     "otherCurrencyTransferHint": "Selecciona la cuenta de origen en la misma moneda. Si el pago tuvo conversión, revisa las dos partidas y el tipo de cambio antes de registrarlo.",
     "transferReviewTitle": "Revisa si es una transferencia",
     "transferReviewHint": "Este movimiento puede ser entre tus cuentas. Vincula la otra cuenta para registrarlo como transferencia.",
-    "refundDescription": "Devolución a la tarjeta"
+    "refundDescription": "Devolución a la tarjeta",
+    "cardPaymentDescription": "Pago de tarjeta de crédito",
+    "noCurrencyAccounts": "No tienes otra cuenta disponible en {currency}."
   },
   "planning": {
     "title": "Planifica tu dinero",

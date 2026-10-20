@@ -29,15 +29,13 @@ export function EnableCurrency({
               size='sm'
               disabled={mutation.isPending}
               onClick={() =>
-                mutation.mutate(
-                  { id: account.id, currency },
-                  {
-                    onSuccess: (created) => {
-                      setConfirm(false);
-                      onEnabled(created);
-                    },
-                  },
-                )
+                mutation
+                  .mutateAsync({ id: account.id, currency })
+                  .then((created) => {
+                    setConfirm(false);
+                    onEnabled(created);
+                  })
+                  .catch(() => undefined)
               }>
               {mutation.isPending ? <InlineLoader /> : <Check className='size-4' />}
               {t('enableCurrency', { currency })}
