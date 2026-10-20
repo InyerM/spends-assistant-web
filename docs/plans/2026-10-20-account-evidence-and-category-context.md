@@ -56,3 +56,30 @@ and release results are recorded below when completed.
   (`/tmp/anotto-context-ai-local2.log`).
 - Worker version: `bb9649b9-db3c-45e3-90ed-c134ab26e072`
   (`/tmp/anotto-account-worker-deploy-final.log`).
+
+## Production confirmation — 2026-10-20
+
+- Backend commit `f7a10ca`; web runtime commit `b2a922d`.
+- Vercel deployment `dpl_F1EbNNLQWAGpUZn3XcLymiPqCn4a` reached READY and is aliased to
+  https://my.anotto.app (`/tmp/anotto-account-vercel-deploy.log`).
+- Production browser checks passed destination account records, destination-filtered transaction
+  list, valid all-dates label, home evidence link, correction of the actual COP debit while
+  preserving the USD balance and proof, and source statement navigation. No browser runtime errors;
+  disposable owner deleted (`/tmp/anotto-account-browser-production.log`).
+- Production AI checks passed marketplace Shopping, relevant owned history citations, custom
+  category-rule priority, read-only suggestions and the full account-name tooltip. Disposable owner
+  deleted (`/tmp/anotto-context-ai-production.log`).
+- Final backend suite passed 951 tests across 138 files
+  (`/tmp/anotto-account-backend-full-final.log`).
+- Evidence coverage includes full list, home, account records, contacts, budget movements,
+  transaction detail and edit. Contact and budget evidence use the same batched query and link; the
+  budget/account component tests verify the link is not nested inside another interactive element.
+
+### Reviewing an estimated COP debit
+
+Open the payment from the funding account or from the statement's **Only in Anotto** list. In the
+transaction detail or edit dialog, choose **Review COP debit** (Spanish: **Revisar débito en COP**),
+enter the actual bank debit and confirm it. The USD statement credit remains unchanged and
+reconciled. Return to bank-statement comparison to reconcile the actual COP debit. If that debit is
+already independently reconciled or exists as another transaction, review its existing link instead
+of posting twice.
