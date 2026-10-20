@@ -2,6 +2,7 @@
 import { transactionCurrencyTotals } from '@/lib/transactions/currency-totals';
 
 import { useStatementProofs } from '@/lib/api/queries/statement.queries';
+import { accountPosting } from '@/lib/transactions/account-posting';
 import { StatementEvidenceLink } from './statement-evidence-link';
 import type { StatementProof } from '@/lib/statement-reconciliation';
 import { useMemo, useState } from 'react';
@@ -126,6 +127,7 @@ function MetadataField({
 
 interface TransactionRowProps {
   tx: Transaction;
+  viewAccountId?: string;
   statementStatus?: 'valid' | 'changed';
   statementProof?: StatementProof;
   categoryInfo: { name: string; color: string | null } | null;
@@ -143,6 +145,7 @@ interface TransactionRowProps {
 
 function TransactionRow({
   tx,
+  viewAccountId,
   statementStatus,
   statementProof,
   categoryInfo,
@@ -157,6 +160,7 @@ function TransactionRow({
   showHint,
   onLongPress,
 }: TransactionRowProps): React.ReactElement {
+  const posting = accountPosting(tx, viewAccountId ?? tx.account_id);
   const t = useTranslations('transactions');
   const config = typeConfig[tx.type];
   const Icon = config.icon;
@@ -262,7 +266,7 @@ function TransactionRow({
         <div className='shrink-0 text-right'>
           <p className={`text-sm font-semibold tabular-nums ${config.colorClass}`}>
             {tx.type === 'expense' ? '-' : tx.type === 'income' ? '+' : ''}
-            {formatCurrency(tx.amount, tx.currency ?? 'COP', locale)}
+            {formatCurrency(posting.amount, posting.currency, locale)}
           </p>
           <p className='text-muted-foreground text-xs'>
             {tx.parsed_data?.time_unknown === true && /^00:00(?::00)?$/.test(tx.time)
@@ -425,6 +429,10 @@ export function TransactionList({
               <TransactionRow
                 key={tx.id}
                 tx={tx}
+                viewAccountId={
+                  filters.account_id ??
+                  (filters.account_ids?.length === 1 ? filters.account_ids[0] : undefined)
+                }
                 statementProof={
                   statementProofs?.find((p) => p.transaction_id === tx.id && p.valid) ??
                   statementProofs?.find((p) => p.transaction_id === tx.id)
@@ -437,7 +445,10 @@ export function TransactionList({
                       : undefined
                 }
                 categoryInfo={getCategory(tx.category_id)}
-                accountName={getAccountName(tx.account_id)}
+                accountName={getAccountName(
+                  filters.account_id ??
+                    (filters.account_ids?.length === 1 ? filters.account_ids[0] : tx.account_id),
+                )}
                 locale={locale}
                 selectMode={selectMode}
                 isSelected={selectedIds?.has(tx.id) ?? false}

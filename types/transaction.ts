@@ -22,6 +22,10 @@ export interface Transaction {
   time: string;
   amount: number;
   currency?: string;
+  destination_amount?: number | null;
+  source_currency?: string | null;
+  source_amount?: number | null;
+  fx_rate?: number | null;
   description: string;
   notes: string | null;
   category_id: string | null;

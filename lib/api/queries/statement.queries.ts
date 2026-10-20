@@ -1,10 +1,12 @@
+import { useAuthStore } from '@/store/auth-store';
 import { useQuery } from '@tanstack/react-query';
 import type { StatementProof, StatementReview } from '@/lib/statement-reconciliation';
 export function useStatementProofs(ids: string[]): ReturnType<typeof useQuery<StatementProof[]>> {
+  const owner = useAuthStore((state) => state.supabaseUser?.id);
   const stable = [...new Set(ids)].sort();
   return useQuery({
-    queryKey: ['transactions', 'statement-proofs', stable],
-    enabled: stable.length > 0,
+    queryKey: ['transactions', 'statement-proofs', owner, stable],
+    enabled: Boolean(owner) && stable.length > 0,
     queryFn: async (): Promise<StatementProof[]> => {
       const chunks: string[][] = [];
       for (let i = 0; i < stable.length; i += 100) chunks.push(stable.slice(i, i + 100));

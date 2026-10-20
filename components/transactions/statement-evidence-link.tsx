@@ -29,3 +29,13 @@ export function StatementEvidenceLink({
     </TooltipProvider>
   );
 }
+
+export function findStatementProof(
+  proofs: StatementProof[] | undefined,
+  transactionId: string,
+): StatementProof | undefined {
+  return (
+    proofs?.find((proof) => proof.transaction_id === transactionId && proof.valid) ??
+    proofs?.find((proof) => proof.transaction_id === transactionId)
+  );
+}

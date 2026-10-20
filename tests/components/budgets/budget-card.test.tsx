@@ -5,6 +5,19 @@ import { BudgetCard } from '@/components/budgets/budget-card';
 import type { BudgetStatus } from '@/lib/api/queries/budget.queries';
 import type { Category } from '@/types/category';
 
+vi.mock('@/lib/api/queries/statement.queries', () => ({
+  useStatementProofs: () => ({
+    data: [
+      {
+        transaction_id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+        observation_id: 'row',
+        document_id: 'statement',
+        valid: true,
+      },
+    ],
+  }),
+}));
+
 vi.mock('next-intl', () => ({ useTranslations: () => (key: string) => key }));
 
 const category: Category = {
@@ -68,6 +81,11 @@ describe('BudgetCard', () => {
     );
     const card = within(container);
     await userEvent.click(card.getByRole('button', { name: /viewMovements/ }));
+    expect(card.getByRole('link', { name: 'viewStatementEvidence' })).toHaveAttribute(
+      'href',
+      '/documents#document-statement',
+    );
+    expect(container.querySelector('a a')).toBeNull();
     expect(card.getByText('Lunch')).toBeInTheDocument();
     expect(card.getByRole('list')).not.toHaveClass('max-h-64', 'overflow-y-auto');
     expect(container.querySelector('[data-slot=card]')).toHaveClass('self-start');

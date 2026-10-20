@@ -24,6 +24,7 @@ function createChainableQuery(data: unknown, error: { message: string } | null =
     'eq',
     'is',
     'in',
+    'or',
     'gte',
     'lte',
     'ilike',
@@ -252,4 +253,20 @@ describe('GET /api/transactions', () => {
     const response = await GET(request);
     expect(response.status).toBe(400);
   });
+});
+
+it('includes both sides of account transfers without interpreting filter values as PostgREST syntax', async () => {
+  const { getUserClient } = await import('@/lib/api/server');
+  const mockSb = createChainableQuery([]);
+  vi.mocked(getUserClient).mockResolvedValue({ supabase: mockSb as never, userId: 'owner' });
+  const id = '11111111-1111-4111-8111-111111111111';
+  const response = await GET(new NextRequest(`http://localhost/api/transactions?account_id=${id}`));
+  expect(response.status).toBe(200);
+  expect(mockSb._chain.or).toHaveBeenCalledWith(
+    `account_id.in.(${id}),transfer_to_account_id.in.(${id})`,
+  );
+  expect(
+    (await GET(new NextRequest('http://localhost/api/transactions?account_id=bad),user_id.neq.x')))
+      .status,
+  ).toBe(400);
 });

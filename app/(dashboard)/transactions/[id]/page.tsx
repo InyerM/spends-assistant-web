@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { useTransactionFormStore } from '@/lib/stores/transaction-form.store';
+import { StatementFundingCorrection } from '@/components/transactions/statement-funding-correction';
 import { TransactionOrigin } from '@/components/transactions/transaction-origin';
 import { useParams } from 'next/navigation';
 import { useLocale, useTranslations } from 'next-intl';
@@ -79,6 +80,7 @@ export default function TransactionDetailPage(): React.ReactElement {
           </CardHeader>
           <CardContent>
             <TransactionOrigin transactionId={id} />
+            <StatementFundingCorrection transaction={transaction} />
             <dl className='border-border grid gap-4 border-t pt-4 text-sm sm:grid-cols-2'>
               <div>
                 <dt className='text-muted-foreground'>{t('type')}</dt>

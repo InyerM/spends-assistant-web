@@ -600,7 +600,8 @@
     "existingSuggestionsApplied": "Os campos que continuavam sem alterações foram atualizados. Revise o formulário e salve para confirmar.",
     "existingNoChanges": "Nenhuma alteração sugerida para estes campos.",
     "emptyReviewValue": "Vazio",
-    "noCategory": "Sem categoria"
+    "noCategory": "Sem categoria",
+    "allDates": "Todas as datas"
   },
   "accounts": {
     "title": "Contas",
@@ -1825,5 +1826,15 @@
     "all": "Todos",
     "doesNotReplaceProof": "A conciliação é indicada em cada movimentação.",
     "saveError": "Não foi possível alterar o status. Se já houver movimentações vinculadas, use Concluído."
+  },
+  "statementFundingCorrection": {
+    "review": "Revisar débito em COP",
+    "help": "Confira quanto o banco debitou. O saldo em COP será ajustado e o crédito conciliado em USD será mantido.",
+    "actual": "Débito real em COP",
+    "confirm": "Confirmar débito real",
+    "saved": "Débito atualizado. O crédito em USD continua conciliado.",
+    "duplicate": "Já existe um débito com esse valor e data. Revise e concilie antes de corrigir este pagamento.",
+    "reconciled": "O débito em COP já está conciliado. Revise esse vínculo antes de alterar o valor.",
+    "error": "Não foi possível corrigir. Atualize e revise o pagamento e seus vínculos."
   }
 }

@@ -1,5 +1,10 @@
 'use client';
 
+import { useStatementProofs } from '@/lib/api/queries/statement.queries';
+import {
+  StatementEvidenceLink,
+  findStatementProof,
+} from '@/components/transactions/statement-evidence-link';
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
@@ -40,6 +45,9 @@ export function BudgetCard({
   const name = category?.translations?.[locale] || category?.name || t('unknownCategory');
   const coverageGaps = budget.pending_count + budget.unknown_currency_count + budget.excluded_count;
   const [showMovements, setShowMovements] = useState(false);
+  const proofs = useStatementProofs(
+    showMovements ? budget.contributing_transactions.map((tx) => tx.id) : [],
+  );
   const movementsId = `budget-movements-${budget.budget_id}`;
 
   return (
@@ -129,10 +137,10 @@ export function BudgetCard({
             {showMovements && (
               <ul id={movementsId} className='mt-2 space-y-1'>
                 {budget.contributing_transactions.map((transaction) => (
-                  <li key={transaction.id}>
+                  <li key={transaction.id} className='flex min-w-0 items-center gap-1'>
                     <Link
                       href={`/transactions/${transaction.id}`}
-                      className='hover:bg-card-overlay focus-visible:ring-ring flex items-center justify-between gap-3 rounded-md px-2 py-2 text-sm focus-visible:ring-2 focus-visible:outline-none'>
+                      className='hover:bg-card-overlay focus-visible:ring-ring flex min-w-0 flex-1 items-center justify-between gap-3 rounded-md px-2 py-2 text-sm focus-visible:ring-2 focus-visible:outline-none'>
                       <span className='min-w-0'>
                         <span className='block truncate font-medium'>
                           {transaction.description}
@@ -143,6 +151,11 @@ export function BudgetCard({
                         {formatCurrency(transaction.amount, 'COP', locale)}
                       </span>
                     </Link>
+                    {findStatementProof(proofs.data, transaction.id) && (
+                      <StatementEvidenceLink
+                        proof={findStatementProof(proofs.data, transaction.id)!}
+                      />
+                    )}
                   </li>
                 ))}
               </ul>

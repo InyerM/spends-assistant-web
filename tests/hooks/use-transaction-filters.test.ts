@@ -389,3 +389,20 @@ describe('useTransactionFilters', () => {
     });
   });
 });
+it('reflects a URL account filter and clears its scalar value when toggled off', () => {
+  const onFiltersChange = vi.fn();
+  const { result } = renderHook(() =>
+    useTransactionFilters({
+      filters: { account_id: 'a1' },
+      onFiltersChange,
+      accounts: ACCOUNTS,
+      categories: CATEGORIES,
+    }),
+  );
+  expect(result.current.selectedAccountIds).toEqual(['a1']);
+  expect(result.current.activeFilterCount).toBe(1);
+  act(() => result.current.toggleAccount('a1'));
+  expect(onFiltersChange).toHaveBeenCalledWith(
+    expect.objectContaining({ account_id: undefined, account_ids: undefined }),
+  );
+});

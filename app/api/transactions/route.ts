@@ -69,8 +69,19 @@ export async function GET(request: NextRequest): Promise<Response> {
 
     if (types) query = query.in('type', types.split(','));
     else if (type) query = query.eq('type', type);
-    if (accountIds) query = query.in('account_id', accountIds.split(','));
-    else if (accountId) query = query.eq('account_id', accountId);
+    const selectedAccounts = accountIds ? accountIds.split(',') : accountId ? [accountId] : [];
+    if (
+      selectedAccounts.length > 100 ||
+      selectedAccounts.some(
+        (id) =>
+          !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id),
+      )
+    )
+      return errorResponse('Invalid account filter', 400);
+    if (selectedAccounts.length) {
+      const ids = selectedAccounts.join(',');
+      query = query.or(`account_id.in.(${ids}),transfer_to_account_id.in.(${ids})`);
+    }
     if (categoryIds) query = query.in('category_id', categoryIds.split(','));
     else if (categoryId) query = query.eq('category_id', categoryId);
     if (source) query = query.eq('source', source);

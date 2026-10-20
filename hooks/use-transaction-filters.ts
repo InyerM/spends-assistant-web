@@ -35,7 +35,7 @@ function countActiveFilters(filters: ListFilters): number {
   let count = 0;
   if (filters.search) count++;
   if (filters.types?.length) count++;
-  if (filters.account_ids?.length) count++;
+  if (filters.account_ids?.length || filters.account_id) count++;
   if (filters.category_ids?.length) count++;
   if (filters.sort_by) count++;
   return count;
@@ -48,7 +48,10 @@ export function useTransactionFilters({
   categories,
 }: UseTransactionFiltersOptions): UseTransactionFiltersReturn {
   const selectedTypes = useMemo(() => filters.types ?? [], [filters.types]);
-  const selectedAccountIds = useMemo(() => filters.account_ids ?? [], [filters.account_ids]);
+  const selectedAccountIds = useMemo(
+    () => filters.account_ids ?? (filters.account_id ? [filters.account_id] : []),
+    [filters.account_ids, filters.account_id],
+  );
   const selectedCategoryIds = useMemo(() => filters.category_ids ?? [], [filters.category_ids]);
   const activeFilterCount = countActiveFilters(filters);
   const currentSort = `${filters.sort_by ?? 'date'}-${filters.sort_order ?? 'desc'}`;
@@ -94,6 +97,7 @@ export function useTransactionFilters({
       }
       onFiltersChange({
         ...filters,
+        account_id: undefined,
         account_ids: current.length > 0 ? current : undefined,
       });
     },
@@ -105,6 +109,7 @@ export function useTransactionFilters({
     const allSelected = selectedAccountIds.length === accounts.length;
     onFiltersChange({
       ...filters,
+      account_id: undefined,
       account_ids: allSelected ? undefined : accounts.map((a) => a.id),
     });
   }, [accounts, selectedAccountIds.length, filters, onFiltersChange]);

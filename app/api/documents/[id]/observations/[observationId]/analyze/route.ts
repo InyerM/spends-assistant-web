@@ -87,6 +87,9 @@ export async function POST(
     const token = accessToken ?? (await supabase.auth.getSession()).data.session?.access_token;
     if (!token) return errorResponse('Unauthorized', 401);
     const proposal = await requestCategoryReview(token, {
+      amount: Math.abs(Number(movement.amount)),
+      account_id: scopedAccount,
+      source: 'statement',
       locale: body.data.locale,
       type,
       account_type: account.data.type,

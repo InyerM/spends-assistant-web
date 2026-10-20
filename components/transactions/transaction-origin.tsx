@@ -17,12 +17,15 @@ export function TransactionOrigin({
   const t = useTranslations('transactions');
   const query = useTransactionOrigin(transactionId);
   const [expanded, setExpanded] = useState(false);
-  if (query.isPending) return null;
+  if (query.isPending) return <StatementEvidence transactionId={transactionId} />;
   if (query.isError)
     return (
-      <p className='text-muted-foreground text-sm' role='status'>
-        {t('originUnavailable')}
-      </p>
+      <>
+        <StatementEvidence transactionId={transactionId} />
+        <p className='text-muted-foreground text-sm' role='status'>
+          {t('originUnavailable')}
+        </p>
+      </>
     );
   const { document, inbox } = query.data;
   if (!document && !inbox) return <StatementEvidence transactionId={transactionId} />;

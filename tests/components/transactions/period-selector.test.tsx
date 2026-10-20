@@ -21,3 +21,9 @@ it('opens the existing period picker from an unfiltered range without an invalid
     expect.stringMatching(/^\d{4}-01-31$/u),
   );
 });
+
+it('defaults an empty account-filter range to all dates even without an explicit label', () => {
+  render(<PeriodSelector dateFrom='' dateTo='' onChange={vi.fn()} />);
+  expect(screen.getByRole('button', { name: 'allDates' })).toBeInTheDocument();
+  expect(document.body.textContent).not.toMatch(/NaN|undefined/);
+});

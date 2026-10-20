@@ -46,6 +46,10 @@ export async function POST(
     const token = accessToken ?? (await supabase.auth.getSession()).data.session?.access_token;
     if (!token) return errorResponse('Unauthorized', 401);
     const result = await requestCategoryReview(token, {
+      transaction_id: transaction.id,
+      amount: transaction.amount,
+      account_id: body.data.account_id ?? transaction.account_id,
+      source: transaction.source,
       locale: body.data.locale,
       type: body.data.type ?? transaction.type,
       account_type: account.data.type,

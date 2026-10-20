@@ -634,7 +634,8 @@
     "existingSuggestionsApplied": "Fields that were still unchanged were updated. Review the form and save to confirm.",
     "existingNoChanges": "No changes suggested for these fields.",
     "emptyReviewValue": "Empty",
-    "noCategory": "Uncategorized"
+    "noCategory": "Uncategorized",
+    "allDates": "All dates"
   },
   "accounts": {
     "title": "Accounts",
@@ -1942,5 +1943,15 @@
     "all": "All",
     "doesNotReplaceProof": "Reconciliation is shown on each movement.",
     "saveError": "Could not change the status. If movements are already linked, use Completed."
+  },
+  "statementFundingCorrection": {
+    "review": "Review COP debit",
+    "help": "Check the actual bank debit. The COP balance will be adjusted while the reconciled USD credit is preserved.",
+    "actual": "Actual COP debit",
+    "confirm": "Confirm actual debit",
+    "saved": "Debit updated. The USD credit remains reconciled.",
+    "duplicate": "A debit with this amount and date already exists. Review and reconcile it before correcting this payment.",
+    "reconciled": "The COP debit is already reconciled. Review that link before changing the amount.",
+    "error": "Could not correct the debit. Reload and review the payment and its links."
   }
 }

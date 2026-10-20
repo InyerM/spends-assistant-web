@@ -1,4 +1,9 @@
 'use client';
+import { useStatementProofs } from '@/lib/api/queries/statement.queries';
+import {
+  StatementEvidenceLink,
+  findStatementProof,
+} from '@/components/transactions/statement-evidence-link';
 import { CategorySuggestions } from '@/components/transactions/category-suggestions';
 import { useState } from 'react';
 import Link from 'next/link';
@@ -26,6 +31,7 @@ export function ContactDetailDialog({
   const locale = useLocale();
   const cache = useQueryClient();
   const { data, isLoading, isError } = useContactDetail(contact.id);
+  const proofs = useStatementProofs(data?.transactions.map((row) => row.id) ?? []);
   const [name, setName] = useState(contact.name);
   const [saving, setSaving] = useState(false);
   const save = async (): Promise<void> => {
@@ -120,22 +126,27 @@ export function ContactDetailDialog({
             </div>
             <h3 className='font-medium'>{t('recent')}</h3>
             <div className='divide-border divide-y'>
-              {data.transactions.map((transaction) => (
-                <Link
-                  href={`/transactions/${transaction.id}`}
-                  key={transaction.id}
-                  className='hover:bg-muted/40 focus-visible:ring-ring flex items-center justify-between gap-4 rounded-lg px-2 py-3 focus-visible:ring-2'>
-                  <div className='min-w-0 flex-1'>
-                    <p className='truncate text-sm'>{transaction.description}</p>
-                    <p className='text-muted-foreground text-xs'>
-                      {new Date(`${transaction.date}T12:00:00`).toLocaleDateString(locale)}
-                    </p>
+              {data.transactions.map((transaction) => {
+                const proof = findStatementProof(proofs.data, transaction.id);
+                return (
+                  <div key={transaction.id} className='flex min-w-0 items-center gap-2'>
+                    <Link
+                      href={`/transactions/${transaction.id}`}
+                      className='hover:bg-muted/40 focus-visible:ring-ring flex min-w-0 flex-1 items-center justify-between gap-4 rounded-lg px-2 py-3 focus-visible:ring-2'>
+                      <div className='min-w-0 flex-1'>
+                        <p className='truncate text-sm'>{transaction.description}</p>
+                        <p className='text-muted-foreground text-xs'>
+                          {new Date(`${transaction.date}T12:00:00`).toLocaleDateString(locale)}
+                        </p>
+                      </div>
+                      <span className='shrink-0 text-sm tabular-nums'>
+                        {formatCurrency(transaction.amount, transaction.currency, locale)}
+                      </span>
+                    </Link>
+                    {proof && <StatementEvidenceLink proof={proof} />}
                   </div>
-                  <span className='shrink-0 text-sm tabular-nums'>
-                    {formatCurrency(transaction.amount, transaction.currency, locale)}
-                  </span>
-                </Link>
-              ))}
+                );
+              })}
             </div>
             {data.movement_count > 100 ? (
               <p className='text-muted-foreground text-xs'>{t('latestOnly')}</p>

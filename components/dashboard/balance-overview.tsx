@@ -3,6 +3,7 @@
 import { useRef, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations, useLocale } from 'next-intl';
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAccounts } from '@/lib/api/queries/account.queries';
 import { formatCurrency } from '@/lib/utils/formatting';
@@ -64,7 +65,18 @@ function AccountCard({ account, onEdit, onClick, locale }: AccountCardProps): Re
       }}>
       <Icon className='text-success h-5 w-5 shrink-0' />
       <div className='min-w-0 flex-1'>
-        <p className='text-foreground truncate text-sm font-semibold'>{account.name}</p>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <p
+                className='text-foreground focus-visible:ring-ring truncate rounded-sm text-sm font-semibold focus-visible:ring-2 focus-visible:outline-none'
+                tabIndex={0}>
+                {account.name}
+              </p>
+            </TooltipTrigger>
+            <TooltipContent>{account.name}</TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
         <p className='text-foreground text-sm tabular-nums'>
           {formatCurrency(account.balance, account.currency, locale)}
         </p>

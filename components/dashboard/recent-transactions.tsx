@@ -1,5 +1,10 @@
 'use client';
 
+import { useStatementProofs } from '@/lib/api/queries/statement.queries';
+import {
+  StatementEvidenceLink,
+  findStatementProof,
+} from '@/components/transactions/statement-evidence-link';
 import { useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations, useLocale } from 'next-intl';
@@ -30,6 +35,7 @@ export function RecentTransactions(): React.ReactElement {
   const router = useRouter();
   const { openWith } = useTransactionFormStore();
   const { data: result, isLoading } = useTransactions({ limit: 5 });
+  const proofs = useStatementProofs(result?.data.map((tx) => tx.id) ?? []);
   const { data: categories } = useCategories();
   const { data: accounts } = useAccounts();
 
@@ -96,47 +102,50 @@ export function RecentTransactions(): React.ReactElement {
                 const category = getCategory(tx.category_id);
                 const accountName = getAccountName(tx.account_id);
 
+                const proof = findStatementProof(proofs.data, tx.id);
                 return (
-                  <button
-                    key={tx.id}
-                    type='button'
-                    onClick={(): void => openWith(tx)}
-                    className='hover:bg-card-overlay flex w-full min-w-0 cursor-pointer items-center gap-3 rounded-lg p-2.5 text-left transition-colors'>
-                    <div
-                      className={`bg-card-overlay flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${config.colorClass}`}>
-                      <Icon className='h-4 w-4' />
-                    </div>
-                    <div className='min-w-0 flex-1'>
-                      <p className='text-foreground truncate text-sm font-medium'>
-                        {tx.description}
-                      </p>
-                      <div className='flex flex-wrap items-center gap-1'>
-                        <p className='text-muted-foreground truncate text-xs'>{accountName}</p>
-                        {category && (
-                          <>
-                            <span className='text-muted-foreground hidden text-xs sm:inline'>
-                              ·
-                            </span>
-                            <Badge
-                              variant='secondary'
-                              className='h-5 max-w-full truncate px-1.5 text-[10px] max-sm:mt-0.5 max-sm:basis-full'>
-                              {category.name}
-                            </Badge>
-                          </>
-                        )}
+                  <div key={tx.id} className='flex min-w-0 items-center gap-1'>
+                    <button
+                      type='button'
+                      onClick={(): void => openWith(tx)}
+                      className='hover:bg-card-overlay flex w-full min-w-0 cursor-pointer items-center gap-3 rounded-lg p-2.5 text-left transition-colors'>
+                      <div
+                        className={`bg-card-overlay flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${config.colorClass}`}>
+                        <Icon className='h-4 w-4' />
                       </div>
-                    </div>
-                    <div className='shrink-0 text-right'>
-                      <p
-                        className={`text-sm font-semibold whitespace-nowrap tabular-nums ${config.colorClass}`}>
-                        {tx.type === 'expense' ? '-' : tx.type === 'income' ? '+' : ''}
-                        {formatCurrency(tx.amount, tx.currency ?? 'COP', locale)}
-                      </p>
-                      <p className='text-muted-foreground text-xs'>
-                        {formatTimeForDisplay(tx.time)}
-                      </p>
-                    </div>
-                  </button>
+                      <div className='min-w-0 flex-1'>
+                        <p className='text-foreground truncate text-sm font-medium'>
+                          {tx.description}
+                        </p>
+                        <div className='flex flex-wrap items-center gap-1'>
+                          <p className='text-muted-foreground truncate text-xs'>{accountName}</p>
+                          {category && (
+                            <>
+                              <span className='text-muted-foreground hidden text-xs sm:inline'>
+                                ·
+                              </span>
+                              <Badge
+                                variant='secondary'
+                                className='h-5 max-w-full truncate px-1.5 text-[10px] max-sm:mt-0.5 max-sm:basis-full'>
+                                {category.name}
+                              </Badge>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                      <div className='shrink-0 text-right'>
+                        <p
+                          className={`text-sm font-semibold whitespace-nowrap tabular-nums ${config.colorClass}`}>
+                          {tx.type === 'expense' ? '-' : tx.type === 'income' ? '+' : ''}
+                          {formatCurrency(tx.amount, tx.currency ?? 'COP', locale)}
+                        </p>
+                        <p className='text-muted-foreground text-xs'>
+                          {formatTimeForDisplay(tx.time)}
+                        </p>
+                      </div>
+                    </button>
+                    {proof && <StatementEvidenceLink proof={proof} />}
+                  </div>
                 );
               })}
             </div>

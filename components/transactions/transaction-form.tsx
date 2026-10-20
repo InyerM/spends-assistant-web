@@ -9,6 +9,7 @@ import { useTranslations, useLocale } from 'next-intl';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm, useWatch } from 'react-hook-form';
 import { toast } from 'sonner';
+import { StatementFundingCorrection } from '@/components/transactions/statement-funding-correction';
 import { TransactionOrigin } from '@/components/transactions/transaction-origin';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -441,7 +442,12 @@ export function TransactionForm({
           )}
         </DialogHeader>
 
-        {transaction && <TransactionOrigin transactionId={transaction.id} />}
+        {transaction && (
+          <>
+            <TransactionOrigin transactionId={transaction.id} />
+            <StatementFundingCorrection transaction={transaction} />
+          </>
+        )}
 
         {/* ========== STEP: AI PROMPT ========== */}
         {ai.step === 'ai-prompt' && !isEditing && (

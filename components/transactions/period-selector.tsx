@@ -41,7 +41,7 @@ export function PeriodSelector({
   const localeMonthShort = useMemo(() => getMonthShortUtil(locale), [locale]);
   const localeDayHeaders = useMemo(() => getDayHeadersUtil(locale), [locale]);
 
-  const empty = Boolean(emptyLabel) && !dateFrom && !dateTo;
+  const empty = !dateFrom || !dateTo;
   const now = new Date();
   const period = usePeriodSelector({
     dateFrom: empty ? toStr(startOfMonth(now)) : dateFrom,
@@ -121,7 +121,7 @@ export function PeriodSelector({
             variant='ghost'
             className='min-w-0 cursor-pointer gap-1.5 text-sm font-medium sm:h-8 sm:px-2'>
             <Calendar className='text-muted-foreground h-3.5 w-3.5' />
-            <span className='truncate'>{empty ? emptyLabel : label}</span>
+            <span className='truncate'>{empty ? (emptyLabel ?? t('allDates')) : label}</span>
           </Button>
         </PopoverTrigger>
         <PopoverContent className='w-auto min-w-[280px] p-3' align='start'>
