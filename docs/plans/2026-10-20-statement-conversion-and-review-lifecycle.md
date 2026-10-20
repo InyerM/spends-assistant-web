@@ -98,3 +98,19 @@ shipping.
   duplicated or reclassified.
 - Workflow completion organizes captures and does not replace the per-movement reconciliation proof.
   Mobile native implementation remains deferred.
+
+## Production confirmation
+
+- Backend source: `d1cda35`; web runtime source: `d87b69b`.
+- Vercel deployment `dpl_51YKfbNkwqf2JrTyRw4JKJdqYeYT` is READY and aliased to https://my.anotto.app
+  on October 20, 2026.
+- The complete browser scenario passed against production: bank-identifier currency setup, period
+  mismatch explanation, real dated reference and editable funding amount, atomic two-currency
+  posting, valid reconciliation, completed/no-movements filters, updated pending count, and
+  transaction-to-statement navigation.
+- The production browser had no runtime errors; the mobile dialog fit within the viewport and the
+  disposable owner was removed successfully. Evidence:
+  `/tmp/anotto-statement-conversion-production.log` and
+  `/tmp/anotto-statement-conversion-browser-report.json`.
+- Customer financial rows and previously valid reconciliation proofs were preserved; only disposable
+  synthetic owners were used for posting and deletion tests.
