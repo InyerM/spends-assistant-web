@@ -4,7 +4,8 @@ import { getCategoryName } from '@/lib/i18n/get-category-name';
 import type { Locale } from '@/i18n/config';
 import { useState } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
-import { Tags, ChevronRight } from 'lucide-react';
+import { Tags, ChevronRight, Sparkles } from 'lucide-react';
+import { ExpenseCategoryReviewDialog } from './expense-category-review-dialog';
 import { Button } from '@/components/ui/button';
 import { useCategorySuggestions } from '@/lib/api/queries/category-followup.queries';
 import { useCategoryFollowupStore } from '@/lib/stores/category-followup.store';
@@ -20,6 +21,8 @@ export function CategorySuggestions({
   const locale = useLocale() as Locale;
   const query = useCategorySuggestions(contactId);
   const [expanded, setExpanded] = useState(false);
+  const [aiReviewOpen, setAiReviewOpen] = useState(false);
+  const tAi = useTranslations('expenseCategoryReview');
   const categoryName = (id: string, fallback: string): string => {
     const category = categories?.find((c) => c.id === id);
     return category ? getCategoryName(category, locale) : fallback;
@@ -39,6 +42,12 @@ export function CategorySuggestions({
         {onUncategorized && (
           <Button variant='ghost' size='sm' onClick={onUncategorized}>
             {t('showUncategorized')}
+          </Button>
+        )}
+        {!contactId && (
+          <Button variant='outline' size='sm' onClick={() => setAiReviewOpen(true)}>
+            <Sparkles className='size-4' />
+            {tAi('entry')}
           </Button>
         )}
         {rows.length > 0 && (
@@ -77,6 +86,7 @@ export function CategorySuggestions({
           ))}
         </div>
       )}
+      {aiReviewOpen && <ExpenseCategoryReviewDialog open onOpenChange={setAiReviewOpen} />}
     </section>
   );
 }
