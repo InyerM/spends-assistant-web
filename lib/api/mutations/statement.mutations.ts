@@ -29,6 +29,7 @@ export interface StatementCreationInput {
   category_id: string | null;
   description: string;
   transfer_account_id?: string | null;
+  funding_amount?: number;
 }
 export function useCreateStatementTransaction(
   documentId: string,

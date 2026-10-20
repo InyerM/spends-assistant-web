@@ -13,6 +13,7 @@ import { DocumentCaptureCard } from '@/components/documents/document-capture-car
 import { AiConsentNotice } from '@/components/ai-consent-notice';
 import { AiConsentRequiredError } from '@/lib/ai-consent';
 import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { documentNeedsReview } from '@/lib/documents/pending';
 import { MAX_DOCUMENT_BYTES } from '@/lib/documents';
 import { useAccounts } from '@/lib/api/queries/account.queries';
@@ -34,6 +35,7 @@ type SuggestionGroup = DocumentSuggestionGroup;
 
 export default function DocumentsPage(): React.ReactElement {
   const t = useTranslations('documents');
+  const tWorkflow = useTranslations('documentWorkflow');
   const queryClient = useQueryClient();
   const documentQuery = useDocuments();
   const refetchDocuments = documentQuery.refetch;
@@ -45,6 +47,16 @@ export default function DocumentsPage(): React.ReactElement {
   const [protectedPdfId, setProtectedPdfId] = useState<string | null>(null);
   const [incorrectPassword, setIncorrectPassword] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
+  const [reviewFilter, setReviewFilter] = useState<'all' | 'active' | 'completed' | 'no_movements'>(
+    'active',
+  );
+  const visibleDocuments = documents.filter(
+    (document) =>
+      Boolean(document.archived_at) === showArchived &&
+      (showArchived ||
+        reviewFilter === 'all' ||
+        (document.review_status ?? 'active') === reviewFilter),
+  );
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | AiConsentRequiredError | null>(null);
   const [suggestions, setSuggestions] = useState<Partial<Record<string, SuggestionGroup[]>>>({});
@@ -59,6 +71,7 @@ export default function DocumentsPage(): React.ReactElement {
       if (!target) return;
       openedHash.current = hash;
       setShowArchived(Boolean(target.archived_at));
+      setReviewFilter(target.review_status ?? 'active');
       window.setTimeout(() => {
         const element = window.document.getElementById(hash.slice(1));
         if (element && typeof element.scrollIntoView === 'function')
@@ -226,6 +239,18 @@ export default function DocumentsPage(): React.ReactElement {
       </header>
 
       <p className='text-muted-foreground text-xs leading-5'>{t('pdfSupportHint')}</p>
+      {!showArchived && (
+        <Tabs
+          value={reviewFilter}
+          onValueChange={(value) => setReviewFilter(value as typeof reviewFilter)}>
+          <TabsList className='h-auto max-w-full flex-wrap'>
+            <TabsTrigger value='all'>{tWorkflow('all')}</TabsTrigger>
+            <TabsTrigger value='active'>{tWorkflow('active')}</TabsTrigger>
+            <TabsTrigger value='completed'>{tWorkflow('completed')}</TabsTrigger>
+            <TabsTrigger value='no_movements'>{tWorkflow('no_movements')}</TabsTrigger>
+          </TabsList>
+        </Tabs>
+      )}
       {protectedPdfId ? (
         <PdfPasswordDialog
           busy={busy === protectedPdfId}
@@ -247,8 +272,7 @@ export default function DocumentsPage(): React.ReactElement {
       )}
       {loading ? (
         <p className='text-muted-foreground text-sm'>{t('loading')}</p>
-      ) : documents.filter((document) => Boolean(document.archived_at) === showArchived).length ===
-        0 ? (
+      ) : visibleDocuments.length === 0 ? (
         <Card>
           <CardContent className='flex flex-col items-center py-12 text-center'>
             <FileImage className='text-muted-foreground mb-3 h-10 w-10' />
@@ -258,32 +282,30 @@ export default function DocumentsPage(): React.ReactElement {
         </Card>
       ) : (
         <div className='space-y-4'>
-          {documents
-            .filter((document) => Boolean(document.archived_at) === showArchived)
-            .map((document) => (
-              <DocumentCaptureCard
-                key={document.id}
-                document={document}
-                history={documents.flatMap((entry) =>
-                  entry.document_observations.map((observation) => ({
-                    ...observation,
-                    document_type: entry.document_type,
-                  })),
-                )}
-                accounts={accounts ?? []}
-                categories={categories ?? []}
-                suggestions={suggestions[document.id]}
-                busy={busy}
-                suggestionsBusy={suggestionBusy === document.id}
-                onOpen={() => void findSuggestions(document.id)}
-                onArchive={(archived) => void archiveCapture(document.id, archived)}
-                onExtract={() => void extract(document.id)}
-                onRestore={(documentId, observationId) =>
-                  void restoreObservation(documentId, observationId)
-                }
-                onRefresh={load}
-              />
-            ))}
+          {visibleDocuments.map((document) => (
+            <DocumentCaptureCard
+              key={document.id}
+              document={document}
+              history={documents.flatMap((entry) =>
+                entry.document_observations.map((observation) => ({
+                  ...observation,
+                  document_type: entry.document_type,
+                })),
+              )}
+              accounts={accounts ?? []}
+              categories={categories ?? []}
+              suggestions={suggestions[document.id]}
+              busy={busy}
+              suggestionsBusy={suggestionBusy === document.id}
+              onOpen={() => void findSuggestions(document.id)}
+              onArchive={(archived) => void archiveCapture(document.id, archived)}
+              onExtract={() => void extract(document.id)}
+              onRestore={(documentId, observationId) =>
+                void restoreObservation(documentId, observationId)
+              }
+              onRefresh={load}
+            />
+          ))}
         </div>
       )}
     </div>

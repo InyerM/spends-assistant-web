@@ -1548,7 +1548,11 @@
     "transferReviewHint": "This transaction may be between your own accounts. Link the other account to record it as a transfer.",
     "refundDescription": "Refund to card",
     "cardPaymentDescription": "Credit card payment",
-    "noCurrencyAccounts": "You have no other available account in {currency}."
+    "noCurrencyAccounts": "You have no other available account in {currency}.",
+    "outsidePeriod": "The movement is dated {date}, but the selected period is {start} to {end}. Close this window and check the statement dates before comparing.",
+    "periodMismatch": "The movement is outside the selected period. Check the statement dates and compare again.",
+    "createConversionConfirmation": "I confirm this payment is not recorded and I reviewed the amount debited from the funding account.",
+    "viewStatementEvidence": "View reconciliation statement"
   },
   "planning": {
     "title": "Plan your money",
@@ -1917,5 +1921,26 @@
     "saving": "Saving category",
     "selectBatch": "Select up to 5",
     "clearSelection": "Clear selection"
+  },
+  "statementConversion": {
+    "fundingAccount": "Account you paid from",
+    "chooseAccount": "Choose an account",
+    "searchAccount": "Search accounts",
+    "noAccounts": "No other accounts available",
+    "debitedAmount": "Amount debited in {currency}",
+    "reference": "Reference TRM: {rate} COP per USD · {date}",
+    "useEstimate": "Use estimate: {amount}",
+    "source": "View TRM source",
+    "referenceUnavailable": "No verified rate for this date. Enter the amount debited.",
+    "reviewDebit": "Your bank may use a different rate. Review the debited amount before confirming."
+  },
+  "documentWorkflow": {
+    "label": "Review status",
+    "active": "In review",
+    "completed": "Completed",
+    "no_movements": "No movements",
+    "all": "All",
+    "doesNotReplaceProof": "Reconciliation is shown on each movement.",
+    "saveError": "Could not change the status. If movements are already linked, use Completed."
   }
 }

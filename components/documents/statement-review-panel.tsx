@@ -202,6 +202,7 @@ export function StatementReviewPanel({
             account={account}
             busy={busy}
             submit={submit}
+            period={{ start: from, end: to }}
           />
         </>
       )}

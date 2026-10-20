@@ -16,6 +16,7 @@ import { DocumentReviewedList } from '@/components/documents/document-reviewed-l
 import type { ReviewHistoryObservation } from '@/lib/document-review';
 import type { DocumentSuggestionGroup, StoredDocument } from '@/lib/api/queries/document.queries';
 import { documentNeedsReview } from '@/lib/documents/pending';
+import { DocumentReviewStatusControl } from './document-review-status';
 import type { Account, Category } from '@/types';
 
 interface Props {
@@ -156,6 +157,9 @@ export function DocumentCaptureCard({
             </div>
           </TooltipProvider>
         </div>
+        {document.status === 'extracted' && !document.archived_at && (
+          <DocumentReviewStatusControl document={document} disabled={busy !== null} />
+        )}
         {document.status === 'extracted' && !document.archived_at && (
           <details
             className='border-border border-t pt-4'

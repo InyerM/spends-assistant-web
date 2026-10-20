@@ -15,6 +15,8 @@ export interface StatementTransaction {
   date: string;
   type: string;
   description?: string;
+  destination_amount?: number | null;
+  source_currency?: string | null;
 }
 export interface StatementProof {
   id?: string;
@@ -57,22 +59,40 @@ export function compareStatement(
   );
   const unverified = new Set(needsReview.map((r) => r.id));
   const statementOnly = pending.filter((r) => !unverified.has(r.id));
-  const appOnly = transactions.filter((t) => !linkedTransactions.has(t.id));
+  const appOnly = transactions
+    .filter((t) => !linkedTransactions.has(t.id))
+    .map((t) =>
+      t.type === 'transfer' &&
+      t.transfer_to_account_id === accountId &&
+      t.account_id !== accountId &&
+      typeof t.destination_amount === 'number'
+        ? { ...t, amount: t.destination_amount, currency: t.source_currency ?? t.currency }
+        : t,
+    );
   const candidates: Record<string, string[]> = {};
   for (const row of statementOnly) {
     candidates[row.id] = appOnly
       .filter((t) => {
+        const destinationSide =
+          t.type === 'transfer' &&
+          t.transfer_to_account_id === accountId &&
+          t.account_id !== accountId;
+        const amount = destinationSide ? (t.destination_amount ?? t.amount) : t.amount;
+        const currency =
+          destinationSide && typeof t.destination_amount === 'number'
+            ? (t.source_currency ?? t.currency)
+            : t.currency;
         const signed =
           t.type === 'income' ||
           (t.type === 'transfer' &&
             t.transfer_to_account_id === accountId &&
             t.account_id !== accountId)
-            ? t.amount
-            : -t.amount;
+            ? amount
+            : -amount;
         return (
           row.amount !== null &&
           row.amount !== 0 &&
-          row.currency === t.currency &&
+          row.currency === currency &&
           Math.round(row.amount * 100) === Math.round(signed * 100) &&
           row.occurred_at_text?.slice(0, 10) === t.date
         );

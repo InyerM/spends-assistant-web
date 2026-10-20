@@ -16,7 +16,21 @@ vi.mock('@/lib/api/mutations/statement.mutations', () => ({
   useCreateStatementTransaction: () => ({ mutate: vi.fn(), isPending: false }),
 }));
 vi.mock('@/components/shared/searchable-select', () => ({
-  SearchableSelect: () => <div>category</div>,
+  SearchableSelect: ({
+    ariaLabel,
+    items,
+  }: {
+    ariaLabel?: string;
+    items: Array<{ value: string; label: string }>;
+  }) => (
+    <select aria-label={ariaLabel}>
+      {items.map((item) => (
+        <option key={item.value} value={item.value}>
+          {item.label}
+        </option>
+      ))}
+    </select>
+  ),
 }));
 vi.mock('@/components/accounts/account-create-dialog', () => ({ AccountCreateDialog: () => null }));
 import { StatementCreateDialog } from '@/components/documents/statement-create-dialog';
@@ -54,7 +68,7 @@ it('uses one payment choice and updates automatic wording when switching from a 
   fireEvent.click(screen.getByRole('button', { name: 'confirmOwnPayment' }));
   expect(screen.getByDisplayValue('cardPaymentDescription')).toBeVisible();
   expect(screen.queryByRole('checkbox', { name: 'ownTransfer' })).not.toBeInTheDocument();
-  expect(screen.getByRole('combobox', { name: 'otherAccount' })).toBeEnabled();
+  expect(screen.getByRole('combobox', { name: 'fundingAccount' })).toBeEnabled();
 });
 it('keeps a payment decision and manually written description when AI finishes late', async () => {
   open();

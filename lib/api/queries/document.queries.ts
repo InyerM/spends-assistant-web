@@ -23,6 +23,7 @@ export interface StoredDocument {
   created_at: string;
   updated_at: string;
   archived_at: string | null;
+  review_status?: 'active' | 'completed' | 'no_movements';
   document_observations: DocumentObservation[];
 }
 

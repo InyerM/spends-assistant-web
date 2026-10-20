@@ -21,6 +21,7 @@ export function StatementDifferences({
   account,
   busy,
   submit,
+  period,
 }: {
   documentId?: string;
   accounts?: Account[];
@@ -29,6 +30,7 @@ export function StatementDifferences({
   account: string;
   busy: boolean;
   submit: (body: Record<string, string>) => void;
+  period?: { start: string; end: string };
 }): React.ReactElement {
   const t = useTranslations('statementReconciliation'),
     locale = useLocale();
@@ -131,6 +133,7 @@ export function StatementDifferences({
                       accounts={accounts}
                       account={account}
                       disabled={busy}
+                      period={period}
                     />
                   )}
               </div>

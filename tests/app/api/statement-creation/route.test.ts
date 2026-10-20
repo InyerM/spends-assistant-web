@@ -88,3 +88,33 @@ it('accepts the browser host behind the local server while rejecting a foreign o
     (await POST(request('https://foreign.example'), { params: Promise.resolve({ id }) })).status,
   ).toBe(403);
 });
+it('posts only a reviewed conversion through the dedicated atomic writer and reports period mismatch', async () => {
+  const body = {
+    request_id: id,
+    observation_id: id,
+    category_id: null,
+    description: 'Card payment',
+    transfer_account_id: id,
+    funding_amount: 20000,
+  };
+  const send = (payload: unknown) =>
+    POST(
+      new Request('https://app.test/create', { method: 'POST', body: JSON.stringify(payload) }),
+      { params: Promise.resolve({ id }) },
+    );
+  rpc.mockResolvedValue({ data: { transaction_id: id }, error: null });
+  expect((await send(body)).status).toBe(201);
+  expect(rpc).toHaveBeenCalledWith('create_converted_statement_transaction', {
+    p_request_id: id,
+    p_document_id: id,
+    p_observation_id: id,
+    p_description: 'Card payment',
+    p_funding_account_id: id,
+    p_funding_amount: 20000,
+  });
+  expect((await send({ ...body, transfer_account_id: null })).status).toBe(400);
+  rpc.mockResolvedValue({
+    error: { message: 'Statement date is outside its period', code: 'P0001' },
+  });
+  expect(await (await send(body)).json()).toMatchObject({ code: 'STATEMENT_PERIOD_MISMATCH' });
+});

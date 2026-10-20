@@ -22,3 +22,14 @@ it('counts unprocessed captures and unresolved observations, excluding archived 
     documentNeedsReview({ status: 'failed', archived_at: '2026-10-09', document_observations: [] }),
   ).toBe(false);
 });
+it('excludes manually completed or empty reviewed documents from the attention count', () => {
+  for (const review_status of ['completed', 'no_movements'] as const)
+    expect(
+      documentNeedsReview({
+        status: 'extracted',
+        review_status,
+        archived_at: null,
+        document_observations: [{ status: 'pending' }] as never,
+      }),
+    ).toBe(false);
+});

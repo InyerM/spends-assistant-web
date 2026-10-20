@@ -83,3 +83,26 @@ it('requires a card payment explanation before a positive card entry can become 
   fireEvent.click(screen.getByRole('button', { name: 'confirmOtherIncome' }));
   expect(screen.getByRole('button', { name: 'createAndReconcile' })).toBeEnabled();
 });
+it('explains a movement outside the reviewed statement period and blocks posting before a server error', () => {
+  render(
+    <StatementCreateDialog
+      documentId='doc'
+      row={{
+        id: 'row',
+        description: 'Fee',
+        amount: -5,
+        currency: 'USD',
+        occurred_at_text: '2026-09-01',
+        status: 'pending',
+      }}
+      accounts={[]}
+      account='card'
+      disabled={false}
+      period={{ start: '2026-08-01', end: '2026-08-31' }}
+    />,
+  );
+  fireEvent.click(screen.getByRole('button', { name: 'createMissing' }));
+  fireEvent.click(screen.getByRole('checkbox', { name: 'createConfirmation' }));
+  expect(screen.getByRole('button', { name: 'createAndReconcile' })).toBeDisabled();
+  expect(screen.getByText('outsidePeriod')).toBeVisible();
+});

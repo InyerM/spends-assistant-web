@@ -1545,7 +1545,11 @@
     "transferReviewHint": "Este movimiento puede ser entre tus cuentas. Vincula la otra cuenta para registrarlo como transferencia.",
     "refundDescription": "Devolución a la tarjeta",
     "cardPaymentDescription": "Pago de tarjeta de crédito",
-    "noCurrencyAccounts": "No tienes otra cuenta disponible en {currency}."
+    "noCurrencyAccounts": "No tienes otra cuenta disponible en {currency}.",
+    "outsidePeriod": "El movimiento es del {date}, pero el período seleccionado va del {start} al {end}. Cierra esta ventana y revisa las fechas del extracto antes de comparar.",
+    "periodMismatch": "El movimiento está fuera del período seleccionado. Revisa las fechas del extracto y vuelve a comparar.",
+    "createConversionConfirmation": "Confirmo que este pago no está registrado y revisé el importe debitado en la cuenta de origen.",
+    "viewStatementEvidence": "Ver extracto de conciliación"
   },
   "planning": {
     "title": "Planifica tu dinero",
@@ -1914,5 +1918,26 @@
     "saving": "Guardando categoría",
     "selectBatch": "Seleccionar hasta 5",
     "clearSelection": "Quitar selección"
+  },
+  "statementConversion": {
+    "fundingAccount": "Cuenta desde la que pagaste",
+    "chooseAccount": "Selecciona una cuenta",
+    "searchAccount": "Buscar cuenta",
+    "noAccounts": "No tienes otras cuentas disponibles",
+    "debitedAmount": "Importe debitado en {currency}",
+    "reference": "TRM de referencia: {rate} COP por USD · {date}",
+    "useEstimate": "Usar aproximado: {amount}",
+    "source": "Ver fuente de la TRM",
+    "referenceUnavailable": "No encontramos una tasa verificable para esta fecha. Ingresa el importe debitado.",
+    "reviewDebit": "La tasa del banco puede ser distinta. Revisa el importe debitado antes de confirmar."
+  },
+  "documentWorkflow": {
+    "label": "Estado de revisión",
+    "active": "En revisión",
+    "completed": "Completado",
+    "no_movements": "Sin movimientos",
+    "all": "Todos",
+    "doesNotReplaceProof": "Las conciliaciones se indican en cada movimiento.",
+    "saveError": "No se pudo cambiar el estado. Si ya tiene movimientos vinculados, usa Completado."
   }
 }

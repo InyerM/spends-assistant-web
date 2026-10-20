@@ -2,6 +2,8 @@
 import { transactionCurrencyTotals } from '@/lib/transactions/currency-totals';
 
 import { useStatementProofs } from '@/lib/api/queries/statement.queries';
+import { StatementEvidenceLink } from './statement-evidence-link';
+import type { StatementProof } from '@/lib/statement-reconciliation';
 import { useMemo, useState } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
 import { Badge } from '@/components/ui/badge';
@@ -125,6 +127,7 @@ function MetadataField({
 interface TransactionRowProps {
   tx: Transaction;
   statementStatus?: 'valid' | 'changed';
+  statementProof?: StatementProof;
   categoryInfo: { name: string; color: string | null } | null;
   accountName: string;
   locale: string;
@@ -141,6 +144,7 @@ interface TransactionRowProps {
 function TransactionRow({
   tx,
   statementStatus,
+  statementProof,
   categoryInfo,
   accountName,
   locale,
@@ -267,6 +271,8 @@ function TransactionRow({
           </p>
         </div>
       </button>
+
+      {statementProof && <StatementEvidenceLink proof={statementProof} />}
 
       {!selectMode && hasMetadata && (
         <button
@@ -419,6 +425,10 @@ export function TransactionList({
               <TransactionRow
                 key={tx.id}
                 tx={tx}
+                statementProof={
+                  statementProofs?.find((p) => p.transaction_id === tx.id && p.valid) ??
+                  statementProofs?.find((p) => p.transaction_id === tx.id)
+                }
                 statementStatus={
                   statementProofs?.some((p) => p.transaction_id === tx.id && p.valid)
                     ? 'valid'

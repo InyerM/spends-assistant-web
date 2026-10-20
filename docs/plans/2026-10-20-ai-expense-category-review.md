@@ -56,3 +56,9 @@ Mobile remains deferred until the web flow is released.
 - Evidence artifacts: `/tmp/anotto-expense-category-browser-report.json`,
   `/tmp/anotto-expense-category-web-full.log`, `/tmp/anotto-expense-category-backend-full.log`,
   `/tmp/anotto-expense-category-build.log`, `/tmp/anotto-expense-category-migration.log`.
+
+Production web release: source `3b4aefa`, deployment `dpl_7e5BKX57k3STobkr2ziCE3v8fTaJ`, READY and
+aliased to my.anotto.app. The full browser scenario also passed against production, including five
+real-provider classifications, explicit audited category save, unchanged money and evidence, search
+across existing categories, mobile layout, no runtime errors, and disposable-owner cleanup
+(`/tmp/anotto-expense-category-production.log`).

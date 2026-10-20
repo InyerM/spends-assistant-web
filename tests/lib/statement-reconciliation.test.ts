@@ -56,3 +56,24 @@ it('shows both differences, preserves ambiguous matches and handles incoming tra
     ).statementOnly,
   ).toHaveLength(1);
 });
+it('compares a converted transfer using the amount and currency on the statement account side', () => {
+  const result = compareStatement(
+    [{ id: 'row', amount: 5, currency: 'USD', occurred_at_text: '2026-09-01', status: 'pending' }],
+    [
+      {
+        id: 'tx',
+        account_id: 'cop',
+        transfer_to_account_id: 'usd',
+        type: 'transfer',
+        amount: 20000,
+        currency: 'COP',
+        destination_amount: 5,
+        source_currency: 'USD',
+        date: '2026-09-01',
+      },
+    ],
+    [],
+    'usd',
+  );
+  expect(result.candidates.row).toEqual(['tx']);
+});

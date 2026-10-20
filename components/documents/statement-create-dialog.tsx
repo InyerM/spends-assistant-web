@@ -24,6 +24,7 @@ import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { SearchableSelect } from '@/components/shared/searchable-select';
 import { StatementAccountSetup } from './statement-account-setup';
+import { StatementFundingAccount } from './statement-funding-account';
 import { buildCategoryItems } from '@/lib/utils/select-items';
 import { InlineLoader } from '@/components/shared/loader';
 import type { StatementRow } from '@/lib/statement-reconciliation';
@@ -34,12 +35,14 @@ export function StatementCreateDialog({
   accounts,
   account,
   disabled,
+  period,
 }: {
   documentId: string;
   row: StatementRow;
   accounts: Account[];
   account: string;
   disabled: boolean;
+  period?: { start: string; end: string };
 }): React.ReactElement {
   const t = useTranslations('statementReconciliation'),
     locale = useLocale();
@@ -49,6 +52,7 @@ export function StatementCreateDialog({
     [category, setCategory] = useState(''),
     [transfer, setTransfer] = useState(false),
     [other, setOther] = useState(''),
+    [fundingAmount, setFundingAmount] = useState(''),
     [resolution, setResolution] = useState<'unconfirmed' | 'transfer' | 'refund' | 'other'>(
       'unconfirmed',
     ),
@@ -73,7 +77,17 @@ export function StatementCreateDialog({
     });
   }
   const own = accounts.find((a) => a.id === account);
+  const fundingAccounts = accounts.filter(
+    (a) =>
+      a.is_active &&
+      !a.deleted_at &&
+      (a.parent_account_id ?? a.id) !== (own?.parent_account_id ?? own?.id),
+  );
   const amount = row.amount ?? 0;
+  const funding = accounts.find((a) => a.id === other);
+  const converted = transfer && amount > 0 && !!funding && funding.currency !== row.currency;
+  const eventDate = row.occurred_at_text?.slice(0, 10) ?? '';
+  const outsidePeriod = !!period && (eventDate < period.start || eventDate > period.end);
   const cardPayment =
     amount > 0 &&
     own?.type === 'credit_card' &&
@@ -104,7 +118,7 @@ export function StatementCreateDialog({
         disabled={disabled}
         onClick={() => {
           setOpen(true);
-          if (!analyze.data && !analyze.isPending) runAnalysis();
+          if (!outsidePeriod && !analyze.data && !analyze.isPending) runAnalysis();
         }}>
         <Plus className='size-4' />
         {t('createMissing')}
@@ -119,6 +133,15 @@ export function StatementCreateDialog({
             <DialogTitle>{t('createMissing')}</DialogTitle>
             <DialogDescription>{t('createHint')}</DialogDescription>
           </DialogHeader>
+          {outsidePeriod && (
+            <p role='alert' className='text-warning text-sm'>
+              {t('outsidePeriod', {
+                date: eventDate,
+                start: period.start,
+                end: period.end,
+              })}
+            </p>
+          )}
           <div className='bg-muted space-y-1 rounded-lg p-3 text-sm'>
             <p>{own?.name}</p>
             <p>{row.occurred_at_text}</p>
@@ -192,7 +215,26 @@ export function StatementCreateDialog({
               {t('ownTransfer')}
             </label>
           )}
-          {transfer ? (
+          {transfer && amount > 0 && fundingAccounts.length > 0 ? (
+            <StatementFundingAccount
+              currency={row.currency ?? own?.currency ?? 'COP'}
+              amount={amount}
+              date={eventDate}
+              value={other}
+              onChange={(value) => {
+                setOther(value);
+                setFundingAmount('');
+                setConfirmed(false);
+              }}
+              fundingAmount={fundingAmount}
+              onFundingAmount={(value) => {
+                setFundingAmount(value);
+                setConfirmed(false);
+              }}
+              accounts={fundingAccounts}
+              disabled={create.isPending}
+            />
+          ) : transfer ? (
             <StatementAccountSetup
               currency={row.currency ?? own?.currency ?? 'COP'}
               value={other}
@@ -253,12 +295,16 @@ export function StatementCreateDialog({
               disabled={create.isPending}
               onCheckedChange={(value) => setConfirmed(value === true)}
             />
-            {t('createConfirmation')}
+            {t(converted ? 'createConversionConfirmation' : 'createConfirmation')}
           </label>
           {create.error && (
             <p role='alert' className='text-destructive text-sm'>
               {t(
-                create.error.message === 'POSSIBLE_DUPLICATE' ? 'createDuplicate' : 'createFailed',
+                create.error.message === 'POSSIBLE_DUPLICATE'
+                  ? 'createDuplicate'
+                  : create.error.message === 'STATEMENT_PERIOD_MISMATCH'
+                    ? 'periodMismatch'
+                    : 'createFailed',
               )}
             </p>
           )}
@@ -273,6 +319,9 @@ export function StatementCreateDialog({
                 !confirmed ||
                 !description.trim() ||
                 (transfer && !other) ||
+                outsidePeriod ||
+                (converted &&
+                  (!Number.isFinite(Number(fundingAmount)) || Number(fundingAmount) <= 0)) ||
                 (cardPayment && resolution === 'unconfirmed')
               }
               onClick={() =>
@@ -283,6 +332,7 @@ export function StatementCreateDialog({
                     category_id: transfer ? null : category || null,
                     description: description.trim(),
                     transfer_account_id: transfer ? other : null,
+                    ...(converted ? { funding_amount: Number(fundingAmount) } : {}),
                   },
                   { onSuccess: () => setOpen(false) },
                 )

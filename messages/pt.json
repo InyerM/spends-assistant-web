@@ -1431,7 +1431,11 @@
     "transferReviewHint": "Este movimento pode ser entre suas contas. Vincule a outra conta para registrar como transferência.",
     "refundDescription": "Reembolso no cartão",
     "cardPaymentDescription": "Pagamento de cartão de crédito",
-    "noCurrencyAccounts": "Você não tem outra conta disponível em {currency}."
+    "noCurrencyAccounts": "Você não tem outra conta disponível em {currency}.",
+    "outsidePeriod": "A movimentação é de {date}, mas o período selecionado vai de {start} a {end}. Feche esta janela e revise as datas do extrato antes de comparar.",
+    "periodMismatch": "A movimentação está fora do período selecionado. Revise as datas do extrato e compare novamente.",
+    "createConversionConfirmation": "Confirmo que este pagamento não está registrado e revisei o valor debitado da conta de origem.",
+    "viewStatementEvidence": "Ver extrato da conciliação"
   },
   "planning": {
     "title": "Planeje seu dinheiro",
@@ -1800,5 +1804,26 @@
     "saving": "Salvando categoria",
     "selectBatch": "Selecionar até 5",
     "clearSelection": "Limpar seleção"
+  },
+  "statementConversion": {
+    "fundingAccount": "Conta usada para pagar",
+    "chooseAccount": "Selecione uma conta",
+    "searchAccount": "Buscar conta",
+    "noAccounts": "Nenhuma outra conta disponível",
+    "debitedAmount": "Valor debitado em {currency}",
+    "reference": "TRM de referência: {rate} COP por USD · {date}",
+    "useEstimate": "Usar estimativa: {amount}",
+    "source": "Ver fonte da TRM",
+    "referenceUnavailable": "Não encontramos uma taxa verificável para esta data. Informe o valor debitado.",
+    "reviewDebit": "O banco pode usar outra taxa. Revise o valor debitado antes de confirmar."
+  },
+  "documentWorkflow": {
+    "label": "Status da revisão",
+    "active": "Em revisão",
+    "completed": "Concluído",
+    "no_movements": "Sem movimentações",
+    "all": "Todos",
+    "doesNotReplaceProof": "A conciliação é indicada em cada movimentação.",
+    "saveError": "Não foi possível alterar o status. Se já houver movimentações vinculadas, use Concluído."
   }
 }

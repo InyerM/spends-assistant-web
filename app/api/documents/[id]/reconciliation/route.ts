@@ -82,7 +82,9 @@ export async function GET(request: Request, { params }: Context): Promise<Respon
       for (let offset = 0; offset < 20000; offset += 1000) {
         const result = await supabase
           .from('transactions')
-          .select('id,account_id,transfer_to_account_id,amount,currency,date,type,description')
+          .select(
+            'id,account_id,transfer_to_account_id,amount,currency,date,type,description,destination_amount,source_currency',
+          )
           .eq('user_id', userId)
           .is('deleted_at', null)
           .gte('date', selectedScope.period_start)
