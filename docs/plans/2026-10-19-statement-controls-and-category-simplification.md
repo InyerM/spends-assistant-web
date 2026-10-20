@@ -106,7 +106,21 @@ inspection because JSON references are not represented by foreign keys.
   overwritten custom translations. Four custom categories had missing language keys filled. No
   untranslated Spanish Leasing label remained. Private label repair inputs and audit exports remain
   outside the repository.
-- Worker version: `10ec23ab-4ab8-439d-b2ab-e2c463f58163`.
+- Web source: `076dc9c`, deployed READY as `dpl_8ufXrW1Q38uNjdCk4PxfFvBdasZB` and aliased to
+  [my.anotto.app](https://my.anotto.app).
+- Worker version: `8a0b3f23-b7fe-44ac-b759-3f49a1e48980`. Follow-up backend commit `22ec1fb`
+  supplies localized category names in both AI choices and history, so explanations use the screen's
+  language.
 - Local browser checks with the actual AI provider verified the exact duplicate reference, read-only
   existing analysis, preservation of a note edited while waiting, explicit metadata save and the
   audited Keep both decision.
+- Production checks on 2026-10-19 verified both the saved-period/account-currency flow and the
+  existing-transaction flow, including transfer wording, category collections and translated labels.
+  Both browser reports had no runtime errors, passed at 390px without horizontal overflow and
+  confirmed disposal of their synthetic owners. A final real-provider smoke verified Spanish
+  category names in the AI explanation and removed its synthetic owner.
+- Full suites: **939 backend tests across 133 files** and **1,371 web tests across 258 files**
+  passed. The final localization adjustment passed its six focused AI/handler tests. TypeScript,
+  lint and production builds passed; the existing React Hook Form compiler compatibility warning
+  remains. The web suite used two workers and a 20-second test timeout after an unrelated
+  receivables test exceeded its default five-second timeout during concurrent SQL/browser checks.
