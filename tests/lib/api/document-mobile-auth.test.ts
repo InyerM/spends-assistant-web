@@ -68,6 +68,88 @@ describe('document API user authentication', () => {
     expect(bearerFactory).not.toHaveBeenCalled();
   });
 
+  it('keeps mandatory terms acceptance in the delegated Bearer handler', async () => {
+    bearerGetUser.mockResolvedValue({
+      data: { user: { id: 'mobile-owner', app_metadata: { anotto_terms_required: true } } },
+      error: null,
+    });
+    await expect(
+      getUserClient(
+        new Request('https://anotto.app/api/financial-chat/history', {
+          headers: { Authorization: 'Bearer mobile-access-token' },
+        }),
+      ),
+    ).rejects.toThrow('Terms acceptance required');
+    expect(cookieFactory).not.toHaveBeenCalled();
+  });
+
+  it('rejects a new Bearer owner without the required eligibility declaration', async () => {
+    bearerGetUser.mockResolvedValue({
+      data: {
+        user: {
+          id: 'mobile-owner',
+          created_at: '2026-10-21T00:00:00Z',
+          user_metadata: {},
+          app_metadata: {},
+        },
+      },
+      error: null,
+    });
+    await expect(
+      getUserClient(
+        new Request('https://anotto.app/api/contacts', {
+          headers: { Authorization: 'Bearer mobile-access-token' },
+        }),
+      ),
+    ).rejects.toThrow('Eligibility confirmation required');
+    expect(cookieFactory).not.toHaveBeenCalled();
+  });
+
+  it('allows an eligible Bearer owner and keeps account deletion available before declarations', async () => {
+    bearerGetUser.mockResolvedValueOnce({
+      data: {
+        user: {
+          id: 'mobile-owner',
+          created_at: '2026-10-21T00:00:00Z',
+          user_metadata: {
+            anotto_eligibility: { adult: true, country: 'CO', version: '2026-10-06' },
+          },
+          app_metadata: {},
+        },
+      },
+      error: null,
+    });
+    expect(
+      (
+        await getUserClient(
+          new Request('https://anotto.app/api/contacts', {
+            headers: { Authorization: 'Bearer mobile-access-token' },
+          }),
+        )
+      ).userId,
+    ).toBe('mobile-owner');
+    bearerGetUser.mockResolvedValueOnce({
+      data: {
+        user: {
+          id: 'mobile-owner',
+          created_at: '2026-10-21T00:00:00Z',
+          user_metadata: {},
+          app_metadata: { anotto_terms_required: true },
+        },
+      },
+      error: null,
+    });
+    expect(
+      (
+        await getUserClient(
+          new Request('https://anotto.app/api/settings/account/delete', {
+            headers: { Authorization: 'Bearer mobile-access-token' },
+          }),
+        )
+      ).userId,
+    ).toBe('mobile-owner');
+  });
+
   it('keeps the existing cookie session when no Authorization header is sent', async () => {
     const result = await getUserClient(new Request('https://anotto.app/api/documents'));
 

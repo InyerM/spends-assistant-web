@@ -2,6 +2,7 @@ import { createClient, createAdminClient } from '@/lib/supabase/server';
 import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { AutomationRule, AutomationRuleConditions, AutomationRuleActions } from '@/types';
+import { needsEligibilityAttestation } from '@/lib/auth/eligibility';
 import { needsTermsAcceptance } from '@/lib/auth/legal-acceptance';
 import { env } from '@/lib/env';
 
@@ -38,6 +39,11 @@ export async function getUserClient(
       (!request || new URL(request.url).pathname !== '/api/settings/account/delete')
     )
       throw new AuthError('Terms acceptance required');
+    if (
+      needsEligibilityAttestation(user) &&
+      (!request || new URL(request.url).pathname !== '/api/settings/account/delete')
+    )
+      throw new AuthError('Eligibility confirmation required');
     return { supabase, userId: user.id, accessToken };
   }
   const supabase = await createClient();

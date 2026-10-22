@@ -67,7 +67,11 @@ describe('authentication proxy', () => {
     const list = await proxy(request('/api/documents', 'GET', 'Bearer mobile-jwt'));
     const upload = await proxy(request('/api/documents', 'POST', 'Bearer mobile-jwt'));
     const extract = await proxy(
-      request('/api/documents/document-1/extract', 'POST', 'Bearer mobile-jwt'),
+      request(
+        '/api/documents/11111111-1111-4111-8111-111111111111/extract',
+        'POST',
+        'Bearer mobile-jwt',
+      ),
     );
 
     expect([list.status, upload.status, extract.status]).toEqual([200, 200, 200]);
@@ -116,6 +120,63 @@ describe('authentication proxy', () => {
     const response = await proxy(request(path, method, 'Bearer mobile-jwt'));
     expect(response.status).toBe(200);
     expect(getUser).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['/api/fx-reference?date=2026-10-01', 'GET'],
+    ['/api/financial-chat/history', 'GET'],
+    ['/api/financial-chat/history?page=0', 'GET'],
+    ['/api/financial-chat/history', 'DELETE'],
+    ['/api/contacts?summary=1', 'GET'],
+    ['/api/contacts', 'POST'],
+    ['/api/contacts/11111111-1111-4111-8111-111111111111', 'GET'],
+    ['/api/contacts/11111111-1111-4111-8111-111111111111', 'PATCH'],
+    ['/api/accounts/11111111-1111-4111-8111-111111111111/activity', 'GET'],
+    ['/api/accounts/11111111-1111-4111-8111-111111111111/currencies', 'POST'],
+    ['/api/statements/proofs?ids=11111111-1111-4111-8111-111111111111', 'GET'],
+    ['/api/transactions/category-review', 'GET'],
+    ['/api/transactions/11111111-1111-4111-8111-111111111111/analyze', 'POST'],
+    ['/api/transactions/11111111-1111-4111-8111-111111111111/category-review', 'POST'],
+    ['/api/transactions/11111111-1111-4111-8111-111111111111/category-followup', 'GET'],
+    ['/api/transactions/11111111-1111-4111-8111-111111111111/category-followup', 'POST'],
+    ['/api/transactions/11111111-1111-4111-8111-111111111111/category-followup/explain', 'POST'],
+    ['/api/transactions/11111111-1111-4111-8111-111111111111/category-followup/review', 'POST'],
+    ['/api/transactions/11111111-1111-4111-8111-111111111111/duplicate-review', 'POST'],
+    ['/api/transactions/11111111-1111-4111-8111-111111111111/funding-correction', 'POST'],
+  ])(
+    'delegates released native %s %s authentication to its owner-scoped handler',
+    async (path, method) => {
+      const response = await proxy(request(path, method, 'Bearer mobile-jwt'));
+      expect(response.status).toBe(200);
+      expect(response.headers.get('location')).toBeNull();
+      expect(getUser).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each([
+    ['/api/fx-reference', 'POST'],
+    ['/api/fx/reference-rate', 'GET'],
+    ['/api/financial-chat/history', 'POST'],
+    ['/api/contacts', 'DELETE'],
+    ['/api/contacts/invalid', 'GET'],
+    ['/api/contacts/11111111-1111-4111-8111-111111111111/admin', 'GET'],
+    ['/api/accounts/11111111-1111-4111-8111-111111111111/activity', 'POST'],
+    ['/api/accounts/11111111-1111-4111-8111-111111111111/currencies', 'DELETE'],
+    ['/api/statements/proofs', 'POST'],
+    ['/api/transactions/category-review', 'POST'],
+    ['/api/transactions/invalid/analyze', 'POST'],
+    ['/api/transactions/11111111-1111-4111-8111-111111111111/funding-correction', 'GET'],
+    [
+      '/api/transactions/11111111-1111-4111-8111-111111111111/category-followup/review/extra',
+      'POST',
+    ],
+    ['/api/documents', 'DELETE'],
+    ['/api/documents/11111111-1111-4111-8111-111111111111/admin', 'POST'],
+    ['/api/documents/11111111-1111-4111-8111-111111111111/extract', 'GET'],
+    ['/api/email-forwarding', 'GET'],
+    ['/api/settings/profile', 'GET'],
+  ])('keeps unapproved native %s %s behind browser authentication', async (path, method) => {
+    expect((await proxy(request(path, method, 'Bearer mobile-jwt'))).status).toBe(307);
   });
 
   it('keeps mobile security routes protected without a bearer token', async () => {

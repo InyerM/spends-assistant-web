@@ -2,19 +2,10 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import { env } from './lib/env';
 import { defaultLocale, isValidLocale } from './i18n/config';
+import { isMobileBearerRoute } from './lib/api/mobile-bearer-routes';
 import { needsEligibilityAttestation } from './lib/auth/eligibility';
 
 const PUBLIC_PATHS = ['/login', '/register', '/forgot-password', '/auth'];
-const MOBILE_BEARER_ROUTES: Record<string, readonly string[]> = {
-  '/api/purchase-locations': ['GET'],
-  '/api/planning': ['GET', 'POST'],
-  '/api/api-keys': ['GET', 'POST', 'DELETE'],
-  '/api/settings/sessions': ['GET'],
-  '/api/settings/user-settings': ['GET', 'PATCH'],
-  '/api/settings/account/delete': ['POST'],
-  '/api/merchant-suggestions': ['POST'],
-};
-
 function isPublicPath(pathname: string): boolean {
   return PUBLIC_PATHS.some((path) => pathname.startsWith(path));
 }
@@ -38,48 +29,7 @@ function ensureLocaleCookie(request: NextRequest, response: NextResponse): void 
 export async function proxy(request: NextRequest): Promise<NextResponse> {
   const pathname = request.nextUrl.pathname;
 
-  if (
-    request.headers.has('authorization') &&
-    Object.hasOwn(MOBILE_BEARER_ROUTES, pathname) &&
-    MOBILE_BEARER_ROUTES[pathname].includes(request.method)
-  ) {
-    return NextResponse.next({ request });
-  }
-
-  // Email review authenticates native sessions and scopes the inbox owner in its handler.
-  if (
-    /^\/api\/shortcut-inbox\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/analyze$/iu.test(
-      pathname,
-    ) &&
-    request.method === 'POST' &&
-    request.headers.has('authorization')
-  ) {
-    return NextResponse.next({ request });
-  }
-
-  // The Shortcut inbox handler validates bearer API keys without a browser session.
-  if (
-    pathname === '/api/shortcut-inbox' &&
-    request.method === 'POST' &&
-    request.headers.has('authorization')
-  ) {
-    return NextResponse.next({ request });
-  }
-
-  // Document API handlers verify mobile bearer tokens and enforce user-scoped access.
-  if (
-    (pathname === '/api/documents' || pathname.startsWith('/api/documents/')) &&
-    request.headers.has('authorization')
-  ) {
-    return NextResponse.next({ request });
-  }
-
-  // The owner-scoped transaction writer verifies mobile bearer tokens itself.
-  if (
-    pathname === '/api/transactions' &&
-    request.method === 'POST' &&
-    request.headers.has('authorization')
-  ) {
+  if (request.headers.has('authorization') && isMobileBearerRoute(pathname, request.method)) {
     return NextResponse.next({ request });
   }
 
