@@ -86,6 +86,7 @@ describe('POST /api/transactions/parse', () => {
 
     const request = new NextRequest('http://localhost/api/transactions/parse', {
       method: 'POST',
+      headers: { Origin: 'http://localhost' },
       body: JSON.stringify({ text: 'Almuerzo 15000' }),
     });
     const response = await POST(request);
@@ -98,6 +99,7 @@ describe('POST /api/transactions/parse', () => {
   it('returns 400 when text is empty', async () => {
     const request = new NextRequest('http://localhost/api/transactions/parse', {
       method: 'POST',
+      headers: { Origin: 'http://localhost' },
       body: JSON.stringify({ text: '' }),
     });
     const response = await POST(request);
@@ -107,6 +109,7 @@ describe('POST /api/transactions/parse', () => {
   it('returns 400 when text is missing', async () => {
     const request = new NextRequest('http://localhost/api/transactions/parse', {
       method: 'POST',
+      headers: { Origin: 'http://localhost' },
       body: JSON.stringify({}),
     });
     const response = await POST(request);
@@ -128,6 +131,7 @@ describe('POST /api/transactions/parse', () => {
     const response = await POST(
       new NextRequest('http://localhost/api/transactions/parse', {
         method: 'POST',
+        headers: { Origin: 'http://localhost' },
         body: JSON.stringify({ text: 'Coffee 10000' }),
       }),
     );
@@ -152,6 +156,7 @@ describe('POST /api/transactions/parse', () => {
 
     const request = new NextRequest('http://localhost/api/transactions/parse', {
       method: 'POST',
+      headers: { Origin: 'http://localhost' },
       body: JSON.stringify({ text: 'something' }),
     });
     const response = await POST(request);
@@ -172,9 +177,89 @@ describe('POST /api/transactions/parse', () => {
 
     const request = new NextRequest('http://localhost/api/transactions/parse', {
       method: 'POST',
+      headers: { Origin: 'http://localhost' },
       body: JSON.stringify({ text: 'something' }),
     });
     const response = await POST(request);
     expect(response.status).toBe(500);
   });
+});
+
+it('preserves validated purpose notes and lets automation append instead of replace them for Bearer callers', async () => {
+  const { getUserClient, applyAutomationRules } = await import('@/lib/api/server');
+  const getSession = vi.fn();
+  vi.mocked(getUserClient).mockResolvedValue({
+    supabase: { auth: { getSession } } as never,
+    userId: 'owner',
+    accessToken: 'native-jwt',
+  });
+  vi.mocked(applyAutomationRules).mockImplementation(async (_client, tx) => ({
+    ...tx,
+    notes: `${tx.notes}\nRule note`,
+  }));
+  vi.stubGlobal(
+    'fetch',
+    vi.fn().mockResolvedValue(
+      Response.json({
+        parsed: { amount: 4200, description: 'Purchase', source: 'manual', confidence: 1 },
+        resolved: { notes: 'Current-source purpose' },
+      }),
+    ),
+  );
+  const request = new NextRequest('https://web.example/api/transactions/parse', {
+    method: 'POST',
+    headers: { Authorization: 'Bearer native-jwt' },
+    body: JSON.stringify({ text: 'Purchase 4200 for current-source purpose' }),
+  });
+  const response = await POST(request);
+  expect(response.status).toBe(200);
+  expect(await response.json()).toMatchObject({
+    resolved: { notes: 'Current-source purpose\nRule note' },
+  });
+  expect(getUserClient).toHaveBeenCalledWith(request);
+  expect(getSession).not.toHaveBeenCalled();
+});
+
+it.each([null, [], { text: 4 }, { text: 'x'.repeat(16385) }])(
+  'rejects invalid or unbounded parse input before Worker calls: %s',
+  async (body) => {
+    const { getUserClient } = await import('@/lib/api/server');
+    vi.mocked(getUserClient).mockResolvedValue({
+      supabase: createMockSupabaseWithSession() as never,
+      userId: 'owner',
+    });
+    vi.stubGlobal('fetch', vi.fn());
+    expect(
+      (
+        await POST(
+          new NextRequest('https://web.example/api/transactions/parse', {
+            method: 'POST',
+            headers: { Origin: 'https://web.example' },
+            body: JSON.stringify(body),
+          }),
+        )
+      ).status,
+    ).toBe(400);
+    expect(fetch).not.toHaveBeenCalled();
+  },
+);
+
+it('rejects cross-origin cookie parse before session reads or external AI', async () => {
+  const { getUserClient } = await import('@/lib/api/server');
+  const getSession = vi.fn();
+  vi.mocked(getUserClient).mockResolvedValue({
+    supabase: { auth: { getSession } } as never,
+    userId: 'owner',
+  });
+  vi.stubGlobal('fetch', vi.fn());
+  const response = await POST(
+    new NextRequest('https://web.example/api/transactions/parse', {
+      method: 'POST',
+      headers: { Origin: 'https://evil.example' },
+      body: JSON.stringify({ text: 'Synthetic purchase 4200' }),
+    }),
+  );
+  expect(response.status).toBe(403);
+  expect(getSession).not.toHaveBeenCalled();
+  expect(fetch).not.toHaveBeenCalled();
 });

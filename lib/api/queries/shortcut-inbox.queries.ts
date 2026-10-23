@@ -35,6 +35,14 @@ export async function fetchShortcutInbox(
   return response.json() as Promise<InboxList>;
 }
 
+export function inboxAnalysisPollInterval(data: InboxList | undefined): number | false {
+  return data?.data.some(
+    (item) => item.analysis_job?.state === 'pending' || item.analysis_job?.state === 'running',
+  )
+    ? 2500
+    : false;
+}
+
 export function useShortcutInbox(filters: InboxFilters): ReturnType<typeof useQuery<InboxList>> {
   const userId = useAuthStore((state) => state.supabaseUser?.id);
   return useQuery({
@@ -43,5 +51,6 @@ export function useShortcutInbox(filters: InboxFilters): ReturnType<typeof useQu
     placeholderData: (previous, previousQuery) =>
       previousQuery?.queryKey[1] === (userId ?? null) ? previous : undefined,
     staleTime: 0,
+    refetchInterval: (query) => inboxAnalysisPollInterval(query.state.data),
   });
 }

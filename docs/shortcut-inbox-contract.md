@@ -227,3 +227,44 @@ review. The transaction deletion path remains responsible for reversing its bala
 transactions. The decision does not classify or create entries from messages automatically. The
 database and web application were deployed on 2026-09-30. The reviewed 2026 backfill is in progress;
 see the backend release manifest for verified counts and outstanding review.
+
+## Persisted automatic analysis (version 3)
+
+Apply backend migration `20261022000010_inbox_analysis_jobs.sql` and release the new Worker routes
+before releasing this web integration. New intake creates durable owner-bound analysis jobs through
+the database, independently of whether a browser remains open. Analysis only prepares suggestions;
+reviewed SQL confirmation remains the authority for transactions, balances and duplicate decisions.
+
+`GET /api/shortcut-inbox` adds optional `analysis` and `analysis_job` to each visible row. It uses
+two batched owner-filtered lookups for the page, never one analysis request per message. Analysis
+details are flattened through an explicit public whitelist; job responses never expose lease tokens.
+Read failure is reported instead of fabricating an empty or ready result. The existing React Query
+list polls every 2.5 seconds only while visible jobs are pending or running, and stops for ready,
+blocked, failed and skipped states. It does not poll in the background by default.
+
+After successful new intake, Next.js `after()` requests `/inbox/analysis-dispatch` in batches of at
+most 25 IDs using the authenticated caller's Bearer credential or browser session JWT. The response
+does not wait for AI. No static Worker key or session JWT is persisted. Dispatch failure cannot undo
+accepted intake; the scheduled Worker recovers durable jobs. Cookie-based intake and analysis
+require the same Origin; Bearer callers retain their authenticated owner contract.
+
+`POST /api/shortcut-inbox/{id}/analyze` supports every source through Worker `/inbox/analyze`,
+sending only the owned inbox ID and a boolean refresh request. Stored v3 analysis is immediately
+reusable. Running work returns 202 with pending/running state. Consent, quota, source verification
+and missing item errors retain their status and never fall back to another AI consent scope. Only an
+explicit plain `404 Not Found` from the old Worker's missing route permits the legacy email-only
+analysis path; a JSON missing-item response does not. `WORKER_INBOX_ANALYSIS_ENABLED=false` can
+temporarily retain the legacy path for email items without v3 analysis; non-email items always use
+the canonical route and never the forwarded-email consent scope.
+
+Opening a prepared item reuses the persisted proposal without another AI request. Explicit refresh
+is available separately. Background or refreshed proposals never replace manually edited fields,
+accounts or categories. Transfers remain explicit review drafts, with destination defaults
+restricted to distinct active owned COP account options. Missing or unsupported options require
+manual review. The compact preparation label and suggestion summary never claim that a financial
+entry was saved.
+
+The generic `/api/transactions/parse` adapter also accepts authenticated native Bearer sessions and
+preserves the Worker's validated purpose notes before automation `add_note` appends to them. Input
+JSON is byte bounded before parsing; text is limited to 16384 characters, and purpose notes are
+limited to the released 500-character contract.

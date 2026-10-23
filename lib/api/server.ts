@@ -135,8 +135,12 @@ function matchesConditions(
     if (!matchFn) return false;
   }
   if (conditions.description_regex) {
-    const regex = new RegExp(conditions.description_regex, 'i');
-    if (!regex.test(tx.description)) return false;
+    try {
+      const regex = new RegExp(conditions.description_regex, 'i');
+      if (!regex.test(tx.description)) return false;
+    } catch {
+      return false;
+    }
   }
   if (conditions.amount_between) {
     const [min, max] = conditions.amount_between;
@@ -148,6 +152,8 @@ function matchesConditions(
   if (conditions.from_account) {
     if (tx.account_id !== conditions.from_account) return false;
   }
+  if (conditions.category && tx.category_id !== conditions.category) return false;
+  if (conditions.to_account && tx.transfer_to_account_id !== conditions.to_account) return false;
   if (conditions.raw_text_contains) {
     const rawText = (tx.raw_text ?? '').toLowerCase();
     const matchFn =

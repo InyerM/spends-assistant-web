@@ -1,6 +1,7 @@
 'use client';
 import { useCategoryFollowupStore } from '@/lib/stores/category-followup.store';
 import { CompletedInboxCard } from '@/components/transactions/completed-inbox-card';
+import { InboxAnalysisSummary } from '@/components/transactions/inbox-analysis-summary';
 import { InlineLoader } from '@/components/shared/loader';
 import { UnrecognizedAccountNotice } from '@/components/transactions/unrecognized-account-notice';
 
@@ -219,20 +220,30 @@ export default function ShortcutInboxPage({
   const [analysisBusyIds, setAnalysisBusyIds] = useState<Set<string>>(() => new Set());
   const analysisMutation = useAnalyzeForwardedEmail();
 
-  const openCreateReview = async (item: InboxItem): Promise<void> => {
-    if (createInboxId === item.id) {
+  const openCreateReview = async (item: InboxItem, refresh = false): Promise<void> => {
+    if (createInboxId === item.id && !refresh) {
       setCreateInboxId(null);
       return;
     }
     setCreateInboxId(item.id);
     setOpenCandidateId(item.id);
     void loadCandidates(item.id);
-    if (item.source === 'forwarded_email') {
+    const cachedAnalysis = analysisById[item.id] ?? item.analysis;
+    if (cachedAnalysis && !refresh) {
+      setAnalysisById((current) => ({ ...current, [item.id]: cachedAnalysis }));
+      return;
+    }
+    if (item.analysis_job?.state === 'pending' || item.analysis_job?.state === 'running') return;
+    {
       setAnalysisBusyIds((current) => new Set(current).add(item.id));
       setConsentRequired(null);
       try {
-        const analysis = await analysisMutation.mutateAsync(item.id);
-        setAnalysisById((current) => ({ ...current, [item.id]: analysis }));
+        const analysis = await analysisMutation.mutateAsync(
+          refresh ? { id: item.id, refresh: true } : item.id,
+        );
+        if ('state' in analysis) {
+          void queryClient.invalidateQueries({ queryKey: ['shortcut-inbox'] });
+        } else setAnalysisById((current) => ({ ...current, [item.id]: analysis }));
       } catch (cause) {
         if (cause instanceof AiConsentRequiredError) setConsentRequired(cause.scope);
         else setError(t('reanalyzeFailed'));
@@ -552,7 +563,7 @@ export default function ShortcutInboxPage({
                 <CompletedInboxCard
                   key={item.id}
                   item={item}
-                  description={analysisById[item.id]?.description}
+                  description={(analysisById[item.id] ?? item.analysis)?.description}
                 />
               );
             return (
@@ -607,6 +618,10 @@ export default function ShortcutInboxPage({
                         {formatDate(item.received_at)}
                       </time>
                     </div>
+                    <InboxAnalysisSummary
+                      analysis={analysisById[item.id] ?? item.analysis}
+                      job={item.analysis_job}
+                    />
                     <ForwardedEmailEvidence
                       source={item.source}
                       rawText={item.raw_text}
@@ -684,6 +699,23 @@ export default function ShortcutInboxPage({
                           </Button>
                         </InboxAction>
                       )}
+                      {item.status === 'pending' &&
+                        (item.analysis ||
+                          analysisById[item.id] ||
+                          item.analysis_job?.state === 'blocked' ||
+                          item.analysis_job?.state === 'failed') && (
+                          <Button
+                            size='sm'
+                            variant='outline'
+                            disabled={
+                              analysisBusyIds.has(item.id) ||
+                              item.analysis_job?.state === 'pending' ||
+                              item.analysis_job?.state === 'running'
+                            }
+                            onClick={() => void openCreateReview(item, true)}>
+                            {t('refreshPrepared')}
+                          </Button>
+                        )}
                       {item.status !== 'pending' &&
                         item.status !== 'matched' &&
                         item.status !== 'created' && (
@@ -752,8 +784,14 @@ export default function ShortcutInboxPage({
                         rawText={item.raw_text}
                         receivedAt={item.received_at}
                         preview={luloPreview}
-                        analysis={analysisById[item.id]}
-                        analyzing={analysisBusyIds.has(item.id)}
+                        analysis={analysisById[item.id] ?? item.analysis}
+                        analyzing={
+                          !analysisById[item.id] &&
+                          !item.analysis &&
+                          (analysisBusyIds.has(item.id) ||
+                            item.analysis_job?.state === 'pending' ||
+                            item.analysis_job?.state === 'running')
+                        }
                         onReview={(review): void => {
                           setReviewById((current) => ({
                             ...current,

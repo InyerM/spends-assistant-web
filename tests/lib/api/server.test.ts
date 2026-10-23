@@ -190,6 +190,71 @@ describe('applyTransactionBalance', () => {
 });
 
 describe('applyAutomationRules', () => {
+  it.each(['category', 'to_account'] as const)(
+    'requires exact %s matches, including missing evolving fields',
+    async (condition) => {
+      for (const actual of [undefined, 'different']) {
+        const sb = createRulesSupabase([
+          createMockAutomationRule({
+            conditions: { [condition]: 'expected' },
+            actions: { add_note: 'must not apply' },
+          }),
+        ]);
+        const tx = {
+          description: 'Synthetic',
+          amount: 1,
+          account_id: 'source',
+          source: 'manual',
+          type: 'expense',
+          ...(condition === 'category'
+            ? { category_id: actual }
+            : { transfer_to_account_id: actual }),
+        };
+        expect((await applyAutomationRules(sb as never, tx)).notes).toBeUndefined();
+      }
+      const sb = createRulesSupabase([
+        createMockAutomationRule({
+          conditions: { [condition]: 'expected' },
+          actions: { add_note: 'matched' },
+        }),
+      ]);
+      expect(
+        (
+          await applyAutomationRules(sb as never, {
+            description: 'Synthetic',
+            amount: 1,
+            account_id: 'source',
+            source: 'manual',
+            type: 'expense',
+            ...(condition === 'category'
+              ? { category_id: 'expected' }
+              : { transfer_to_account_id: 'expected' }),
+          })
+        ).notes,
+      ).toBe('matched');
+    },
+  );
+  it('fails closed for malformed regular expressions and continues later valid rules', async () => {
+    const sb = createRulesSupabase([
+      createMockAutomationRule({
+        conditions: { description_regex: '[' },
+        actions: { add_note: 'must not apply' },
+      }),
+      createMockAutomationRule({
+        conditions: { category: 'expected' },
+        actions: { add_note: 'valid' },
+      }),
+    ]);
+    const result = await applyAutomationRules(sb as never, {
+      description: 'Synthetic',
+      amount: 1,
+      account_id: 'source',
+      source: 'manual',
+      type: 'expense',
+      category_id: 'expected',
+    });
+    expect(result.notes).toBe('valid');
+  });
   function createRulesSupabase(rules: ReturnType<typeof createMockAutomationRule>[]) {
     const chain: Record<string, ReturnType<typeof vi.fn>> = {};
     const methods = ['select', 'eq', 'is', 'order'] as const;

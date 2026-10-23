@@ -1,6 +1,8 @@
 import { z } from 'zod';
 import { EMAIL_MESSAGE_KINDS } from '@/types/shortcut-inbox';
-import type { NextRequest } from 'next/server';
+import { after, type NextRequest } from 'next/server';
+import { enrichInboxAnalysis } from '@/lib/shortcut-inbox/analysis';
+import { dispatchInboxAnalysis } from '@/lib/shortcut-inbox/analysis-dispatch';
 import { AuthError, errorResponse, getUserClient } from '@/lib/api/server';
 import { getShortcutPostClient } from '@/lib/shortcut-inbox/auth';
 import { ingestBatch, type InboxRow, type InboxStore } from '@/lib/shortcut-inbox/intake';
@@ -40,6 +42,11 @@ function inboxStore(supabase: SupabaseClient): InboxStore {
 
 export async function POST(request: NextRequest): Promise<Response> {
   try {
+    if (
+      !request.headers.has('Authorization') &&
+      request.headers.get('Origin') !== new URL(request.url).origin
+    )
+      return errorResponse('Invalid request origin', 403);
     const { supabase, userId } = await getShortcutPostClient(request);
     const body = await request.text();
     if (new TextEncoder().encode(body).byteLength > MAX_BODY_BYTES) {
@@ -53,6 +60,9 @@ export async function POST(request: NextRequest): Promise<Response> {
     }
     try {
       const result = await ingestBatch(input, userId, inboxStore(supabase));
+      if (result.items.some((item) => item.status === 'received')) {
+        after(() => dispatchInboxAnalysis(request, supabase, result.items));
+      }
       const statuses = result.items.map((item) => item.status);
       const status = statuses.every((value) => value === 'received')
         ? 201
@@ -148,12 +158,16 @@ export async function GET(request: NextRequest): Promise<Response> {
       .order('id', { ascending: sort === 'oldest' })
       .range(from, from + limit - 1);
     if (error) return errorResponse('Inbox list failed');
-    const inboxRows = data as Array<Record<string, unknown> & { id: string; status: string }>;
+    const inboxRows = await enrichInboxAnalysis(
+      supabase,
+      userId,
+      data as Array<Record<string, unknown> & { id: string; status: string }>,
+    );
     const matchedIds = inboxRows
       .filter((item) => ['matched', 'created'].includes(item.status))
       .map((item) => item.id);
     if (matchedIds.length === 0) {
-      return Response.json({ data, count, page, limit }, { headers: privateHeaders });
+      return Response.json({ data: inboxRows, count, page, limit }, { headers: privateHeaders });
     }
     const { data: decisions, error: decisionError } = await supabase
       .from('shortcut_inbox_match_decisions')

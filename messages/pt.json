@@ -217,6 +217,12 @@
     "viewBudgets": "Ver orçamentos"
   },
   "shortcutInbox": {
+    "refreshPrepared": "Atualizar sugestão",
+    "preparedPending": "Preparando sugestão",
+    "preparedReady": "Pronta para revisar",
+    "preparedUnavailable": "Revisão manual disponível",
+    "preparedCategory": "Categoria sugerida: {category}",
+    "preparedReviewOnly": "É uma sugestão. Nada é registrado até você confirmar.",
     "receivedFrom": "Recebidos desde",
     "receivedTo": "Recebidos até",
     "clearDates": "Limpar datas",

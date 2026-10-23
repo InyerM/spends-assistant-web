@@ -1,3 +1,5 @@
+import { readBoundedJson, RequestBodyError } from '@/lib/api/bounded-json';
+import { normalizeInboxAnalysis } from '@/lib/shortcut-inbox/analysis';
 import { extractEmailEventEvidence } from '@/lib/shortcut-inbox/email-event-evidence';
 import { AuthError, errorResponse, getUserClient } from '@/lib/api/server';
 import { workerConfig } from '@/lib/config';
@@ -65,30 +67,35 @@ export async function POST(request: Request, context: Context): Promise<Response
     if (!accessToken && request.headers.get('Origin') !== new URL(request.url).origin) {
       return errorResponse('Invalid request origin', 403);
     }
-    const options = (await request.json().catch(() => null)) as { refresh?: unknown } | null;
-    const refresh = options?.refresh === true;
+    let input: unknown;
+    try {
+      input = await readBoundedJson(request, 1024, true);
+    } catch (error) {
+      return errorResponse(
+        'Invalid analysis request',
+        error instanceof RequestBodyError ? error.status : 400,
+      );
+    }
+    if (
+      !input ||
+      typeof input !== 'object' ||
+      Array.isArray(input) ||
+      Object.keys(input).some((key) => key !== 'refresh') ||
+      ('refresh' in input && typeof input.refresh !== 'boolean')
+    )
+      return errorResponse('Invalid analysis request', 400);
+    const refresh = 'refresh' in input && input.refresh === true;
     const { id } = await context.params;
     if (!uuid.test(id)) return errorResponse('Invalid inbox item ID', 400);
 
-    const [{ data: inbox, error: inboxError }, { data: route, error: routeError }] =
-      await Promise.all([
-        supabase
-          .from('shortcut_inbox_items')
-          .select('id,user_id,source,status,received_at,raw_text')
-          .eq('id', id)
-          .eq('user_id', userId)
-          .maybeSingle(),
-        supabase
-          .from('email_forwarding_routes')
-          .select('confirmation_received_at,user_confirmed_at')
-          .eq('user_id', userId)
-          .maybeSingle(),
-      ]);
-    if (inboxError || routeError) return errorResponse('Email analysis lookup failed');
-    if (!inbox || inbox.source !== 'forwarded_email')
-      return errorResponse('Inbox item not found', 404);
-    if (!route?.confirmation_received_at || !route.user_confirmed_at)
-      return errorResponse('Email forwarding is not verified', 403);
+    const { data: inbox, error: inboxError } = await supabase
+      .from('shortcut_inbox_items')
+      .select('id,user_id,source,status,received_at,raw_text')
+      .eq('id', id)
+      .eq('user_id', userId)
+      .maybeSingle();
+    if (inboxError) return errorResponse('Inbox analysis lookup failed');
+    if (!inbox) return errorResponse('Inbox item not found', 404);
 
     const { data: cached, error: cacheError } = await supabase
       .from('forwarded_email_analyses')
@@ -97,6 +104,86 @@ export async function POST(request: Request, context: Context): Promise<Response
       .eq('user_id', userId)
       .maybeSingle();
     if (cacheError) return errorResponse('Email analysis lookup failed');
+    const currentAnalysis = normalizeInboxAnalysis(cached);
+    if (currentAnalysis && (!refresh || inbox.status !== 'pending'))
+      return Response.json(currentAnalysis, { headers: privateHeaders });
+    if (
+      inbox.source !== 'forwarded_email' ||
+      currentAnalysis ||
+      workerConfig.inboxAnalysisEnabled
+    ) {
+      const token = accessToken ?? (await supabase.auth.getSession()).data.session?.access_token;
+      if (!token) throw new AuthError();
+      if (!workerConfig.url) return errorResponse('Inbox analysis unavailable', 503);
+      let response: Response;
+      try {
+        response = await fetch(`${workerConfig.url.replace(/\/$/u, '')}/inbox/analyze`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ inbox_item_id: id, refresh }),
+          signal: AbortSignal.timeout(60_000),
+        });
+      } catch {
+        return errorResponse('Inbox analysis unavailable', 503);
+      }
+      // Only an explicitly missing new endpoint permits the legacy email-only contract.
+      const missingEndpoint =
+        response.status === 404 &&
+        inbox.source === 'forwarded_email' &&
+        (await response.clone().text()).trim() === 'Not Found';
+      if (!missingEndpoint) {
+        const consent = await forwardAiConsentError(response.clone());
+        if (consent) return consent;
+        const payload: unknown = await response.json().catch(() => null);
+        if (
+          response.status === 429 &&
+          payload &&
+          typeof payload === 'object' &&
+          'code' in payload &&
+          payload.code === 'PARSE_LIMIT_REACHED'
+        ) {
+          const quota = payload as Record<string, unknown>;
+          return Response.json(
+            {
+              error: 'Parse limit reached',
+              code: 'PARSE_LIMIT_REACHED',
+              ...(typeof quota.used === 'number' &&
+              Number.isSafeInteger(quota.used) &&
+              quota.used >= 0
+                ? { used: quota.used }
+                : {}),
+              ...(typeof quota.limit === 'number' &&
+              Number.isSafeInteger(quota.limit) &&
+              quota.limit >= 0
+                ? { limit: quota.limit }
+                : {}),
+            },
+            { status: 429, headers: privateHeaders },
+          );
+        }
+        if (!response.ok) return errorResponse('Inbox analysis unavailable', response.status);
+        if (response.status === 202) {
+          const state =
+            payload && typeof payload === 'object' && 'state' in payload ? payload.state : null;
+          return state === 'pending' || state === 'running'
+            ? Response.json({ state }, { status: 202, headers: privateHeaders })
+            : errorResponse('Invalid analysis status', 502);
+        }
+        const proposal = normalizeInboxAnalysis(payload);
+        return proposal
+          ? Response.json(proposal, { headers: privateHeaders })
+          : errorResponse('Invalid analysis result', 502);
+      }
+    }
+    const { data: route, error: routeError } = await supabase
+      .from('email_forwarding_routes')
+      .select('confirmation_received_at,user_confirmed_at')
+      .eq('user_id', userId)
+      .maybeSingle();
+    if (routeError) return errorResponse('Email analysis lookup failed');
+    if (!route?.confirmation_received_at || !route.user_confirmed_at)
+      return errorResponse('Email forwarding is not verified', 403);
+
     if (cached?.analysis_version === 2 && inbox.status !== 'pending') {
       return Response.json(cached, { headers: privateHeaders });
     }

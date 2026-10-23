@@ -96,7 +96,7 @@ vi.mock('@/components/transactions/period-selector', () => ({
   ),
 }));
 
-function renderPage(source?: 'forwarded_email'): void {
+function renderPage(source?: 'forwarded_email' | 'all'): void {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(
     <QueryClientProvider client={client}>
@@ -456,7 +456,7 @@ describe('Shortcut inbox review page', () => {
     );
     expect(
       fetchMock.mock.calls.filter(([url]) => url === '/api/shortcut-inbox/older-mail/analyze'),
-    ).toHaveLength(2);
+    ).toHaveLength(1);
   });
 
   it('shows private intake text with reversible review actions and no confirmation action', async () => {
@@ -1186,4 +1186,68 @@ it('collapses a created notification into a transaction summary', async () => {
   ).not.toBeInTheDocument();
   cleanup();
   vi.unstubAllGlobals();
+});
+
+it('opens persisted analysis immediately for any source without a new AI request', async () => {
+  const fetcher = vi.fn().mockImplementation((url: string) => {
+    if (url.startsWith('/api/shortcut-inbox?'))
+      return Promise.resolve(
+        Response.json({
+          data: [
+            {
+              id: 'cached',
+              source: 'sms-shortcut',
+              status: 'pending',
+              raw_text: 'Synthetic purchase',
+              received_at: '2026-10-22T12:00:00Z',
+              created_at: '2026-10-22T12:00:00Z',
+              analysis: {
+                analysis_version: 3,
+                status: 'needs_review',
+                account_id: null,
+                category_id: null,
+                category_source: null,
+                suggested_type: 'expense',
+                description: 'Prepared purchase',
+                notes: 'Prepared notes',
+                amount: 4200,
+              },
+              analysis_job: { state: 'ready', attempts: 1 },
+            },
+          ],
+          count: 1,
+        }),
+      );
+    if (url === '/api/accounts' || url === '/api/categories')
+      return Promise.resolve(Response.json([]));
+    if (url.endsWith('/analyze'))
+      return Promise.resolve(
+        Response.json({
+          status: 'needs_review',
+          account_id: null,
+          category_id: null,
+          category_source: null,
+          suggested_type: 'expense',
+          description: 'Refreshed proposal',
+          notes: 'Refreshed notes',
+        }),
+      );
+    if (url.endsWith('/candidates'))
+      return Promise.resolve(Response.json({ candidates: [], at_limit: false }));
+    throw new Error(`Unexpected request ${url}`);
+  });
+  vi.stubGlobal('fetch', fetcher);
+  renderPage('all');
+  fireEvent.click(await screen.findByRole('button', { name: 'Create new transaction' }));
+  expect(await screen.findByDisplayValue('Prepared purchase')).toBeVisible();
+  expect(screen.getByDisplayValue('Prepared notes')).toBeVisible();
+  expect(fetcher.mock.calls.some(([url]) => String(url).endsWith('/analyze'))).toBe(false);
+  fireEvent.change(screen.getByRole('textbox', { name: 'Description' }), {
+    target: { value: 'Manual purpose' },
+  });
+  fireEvent.click(screen.getByRole('button', { name: 'refreshPrepared' }));
+  await waitFor(() =>
+    expect(fetcher.mock.calls.filter(([url]) => String(url).endsWith('/analyze'))).toHaveLength(1),
+  );
+  expect(screen.getByDisplayValue('Manual purpose')).toBeVisible();
 });

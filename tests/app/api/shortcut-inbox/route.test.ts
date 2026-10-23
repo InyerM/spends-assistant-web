@@ -2,10 +2,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { POST, GET } from '@/app/api/shortcut-inbox/route';
 import { AuthError } from '@/lib/api/server';
 
-const { getShortcutPostClient, getUserClient } = vi.hoisted(() => ({
+const { getShortcutPostClient, getUserClient, after } = vi.hoisted(() => ({
   getShortcutPostClient: vi.fn(),
   getUserClient: vi.fn(),
+  after: vi.fn(),
 }));
+
+vi.mock('next/server', () => ({ after }));
 
 vi.mock('@/lib/shortcut-inbox/auth', () => ({ getShortcutPostClient }));
 vi.mock('@/lib/api/server', () => ({
@@ -29,6 +32,9 @@ function fakeDatabase() {
   const forwardingRoutes: Record<string, unknown>[] = [];
   const supabase = {
     from(table: string) {
+      if (table === 'forwarded_email_analyses' || table === 'inbox_analysis_jobs') {
+        return { select: () => ({ eq: () => ({ in: async () => ({ data: [], error: null }) }) }) };
+      }
       if (table === 'email_forwarding_routes') {
         return {
           select: () => ({
@@ -155,6 +161,7 @@ describe('/api/shortcut-inbox', () => {
       }) as never,
     );
     expect(response.status).toBe(201);
+    expect(after).toHaveBeenCalledOnce();
     expect(db.rows[0].user_id).toBe('owner-a');
     expect(JSON.stringify(await response.json())).not.toContain('Synthetic payment');
   });
@@ -533,4 +540,22 @@ it('lists all pending owner sources explicitly so the unified badge and list agr
   );
   expect(response.status).toBe(200);
   expect((await response.json()).data).toHaveLength(3);
+});
+
+it('rejects cross-origin cookie intake before storing or scheduling AI work', async () => {
+  const db = fakeDatabase();
+  getShortcutPostClient.mockResolvedValue({ supabase: db.supabase, userId: 'owner' });
+  const response = await POST(
+    new Request('https://example.test/api/shortcut-inbox', {
+      method: 'POST',
+      headers: { Origin: 'https://evil.example', 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        source: 'sms-shortcut',
+        items: [{ received_at: '2026-10-22T12:00:00Z', raw_text: 'Synthetic purchase' }],
+      }),
+    }) as never,
+  );
+  expect(response.status).toBe(403);
+  expect(db.rows).toHaveLength(0);
+  expect(after).not.toHaveBeenCalled();
 });

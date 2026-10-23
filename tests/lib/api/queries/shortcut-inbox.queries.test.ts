@@ -57,3 +57,14 @@ it('requests the unified source explicitly instead of the legacy shortcuts-only 
     new URL(fetcher.mock.calls[0][0] as string, 'https://example.test').searchParams.get('source'),
   ).toBe('all');
 });
+
+it('polls only while visible persisted jobs are pending or running', async () => {
+  const { inboxAnalysisPollInterval } = await import('@/lib/api/queries/shortcut-inbox.queries');
+  expect(inboxAnalysisPollInterval(undefined)).toBe(false);
+  expect(inboxAnalysisPollInterval({ data: [], count: 0 })).toBe(false);
+  const list = (state: string) => ({ data: [{ id: 'item', analysis_job: { state } }], count: 1 });
+  expect(inboxAnalysisPollInterval(list('pending') as never)).toBe(2500);
+  expect(inboxAnalysisPollInterval(list('running') as never)).toBe(2500);
+  for (const state of ['ready', 'blocked', 'failed', 'skipped'])
+    expect(inboxAnalysisPollInterval(list(state) as never)).toBe(false);
+});

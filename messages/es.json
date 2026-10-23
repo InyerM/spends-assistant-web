@@ -243,6 +243,12 @@
     "cancel": "Cancelar"
   },
   "shortcutInbox": {
+    "refreshPrepared": "Actualizar sugerencia",
+    "preparedPending": "Preparando sugerencia",
+    "preparedReady": "Lista para revisar",
+    "preparedUnavailable": "Revisión manual disponible",
+    "preparedCategory": "Categoría sugerida: {category}",
+    "preparedReviewOnly": "Es una sugerencia. No se registra nada hasta que confirmes.",
     "receivedFrom": "Recibidos desde",
     "receivedTo": "Recibidos hasta",
     "clearDates": "Limpiar fechas",

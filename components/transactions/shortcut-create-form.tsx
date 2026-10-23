@@ -1,6 +1,7 @@
 'use client';
 import { UnrecognizedAccountNotice } from '@/components/transactions/unrecognized-account-notice';
 
+import { analysisTransferDestination } from '@/lib/shortcut-inbox/analysis';
 import { extractEmailEventEvidence } from '@/lib/shortcut-inbox/email-event-evidence';
 
 import { useState } from 'react';
@@ -107,8 +108,13 @@ export function ShortcutCreateForm({
     ...(fallbackEventAt
       ? { date: fallbackEventAt.slice(0, 10), eventTime: fallbackEventAt.slice(11, 16) }
       : {}),
-    destinationAccountId: ownCardPayment ? paymentDestination : '',
-    type: ownCardPayment ? ('transfer' as const) : (analysis?.suggested_type ?? base.type),
+    destinationAccountId: ownCardPayment
+      ? paymentDestination
+      : analysisTransferDestination(analysis, accountsQuery.data ?? []),
+    type:
+      ownCardPayment || analysis?.financial_type === 'transfer'
+        ? ('transfer' as const)
+        : (analysis?.suggested_type ?? base.type),
     description:
       analysis?.description ||
       (bancolombia?.destinationLastFour

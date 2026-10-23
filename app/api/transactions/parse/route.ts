@@ -1,3 +1,4 @@
+import { readBoundedJson, RequestBodyError } from '@/lib/api/bounded-json';
 import type { NextRequest } from 'next/server';
 import {
   getUserClient,
@@ -21,6 +22,7 @@ interface WorkerParsed {
   original_date?: string | null;
   original_time?: string | null;
   last_four?: string | null;
+  notes?: string;
   account_type?: string | null;
 }
 
@@ -29,6 +31,7 @@ interface WorkerParseResponse {
   resolved: {
     account_id?: string;
     category_id?: string;
+    notes?: string;
   };
 }
 
@@ -38,24 +41,31 @@ export async function POST(request: NextRequest): Promise<Response> {
       return errorResponse('Worker not configured', 503);
     }
 
-    const { supabase } = await getUserClient();
-
-    // Get the user's session token to forward to the worker
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-
-    const authToken = session?.access_token;
-    if (!authToken) {
-      return errorResponse('No authentication token available', 401);
+    const { supabase, accessToken } = await getUserClient(request);
+    if (!accessToken && request.headers.get('Origin') !== new URL(request.url).origin)
+      return errorResponse('Invalid request origin', 403);
+    const authToken = accessToken ?? (await supabase.auth.getSession()).data.session?.access_token;
+    if (!authToken) return errorResponse('No authentication token available', 401);
+    let body: unknown;
+    try {
+      body = await readBoundedJson(request, 128 * 1024);
+    } catch (error) {
+      return errorResponse(
+        'Invalid parse request',
+        error instanceof RequestBodyError ? error.status : 400,
+      );
     }
-
-    const body = await request.json();
-    const { text } = body as { text?: string };
-
-    if (!text?.trim()) {
-      return errorResponse('Text is required', 400);
-    }
+    if (
+      !body ||
+      typeof body !== 'object' ||
+      Array.isArray(body) ||
+      !('text' in body) ||
+      typeof body.text !== 'string' ||
+      !body.text.trim() ||
+      body.text.length > 16384
+    )
+      return errorResponse('Valid text is required (maximum 16384 characters)', 400);
+    const text = body.text;
 
     const res = await fetch(`${workerConfig.url}/parse`, {
       method: 'POST',
@@ -108,6 +118,9 @@ export async function POST(request: NextRequest): Promise<Response> {
       type: parsed.parsed.type ?? 'expense',
       category_id: parsed.resolved.category_id,
       raw_text: text,
+      ...(typeof parsed.resolved.notes === 'string' && parsed.resolved.notes.length <= 500
+        ? { notes: parsed.resolved.notes }
+        : {}),
     };
 
     const processed = await applyAutomationRules(supabase, txForRules);

@@ -1,41 +1,34 @@
 import { useMutation } from '@tanstack/react-query';
 import { aiConsentErrorFromResponse } from '@/lib/ai-consent';
 
-export interface ForwardedEmailAnalysis {
-  status: 'parsed' | 'needs_review';
-  account_id: string | null;
-  category_id: string | null;
-  category_source: 'ai' | 'catalog' | 'automation' | 'review_context' | null;
-  amount?: number | string | null;
-  event_date?: string | null;
-  merchant_source_url?: string;
-  extraction_version?: number;
-  bank_event_at?: string | null;
-  ai_status?: 'unavailable';
-  analysis_source?: 'automation' | 'history' | 'ai' | 'evidence';
-  automation_fields?: string[];
-  history_fields?: string[];
-  suggested_type: 'expense' | 'income' | null;
-  description: string | null;
-  notes: string | null;
-}
+import type { InboxAnalysis } from '@/types/shortcut-inbox';
+export type ForwardedEmailAnalysis = InboxAnalysis;
+export type InboxAnalysisInput = string | { id: string; refresh: true };
 
-export async function analyzeForwardedEmail(inboxId: string): Promise<ForwardedEmailAnalysis> {
+export async function analyzeForwardedEmail(
+  input: InboxAnalysisInput,
+): Promise<ForwardedEmailAnalysis | { state: 'pending' | 'running' }> {
+  const inboxId = typeof input === 'string' ? input : input.id;
+  const refresh = typeof input !== 'string' && input.refresh;
   const response = await fetch(`/api/shortcut-inbox/${inboxId}/analyze`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ refresh: true }),
+    body: JSON.stringify({ refresh }),
     signal: AbortSignal.timeout(60_000),
   });
   if (!response.ok) {
     const consentError = await aiConsentErrorFromResponse(response);
     throw consentError ?? new Error('Email analysis failed');
   }
-  return (await response.json()) as ForwardedEmailAnalysis;
+  return (await response.json()) as ForwardedEmailAnalysis | { state: 'pending' | 'running' };
 }
 
 export function useAnalyzeForwardedEmail(): ReturnType<
-  typeof useMutation<ForwardedEmailAnalysis, Error, string>
+  typeof useMutation<
+    ForwardedEmailAnalysis | { state: 'pending' | 'running' },
+    Error,
+    InboxAnalysisInput
+  >
 > {
   return useMutation({ mutationFn: analyzeForwardedEmail });
 }
