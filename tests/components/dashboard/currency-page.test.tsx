@@ -31,7 +31,10 @@ vi.mock('@/lib/stores/transaction-form.store', () => ({ useTransactionFormStore:
 vi.mock('@/lib/dashboard-layout', () => ({
   DASHBOARD_ZONES: ['main'],
   dashboardLayout: () =>
-    ['summary', 'budgets', 'custom', 'recent'].map((id) => ({ id, zone: 'main' })),
+    ['summary', 'budgets', 'custom', 'recent', 'categories', 'nature', 'trend'].map((id) => ({
+      id,
+      zone: 'main',
+    })),
 }));
 vi.mock('@/components/planning/dashboard-zone', () => ({
   DashboardZone: ({
@@ -47,15 +50,6 @@ vi.mock('@/components/planning/dashboard-zone', () => ({
       ))}
     </div>
   ),
-}));
-vi.mock('@/components/dashboard/dashboard-currency-hero', () => ({
-  DashboardCurrencyHero: ({
-    currency,
-    onCurrencyChange,
-  }: {
-    currency: string;
-    onCurrencyChange: (currency: string) => void;
-  }) => <button onClick={() => onCurrencyChange('USD')}>select:{currency}</button>,
 }));
 vi.mock('@/components/dashboard/summary-cards', () => ({
   SummaryCards: ({ currency }: { currency: string }) => <p>summary:{currency}</p>,
@@ -78,11 +72,15 @@ vi.mock('@/components/dashboard/money-alerts', () => ({ MoneyAlerts: () => null 
 vi.mock('@/components/planning/planning-overview', () => ({ PlanningOverview: () => null }));
 vi.mock('@/components/planning/onboarding-card', () => ({ OnboardingCard: () => null }));
 vi.mock('@/components/dashboard/balance-overview', () => ({ BalanceOverview: () => null }));
-vi.mock('@/components/dashboard/spending-by-category', () => ({ SpendingByCategory: () => null }));
-vi.mock('@/components/dashboard/spending-nature-cards', () => ({
-  SpendingNatureCards: () => null,
+vi.mock('@/components/dashboard/spending-by-category', () => ({
+  SpendingByCategory: ({ currency }: { currency: string }) => <p>categories:{currency}</p>,
 }));
-vi.mock('@/components/dashboard/balance-trend-chart', () => ({ BalanceTrendChart: () => null }));
+vi.mock('@/components/dashboard/spending-nature-cards', () => ({
+  SpendingNatureCards: ({ currency }: { currency: string }) => <p>nature:{currency}</p>,
+}));
+vi.mock('@/components/dashboard/balance-trend-chart', () => ({
+  BalanceTrendChart: ({ currency }: { currency: string }) => <p>trend:{currency}</p>,
+}));
 vi.mock('@/components/transactions/period-selector', () => ({ PeriodSelector: () => null }));
 vi.mock('@/components/dashboard/usage-card', () => ({ UsageCard: () => null }));
 vi.mock('@/components/accounts/account-edit-dialog', () => ({ AccountEditDialog: () => null }));
@@ -91,12 +89,15 @@ afterEach(() => {
   cleanup();
   state.queries = [];
 });
-it('connects hero selection to queries and built-in widgets while preserving custom-chart currency data', () => {
+it('connects compact selection to queries and built-in widgets while preserving custom-chart currency data', () => {
   render(<DashboardPage />);
   expect(screen.getByText('COP budgets')).toBeVisible();
-  fireEvent.click(screen.getByRole('button', { name: 'select:COP' }));
+  fireEvent.click(screen.getByRole('button', { name: 'next' }));
   expect(screen.getByText('summary:USD')).toBeVisible();
   expect(screen.getByText('recent:USD')).toBeVisible();
+  for (const widget of ['categories', 'nature', 'trend'])
+    expect(screen.getByText(widget + ':USD')).toBeVisible();
+  expect(screen.getAllByRole('group', { name: 'displayCurrency' })).toHaveLength(1);
   expect(screen.getByText('budgetsCopOnly')).toBeVisible();
   expect(screen.queryByText('COP budgets')).not.toBeInTheDocument();
   expect(state.queries.some((query) => query.currency === 'USD')).toBe(true);

@@ -181,6 +181,7 @@
     "currencyPeriodPartial": "O período contém mais de 500 movimentos. Os totais mostram apenas os movimentos carregados nesta moeda.",
     "balanceTrendUnavailable": "A evolução do saldo não está disponível para períodos históricos, dados incompletos ou transferências entre moedas diferentes. Os saldos atuais continuam disponíveis acima.",
     "budgetsCopOnly": "Os orçamentos são registrados em COP. Selecione COP para revisá-los.",
+    "displayCurrency": "Moeda do resumo",
     "currencyBalances": "Saldo atual das suas contas",
     "currencyBalancesHint": "Saldos separados por moeda, sem conversão. Deslize para mudar de moeda.",
     "balanceOverview": "Visão Geral do Saldo",

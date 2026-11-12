@@ -17,7 +17,7 @@ import { useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { startOfMonth, endOfMonth } from 'date-fns';
 import { BalanceOverview } from '@/components/dashboard/balance-overview';
-import { DashboardCurrencyHero } from '@/components/dashboard/dashboard-currency-hero';
+import { DashboardCurrencyControl } from '@/components/dashboard/dashboard-currency-control';
 import { BudgetOverview } from '@/components/dashboard/budget-overview';
 import { SummaryCards } from '@/components/dashboard/summary-cards';
 import { SpendingByCategory } from '@/components/dashboard/spending-by-category';
@@ -91,21 +91,22 @@ export default function DashboardPage(): React.ReactElement {
   return (
     <div className='mx-auto max-w-[1480px] space-y-6 p-4 sm:space-y-8 sm:p-8 lg:p-10'>
       <div className='flex flex-wrap items-center justify-between gap-3'>
-        <h1 className='text-foreground text-2xl font-semibold tracking-tight sm:text-3xl'>
-          {t('overview')}
-        </h1>
+        <div className='flex min-w-0 flex-wrap items-center gap-3'>
+          <h1 className='text-foreground text-2xl font-semibold tracking-tight sm:text-3xl'>
+            {t('overview')}
+          </h1>
+          <DashboardCurrencyControl
+            balances={balances}
+            currency={currency}
+            onCurrencyChange={setCurrency}
+            isLoading={accountsLoading}
+          />
+        </div>
         <div className='flex flex-wrap items-center gap-2'>
           <PeriodSelector dateFrom={dateFrom} dateTo={dateTo} onChange={handlePeriodChange} />
           <DashboardEditor draft={draftLayout} onDraft={setDraftLayout} />
         </div>
       </div>
-
-      <DashboardCurrencyHero
-        balances={balances}
-        currency={currency}
-        onCurrencyChange={setCurrency}
-        isLoading={accountsLoading}
-      />
 
       {(txResult?.count ?? 0) > transactions.length && (
         <p role='status' className='text-warning text-sm'>
