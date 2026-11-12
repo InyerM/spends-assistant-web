@@ -112,12 +112,22 @@ unallowlisted valid bearer denial, allowlisted native settings without Origin, a
 and signed synthetic PDF preview. No provider/OCR call or financial write occurred; exact synthetic
 fixtures were cleaned by that harness owner.
 
-A replacement isolated build including the balance status fix is being prepared at
-`/tmp/anotto-a09-build-v2-20261112`. Its final build/start evidence and the production
-publication/acceptance result must be recorded by the coordinator before marking this change
-released. The local runtime acceptance does not establish deployed origin/forwarded-header behavior;
-the same bounded production harness remains required, with an added balance-origin denial and no
-financial operation.
+The replacement isolated build including the balance status fix passed at
+`/tmp/anotto-a09-build-v2-20261112`; typecheck/lint and all four compiled OCR artifact tests passed.
+The committed source matched the built TypeScript files byte-for-byte after commit hooks. Commit
+`ea6749f` was published as READY deployment `dpl_EvyQe3KBqacs4Dq6guJgV5myMua2`; the coordinator
+independently verified the `my.anotto.app` alias through the deployment API.
+
+Production acceptance passed at `2026-11-12T21:13:27Z`, using normal browser login and a synthetic
+owner: same-origin mutation 200; foreign/sibling/missing/null origin 403 without preference changes;
+invalid bearer with cookie 401; valid bearer on an undelegated mutation 401; delegated native
+settings mutation without Origin 200; and the balance endpoint's foreign-origin denial 403 before
+any financial action. Login/API errors/audio/PDF carried the expected headers, JavaScript MIME and
+signed PDF preview/iframe remained compatible, accounts and transactions were unchanged, and no OCR
+reservation/provider call occurred. Exact storage and the synthetic owner were removed. Evidence:
+`/tmp/anotto-a09-production-acceptance-20261112.json` (`passed: true`) and the independent review
+`/tmp/anotto-a09-consumer-review-20261112.md`. The corrected production candidate also serves
+`http://localhost:3000`.
 
 ## Residual scope
 
