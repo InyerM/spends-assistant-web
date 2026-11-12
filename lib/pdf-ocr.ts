@@ -1,6 +1,5 @@
 import { Worker } from 'node:worker_threads';
 import { createHash } from 'node:crypto';
-import { createRequire } from 'node:module';
 import { MAX_DOCUMENT_BYTES } from '@/lib/documents';
 
 export class PdfOcrError extends Error {
@@ -26,12 +25,13 @@ const { parentPort, workerData } = require('node:worker_threads');
 const { createHash } = require('node:crypto');
 (async () => {
   try {
-    const { PDFDocument, PDFName, PDFDict, PDFArray } = require(workerData.modulePath);
+    const loadModule = require('node:module').createRequire(require('node:path').join(workerData.moduleRoot, 'package.json'));
+    const { PDFDocument, PDFName, PDFDict, PDFArray } = loadModule('pdf-lib');
     let pdf;
     if (workerData.mimeType === 'application/pdf') {
       pdf = await PDFDocument.load(workerData.bytes, { updateMetadata: false, throwOnInvalidObject: true });
     } else {
-      const sharp = require(workerData.sharpPath);
+      const sharp = loadModule('sharp');
       const image = sharp(Buffer.from(workerData.bytes), {limitInputPixels:16000000, sequentialRead:true, failOn:'warning'});
       const metadata = await image.metadata();
       const expected = {'image/png':'png','image/jpeg':'jpeg','image/webp':'webp'}[workerData.mimeType];
@@ -107,14 +107,11 @@ async function prepareOcrDocument(input: Uint8Array, mimeType: string): Promise<
     throw new PdfOcrError('PDF_UNSUPPORTED');
   const bytes = Uint8Array.from(input);
   const sourceSha256 = createHash('sha256').update(bytes).digest('hex');
-  const requireModule = createRequire(import.meta.url);
-  const modulePath = requireModule.resolve('pdf-lib');
-  const sharpPath = mimeType === 'application/pdf' ? null : requireModule.resolve('sharp');
   return new Promise((resolve, reject) => {
     const worker = new Worker(source, {
       eval: true,
       execArgv: [],
-      workerData: { bytes, modulePath, mimeType, sharpPath },
+      workerData: { bytes, moduleRoot: process.cwd(), mimeType },
       resourceLimits: { maxOldGenerationSizeMb: 128, maxYoungGenerationSizeMb: 32, stackSizeMb: 4 },
     });
     let settled = false;
