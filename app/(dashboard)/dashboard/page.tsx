@@ -17,6 +17,7 @@ import { useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { startOfMonth, endOfMonth } from 'date-fns';
 import { BalanceOverview } from '@/components/dashboard/balance-overview';
+import { DashboardCurrencyHero } from '@/components/dashboard/dashboard-currency-hero';
 import { BudgetOverview } from '@/components/dashboard/budget-overview';
 import { SummaryCards } from '@/components/dashboard/summary-cards';
 import { SpendingByCategory } from '@/components/dashboard/spending-by-category';
@@ -29,6 +30,8 @@ import { AccountEditDialog } from '@/components/accounts/account-edit-dialog';
 import { AccountCreateDialog } from '@/components/accounts/account-create-dialog';
 import { useTransactions } from '@/lib/api/queries/transaction.queries';
 import type { Account } from '@/types';
+import { useAccounts } from '@/lib/api/queries/account.queries';
+import { accountCurrencyBalances } from '@/lib/account-currency-balances';
 
 function toStr(date: Date): string {
   const y = date.getFullYear();
@@ -41,6 +44,12 @@ export default function DashboardPage(): React.ReactElement {
   const t = useTranslations('dashboard');
   const guideRequested = useSearchParams().get('guide') === '1';
   const { data: planning } = usePlanning();
+  const [requestedCurrency, setCurrency] = useState('COP');
+  const { data: accounts, isLoading: accountsLoading } = useAccounts();
+  const balances = accountCurrencyBalances(accounts ?? []);
+  const currency = balances.some((balance) => balance.currency === requestedCurrency)
+    ? requestedCurrency
+    : (balances[0]?.currency ?? 'COP');
   const [draftLayout, setDraftLayout] = useState<WidgetPlacement[] | null>(null);
   const layout =
     draftLayout ??
@@ -56,12 +65,21 @@ export default function DashboardPage(): React.ReactElement {
   const [createAccountOpen, setCreateAccountOpen] = useState(false);
 
   const { data: txResult, isLoading: txLoading } = useTransactions({
+    currency,
     date_from: dateFrom,
     date_to: dateTo,
     limit: 500,
   });
 
   const transactions = txResult?.data ?? [];
+  const hasCustomCharts =
+    layout.some((item) => item.id === 'custom') &&
+    Array.isArray(planning?.preferences.dashboard_custom_charts) &&
+    planning.preferences.dashboard_custom_charts.length > 0;
+  const { data: periodResult } = useTransactions(
+    { date_from: dateFrom, date_to: dateTo, limit: 500 },
+    { enabled: hasCustomCharts || layout.some((item) => item.id === 'trend') },
+  );
   const budgetMonth =
     dateFrom.slice(0, 7) === dateTo.slice(0, 7) ? `${dateFrom.slice(0, 7)}-01` : null;
 
@@ -81,6 +99,19 @@ export default function DashboardPage(): React.ReactElement {
           <DashboardEditor draft={draftLayout} onDraft={setDraftLayout} />
         </div>
       </div>
+
+      <DashboardCurrencyHero
+        balances={balances}
+        currency={currency}
+        onCurrencyChange={setCurrency}
+        isLoading={accountsLoading}
+      />
+
+      {(txResult?.count ?? 0) > transactions.length && (
+        <p role='status' className='text-warning text-sm'>
+          {t('currencyPeriodPartial')}
+        </p>
+      )}
 
       <OnboardingCard
         force={guideRequested}
@@ -105,7 +136,11 @@ export default function DashboardPage(): React.ReactElement {
             renderWidget={(id) => (
               <>
                 {id === 'summary' && (
-                  <SummaryCards transactions={transactions} isLoading={txLoading} />
+                  <SummaryCards
+                    currency={currency}
+                    transactions={transactions}
+                    isLoading={txLoading}
+                  />
                 )}
                 {id === 'reviewInbox' && <PendingReviewWidget kind='inbox' />}
                 {id === 'reviewDocuments' && <PendingReviewWidget kind='documents' />}
@@ -118,24 +153,38 @@ export default function DashboardPage(): React.ReactElement {
                 )}
                 {id === 'trend' && (
                   <BalanceTrendChart
-                    transactions={transactions}
+                    partial={!periodResult || periodResult.count > periodResult.data.length}
+                    currency={currency}
+                    transactions={periodResult?.data ?? []}
                     dateFrom={dateFrom}
                     dateTo={dateTo}
                   />
                 )}
                 {id === 'categories' && (
-                  <SpendingByCategory transactions={transactions} isLoading={txLoading} />
+                  <SpendingByCategory
+                    currency={currency}
+                    transactions={transactions}
+                    isLoading={txLoading}
+                  />
                 )}
-                {id === 'nature' && <SpendingNatureCards transactions={transactions} />}
+                {id === 'nature' && (
+                  <SpendingNatureCards currency={currency} transactions={transactions} />
+                )}
                 {id === 'contacts' && <TopContacts />}
                 {id === 'alerts' && <MoneyAlerts />}
-                {id === 'recent' && <RecentTransactions />}
-                {id === 'budgets' && budgetMonth && <BudgetOverview month={budgetMonth} />}
+                {id === 'recent' && <RecentTransactions currency={currency} />}
+                {id === 'budgets' &&
+                  budgetMonth &&
+                  (currency === 'COP' ? (
+                    <BudgetOverview month={budgetMonth} />
+                  ) : (
+                    <p className='text-muted-foreground text-sm'>{t('budgetsCopOnly')}</p>
+                  ))}
                 {id === 'goals' && <PlanningOverview />}
                 {id === 'custom' && (
                   <CustomCharts
-                    transactions={transactions}
-                    partial={(txResult?.count ?? 0) > transactions.length}
+                    transactions={periodResult?.data ?? []}
+                    partial={(periodResult?.count ?? 0) > (periodResult?.data.length ?? 0)}
                   />
                 )}
               </>

@@ -97,6 +97,8 @@ export default function ReliefFundsPage(): React.ReactElement {
   }, [loadError]);
 
   useEffect(() => {
+    // Synchronize initial remote data; preserve the shared manual-refresh loading flow.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void loadFunds()
       .catch((cause: unknown) => {
         setError(cause instanceof Error ? cause.message : loadError);

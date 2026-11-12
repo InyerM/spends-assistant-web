@@ -10,17 +10,24 @@ import { TrendingUp, TrendingDown, Scale } from 'lucide-react';
 import type { Transaction } from '@/types';
 
 interface SummaryCardsProps {
+  currency?: string;
   transactions: Transaction[];
   isLoading?: boolean;
 }
 
-export function SummaryCards({ transactions, isLoading }: SummaryCardsProps): React.ReactElement {
+export function SummaryCards({
+  transactions,
+  isLoading,
+  currency = 'COP',
+}: SummaryCardsProps): React.ReactElement {
   const t = useTranslations('dashboard');
   const locale = useLocale();
 
   const stats = useMemo(() => {
-    return calculateDashboardSummary(transactions);
-  }, [transactions]);
+    return calculateDashboardSummary(
+      transactions.filter((tx) => (tx.currency ?? 'COP') === currency),
+    );
+  }, [transactions, currency]);
 
   const cards = [
     {
@@ -52,7 +59,8 @@ export function SummaryCards({ transactions, isLoading }: SummaryCardsProps): Re
 
   const maxCharacters = Math.max(
     ...cards.map(
-      (card) => `${card.prefix ?? ''}${formatCurrency(Math.abs(card.value), 'COP', locale)}`.length,
+      (card) =>
+        `${card.prefix ?? ''}${formatCurrency(Math.abs(card.value), currency, locale)}`.length,
     ),
   );
 
@@ -86,7 +94,7 @@ export function SummaryCards({ transactions, isLoading }: SummaryCardsProps): Re
                 <span
                   className={`ml-auto min-w-0 text-right text-sm font-bold [overflow-wrap:anywhere] ${card.colorClass}`}>
                   {card.prefix ?? ''}
-                  {formatCurrency(Math.abs(card.value), 'COP', locale)}
+                  {formatCurrency(Math.abs(card.value), currency, locale)}
                 </span>
               </div>
             );
@@ -117,7 +125,7 @@ export function SummaryCards({ transactions, isLoading }: SummaryCardsProps): Re
                       }}
                       className={`max-w-full font-semibold tracking-tight [overflow-wrap:anywhere] tabular-nums ${card.colorClass}`}>
                       {card.prefix ?? ''}
-                      {formatCurrency(Math.abs(card.value), 'COP', locale)}
+                      {formatCurrency(Math.abs(card.value), currency, locale)}
                     </p>
                   </div>
                 </CardContent>

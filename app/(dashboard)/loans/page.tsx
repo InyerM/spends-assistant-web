@@ -8,7 +8,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useLocale, useTranslations } from 'next-intl';
 import { Landmark } from 'lucide-react';
@@ -94,7 +94,7 @@ export default function LoansPage(): React.ReactElement {
   const [preview, setPreview] = useState<LoanEventDraft | null>(null);
   const [checked, setChecked] = useState(false);
   const [historyView, setHistoryView] = useState(false);
-  const requestId = useRef<string | null>(null);
+  const [requestId, setRequestId] = useState<string | null>(null);
 
   const load = useCallback(async (): Promise<void> => {
     const response = await fetch('/api/loans');
@@ -103,6 +103,8 @@ export default function LoansPage(): React.ReactElement {
     setLoans(body.data ?? []);
   }, [loadError]);
   useEffect(() => {
+    // Synchronize initial remote data; preserve the shared manual-refresh loading flow.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void load()
       .catch((cause: unknown) => setError(cause instanceof Error ? cause.message : loadError))
       .finally(() => setLoading(false));
@@ -111,7 +113,7 @@ export default function LoansPage(): React.ReactElement {
     setDraft((previous) => ({ ...previous, [field]: value }));
     setPreview(null);
     setChecked(false);
-    requestId.current = null;
+    setRequestId(null);
     setError(null);
   }
   const selected = loans.find((loan) => loan.id === draft.loanId);
@@ -179,21 +181,21 @@ export default function LoansPage(): React.ReactElement {
     try {
       setPreview(build());
       setChecked(false);
-      requestId.current = crypto.randomUUID();
+      setRequestId(crypto.randomUUID());
       setError(null);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : t('checkSource'));
     }
   }
   async function confirm(): Promise<void> {
-    if (!preview || !checked || !requestId.current) return;
+    if (!preview || !checked || !requestId) return;
     setSaving(true);
     setError(null);
     try {
       const response = await fetch('/api/loans', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ request_id: requestId.current, reviewed: true, event: preview }),
+        body: JSON.stringify({ request_id: requestId, reviewed: true, event: preview }),
       });
       if (!response.ok) {
         const body = (await response.json()) as { error?: string };
@@ -203,7 +205,7 @@ export default function LoansPage(): React.ReactElement {
       setDraft(emptyDraft);
       setPreview(null);
       setChecked(false);
-      requestId.current = null;
+      setRequestId(null);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : t('saveFailed'));
     } finally {

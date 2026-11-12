@@ -97,6 +97,7 @@ export interface BulkUpdateTransactionInput {
 }
 
 export interface TransactionFilters {
+  currency?: string;
   type?: TransactionType;
   types?: TransactionType[];
   account_id?: string;

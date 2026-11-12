@@ -60,7 +60,7 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps): React.R
   const [isImporting, setIsImporting] = useState(false);
   const [duplicates, setDuplicates] = useState<DuplicateMatch[]>([]);
   const fileRef = useRef<HTMLInputElement>(null);
-  const parsedRowsRef = useRef<Record<string, string>[]>([]);
+  const [parsedRows, setParsedRows] = useState<Record<string, string>[]>([]);
   const requestIdRef = useRef<string>(crypto.randomUUID());
   const { data: usage } = useUsage();
   const { data: subscription } = useSubscription();
@@ -77,7 +77,7 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps): React.R
     setMapping({} as Record<AppField, string>);
     setDuplicates([]);
     checkDuplicatesMutation.reset();
-    parsedRowsRef.current = [];
+    setParsedRows([]);
     requestIdRef.current = crypto.randomUUID();
   };
 
@@ -93,7 +93,7 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps): React.R
       return;
     }
 
-    parsedRowsRef.current = rows;
+    setParsedRows(rows);
     setCsvHeaders(headers);
     setMapping(buildAutoMapping(headers));
     setStep('map');
@@ -120,13 +120,12 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps): React.R
   );
 
   const previewRows = useMemo(
-    () => parsedRowsRef.current.slice(0, 5).map((row) => transformRow(row, mapping)),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [mapping, step],
+    () => parsedRows.slice(0, 5).map((row) => transformRow(row, mapping)),
+    [mapping, parsedRows],
   );
 
   const isFree = subscription?.plan !== 'pro';
-  const importCount = parsedRowsRef.current.length;
+  const importCount = parsedRows.length;
   const txRemaining =
     usage && isFree ? Math.max(0, usage.transactions_limit - usage.transactions_count) : Infinity;
   const importExceedsLimit = isFree && importCount > txRemaining;
@@ -134,14 +133,14 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps): React.R
   const doImport = async (duplicateReviews?: DuplicateReview[]): Promise<void> => {
     setIsImporting(true);
     try {
-      const transactions = parsedRowsRef.current.map((row) => transformRow(row, mapping));
+      const transactions = parsedRows.map((row) => transformRow(row, mapping));
 
       const result = await importMutation.mutateAsync({
         transactions,
         resolve_names: true,
         file_name: file?.name ?? 'import.csv',
         request_id: requestIdRef.current,
-        row_count: parsedRowsRef.current.length,
+        row_count: parsedRows.length,
         duplicate_reviews: duplicateReviews,
       });
 
@@ -186,11 +185,11 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps): React.R
   };
 
   const handleImport = async (): Promise<void> => {
-    if (parsedRowsRef.current.length === 0) return;
+    if (parsedRows.length === 0) return;
 
     // Check for duplicates first
     try {
-      const transactions = parsedRowsRef.current.map((row) => transformRow(row, mapping));
+      const transactions = parsedRows.map((row) => transformRow(row, mapping));
       const checkPayload = transactions.map((tx) => ({
         date: tx.date,
         amount: tx.amount,
@@ -286,7 +285,7 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps): React.R
         <FileText className='text-muted-foreground h-4 w-4' />
         <span className='text-sm font-medium'>{file?.name}</span>
         <span className='text-muted-foreground text-xs'>
-          ({parsedRowsRef.current.length} {t('rows')}, {csvHeaders.length} {t('columns')})
+          ({parsedRows.length} {t('rows')}, {csvHeaders.length} {t('columns')})
         </span>
       </div>
 
@@ -349,7 +348,7 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps): React.R
       <p className='text-muted-foreground text-sm'>
         {t('previewDescription', {
           shown: previewRows.length,
-          total: parsedRowsRef.current.length,
+          total: parsedRows.length,
         })}
       </p>
 
@@ -406,7 +405,7 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps): React.R
             ? t('checking')
             : isImporting
               ? tCommon('importing')
-              : t('importCount', { count: parsedRowsRef.current.length })}
+              : t('importCount', { count: parsedRows.length })}
         </Button>
       </div>
     </div>

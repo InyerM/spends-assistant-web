@@ -270,3 +270,24 @@ it('includes both sides of account transfers without interpreting filter values 
       .status,
   ).toBe(400);
 });
+
+it.each(['USD', 'COP'])('filters %s on the server before pagination', async (currency) => {
+  const { getUserClient } = await import('@/lib/api/server');
+  const mockSb = createChainableQuery([]);
+  vi.mocked(getUserClient).mockResolvedValue({ supabase: mockSb as never, userId: 'owner' });
+  const response = await GET(
+    new NextRequest(`http://localhost/api/transactions?currency=${currency}`),
+  );
+  expect(response.status).toBe(200);
+  if (currency === 'COP')
+    expect(mockSb._chain.or).toHaveBeenCalledWith('currency.eq.COP,currency.is.null');
+  else expect(mockSb._chain.eq).toHaveBeenCalledWith('currency', 'USD');
+});
+it('rejects currency query syntax rather than broadening a filter', async () => {
+  const { getUserClient } = await import('@/lib/api/server');
+  const mockSb = createChainableQuery([]);
+  vi.mocked(getUserClient).mockResolvedValue({ supabase: mockSb as never, userId: 'owner' });
+  expect(
+    (await GET(new NextRequest('http://localhost/api/transactions?currency=usd'))).status,
+  ).toBe(400);
+});

@@ -121,6 +121,8 @@ export default function InvestmentsPage(): React.ReactElement {
   }, [loadError]);
 
   useEffect(() => {
+    // Synchronize initial remote data; preserve the shared manual-refresh loading flow.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void loadPositions()
       .catch((cause: unknown) => {
         setError(cause instanceof Error ? cause.message : loadError);

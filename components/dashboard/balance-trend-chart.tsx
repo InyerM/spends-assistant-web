@@ -16,6 +16,8 @@ import {
   ReferenceLine,
 } from 'recharts';
 import type { Transaction } from '@/types';
+import { dashboardTrendUnavailable } from '@/lib/transactions/dashboard-trend';
+import { format } from 'date-fns';
 
 interface DayPoint {
   date: string;
@@ -24,6 +26,8 @@ interface DayPoint {
 }
 
 interface BalanceTrendChartProps {
+  partial?: boolean;
+  currency?: string;
   transactions: Transaction[];
   dateFrom: string;
   dateTo: string;
@@ -31,6 +35,7 @@ interface BalanceTrendChartProps {
 }
 
 interface BalanceTooltipProps {
+  currency: string;
   active?: boolean;
   payload?: Array<{ value?: number }>;
   label?: string;
@@ -38,6 +43,7 @@ interface BalanceTooltipProps {
 }
 
 function CustomTooltip({
+  currency,
   active,
   payload,
   label,
@@ -49,7 +55,7 @@ function CustomTooltip({
     <div className='bg-popover border-border rounded-lg border p-2 text-xs shadow-md'>
       <p className='text-muted-foreground mb-0.5'>{label}</p>
       <p className={`font-semibold ${value >= 0 ? 'text-success' : 'text-destructive'}`}>
-        {formatCurrency(value, 'COP', locale)}
+        {formatCurrency(value, currency, locale)}
       </p>
     </div>
   );
@@ -63,6 +69,8 @@ function formatYAxis(value: number): string {
 
 export function BalanceTrendChart({
   transactions,
+  partial = false,
+  currency = 'COP',
   dateFrom,
   dateTo,
   className,
@@ -74,11 +82,14 @@ export function BalanceTrendChart({
   const { chartData, endBalance } = useMemo(() => {
     if (!accounts) return { chartData: [], endBalance: 0 };
 
-    const currentBalance = accounts.reduce((sum, acc) => sum + acc.balance, 0);
+    const currentBalance = accounts
+      .filter((acc) => acc.is_active && !acc.deleted_at && acc.currency === currency)
+      .reduce((sum, acc) => sum + acc.balance, 0);
 
     // Build daily net map from transactions (income - expense)
     const dailyNet = new Map<string, number>();
     for (const tx of transactions) {
+      if ((tx.currency ?? 'COP') !== currency) continue;
       const existing = dailyNet.get(tx.date) ?? 0;
       if (tx.type === 'income') dailyNet.set(tx.date, existing + tx.amount);
       else if (tx.type === 'expense') dailyNet.set(tx.date, existing - tx.amount);
@@ -110,7 +121,7 @@ export function BalanceTrendChart({
     }
 
     return { chartData: days, endBalance: runningBalance };
-  }, [transactions, accounts, dateFrom, dateTo]);
+  }, [transactions, accounts, dateFrom, dateTo, currency]);
 
   if (accLoading) {
     return (
@@ -125,6 +136,27 @@ export function BalanceTrendChart({
     );
   }
 
+  if (
+    dashboardTrendUnavailable(
+      transactions,
+      accounts ?? [],
+      dateFrom,
+      dateTo,
+      partial,
+      format(new Date(), 'yyyy-MM-dd'),
+    )
+  ) {
+    return (
+      <Card className={`border-border bg-card ${className ?? ''}`}>
+        <CardContent className='p-4 sm:p-5'>
+          <h3 className='text-base font-semibold'>{t('balanceTrend')}</h3>
+          <p role='status' className='text-muted-foreground mt-2 text-sm'>
+            {t('balanceTrendUnavailable')}
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
   if (chartData.length === 0) return null;
 
   const isPositive = endBalance >= 0;
@@ -137,14 +169,14 @@ export function BalanceTrendChart({
 
         <p
           className={`mt-3 text-2xl font-semibold tracking-tight tabular-nums sm:text-3xl ${isPositive ? 'text-success' : 'text-destructive'}`}>
-          {formatCurrency(endBalance, 'COP', locale)}
+          {formatCurrency(endBalance, currency, locale)}
         </p>
 
         <div
           className='mt-6 w-full'
           style={{ height: 'var(--widget-chart-height, 280px)' }}
           role='img'
-          aria-label={`${t('balanceTrend')}: ${formatCurrency(endBalance, 'COP', locale)}`}>
+          aria-label={`${t('balanceTrend')}: ${formatCurrency(endBalance, currency, locale)}`}>
           <ResponsiveContainer width='100%' height='100%'>
             <AreaChart data={chartData} accessibilityLayer>
               <defs>
@@ -169,12 +201,7 @@ export function BalanceTrendChart({
                 width={50}
                 className='fill-muted-foreground'
               />
-              <Tooltip
-                content={
-                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                  ((props: any) => <CustomTooltip {...props} locale={locale} />) as any
-                }
-              />
+              <Tooltip content={<CustomTooltip currency={currency} locale={locale} />} />
               <ReferenceLine
                 y={0}
                 stroke='hsl(var(--muted-foreground))'

@@ -29,12 +29,12 @@ const typeConfig: Record<TransactionType, { icon: typeof ArrowDownLeft; colorCla
   transfer: { icon: ArrowRightLeft, colorClass: 'text-muted-foreground' },
 };
 
-export function RecentTransactions(): React.ReactElement {
+export function RecentTransactions({ currency }: { currency?: string } = {}): React.ReactElement {
   const t = useTranslations('dashboard');
   const locale = useLocale();
   const router = useRouter();
   const { openWith } = useTransactionFormStore();
-  const { data: result, isLoading } = useTransactions({ limit: 5 });
+  const { data: result, isLoading } = useTransactions({ limit: 5, currency });
   const proofs = useStatementProofs(result?.data.map((tx) => tx.id) ?? []);
   const { data: categories } = useCategories();
   const { data: accounts } = useAccounts();

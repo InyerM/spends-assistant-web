@@ -17,8 +17,10 @@ export function PdfOcrAction({
   const acknowledgementId = useId();
   const [acknowledged, setAcknowledged] = useState(false);
   return (
-    <details className='border-border space-y-3 rounded-lg border p-3 text-sm'>
-      <summary className='cursor-pointer font-medium'>{t('optionalOcr')}</summary>
+    <section
+      aria-label={t('optionalOcr')}
+      className='border-border space-y-3 border-t pt-4 text-sm'>
+      <h3 className='font-medium'>{t('optionalOcr')}</h3>
       <p className='text-muted-foreground my-3 max-w-prose'>{t('ocrDisclosure')}</p>
       <div className='mb-3 flex items-start gap-2'>
         <Checkbox
@@ -43,6 +45,6 @@ export function PdfOcrAction({
         }}>
         {t('extractOcr')}
       </Button>
-    </details>
+    </section>
   );
 }

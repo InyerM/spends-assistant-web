@@ -38,6 +38,9 @@ export async function GET(request: NextRequest): Promise<Response> {
 
     const page = parseInt(searchParams.get('page') ?? '1', 10);
     const limit = parseInt(searchParams.get('limit') ?? '20', 10);
+    const currency = searchParams.get('currency');
+    if (currency !== null && !/^[A-Z]{3}$/.test(currency))
+      return errorResponse('Invalid currency filter', 400);
     const type = searchParams.get('type');
     const types = searchParams.get('types');
     const accountId = searchParams.get('account_id');
@@ -67,6 +70,8 @@ export async function GET(request: NextRequest): Promise<Response> {
       query = query.order('date', { ascending }).order('time', { ascending });
     }
 
+    if (currency === 'COP') query = query.or('currency.eq.COP,currency.is.null');
+    else if (currency) query = query.eq('currency', currency);
     if (types) query = query.in('type', types.split(','));
     else if (type) query = query.eq('type', type);
     const selectedAccounts = accountIds ? accountIds.split(',') : accountId ? [accountId] : [];

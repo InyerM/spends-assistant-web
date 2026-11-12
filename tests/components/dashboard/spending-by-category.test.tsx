@@ -59,3 +59,20 @@ describe('spending by category', () => {
     },
   );
 });
+it('keeps foreign currency expenses out of a selected USD category total', () => {
+  render(
+    <NextIntlClientProvider locale='en' messages={en}>
+      <SpendingByCategory
+        currency='USD'
+        transactions={
+          [
+            { type: 'expense', amount: 10, currency: 'USD', category_id: 'food' },
+            { type: 'expense', amount: 90000, currency: 'COP', category_id: 'food' },
+          ] as Transaction[]
+        }
+      />
+    </NextIntlClientProvider>,
+  );
+  expect(screen.getByRole('img')).toHaveAccessibleName(expect.stringContaining('10'));
+  expect(screen.getByRole('img')).not.toHaveAccessibleName(expect.stringContaining('90,010'));
+});

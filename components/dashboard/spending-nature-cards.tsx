@@ -30,6 +30,7 @@ interface DayData {
 }
 
 interface SpendingNatureCardsProps {
+  currency?: string;
   transactions: Transaction[];
   className?: string;
 }
@@ -41,6 +42,7 @@ interface TooltipEntry {
 }
 
 interface NatureTooltipProps {
+  currency: string;
   active?: boolean;
   payload?: TooltipEntry[];
   label?: string;
@@ -49,6 +51,7 @@ interface NatureTooltipProps {
 }
 
 function CustomTooltip({
+  currency,
   active,
   payload,
   label,
@@ -64,7 +67,7 @@ function CustomTooltip({
           <span className='h-2 w-2 rounded-full' style={{ backgroundColor: entry.color }} />
           <span className='text-muted-foreground'>{t(entry.dataKey ?? '')}:</span>
           <span className='text-foreground font-medium'>
-            {formatCurrency(entry.value ?? 0, 'COP', locale)}
+            {formatCurrency(entry.value ?? 0, currency, locale)}
           </span>
         </div>
       ))}
@@ -80,6 +83,7 @@ function formatYAxis(value: number): string {
 
 export function SpendingNatureCards({
   transactions,
+  currency = 'COP',
   className,
 }: SpendingNatureCardsProps): React.ReactElement | null {
   const t = useTranslations('dashboard');
@@ -102,6 +106,7 @@ export function SpendingNatureCards({
     const dayMap = new Map<string, { must: number; need: number; want: number }>();
 
     for (const tx of transactions) {
+      if ((tx.currency ?? 'COP') !== currency) continue;
       if (!isPersonalExpense(tx)) continue;
       const nature = tx.category_id ? categoryNatureMap.get(tx.category_id) : undefined;
       if (!nature || nature === 'none') continue;
@@ -126,7 +131,7 @@ export function SpendingNatureCards({
     }
 
     return { chartData: days, total: sum };
-  }, [transactions, categories]);
+  }, [transactions, categories, currency]);
 
   if (catLoading) {
     return (
@@ -179,7 +184,7 @@ export function SpendingNatureCards({
         </div>
 
         <p className='text-foreground mt-4 text-xl font-bold sm:text-2xl'>
-          {formatCurrency(filteredTotal, 'COP', locale)}
+          {formatCurrency(filteredTotal, currency, locale)}
         </p>
 
         <div className='mt-3 h-[200px] w-full'>
@@ -204,10 +209,7 @@ export function SpendingNatureCards({
                 className='fill-muted-foreground'
               />
               <Tooltip
-                content={
-                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                  ((props: any) => <CustomTooltip {...props} locale={locale} t={t} />) as any
-                }
+                content={<CustomTooltip currency={currency} locale={locale} t={t} />}
                 cursor={{ fill: 'hsl(var(--muted) / 0.3)' }}
               />
               <Legend

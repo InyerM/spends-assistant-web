@@ -11,10 +11,14 @@ export function AccountBalanceHero({
   ledgers,
   selectedId,
   onSelect,
+  label,
+  description,
 }: {
-  ledgers: Account[];
+  ledgers: Pick<Account, 'id' | 'currency' | 'balance'>[];
   selectedId: string;
   onSelect: (id: string) => void;
+  label?: string;
+  description?: string;
 }): React.ReactElement {
   const t = useTranslations('accounts');
   const common = useTranslations('common');
@@ -74,7 +78,7 @@ export function AccountBalanceHero({
   return (
     <section
       role='region'
-      aria-label={t('balanceCurrency')}
+      aria-label={label ?? t('balanceCurrency')}
       className='bg-brand/10 min-w-0 overflow-hidden rounded-2xl'
       onKeyDown={(event) => {
         const next = {
@@ -112,12 +116,14 @@ export function AccountBalanceHero({
             aria-hidden={ledger.id !== selectedId}
             className='w-full min-w-0 shrink-0 snap-center px-5 pt-8 pb-5 sm:px-8 sm:pt-10'>
             <p className='text-foreground/80 text-sm'>
-              {t('currentBalance')} · {ledger.currency}
+              {label ?? t('currentBalance')} · {ledger.currency}
             </p>
             <p className='text-foreground mt-4 text-[clamp(2rem,5vw,4.5rem)] leading-tight font-semibold tracking-tight wrap-anywhere tabular-nums'>
               {formatCurrency(ledger.balance, ledger.currency, locale)}
             </p>
-            <p className='text-foreground/80 mt-3 max-w-lg text-sm'>{t('separateBalances')}</p>
+            <p className='text-foreground/80 mt-3 max-w-lg text-sm'>
+              {description ?? t('separateBalances')}
+            </p>
           </div>
         ))}
       </div>

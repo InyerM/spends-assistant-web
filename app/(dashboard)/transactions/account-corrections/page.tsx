@@ -69,6 +69,8 @@ export default function AccountCorrectionsPage(): React.ReactElement {
   }, []);
 
   useEffect(() => {
+    // Synchronize initial remote data; preserve the shared manual-refresh loading flow.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void load();
   }, [load]);
 

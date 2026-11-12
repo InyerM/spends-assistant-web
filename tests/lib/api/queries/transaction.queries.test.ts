@@ -190,3 +190,9 @@ describe('fetchTransaction', () => {
     await expect(fetchTransaction('tx-999')).rejects.toThrow('Failed to fetch transaction');
   });
 });
+it('serializes the selected currency for server-side filtering', async () => {
+  const fetcher = vi.fn().mockResolvedValue(Response.json({ data: [], count: 0 }));
+  vi.stubGlobal('fetch', fetcher);
+  await fetchTransactions({ currency: 'USD' });
+  expect(fetcher).toHaveBeenCalledWith('/api/transactions?currency=USD');
+});

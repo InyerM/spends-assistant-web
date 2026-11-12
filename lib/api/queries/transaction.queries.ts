@@ -33,6 +33,7 @@ export async function fetchTransactions(filters: TransactionFilters): Promise<Tr
   else if (filters.account_id) params.set('account_id', filters.account_id);
   if (filters.category_ids?.length) params.set('category_ids', filters.category_ids.join(','));
   else if (filters.category_id) params.set('category_id', filters.category_id);
+  if (filters.currency) params.set('currency', filters.currency);
   if (filters.source) params.set('source', filters.source);
   if (filters.date_from) params.set('date_from', filters.date_from);
   if (filters.date_to) params.set('date_to', filters.date_to);

@@ -18,6 +18,7 @@ import { CATEGORY_CHART_COLORS } from '@/lib/constants/chart';
 const MAX_VISIBLE = 5;
 
 interface SpendingByCategoryProps {
+  currency?: string;
   transactions: Transaction[];
   isLoading?: boolean;
 }
@@ -30,12 +31,14 @@ interface CategorySpending {
 }
 
 interface CategoryTooltipProps {
+  currency: string;
   active?: boolean;
   payload?: Array<{ payload?: CategorySpending; value?: number }>;
   locale: string;
 }
 
 function CustomTooltip({
+  currency,
   active,
   payload,
   locale,
@@ -45,13 +48,14 @@ function CustomTooltip({
   return (
     <div className='bg-popover border-border rounded-lg border p-2 text-xs shadow-md'>
       <p className='text-foreground mb-0.5 font-medium'>{entry.payload?.name}</p>
-      <p className='text-muted-foreground'>{formatCurrency(entry.value ?? 0, 'COP', locale)}</p>
+      <p className='text-muted-foreground'>{formatCurrency(entry.value ?? 0, currency, locale)}</p>
     </div>
   );
 }
 
 export function SpendingByCategory({
   transactions,
+  currency = 'COP',
   isLoading,
 }: SpendingByCategoryProps): React.ReactElement {
   const t = useTranslations('dashboard');
@@ -60,7 +64,9 @@ export function SpendingByCategory({
 
   const { data: categories, isLoading: catLoading } = useCategories();
 
-  const expenses = transactions.filter(isPersonalExpense);
+  const expenses = transactions.filter(
+    (tx) => (tx.currency ?? 'COP') === currency && isPersonalExpense(tx),
+  );
   const spending: CategorySpending[] = [];
 
   if (expenses.length > 0 && categories) {
@@ -114,7 +120,7 @@ export function SpendingByCategory({
       <CardHeader className='pb-3'>
         <CardTitle className='text-base font-medium'>{t('spendingByCategory')}</CardTitle>
         <p className='text-brand-secondary text-2xl font-semibold tracking-tight tabular-nums'>
-          -{formatCurrency(totalSpending, 'COP', locale)}
+          -{formatCurrency(totalSpending, currency, locale)}
         </p>
       </CardHeader>
       <CardContent className='flex min-w-0 flex-1 flex-col'>
@@ -127,7 +133,7 @@ export function SpendingByCategory({
             <div
               className='w-full'
               role='img'
-              aria-label={`${t('spendingByCategory')}: ${visibleSpending.map((category) => `${category.name} ${formatCurrency(category.amount, 'COP', locale)}`).join(', ')}`}
+              aria-label={`${t('spendingByCategory')}: ${visibleSpending.map((category) => `${category.name} ${formatCurrency(category.amount, currency, locale)}`).join(', ')}`}
               style={{ height: visibleSpending.length * 40 + 10 }}>
               <ResponsiveContainer width='100%' height='100%'>
                 <BarChart
@@ -149,10 +155,7 @@ export function SpendingByCategory({
                   />
                   <XAxis type='number' hide />
                   <Tooltip
-                    content={
-                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                      ((props: any) => <CustomTooltip {...props} locale={locale} />) as any
-                    }
+                    content={<CustomTooltip currency={currency} locale={locale} />}
                     cursor={{ fill: 'hsl(var(--muted) / 0.3)' }}
                   />
                   <Bar dataKey='amount' radius={[0, 4, 4, 0]} barSize={16}>

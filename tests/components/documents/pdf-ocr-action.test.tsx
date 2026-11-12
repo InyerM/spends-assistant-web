@@ -6,7 +6,7 @@ afterEach(cleanup);
 it('requires explicit acknowledgement of original PDF processing before dispatch', () => {
   const run = vi.fn();
   render(<PdfOcrAction disabled={false} onExtract={run} />);
-  fireEvent.click(screen.getByText('optionalOcr'));
+  expect(screen.getByText('optionalOcr')).toBeVisible();
   expect(screen.getByText('ocrDisclosure')).toBeVisible();
   expect(screen.getByRole('button', { name: 'extractOcr' })).toBeDisabled();
   fireEvent.click(screen.getByRole('checkbox'));
