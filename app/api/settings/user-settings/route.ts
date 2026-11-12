@@ -73,7 +73,11 @@ export async function PATCH(request: NextRequest): Promise<Response> {
       show_api_keys: row.show_api_keys ?? DEFAULTS.show_api_keys,
     });
   } catch (error) {
-    if (error instanceof AuthError) return errorResponse('Unauthorized', 401);
+    if (error instanceof AuthError)
+      return errorResponse(
+        error.status === 403 ? 'Invalid request origin' : 'Unauthorized',
+        error.status === 403 ? 403 : 401,
+      );
     return errorResponse('Failed to update user settings');
   }
 }

@@ -143,6 +143,7 @@ describe('document API user authentication', () => {
       (
         await getUserClient(
           new Request('https://anotto.app/api/settings/account/delete', {
+            method: 'POST',
             headers: { Authorization: 'Bearer mobile-access-token' },
           }),
         )
@@ -157,5 +158,71 @@ describe('document API user authentication', () => {
     expect(cookieFactory).toHaveBeenCalledOnce();
     expect(cookieGetUser).toHaveBeenCalledWith();
     expect(bearerFactory).not.toHaveBeenCalled();
+  });
+  it.each([undefined, 'null', 'https://sibling.anotto.app', 'https://evil.test'])(
+    'rejects cookie mutations from %s before client access',
+    async (origin) => {
+      const headers = new Headers();
+      if (origin !== undefined) headers.set('Origin', origin);
+      await expect(
+        getUserClient(new Request('https://anotto.app/api/documents', { method: 'POST', headers })),
+      ).rejects.toMatchObject({ status: 403 });
+      expect(cookieFactory).not.toHaveBeenCalled();
+      expect(bearerFactory).not.toHaveBeenCalled();
+    },
+  );
+  it('accepts same-origin cookie mutations and verified allowlisted bearer mutations without Origin', async () => {
+    expect(
+      (
+        await getUserClient(
+          new Request('https://anotto.app/api/documents', {
+            method: 'POST',
+            headers: { Origin: 'https://anotto.app' },
+          }),
+        )
+      ).userId,
+    ).toBe('cookie-owner');
+    expect(
+      (
+        await getUserClient(
+          new Request('https://anotto.app/api/documents', {
+            method: 'POST',
+            headers: { Authorization: 'Bearer mobile-access-token' },
+          }),
+        )
+      ).userId,
+    ).toBe('mobile-owner');
+  });
+  it('rejects an unallowlisted bearer method even when browser cookies are available', async () => {
+    await expect(
+      getUserClient(
+        new Request('https://anotto.app/api/automation-rules', {
+          method: 'POST',
+          headers: {
+            Authorization: 'Bearer mobile-access-token',
+            Cookie: 'synthetic-session',
+            Origin: 'https://anotto.app',
+          },
+        }),
+      ),
+    ).rejects.toBeInstanceOf(AuthError);
+    expect(cookieFactory).not.toHaveBeenCalled();
+    expect(bearerFactory).not.toHaveBeenCalled();
+  });
+  it('rejects invalid bearer mutation credentials without using a valid cookie session', async () => {
+    bearerGetUser.mockResolvedValue({ data: { user: null }, error: { message: 'expired' } });
+    await expect(
+      getUserClient(
+        new Request('https://anotto.app/api/documents', {
+          method: 'POST',
+          headers: {
+            Authorization: 'Bearer expired-token',
+            Cookie: 'synthetic-session',
+            Origin: 'https://anotto.app',
+          },
+        }),
+      ),
+    ).rejects.toBeInstanceOf(AuthError);
+    expect(cookieFactory).not.toHaveBeenCalled();
   });
 });

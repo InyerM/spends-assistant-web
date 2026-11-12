@@ -23,7 +23,7 @@ export async function GET(): Promise<Response> {
 
 export async function POST(request: NextRequest): Promise<Response> {
   try {
-    const { supabase } = await getUserClient();
+    const { supabase } = await getUserClient(request);
     const parsed = reliefFundConfirmSchema.safeParse(await request.json());
     if (!parsed.success) return errorResponse('Review and valid exact amounts are required', 400);
     const { data, error } = await supabase.rpc('confirm_relief_fund_event', {
@@ -41,7 +41,10 @@ export async function POST(request: NextRequest): Promise<Response> {
     return Response.json(result, { status: result.replayed ? 200 : 201, headers: privateHeaders });
   } catch (error) {
     return error instanceof AuthError
-      ? errorResponse('Unauthorized', 401)
+      ? errorResponse(
+          error.status === 403 ? 'Invalid request origin' : 'Unauthorized',
+          error.status === 403 ? 403 : 401,
+        )
       : errorResponse('Failed to save relief fund entry');
   }
 }

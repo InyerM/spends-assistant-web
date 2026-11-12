@@ -44,7 +44,7 @@ function validEventAt(value: string, date: string): boolean {
 
 export async function POST(request: NextRequest, context: Context): Promise<Response> {
   try {
-    const { supabase, userId } = await getUserClient();
+    const { supabase, userId } = await getUserClient(request);
     const { id } = await context.params;
     if (!uuid.test(id)) return errorResponse('Invalid inbox item ID', 400);
     const raw = await request.text();
@@ -145,7 +145,10 @@ export async function POST(request: NextRequest, context: Context): Promise<Resp
     return Response.json(data, { status: data.replayed ? 200 : 201, headers: privateHeaders });
   } catch (error) {
     return error instanceof AuthError
-      ? errorResponse('Unauthorized', 401)
+      ? errorResponse(
+          error.status === 403 ? 'Invalid request origin' : 'Unauthorized',
+          error.status === 403 ? 403 : 401,
+        )
       : errorResponse('Shortcut creation failed');
   }
 }

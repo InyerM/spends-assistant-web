@@ -84,7 +84,10 @@ export async function POST(
     return Response.json({ decision_id: data }, { headers: { 'Cache-Control': 'no-store' } });
   } catch (error) {
     return error instanceof AuthError
-      ? errorResponse('Unauthorized', 401)
+      ? errorResponse(
+          error.status === 403 ? 'Invalid request origin' : 'Unauthorized',
+          error.status === 403 ? 403 : 401,
+        )
       : errorResponse('Could not save review decision');
   }
 }

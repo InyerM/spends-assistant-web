@@ -61,8 +61,12 @@ export async function POST(
     return Response.json(data, { status: 201, headers: { 'Cache-Control': 'private, no-store' } });
   } catch (error) {
     return errorResponse(
-      error instanceof AuthError ? 'Unauthorized' : 'Could not create statement transaction',
-      error instanceof AuthError ? 401 : 500,
+      error instanceof AuthError
+        ? error.status === 403
+          ? 'Invalid request origin'
+          : 'Unauthorized'
+        : 'Could not create statement transaction',
+      error instanceof AuthError ? (error.status === 403 ? 403 : 401) : 500,
     );
   }
 }

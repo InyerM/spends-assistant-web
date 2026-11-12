@@ -1,3 +1,4 @@
+import { hasSameRequestOrigin } from '@/lib/api/request-origin';
 import { AuthError, errorResponse, getUserClient } from '@/lib/api/server';
 import { workerConfig } from '@/lib/config';
 
@@ -5,7 +6,7 @@ export async function POST(request: Request): Promise<Response> {
   const headers = { 'Cache-Control': 'private, no-store' };
   try {
     const { accessToken, supabase } = await getUserClient(request);
-    if (!accessToken && request.headers.get('Origin') !== new URL(request.url).origin) {
+    if (!accessToken && !hasSameRequestOrigin(request)) {
       return errorResponse('Invalid request origin', 403);
     }
     const token = accessToken ?? (await supabase.auth.getSession()).data.session?.access_token;
@@ -41,8 +42,15 @@ export async function POST(request: Request): Promise<Response> {
     return Response.json(await response.json(), { headers });
   } catch (error) {
     return Response.json(
-      { error: error instanceof AuthError ? 'Unauthorized' : 'Financial chat unavailable' },
-      { status: error instanceof AuthError ? 401 : 503, headers },
+      {
+        error:
+          error instanceof AuthError
+            ? error.status === 403
+              ? 'Invalid request origin'
+              : 'Unauthorized'
+            : 'Financial chat unavailable',
+      },
+      { status: error instanceof AuthError ? (error.status === 403 ? 403 : 401) : 503, headers },
     );
   }
 }

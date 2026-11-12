@@ -1,3 +1,4 @@
+import { hasSameRequestOrigin } from '@/lib/api/request-origin';
 import { z } from 'zod';
 import { AuthError, getUserClient, errorResponse } from '@/lib/api/server';
 const privateHeaders = { 'Cache-Control': 'private, no-store' };
@@ -48,7 +49,7 @@ export async function GET(request: Request): Promise<Response> {
 export async function POST(request: Request): Promise<Response> {
   try {
     const { supabase, accessToken } = await getUserClient(request);
-    if (!accessToken && request.headers.get('Origin') !== new URL(request.url).origin)
+    if (!accessToken && !hasSameRequestOrigin(request))
       return errorResponse('Invalid request origin', 403);
     const text = await request.text();
     if (text.length > 1024) return errorResponse('Request too large', 413);
@@ -68,8 +69,12 @@ export async function POST(request: Request): Promise<Response> {
     return Response.json(data, { headers: privateHeaders });
   } catch (error) {
     return errorResponse(
-      error instanceof AuthError ? 'Unauthorized' : 'Contact scan failed',
-      error instanceof AuthError ? 401 : 500,
+      error instanceof AuthError
+        ? error.status === 403
+          ? 'Invalid request origin'
+          : 'Unauthorized'
+        : 'Contact scan failed',
+      error instanceof AuthError ? (error.status === 403 ? 403 : 401) : 500,
     );
   }
 }

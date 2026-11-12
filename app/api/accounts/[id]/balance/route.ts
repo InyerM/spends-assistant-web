@@ -44,7 +44,8 @@ export async function POST(
       );
     return jsonResponse(data);
   } catch (error) {
-    if (error instanceof AuthError) return errorResponse(error.message, 401);
+    if (error instanceof AuthError)
+      return errorResponse(error.message, error.status === 403 ? 403 : 401);
     return errorResponse('Failed to adjust balance');
   }
 }

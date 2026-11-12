@@ -44,7 +44,11 @@ export async function PATCH(request: NextRequest): Promise<Response> {
       created_at: data.user.created_at,
     });
   } catch (error) {
-    if (error instanceof AuthError) return errorResponse('Unauthorized', 401);
+    if (error instanceof AuthError)
+      return errorResponse(
+        error.status === 403 ? 'Invalid request origin' : 'Unauthorized',
+        error.status === 403 ? 403 : 401,
+      );
     return errorResponse('Failed to update profile');
   }
 }

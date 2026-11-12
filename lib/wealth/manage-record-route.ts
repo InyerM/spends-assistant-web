@@ -11,6 +11,7 @@ const updateSchema = z.discriminatedUnion('action', [
 ]);
 
 async function runAction(
+  request: Request,
   kind: WealthKind,
   id: string,
   action: Action,
@@ -18,7 +19,7 @@ async function runAction(
 ): Promise<Response> {
   if (!z.uuid().safeParse(id).success) return errorResponse('Invalid record ID', 400);
   try {
-    const { supabase } = await getUserClient();
+    const { supabase } = await getUserClient(request);
     const { data, error } = await supabase.rpc('manage_manual_wealth_record', {
       p_kind: kind,
       p_id: id,
@@ -34,7 +35,10 @@ async function runAction(
     return Response.json(data, { headers: { 'Cache-Control': 'private, no-store' } });
   } catch (error) {
     return error instanceof AuthError
-      ? errorResponse('Unauthorized', 401)
+      ? errorResponse(
+          error.status === 403 ? 'Invalid request origin' : 'Unauthorized',
+          error.status === 403 ? 403 : 401,
+        )
       : errorResponse('Could not update record');
   }
 }
@@ -47,6 +51,7 @@ export async function updateWealthRecord(
   const parsed = updateSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return errorResponse('Invalid record action', 400);
   return runAction(
+    request,
     kind,
     id,
     parsed.data.action,
@@ -54,6 +59,10 @@ export async function updateWealthRecord(
   );
 }
 
-export async function deleteEmptyWealthRecord(kind: WealthKind, id: string): Promise<Response> {
-  return runAction(kind, id, 'delete_empty', null);
+export async function deleteEmptyWealthRecord(
+  kind: WealthKind,
+  id: string,
+  request: Request,
+): Promise<Response> {
+  return runAction(request, kind, id, 'delete_empty', null);
 }

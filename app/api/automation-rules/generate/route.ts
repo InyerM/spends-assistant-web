@@ -9,7 +9,7 @@ export async function POST(request: NextRequest): Promise<Response> {
       return errorResponse('Worker not configured', 503);
     }
 
-    const { supabase } = await getUserClient();
+    const { supabase } = await getUserClient(request);
 
     const {
       data: { session },
@@ -46,7 +46,11 @@ export async function POST(request: NextRequest): Promise<Response> {
     const data = await res.json();
     return jsonResponse(data);
   } catch (error) {
-    if (error instanceof AuthError) return errorResponse('Unauthorized', 401);
+    if (error instanceof AuthError)
+      return errorResponse(
+        error.status === 403 ? 'Invalid request origin' : 'Unauthorized',
+        error.status === 403 ? 403 : 401,
+      );
     return errorResponse('Failed to generate automation rules');
   }
 }

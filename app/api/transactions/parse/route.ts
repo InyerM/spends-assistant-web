@@ -1,3 +1,4 @@
+import { hasSameRequestOrigin } from '@/lib/api/request-origin';
 import { readBoundedJson, RequestBodyError } from '@/lib/api/bounded-json';
 import type { NextRequest } from 'next/server';
 import {
@@ -42,7 +43,7 @@ export async function POST(request: NextRequest): Promise<Response> {
     }
 
     const { supabase, accessToken } = await getUserClient(request);
-    if (!accessToken && request.headers.get('Origin') !== new URL(request.url).origin)
+    if (!accessToken && !hasSameRequestOrigin(request))
       return errorResponse('Invalid request origin', 403);
     const authToken = accessToken ?? (await supabase.auth.getSession()).data.session?.access_token;
     if (!authToken) return errorResponse('No authentication token available', 401);
@@ -142,7 +143,11 @@ export async function POST(request: NextRequest): Promise<Response> {
       applied_rules: processed.applied_rules ?? [],
     });
   } catch (error) {
-    if (error instanceof AuthError) return errorResponse('Unauthorized', 401);
+    if (error instanceof AuthError)
+      return errorResponse(
+        error.status === 403 ? 'Invalid request origin' : 'Unauthorized',
+        error.status === 403 ? 403 : 401,
+      );
     return errorResponse('Failed to parse transaction');
   }
 }

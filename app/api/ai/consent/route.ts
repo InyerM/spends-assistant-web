@@ -1,3 +1,4 @@
+import { hasSameRequestOrigin } from '@/lib/api/request-origin';
 import { AuthError, errorResponse, getUserClient } from '@/lib/api/server';
 import { AI_CONSENT_SCOPES, parseAiConsentState } from '@/lib/ai-consent';
 import { workerConfig } from '@/lib/config';
@@ -49,7 +50,7 @@ export async function POST(request: Request): Promise<Response> {
   try {
     const { token, bearer } = await userToken(request);
     if (!token) return errorResponse('Unauthorized', 401);
-    if (!bearer && request.headers.get('Origin') !== new URL(request.url).origin) {
+    if (!bearer && !hasSameRequestOrigin(request)) {
       return errorResponse('Invalid request origin', 403);
     }
     const body = (await request.json().catch(() => null)) as Record<string, unknown> | null;
@@ -69,7 +70,10 @@ export async function POST(request: Request): Promise<Response> {
     });
   } catch (error) {
     return error instanceof AuthError
-      ? errorResponse('Unauthorized', 401)
+      ? errorResponse(
+          error.status === 403 ? 'Invalid request origin' : 'Unauthorized',
+          error.status === 403 ? 403 : 401,
+        )
       : errorResponse('AI consent unavailable', 503);
   }
 }

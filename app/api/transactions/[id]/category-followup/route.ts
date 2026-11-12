@@ -46,8 +46,12 @@ export async function POST(request: Request, { params }: Context): Promise<Respo
     return Response.json({ updated: data }, { headers: { 'Cache-Control': 'private, no-store' } });
   } catch (error) {
     return errorResponse(
-      error instanceof AuthError ? 'Unauthorized' : 'Category update failed',
-      error instanceof AuthError ? 401 : 500,
+      error instanceof AuthError
+        ? error.status === 403
+          ? 'Invalid request origin'
+          : 'Unauthorized'
+        : 'Category update failed',
+      error instanceof AuthError ? (error.status === 403 ? 403 : 401) : 500,
     );
   }
 }

@@ -12,7 +12,7 @@ export async function POST(request: Request): Promise<Response> {
   const parsed = linkSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return errorResponse('Reviewed transaction link required', 400);
   try {
-    const { supabase } = await getUserClient();
+    const { supabase } = await getUserClient(request);
     const { data, error } = await supabase.rpc('link_manual_wealth_event', {
       p_kind: parsed.data.kind,
       p_event_id: parsed.data.event_id,
@@ -28,7 +28,10 @@ export async function POST(request: Request): Promise<Response> {
     return Response.json(data, { headers: { 'Cache-Control': 'private, no-store' } });
   } catch (error) {
     return error instanceof AuthError
-      ? errorResponse('Unauthorized', 401)
+      ? errorResponse(
+          error.status === 403 ? 'Invalid request origin' : 'Unauthorized',
+          error.status === 403 ? 403 : 401,
+        )
       : errorResponse('Could not link transaction');
   }
 }

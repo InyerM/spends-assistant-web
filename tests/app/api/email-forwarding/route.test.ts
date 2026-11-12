@@ -52,7 +52,12 @@ describe('/api/email-forwarding', () => {
     const fetchMock = vi.fn().mockResolvedValue(Response.json(activeRoute, { status: 201 }));
     vi.stubGlobal('fetch', fetchMock);
 
-    const response = await POST();
+    const response = await POST(
+      new Request('https://example.test/api/email-forwarding', {
+        method: 'POST',
+        headers: { Origin: 'https://example.test' },
+      }),
+    );
 
     expect(response.status).toBe(201);
     expect(await response.json()).toEqual(activeRoute);
@@ -62,7 +67,12 @@ describe('/api/email-forwarding', () => {
   it('passes through a successful removal', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(null, { status: 204 })));
 
-    const response = await DELETE();
+    const response = await DELETE(
+      new Request('https://example.test/api/email-forwarding', {
+        method: 'DELETE',
+        headers: { Origin: 'https://example.test' },
+      }),
+    );
 
     expect(response.status).toBe(204);
   });
@@ -72,7 +82,12 @@ describe('/api/email-forwarding', () => {
     const fetchMock = vi.fn().mockResolvedValue(Response.json(confirmed));
     vi.stubGlobal('fetch', fetchMock);
 
-    const response = await PATCH();
+    const response = await PATCH(
+      new Request('https://example.test/api/email-forwarding', {
+        method: 'PATCH',
+        headers: { Origin: 'https://example.test' },
+      }),
+    );
 
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual(confirmed);

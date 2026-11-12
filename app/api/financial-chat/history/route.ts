@@ -1,3 +1,4 @@
+import { hasSameRequestOrigin } from '@/lib/api/request-origin';
 import { z } from 'zod';
 import { AuthError, errorResponse, getUserClient } from '@/lib/api/server';
 const privateHeaders = { 'Cache-Control': 'private, no-store' };
@@ -33,7 +34,7 @@ export async function GET(request: Request): Promise<Response> {
 export async function DELETE(request: Request): Promise<Response> {
   try {
     const { supabase, userId, accessToken } = await getUserClient(request);
-    if (!accessToken && request.headers.get('Origin') !== new URL(request.url).origin)
+    if (!accessToken && !hasSameRequestOrigin(request))
       return errorResponse('Invalid request origin', 403);
     const body = deleteSchema.safeParse(await request.json().catch(() => null));
     if (!body.success) return errorResponse('Invalid history entry', 400);
@@ -47,6 +48,9 @@ export async function DELETE(request: Request): Promise<Response> {
     if (!data.length) return errorResponse('Chat not found', 404);
     return Response.json({ deleted: true }, { headers: privateHeaders });
   } catch (error) {
-    return errorResponse('Could not delete chat', error instanceof AuthError ? 401 : 503);
+    return errorResponse(
+      'Could not delete chat',
+      error instanceof AuthError ? (error.status === 403 ? 403 : 401) : 503,
+    );
   }
 }

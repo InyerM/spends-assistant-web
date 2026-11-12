@@ -56,7 +56,7 @@ function completedResponse(
 /** The RPC owns the duplicate check and every write in one database transaction. */
 export async function POST(request: NextRequest): Promise<Response> {
   try {
-    const { supabase, userId } = await getUserClient();
+    const { supabase, userId } = await getUserClient(request);
     const body = (await request.json()) as ImportBody;
     const invalid = validateImportRows(body.transactions);
     if (invalid) return errorResponse(invalid, 400);
@@ -139,7 +139,11 @@ export async function POST(request: NextRequest): Promise<Response> {
         : [],
     );
   } catch (error) {
-    if (error instanceof AuthError) return errorResponse('Unauthorized', 401);
+    if (error instanceof AuthError)
+      return errorResponse(
+        error.status === 403 ? 'Invalid request origin' : 'Unauthorized',
+        error.status === 403 ? 403 : 401,
+      );
     return errorResponse('Failed to import transactions');
   }
 }

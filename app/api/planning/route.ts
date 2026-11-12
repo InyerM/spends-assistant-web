@@ -71,8 +71,18 @@ export async function POST(request: Request): Promise<Response> {
     return Response.json(result.data, { headers });
   } catch (error) {
     return errorResponse(
-      error instanceof AuthError ? 'Unauthorized' : 'Could not save planning',
-      error instanceof AuthError ? 401 : error instanceof SyntaxError ? 400 : 500,
+      error instanceof AuthError
+        ? error.status === 403
+          ? 'Invalid request origin'
+          : 'Unauthorized'
+        : 'Could not save planning',
+      error instanceof AuthError
+        ? error.status === 403
+          ? 403
+          : 401
+        : error instanceof SyntaxError
+          ? 400
+          : 500,
     );
   }
 }

@@ -35,7 +35,11 @@ export async function DELETE(request: NextRequest): Promise<Response> {
     if (error) return errorResponse(error.message, 400);
     return jsonResponse({ success: true });
   } catch (error) {
-    if (error instanceof AuthError) return errorResponse('Unauthorized', 401);
+    if (error instanceof AuthError)
+      return errorResponse(
+        error.status === 403 ? 'Invalid request origin' : 'Unauthorized',
+        error.status === 403 ? 403 : 401,
+      );
     return errorResponse('Failed to revoke session');
   }
 }

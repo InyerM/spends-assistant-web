@@ -40,7 +40,7 @@ export async function GET(request?: NextRequest): Promise<Response> {
 
 export async function POST(request: NextRequest): Promise<Response> {
   try {
-    const { supabase, userId } = await getUserClient();
+    const { supabase, userId } = await getUserClient(request);
     const parsed = accountCreateSchema.safeParse(await request.json());
     if (!parsed.success) return errorResponse('Invalid account', 400);
 
@@ -74,7 +74,11 @@ export async function POST(request: NextRequest): Promise<Response> {
     if (error) return errorResponse(error.message, 400);
     return jsonResponse(data, 201);
   } catch (error) {
-    if (error instanceof AuthError) return errorResponse('Unauthorized', 401);
+    if (error instanceof AuthError)
+      return errorResponse(
+        error.status === 403 ? 'Invalid request origin' : 'Unauthorized',
+        error.status === 403 ? 403 : 401,
+      );
     return errorResponse('Failed to create account');
   }
 }

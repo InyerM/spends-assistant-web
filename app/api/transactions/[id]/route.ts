@@ -47,7 +47,7 @@ export async function GET(_request: NextRequest, { params }: RouteParams): Promi
 export async function PATCH(request: NextRequest, { params }: RouteParams): Promise<Response> {
   try {
     const { id } = await params;
-    const { supabase } = await getUserClient();
+    const { supabase } = await getUserClient(request);
     if (!z.uuid().safeParse(id).success) return errorResponse('Invalid transaction ID', 400);
     const parsed = patchSchema.safeParse(await request.json().catch(() => null));
     if (!parsed.success) return errorResponse('Invalid transaction patch fields', 400);
@@ -65,7 +65,11 @@ export async function PATCH(request: NextRequest, { params }: RouteParams): Prom
     }
     return jsonResponse(data);
   } catch (error) {
-    if (error instanceof AuthError) return errorResponse('Unauthorized', 401);
+    if (error instanceof AuthError)
+      return errorResponse(
+        error.status === 403 ? 'Invalid request origin' : 'Unauthorized',
+        error.status === 403 ? 403 : 401,
+      );
     return errorResponse('Failed to update transaction');
   }
 }
@@ -73,7 +77,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams): Prom
 export async function DELETE(_request: NextRequest, { params }: RouteParams): Promise<Response> {
   try {
     const { id } = await params;
-    const { supabase } = await getUserClient();
+    const { supabase } = await getUserClient(_request);
     const { error } = await supabase.rpc('soft_delete_transactions', {
       p_transaction_ids: [id],
     });
@@ -87,7 +91,11 @@ export async function DELETE(_request: NextRequest, { params }: RouteParams): Pr
 
     return jsonResponse({ success: true });
   } catch (error) {
-    if (error instanceof AuthError) return errorResponse('Unauthorized', 401);
+    if (error instanceof AuthError)
+      return errorResponse(
+        error.status === 403 ? 'Invalid request origin' : 'Unauthorized',
+        error.status === 403 ? 403 : 401,
+      );
     return errorResponse('Failed to delete transaction');
   }
 }

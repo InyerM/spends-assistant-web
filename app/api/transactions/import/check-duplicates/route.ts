@@ -12,7 +12,7 @@ interface CheckTransaction {
 
 export async function POST(request: NextRequest): Promise<Response> {
   try {
-    const { supabase } = await getUserClient();
+    const { supabase } = await getUserClient(request);
     const body = (await request.json()) as { transactions?: unknown };
 
     if (Array.isArray(body.transactions) && body.transactions.length === 0) {
@@ -37,7 +37,11 @@ export async function POST(request: NextRequest): Promise<Response> {
 
     return jsonResponse({ duplicates, unresolved_accounts: unresolvedAccounts });
   } catch (error) {
-    if (error instanceof AuthError) return errorResponse('Unauthorized', 401);
+    if (error instanceof AuthError)
+      return errorResponse(
+        error.status === 403 ? 'Invalid request origin' : 'Unauthorized',
+        error.status === 403 ? 403 : 401,
+      );
     return errorResponse('Failed to check duplicates');
   }
 }

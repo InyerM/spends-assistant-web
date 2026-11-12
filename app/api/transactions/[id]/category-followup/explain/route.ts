@@ -49,8 +49,12 @@ export async function POST(
       : Response.json(proposal, { headers: { 'Cache-Control': 'private, no-store' } });
   } catch (error) {
     return errorResponse(
-      error instanceof AuthError ? 'Unauthorized' : 'Review explanation unavailable',
-      error instanceof AuthError ? 401 : 503,
+      error instanceof AuthError
+        ? error.status === 403
+          ? 'Invalid request origin'
+          : 'Unauthorized'
+        : 'Review explanation unavailable',
+      error instanceof AuthError ? (error.status === 403 ? 403 : 401) : 503,
     );
   }
 }

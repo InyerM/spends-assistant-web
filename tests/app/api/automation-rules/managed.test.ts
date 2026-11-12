@@ -34,13 +34,31 @@ beforeEach(() => {
 });
 describe('managed account rule routes', () => {
   it('synchronizes managed rules through an owned RPC without deleting custom rules', async () => {
-    expect((await POST()).status).toBe(201);
+    expect(
+      (
+        await POST(
+          new Request('https://example.test/api/automation-rules/generate-account-rules', {
+            method: 'POST',
+            headers: { Origin: 'https://example.test' },
+          }),
+        )
+      ).status,
+    ).toBe(201);
     expect(rpc).toHaveBeenCalledWith('sync_owned_account_detection_rules');
     expect(query.delete).not.toHaveBeenCalled();
   });
   it('stops mutation when owned synchronization fails', async () => {
     rpc.mockResolvedValue({ error: { message: 'Unavailable' } });
-    expect((await POST()).status).toBe(400);
+    expect(
+      (
+        await POST(
+          new Request('https://example.test/api/automation-rules/generate-account-rules', {
+            method: 'POST',
+            headers: { Origin: 'https://example.test' },
+          }),
+        )
+      ).status,
+    ).toBe(400);
     expect(from).not.toHaveBeenCalled();
   });
   it('rejects edit and deletion of a managed rule before attempting a write', async () => {

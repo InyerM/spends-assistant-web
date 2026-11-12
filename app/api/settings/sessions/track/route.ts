@@ -2,9 +2,9 @@ import { headers } from 'next/headers';
 import { getUserClient, AuthError, jsonResponse, errorResponse } from '@/lib/api/server';
 import { UAParser } from 'ua-parser-js';
 
-export async function POST(): Promise<Response> {
+export async function POST(request: Request): Promise<Response> {
   try {
-    const { supabase, userId } = await getUserClient();
+    const { supabase, userId } = await getUserClient(request);
     const headersList = await headers();
     const userAgent = headersList.get('user-agent') ?? '';
     const ip = headersList.get('x-forwarded-for')?.split(',')[0]?.trim() ?? null;
@@ -50,7 +50,11 @@ export async function POST(): Promise<Response> {
 
     return jsonResponse({ success: true });
   } catch (error) {
-    if (error instanceof AuthError) return errorResponse('Unauthorized', 401);
+    if (error instanceof AuthError)
+      return errorResponse(
+        error.status === 403 ? 'Invalid request origin' : 'Unauthorized',
+        error.status === 403 ? 403 : 401,
+      );
     return errorResponse('Failed to track session');
   }
 }

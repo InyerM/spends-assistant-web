@@ -52,7 +52,7 @@ export async function POST(request: NextRequest): Promise<Response> {
     const parsed = upsertSchema.safeParse(await request.json());
     if (!parsed.success) return errorResponse('A valid COP budget is required', 400);
 
-    const { supabase } = await getUserClient();
+    const { supabase } = await getUserClient(request);
     const { data, error } = await supabase.rpc('create_monthly_budget', {
       p_month: parsed.data.month,
       p_category_id: parsed.data.category_id,
@@ -63,7 +63,10 @@ export async function POST(request: NextRequest): Promise<Response> {
     return Response.json({ id: data }, { headers: privateHeaders });
   } catch (error) {
     return error instanceof AuthError
-      ? errorResponse('Unauthorized', 401)
+      ? errorResponse(
+          error.status === 403 ? 'Invalid request origin' : 'Unauthorized',
+          error.status === 403 ? 403 : 401,
+        )
       : errorResponse('Could not save budget');
   }
 }
@@ -73,7 +76,7 @@ export async function DELETE(request: NextRequest): Promise<Response> {
     const parsed = deactivateSchema.safeParse(await request.json());
     if (!parsed.success) return errorResponse('A valid budget is required', 400);
 
-    const { supabase } = await getUserClient();
+    const { supabase } = await getUserClient(request);
     const { data, error } = await supabase.rpc(
       parsed.data.month ? 'stop_monthly_budget' : 'deactivate_monthly_budget',
       {
@@ -86,7 +89,10 @@ export async function DELETE(request: NextRequest): Promise<Response> {
     return Response.json({ deactivated: true }, { headers: privateHeaders });
   } catch (error) {
     return error instanceof AuthError
-      ? errorResponse('Unauthorized', 401)
+      ? errorResponse(
+          error.status === 403 ? 'Invalid request origin' : 'Unauthorized',
+          error.status === 403 ? 403 : 401,
+        )
       : errorResponse('Could not deactivate budget');
   }
 }
@@ -95,7 +101,7 @@ export async function PATCH(request: NextRequest): Promise<Response> {
   try {
     const parsed = upsertSchema.extend({ budget_id: z.uuid() }).safeParse(await request.json());
     if (!parsed.success) return errorResponse('A valid COP budget is required', 400);
-    const { supabase } = await getUserClient();
+    const { supabase } = await getUserClient(request);
     const { data, error } = await supabase.rpc('update_monthly_budget', {
       p_budget_id: parsed.data.budget_id,
       p_month: parsed.data.month,
@@ -107,7 +113,10 @@ export async function PATCH(request: NextRequest): Promise<Response> {
     return Response.json({ id: data }, { headers: privateHeaders });
   } catch (error) {
     return error instanceof AuthError
-      ? errorResponse('Unauthorized', 401)
+      ? errorResponse(
+          error.status === 403 ? 'Invalid request origin' : 'Unauthorized',
+          error.status === 403 ? 403 : 401,
+        )
       : errorResponse('Could not save budget');
   }
 }

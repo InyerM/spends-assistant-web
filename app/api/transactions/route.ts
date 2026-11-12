@@ -260,7 +260,11 @@ export async function POST(request: NextRequest): Promise<Response> {
     }
     return jsonResponse(data.transaction, 201);
   } catch (error) {
-    if (error instanceof AuthError) return errorResponse('Unauthorized', 401);
+    if (error instanceof AuthError)
+      return errorResponse(
+        error.status === 403 ? 'Invalid request origin' : 'Unauthorized',
+        error.status === 403 ? 403 : 401,
+      );
     return errorResponse('Failed to create transaction');
   }
 }

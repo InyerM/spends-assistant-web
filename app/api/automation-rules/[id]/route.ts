@@ -27,7 +27,7 @@ export async function GET(_request: NextRequest, { params }: RouteParams): Promi
 export async function PATCH(request: NextRequest, { params }: RouteParams): Promise<Response> {
   try {
     const { id } = await params;
-    const { supabase } = await getUserClient();
+    const { supabase } = await getUserClient(request);
     const { data: existing, error: lookupError } = await supabase
       .from('automation_rules')
       .select('managed_account_id')
@@ -49,7 +49,11 @@ export async function PATCH(request: NextRequest, { params }: RouteParams): Prom
     if (error) return errorResponse(error.message, 400);
     return jsonResponse(data);
   } catch (error) {
-    if (error instanceof AuthError) return errorResponse('Unauthorized', 401);
+    if (error instanceof AuthError)
+      return errorResponse(
+        error.status === 403 ? 'Invalid request origin' : 'Unauthorized',
+        error.status === 403 ? 403 : 401,
+      );
     return errorResponse('Failed to update automation rule');
   }
 }
@@ -57,7 +61,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams): Prom
 export async function DELETE(_request: NextRequest, { params }: RouteParams): Promise<Response> {
   try {
     const { id } = await params;
-    const { supabase } = await getUserClient();
+    const { supabase } = await getUserClient(_request);
     const { data: existing, error: lookupError } = await supabase
       .from('automation_rules')
       .select('managed_account_id')
@@ -72,7 +76,11 @@ export async function DELETE(_request: NextRequest, { params }: RouteParams): Pr
     if (error) return errorResponse(error.message, 400);
     return jsonResponse({ success: true });
   } catch (error) {
-    if (error instanceof AuthError) return errorResponse('Unauthorized', 401);
+    if (error instanceof AuthError)
+      return errorResponse(
+        error.status === 403 ? 'Invalid request origin' : 'Unauthorized',
+        error.status === 403 ? 403 : 401,
+      );
     return errorResponse('Failed to delete automation rule');
   }
 }

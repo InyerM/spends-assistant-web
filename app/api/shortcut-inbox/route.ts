@@ -1,3 +1,4 @@
+import { hasSameRequestOrigin } from '@/lib/api/request-origin';
 import { z } from 'zod';
 import { EMAIL_MESSAGE_KINDS } from '@/types/shortcut-inbox';
 import { after, type NextRequest } from 'next/server';
@@ -42,10 +43,7 @@ function inboxStore(supabase: SupabaseClient): InboxStore {
 
 export async function POST(request: NextRequest): Promise<Response> {
   try {
-    if (
-      !request.headers.has('Authorization') &&
-      request.headers.get('Origin') !== new URL(request.url).origin
-    )
+    if (!request.headers.has('Authorization') && !hasSameRequestOrigin(request))
       return errorResponse('Invalid request origin', 403);
     const { supabase, userId } = await getShortcutPostClient(request);
     const body = await request.text();
@@ -78,7 +76,10 @@ export async function POST(request: NextRequest): Promise<Response> {
     }
   } catch (error) {
     return error instanceof AuthError
-      ? errorResponse('Unauthorized', 401)
+      ? errorResponse(
+          error.status === 403 ? 'Invalid request origin' : 'Unauthorized',
+          error.status === 403 ? 403 : 401,
+        )
       : errorResponse('Inbox intake failed');
   }
 }

@@ -1,8 +1,8 @@
 import { getUserClient, AuthError, jsonResponse, errorResponse } from '@/lib/api/server';
 
-export async function POST(): Promise<Response> {
+export async function POST(request: Request): Promise<Response> {
   try {
-    const { supabase, userId } = await getUserClient();
+    const { supabase, userId } = await getUserClient(request);
     const { error: syncError } = await supabase.rpc('sync_owned_account_detection_rules');
     if (syncError) return errorResponse(syncError.message, 400);
     const { data, error } = await supabase
@@ -21,7 +21,11 @@ export async function POST(): Promise<Response> {
       201,
     );
   } catch (error) {
-    if (error instanceof AuthError) return errorResponse('Unauthorized', 401);
+    if (error instanceof AuthError)
+      return errorResponse(
+        error.status === 403 ? 'Invalid request origin' : 'Unauthorized',
+        error.status === 403 ? 403 : 401,
+      );
     return errorResponse('Failed to synchronize account rules');
   }
 }

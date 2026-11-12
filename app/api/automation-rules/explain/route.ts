@@ -4,7 +4,7 @@ import { workerConfig } from '@/lib/config';
 
 export async function POST(request: NextRequest): Promise<Response> {
   try {
-    const { supabase } = await getUserClient();
+    const { supabase } = await getUserClient(request);
     const {
       data: { session },
     } = await supabase.auth.getSession();
@@ -25,8 +25,12 @@ export async function POST(request: NextRequest): Promise<Response> {
     });
   } catch (error) {
     return errorResponse(
-      error instanceof AuthError ? 'Unauthorized' : 'Explanation unavailable',
-      error instanceof AuthError ? 401 : 503,
+      error instanceof AuthError
+        ? error.status === 403
+          ? 'Invalid request origin'
+          : 'Unauthorized'
+        : 'Explanation unavailable',
+      error instanceof AuthError ? (error.status === 403 ? 403 : 401) : 503,
     );
   }
 }

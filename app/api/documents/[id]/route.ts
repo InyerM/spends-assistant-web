@@ -24,7 +24,10 @@ export async function PATCH(
     return Response.json({ archived: data }, { headers: { 'Cache-Control': 'private, no-store' } });
   } catch (error) {
     return error instanceof AuthError
-      ? errorResponse('Unauthorized', 401)
+      ? errorResponse(
+          error.status === 403 ? 'Invalid request origin' : 'Unauthorized',
+          error.status === 403 ? 403 : 401,
+        )
       : errorResponse('Could not update document archive');
   }
 }

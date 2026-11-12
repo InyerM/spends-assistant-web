@@ -94,7 +94,10 @@ export async function POST(request: NextRequest): Promise<Response> {
     return Response.json(data, { status: 201, headers: privateHeaders });
   } catch (error) {
     return error instanceof AuthError
-      ? errorResponse('Unauthorized', 401)
+      ? errorResponse(
+          error.status === 403 ? 'Invalid request origin' : 'Unauthorized',
+          error.status === 403 ? 403 : 401,
+        )
       : errorResponse('Failed to upload document');
   }
 }

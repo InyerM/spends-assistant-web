@@ -53,7 +53,12 @@ describe('POST /api/settings/sessions/track', () => {
       userId: 'user-1',
     });
 
-    const response = await POST();
+    const response = await POST(
+      new Request('https://example.test/api/settings/sessions/track', {
+        method: 'POST',
+        headers: { Origin: 'https://example.test' },
+      }),
+    );
     expect(response.status).toBe(200);
     const body = await response.json();
     expect(body.success).toBe(true);
@@ -67,7 +72,12 @@ describe('POST /api/settings/sessions/track', () => {
       userId: 'user-1',
     });
 
-    const response = await POST();
+    const response = await POST(
+      new Request('https://example.test/api/settings/sessions/track', {
+        method: 'POST',
+        headers: { Origin: 'https://example.test' },
+      }),
+    );
     expect(response.status).toBe(200);
     const body = await response.json();
     expect(body.success).toBe(true);

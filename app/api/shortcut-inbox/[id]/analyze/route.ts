@@ -1,3 +1,4 @@
+import { hasSameRequestOrigin } from '@/lib/api/request-origin';
 import { readBoundedJson, RequestBodyError } from '@/lib/api/bounded-json';
 import { normalizeInboxAnalysis } from '@/lib/shortcut-inbox/analysis';
 import { extractEmailEventEvidence } from '@/lib/shortcut-inbox/email-event-evidence';
@@ -65,7 +66,7 @@ function validatedAiEventAt(value: unknown, expectedDate?: string | null): strin
 export async function POST(request: Request, context: Context): Promise<Response> {
   try {
     const { supabase, userId, accessToken } = await getUserClient(request);
-    if (!accessToken && request.headers.get('Origin') !== new URL(request.url).origin) {
+    if (!accessToken && !hasSameRequestOrigin(request)) {
       return errorResponse('Invalid request origin', 403);
     }
     let input: unknown;
@@ -765,7 +766,10 @@ export async function POST(request: Request, context: Context): Promise<Response
     );
   } catch (error) {
     return error instanceof AuthError
-      ? errorResponse('Unauthorized', 401)
+      ? errorResponse(
+          error.status === 403 ? 'Invalid request origin' : 'Unauthorized',
+          error.status === 403 ? 403 : 401,
+        )
       : errorResponse('Email analysis failed');
   }
 }

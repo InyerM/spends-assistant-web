@@ -148,8 +148,12 @@ export async function POST(
     );
   } catch (error) {
     return errorResponse(
-      error instanceof AuthError ? 'Unauthorized' : 'Analysis unavailable',
-      error instanceof AuthError ? 401 : 503,
+      error instanceof AuthError
+        ? error.status === 403
+          ? 'Invalid request origin'
+          : 'Unauthorized'
+        : 'Analysis unavailable',
+      error instanceof AuthError ? (error.status === 403 ? 403 : 401) : 503,
     );
   }
 }

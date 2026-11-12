@@ -136,7 +136,7 @@ export async function GET(): Promise<Response> {
 
 export async function POST(request: NextRequest): Promise<Response> {
   try {
-    const { supabase } = await getUserClient();
+    const { supabase } = await getUserClient(request);
     const raw = await request.text();
     if (new TextEncoder().encode(raw).byteLength > 4096) {
       return errorResponse('Request too large', 413);
@@ -171,7 +171,10 @@ export async function POST(request: NextRequest): Promise<Response> {
     return Response.json(data, { status: data?.replayed ? 200 : 201, headers: privateHeaders });
   } catch (error) {
     return error instanceof AuthError
-      ? errorResponse('Unauthorized', 401)
+      ? errorResponse(
+          error.status === 403 ? 'Invalid request origin' : 'Unauthorized',
+          error.status === 403 ? 403 : 401,
+        )
       : errorResponse('Account correction failed');
   }
 }

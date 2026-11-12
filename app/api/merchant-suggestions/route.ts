@@ -1,3 +1,4 @@
+import { hasSameRequestOrigin } from '@/lib/api/request-origin';
 import { AuthError, errorResponse, getUserClient } from '@/lib/api/server';
 import { workerConfig } from '@/lib/config';
 import { forwardAiConsentError } from '@/lib/ai-consent';
@@ -5,7 +6,7 @@ import { forwardAiConsentError } from '@/lib/ai-consent';
 export async function POST(request: Request): Promise<Response> {
   try {
     const { supabase, accessToken } = await getUserClient(request);
-    if (!accessToken && request.headers.get('Origin') !== new URL(request.url).origin) {
+    if (!accessToken && !hasSameRequestOrigin(request)) {
       return errorResponse('Invalid request origin', 403);
     }
 
@@ -46,7 +47,11 @@ export async function POST(request: Request): Promise<Response> {
       { headers: { 'Cache-Control': 'private, no-store' } },
     );
   } catch (error) {
-    if (error instanceof AuthError) return errorResponse('Unauthorized', 401);
+    if (error instanceof AuthError)
+      return errorResponse(
+        error.status === 403 ? 'Invalid request origin' : 'Unauthorized',
+        error.status === 403 ? 403 : 401,
+      );
     return errorResponse('Merchant suggestion unavailable', 503);
   }
 }

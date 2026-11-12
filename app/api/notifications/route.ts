@@ -38,7 +38,7 @@ export async function GET(request?: NextRequest): Promise<Response> {
 
 export async function PATCH(request: NextRequest): Promise<Response> {
   try {
-    const { supabase } = await getUserClient();
+    const { supabase } = await getUserClient(request);
     const input = readSchema.safeParse(await request.json());
     if (!input.success) return errorResponse('Invalid notification', 400);
     const { data, error } = await supabase.rpc('mark_owner_notifications_read', {
@@ -48,7 +48,10 @@ export async function PATCH(request: NextRequest): Promise<Response> {
     return Response.json({ updated: data }, { headers: privateHeaders });
   } catch (error) {
     return error instanceof AuthError
-      ? errorResponse('Unauthorized', 401)
+      ? errorResponse(
+          error.status === 403 ? 'Invalid request origin' : 'Unauthorized',
+          error.status === 403 ? 403 : 401,
+        )
       : errorResponse('Could not mark notifications read');
   }
 }

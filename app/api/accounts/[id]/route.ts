@@ -47,7 +47,7 @@ export async function GET(_request: NextRequest, { params }: RouteParams): Promi
 export async function PATCH(request: NextRequest, { params }: RouteParams): Promise<Response> {
   try {
     const { id } = await params;
-    const { supabase, userId } = await getUserClient();
+    const { supabase, userId } = await getUserClient(request);
     const result = accountUpdateSchema.safeParse(await request.json());
     if (!result.success) return errorResponse('Invalid account update', 400);
 
@@ -63,7 +63,11 @@ export async function PATCH(request: NextRequest, { params }: RouteParams): Prom
     if (error) return errorResponse(error.message, error.code === 'PGRST116' ? 404 : 400);
     return jsonResponse(data);
   } catch (error) {
-    if (error instanceof AuthError) return errorResponse('Unauthorized', 401);
+    if (error instanceof AuthError)
+      return errorResponse(
+        error.status === 403 ? 'Invalid request origin' : 'Unauthorized',
+        error.status === 403 ? 403 : 401,
+      );
     return errorResponse('Failed to update account');
   }
 }
@@ -71,7 +75,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams): Prom
 export async function DELETE(_request: NextRequest, { params }: RouteParams): Promise<Response> {
   try {
     const { id } = await params;
-    const { supabase } = await getUserClient();
+    const { supabase } = await getUserClient(_request);
     const { data, error } = await supabase.rpc('soft_delete_empty_account', {
       p_account_id: id,
     });
@@ -83,7 +87,11 @@ export async function DELETE(_request: NextRequest, { params }: RouteParams): Pr
     }
     return jsonResponse({ success: true, deleted: data });
   } catch (error) {
-    if (error instanceof AuthError) return errorResponse('Unauthorized', 401);
+    if (error instanceof AuthError)
+      return errorResponse(
+        error.status === 403 ? 'Invalid request origin' : 'Unauthorized',
+        error.status === 403 ? 403 : 401,
+      );
     return errorResponse('Failed to delete account');
   }
 }

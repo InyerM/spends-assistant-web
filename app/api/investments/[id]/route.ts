@@ -9,5 +9,5 @@ export async function PATCH(request: Request, { params }: RouteParams): Promise<
 }
 
 export async function DELETE(_request: Request, { params }: RouteParams): Promise<Response> {
-  return deleteEmptyWealthRecord('investment', (await params).id);
+  return deleteEmptyWealthRecord('investment', (await params).id, _request);
 }

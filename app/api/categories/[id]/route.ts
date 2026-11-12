@@ -49,7 +49,7 @@ export async function GET(request: NextRequest, { params }: RouteParams): Promis
 export async function PATCH(request: NextRequest, { params }: RouteParams): Promise<Response> {
   try {
     const { id } = await params;
-    const { supabase } = await getUserClient();
+    const { supabase } = await getUserClient(request);
     const body = await request.json();
 
     const { data, error } = await supabase
@@ -62,7 +62,11 @@ export async function PATCH(request: NextRequest, { params }: RouteParams): Prom
     if (error) return errorResponse(error.message, 400);
     return jsonResponse(data);
   } catch (error) {
-    if (error instanceof AuthError) return errorResponse('Unauthorized', 401);
+    if (error instanceof AuthError)
+      return errorResponse(
+        error.status === 403 ? 'Invalid request origin' : 'Unauthorized',
+        error.status === 403 ? 403 : 401,
+      );
     return errorResponse('Failed to update category');
   }
 }
@@ -70,7 +74,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams): Prom
 export async function DELETE(_request: NextRequest, { params }: RouteParams): Promise<Response> {
   try {
     const { id } = await params;
-    const { supabase } = await getUserClient();
+    const { supabase } = await getUserClient(_request);
 
     // Check if the category is a default category
     const { data: category } = await supabase
@@ -124,7 +128,11 @@ export async function DELETE(_request: NextRequest, { params }: RouteParams): Pr
       unlinked_transactions: (unlinkedCount ?? 0) + childUnlinked,
     });
   } catch (error) {
-    if (error instanceof AuthError) return errorResponse('Unauthorized', 401);
+    if (error instanceof AuthError)
+      return errorResponse(
+        error.status === 403 ? 'Invalid request origin' : 'Unauthorized',
+        error.status === 403 ? 403 : 401,
+      );
     return errorResponse('Failed to delete category');
   }
 }

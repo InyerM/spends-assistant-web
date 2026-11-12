@@ -10,7 +10,7 @@ export interface InboxClient {
 /** The Shortcut may use an existing per-user API key; browsers use their session cookie. */
 export async function getShortcutPostClient(request: Request): Promise<InboxClient> {
   const authorization = request.headers.get('authorization');
-  if (!authorization) return getUserClient();
+  if (!authorization) return getUserClient(request);
 
   const match = /^Bearer (sk_[a-zA-Z0-9]+)$/u.exec(authorization);
   if (!match) throw new AuthError();

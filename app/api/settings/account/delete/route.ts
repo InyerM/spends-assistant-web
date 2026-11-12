@@ -1,3 +1,4 @@
+import { hasSameRequestOrigin } from '@/lib/api/request-origin';
 import { AuthError, errorResponse, getAdminClient, getUserClient } from '@/lib/api/server';
 import { removeOwnedStorage } from '@/lib/account-deletion/remove-owned-storage';
 
@@ -6,7 +7,7 @@ const privateHeaders = { 'Cache-Control': 'private, no-store' };
 export async function POST(request: Request): Promise<Response> {
   try {
     const { supabase, userId, accessToken } = await getUserClient(request);
-    if (!accessToken && request.headers.get('Origin') !== new URL(request.url).origin) {
+    if (!accessToken && !hasSameRequestOrigin(request)) {
       return errorResponse('Invalid request origin', 403);
     }
 
@@ -31,7 +32,11 @@ export async function POST(request: Request): Promise<Response> {
     if (deletionError) return errorResponse('Account deletion could not be completed', 503);
     return Response.json({ deleted: true }, { headers: privateHeaders });
   } catch (error) {
-    if (error instanceof AuthError) return errorResponse('Unauthorized', 401);
+    if (error instanceof AuthError)
+      return errorResponse(
+        error.status === 403 ? 'Invalid request origin' : 'Unauthorized',
+        error.status === 403 ? 403 : 401,
+      );
     return errorResponse('Account deletion could not be completed', 503);
   }
 }

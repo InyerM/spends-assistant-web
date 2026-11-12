@@ -1,3 +1,4 @@
+import { hasSameRequestOrigin } from '@/lib/api/request-origin';
 import { z } from 'zod';
 import { AuthError, getUserClient, errorResponse } from '@/lib/api/server';
 interface Context {
@@ -23,7 +24,7 @@ export async function PATCH(request: Request, context: Context): Promise<Respons
   try {
     const { supabase, accessToken } = await getUserClient(request);
     const { id } = await context.params;
-    if (!accessToken && request.headers.get('Origin') !== new URL(request.url).origin)
+    if (!accessToken && !hasSameRequestOrigin(request))
       return errorResponse('Invalid request origin', 403);
     if (!z.uuid().safeParse(id).success) return errorResponse('Invalid contact', 400);
     const text = await request.text();
@@ -47,8 +48,12 @@ export async function PATCH(request: Request, context: Context): Promise<Respons
     return Response.json({ ok: true }, { headers: { 'Cache-Control': 'private, no-store' } });
   } catch (error) {
     return errorResponse(
-      error instanceof AuthError ? 'Unauthorized' : 'Contact update failed',
-      error instanceof AuthError ? 401 : 500,
+      error instanceof AuthError
+        ? error.status === 403
+          ? 'Invalid request origin'
+          : 'Unauthorized'
+        : 'Contact update failed',
+      error instanceof AuthError ? (error.status === 403 ? 403 : 401) : 500,
     );
   }
 }

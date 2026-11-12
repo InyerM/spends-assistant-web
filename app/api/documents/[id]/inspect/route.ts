@@ -67,7 +67,11 @@ export async function POST(request: Request, { params }: Context): Promise<Respo
       headers,
     });
   } catch (error) {
-    if (error instanceof AuthError) return errorResponse('Unauthorized', 401);
+    if (error instanceof AuthError)
+      return errorResponse(
+        error.status === 403 ? 'Invalid request origin' : 'Unauthorized',
+        error.status === 403 ? 403 : 401,
+      );
     if (error instanceof PdfTextError)
       return Response.json({ code: error.code }, { status: 422, headers });
     return errorResponse('Could not inspect statement', 500);

@@ -16,7 +16,7 @@ export async function POST(
   context: { params: Promise<{ id: string }> },
 ): Promise<Response> {
   try {
-    const { supabase } = await getUserClient();
+    const { supabase } = await getUserClient(request);
     const { id } = await context.params;
     if (!z.uuid().safeParse(id).success) return errorResponse('Invalid inbox item ID', 400);
     let body: unknown;
@@ -37,7 +37,10 @@ export async function POST(
     return Response.json(data, { headers: { 'Cache-Control': 'private, no-store' } });
   } catch (error) {
     return error instanceof AuthError
-      ? errorResponse('Unauthorized', 401)
+      ? errorResponse(
+          error.status === 403 ? 'Invalid request origin' : 'Unauthorized',
+          error.status === 403 ? 403 : 401,
+        )
       : errorResponse('Sender confirmation failed');
   }
 }

@@ -3,7 +3,7 @@ import { getUserClient, AuthError, jsonResponse, errorResponse } from '@/lib/api
 
 export async function POST(request: NextRequest): Promise<Response> {
   try {
-    const { supabase } = await getUserClient();
+    const { supabase } = await getUserClient(request);
     const body = (await request.json()) as { ids: string[] };
 
     if (
@@ -27,7 +27,11 @@ export async function POST(request: NextRequest): Promise<Response> {
     if (data === 0) return errorResponse('No transactions found', 404);
     return jsonResponse({ success: true, deletedCount: data });
   } catch (error) {
-    if (error instanceof AuthError) return errorResponse('Unauthorized', 401);
+    if (error instanceof AuthError)
+      return errorResponse(
+        error.status === 403 ? 'Invalid request origin' : 'Unauthorized',
+        error.status === 403 ? 403 : 401,
+      );
     return errorResponse('Failed to bulk delete transactions');
   }
 }

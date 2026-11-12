@@ -9,7 +9,7 @@ const reviewStatuses = new Set(['pending', 'non_transaction', 'dismissed']);
 
 export async function PATCH(request: NextRequest, context: Context): Promise<Response> {
   try {
-    const { supabase, userId } = await getUserClient();
+    const { supabase, userId } = await getUserClient(request);
     const { id } = await context.params;
     if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu.test(id)) {
       return errorResponse('Invalid inbox item ID', 400);
@@ -40,7 +40,10 @@ export async function PATCH(request: NextRequest, context: Context): Promise<Res
     return Response.json(data, { headers: { 'Cache-Control': 'private, no-store' } });
   } catch (error) {
     return error instanceof AuthError
-      ? errorResponse('Unauthorized', 401)
+      ? errorResponse(
+          error.status === 403 ? 'Invalid request origin' : 'Unauthorized',
+          error.status === 403 ? 403 : 401,
+        )
       : errorResponse('Inbox review failed');
   }
 }

@@ -1,8 +1,9 @@
+import { hasSameRequestOrigin } from '@/lib/api/request-origin';
 import { createClient } from '@/lib/supabase/server';
 import { TERMS_VERSION } from '@/lib/auth/legal-acceptance';
 
 export async function POST(request: Request): Promise<Response> {
-  if (request.headers.get('Origin') !== new URL(request.url).origin) {
+  if (!hasSameRequestOrigin(request)) {
     return Response.json({ error: 'Invalid request origin' }, { status: 403 });
   }
   const body = (await request.json().catch(() => null)) as {

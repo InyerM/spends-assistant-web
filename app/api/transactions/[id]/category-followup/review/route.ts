@@ -39,8 +39,12 @@ export async function POST(
     return Response.json({ updated: data });
   } catch (error) {
     return errorResponse(
-      error instanceof AuthError ? 'Unauthorized' : 'Review unavailable',
-      error instanceof AuthError ? 401 : 500,
+      error instanceof AuthError
+        ? error.status === 403
+          ? 'Invalid request origin'
+          : 'Unauthorized'
+        : 'Review unavailable',
+      error instanceof AuthError ? (error.status === 403 ? 403 : 401) : 500,
     );
   }
 }

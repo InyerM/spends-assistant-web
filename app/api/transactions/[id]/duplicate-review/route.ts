@@ -23,8 +23,12 @@ export async function POST(
     return Response.json({ success: true });
   } catch (error) {
     return errorResponse(
-      error instanceof AuthError ? 'Unauthorized' : 'Duplicate review unavailable',
-      error instanceof AuthError ? 401 : 503,
+      error instanceof AuthError
+        ? error.status === 403
+          ? 'Invalid request origin'
+          : 'Unauthorized'
+        : 'Duplicate review unavailable',
+      error instanceof AuthError ? (error.status === 403 ? 403 : 401) : 503,
     );
   }
 }

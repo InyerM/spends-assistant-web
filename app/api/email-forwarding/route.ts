@@ -3,9 +3,12 @@ import { workerConfig } from '@/lib/config';
 
 const privateHeaders = { 'Cache-Control': 'private, no-store' };
 
-async function forwardToWorker(method: 'GET' | 'POST' | 'PATCH' | 'DELETE'): Promise<Response> {
+async function forwardToWorker(
+  method: 'GET' | 'POST' | 'PATCH' | 'DELETE',
+  request?: Request,
+): Promise<Response> {
   try {
-    const { supabase } = await getUserClient();
+    const { supabase } = await getUserClient(request);
     const {
       data: { session },
     } = await supabase.auth.getSession();
@@ -35,7 +38,10 @@ async function forwardToWorker(method: 'GET' | 'POST' | 'PATCH' | 'DELETE'): Pro
     return Response.json(result, { status: response.status, headers: privateHeaders });
   } catch (error) {
     return error instanceof AuthError
-      ? errorResponse('Unauthorized', 401)
+      ? errorResponse(
+          error.status === 403 ? 'Invalid request origin' : 'Unauthorized',
+          error.status === 403 ? 403 : 401,
+        )
       : errorResponse('Email forwarding request failed');
   }
 }
@@ -44,14 +50,14 @@ export function GET(): Promise<Response> {
   return forwardToWorker('GET');
 }
 
-export function POST(): Promise<Response> {
-  return forwardToWorker('POST');
+export function POST(request: Request): Promise<Response> {
+  return forwardToWorker('POST', request);
 }
 
-export function PATCH(): Promise<Response> {
-  return forwardToWorker('PATCH');
+export function PATCH(request: Request): Promise<Response> {
+  return forwardToWorker('PATCH', request);
 }
 
-export function DELETE(): Promise<Response> {
-  return forwardToWorker('DELETE');
+export function DELETE(request: Request): Promise<Response> {
+  return forwardToWorker('DELETE', request);
 }

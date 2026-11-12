@@ -1,3 +1,5 @@
+import { hasSameRequestOrigin } from '@/lib/api/request-origin';
+import { isMobileBearerRoute } from '@/lib/api/mobile-bearer-routes';
 import { createClient, createAdminClient } from '@/lib/supabase/server';
 import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 import type { SupabaseClient } from '@supabase/supabase-js';
@@ -7,7 +9,10 @@ import { needsTermsAcceptance } from '@/lib/auth/legal-acceptance';
 import { env } from '@/lib/env';
 
 export class AuthError extends Error {
-  public constructor(message = 'Unauthorized') {
+  public constructor(
+    message = 'Unauthorized',
+    public readonly status: 401 | 403 = 401,
+  ) {
     super(message);
     this.name = 'AuthError';
   }
@@ -19,7 +24,8 @@ export async function getUserClient(
   const authorization = request?.headers.get('Authorization');
   if (authorization !== null && authorization !== undefined) {
     const match = /^Bearer ([^\s]+)$/i.exec(authorization);
-    if (!match) throw new AuthError();
+    if (!match || !request || !isMobileBearerRoute(new URL(request.url).pathname, request.method))
+      throw new AuthError();
     const accessToken = match[1];
     const supabase = createSupabaseClient(
       env.NEXT_PUBLIC_SUPABASE_URL,
@@ -36,16 +42,22 @@ export async function getUserClient(
     if (error || !user) throw new AuthError();
     if (
       needsTermsAcceptance(user) &&
-      (!request || new URL(request.url).pathname !== '/api/settings/account/delete')
+      new URL(request.url).pathname !== '/api/settings/account/delete'
     )
       throw new AuthError('Terms acceptance required');
     if (
       needsEligibilityAttestation(user) &&
-      (!request || new URL(request.url).pathname !== '/api/settings/account/delete')
+      new URL(request.url).pathname !== '/api/settings/account/delete'
     )
       throw new AuthError('Eligibility confirmation required');
     return { supabase, userId: user.id, accessToken };
   }
+  if (
+    request &&
+    ['POST', 'PUT', 'PATCH', 'DELETE'].includes(request.method) &&
+    !hasSameRequestOrigin(request)
+  )
+    throw new AuthError('Invalid request origin', 403);
   const supabase = await createClient();
   const {
     data: { user },

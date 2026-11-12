@@ -41,8 +41,12 @@ export async function POST(
     return Response.json(data, { headers: { 'Cache-Control': 'private, no-store' } });
   } catch (error) {
     return errorResponse(
-      error instanceof AuthError ? 'Unauthorized' : 'Funding correction unavailable',
-      error instanceof AuthError ? 401 : 503,
+      error instanceof AuthError
+        ? error.status === 403
+          ? 'Invalid request origin'
+          : 'Unauthorized'
+        : 'Funding correction unavailable',
+      error instanceof AuthError ? (error.status === 403 ? 403 : 401) : 503,
     );
   }
 }
