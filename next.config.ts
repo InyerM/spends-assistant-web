@@ -12,6 +12,7 @@ const nextConfig: NextConfig = {
       './node_modules/.pnpm/@napi-rs+canvas-*/node_modules/@napi-rs/canvas-*/**',
     ],
     '/api/documents/*/extract': [
+      './node_modules/sharp',
       './node_modules/pdfjs-dist/legacy/build/**',
       './node_modules/@napi-rs/canvas/**',
       './node_modules/.pnpm/@napi-rs+canvas-*/node_modules/@napi-rs/canvas-*/**',
