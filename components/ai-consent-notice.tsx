@@ -3,6 +3,7 @@ import { useTranslations } from 'next-intl';
 import type { AiConsentScope } from '@/lib/ai-consent';
 
 const requiredKey: Record<AiConsentScope, string> = {
+  document_ocr: 'requiredDocumentOcr',
   financial_text: 'requiredFinancialText',
   document_images: 'requiredDocumentImages',
   forwarded_email: 'requiredForwardedEmail',

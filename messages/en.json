@@ -467,6 +467,7 @@
     "transfer": "Transfer",
     "transferTo": "Transfer To",
     "noTransactions": "No transactions found",
+    "loadError": "Your transactions could not load. Try again.",
     "noTransactionsEmpty": "No transactions yet",
     "noTransactionsDescription": "Start tracking your spending by adding your first transaction.",
     "noMoreTransactions": "No more transactions",
@@ -889,6 +890,9 @@
     "explanationOptional": "This explanation is a guide. Review the conditions and actions before saving."
   },
   "aiConsent": {
+    "documentOcr": "Document OCR",
+    "documentOcrDescription": "Allow PDF or image content processing by OpenRouter and Mistral OCR and draft interpretation by DeepSeek. Plugin retention is not covered by inference zero-retention routing. This permission is separate from financial text and the existing image pathway.",
+    "requiredDocumentOcr": "Review the document OCR permission before using Mistral OCR + DeepSeek.",
     "tab": "AI permissions",
     "title": "AI processing permissions",
     "description": "Choose which information Anotto may send to external AI services. Each permission is independent and starts off until you enable it.",
@@ -1150,12 +1154,28 @@
     "description": "Get started by creating your first item."
   },
   "documents": {
-    "pdfSupportHint": "Images or PDFs up to 5 MB. PDFs must contain text and have no more than 10 pages. Review movements and matches before confirming reconciliation.",
+    "ocrErrors": {
+      "CLOUD_PDF_DISABLED": "Optional PDF OCR is unavailable. Try local text extraction or retry later.",
+      "CLOUD_PDF_BUDGET_EXCEEDED": "The daily OCR budget is exhausted. Retry tomorrow or use local text extraction.",
+      "CLOUD_PDF_CLAIM_UNAVAILABLE": "Another extraction is processing this document. Refresh before retrying.",
+      "CLOUD_PDF_INVALID_INPUT": "This PDF exceeds the OCR input limits. Use a smaller unencrypted PDF.",
+      "PARSE_LIMIT_REACHED": "Your AI extraction allowance is exhausted.",
+      "CLOUD_PDF_REQUEST_FAILED": "OCR failed. No movements were recorded; review the original and retry."
+    },
+    "ocrProvenance": "OCR page evidence",
+    "ocrReviewRequired": "OCR drafts can be incomplete or incorrect. Check the original PDF before confirming any movement.",
+    "sourcePage": "Original page {page}",
+    "optionalOcr": "Optional document OCR",
+    "ocrDisclosure": "Send PDF pages or a locally converted image to OpenRouter and Mistral OCR, then extracted content to DeepSeek for draft interpretation. Plugin retention differs from inference routing; end-to-end zero retention is not guaranteed. Up to 5 unencrypted PDF pages or one image. Review every result before recording transactions.",
+    "ocrAcknowledge": "I choose external OCR processing for this document.",
+    "extractOcr": "Extract with Mistral OCR + DeepSeek",
+    "pdfSupportHint": "Images or PDFs up to 5 MB. Local text extraction supports up to 10 PDF pages; optional Mistral OCR supports up to 5 unencrypted scanned pages or one image. Review movements before confirming them.",
     "pdfPasswordTitle": "Unlock PDF statement",
     "pdfPasswordDescription": "Your password is used only to open this PDF on the Anotto server. It is never saved or sent to AI.",
     "pdfPasswordLabel": "PDF password",
     "pdfUnlock": "Unlock and analyze",
     "pdfErrors": {
+      "PDF_OCR_ENCRYPTED": "Encrypted PDFs cannot use external OCR. Use local text extraction.",
       "PDF_PASSWORD_REQUIRED": "This PDF requires a password.",
       "PDF_PASSWORD_INCORRECT": "That password is incorrect. Try again.",
       "PDF_NO_TEXT": "This PDF has pages without readable text. Upload screenshots of those pages to analyze them as images.",
@@ -1938,7 +1958,8 @@
     "applyNotes": "Apply notes",
     "applyCategory": "Apply category",
     "originalNotes": "Current notes: {notes}",
-    "noChanges": "No changes selected"
+    "noChanges": "No changes selected",
+    "staleProposal": "This transaction changed. Analyze it again before applying a proposal."
   },
   "statementConversion": {
     "fundingAccount": "Account you paid from",

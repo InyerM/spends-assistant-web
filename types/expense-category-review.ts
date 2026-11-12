@@ -18,6 +18,8 @@ export interface ExpenseReviewPage {
 export interface ExpenseReviewResult {
   id: string;
   proposal?: CategoryReview;
+  baseline?: Readonly<ExpenseReviewRow>;
+  stale?: boolean;
   error?: Error;
 }
 

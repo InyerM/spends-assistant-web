@@ -13,6 +13,7 @@ import { previewBancolombiaNotice } from '@/lib/shortcut-inbox/bancolombia-previ
 import { previewLuloNotice } from '@/lib/shortcut-inbox/lulo-preview';
 import {
   categoryFromCurrentRules,
+  categoryDecisionFromCurrentRules,
   merchantFromForwardedEvidence,
 } from '@/lib/shortcut-inbox/updated-rules';
 import type { Account } from '@/types';
@@ -219,7 +220,7 @@ export async function POST(request: Request, context: Context): Promise<Response
           .eq('user_id', userId),
         supabase
           .from('automation_rules')
-          .select('name,rule_type,is_active,priority,condition_logic,conditions,actions')
+          .select('id,name,rule_type,is_active,priority,condition_logic,conditions,actions')
           .eq('user_id', userId)
           .eq('is_active', true)
           .is('deleted_at', null),
@@ -240,7 +241,7 @@ export async function POST(request: Request, context: Context): Promise<Response
     const currentRules = Array.isArray(rules) ? (rules as AutomationRule[]) : [];
     const cachedFields = cached as Record<string, unknown> | null;
     const bank = previewBancolombiaNotice(inboxFields.source, inboxFields.raw_text);
-    const ruleCategoryId = categoryFromCurrentRules(
+    const ruleCategoryDecision = categoryDecisionFromCurrentRules(
       preview?.merchant ||
         merchantFromForwardedEvidence(rawText) ||
         (typeof cachedFields?.description === 'string' ? cachedFields.description : ''),
@@ -257,6 +258,8 @@ export async function POST(request: Request, context: Context): Promise<Response
       accountId,
       currentRules,
     );
+    const ruleCategoryId = ruleCategoryDecision.categoryId;
+    const ruleClearsCategory = ruleCategoryDecision.matched && ruleCategoryId === null;
     let validRuleCategory: string | null = null;
     const bankPreview = previewBancolombiaNotice(inboxFields.source, inboxFields.raw_text);
     const cachedType =
@@ -289,7 +292,13 @@ export async function POST(request: Request, context: Context): Promise<Response
 
     let recipientHistory: RecipientHistoryRow | null = null;
     const recipient = recipientFromEmail(rawText);
-    if (!validRuleCategory && recipient && accountId && cachedType === 'expense') {
+    if (
+      !ruleClearsCategory &&
+      !validRuleCategory &&
+      recipient &&
+      accountId &&
+      cachedType === 'expense'
+    ) {
       const { data: historyRows, error: historyError } = await supabase
         .from('transactions')
         .select('category_id,description,notes,raw_text')
@@ -330,30 +339,32 @@ export async function POST(request: Request, context: Context): Promise<Response
       }
     }
 
-    const matchedRule = validRuleCategory
-      ? [...currentRules]
-          .sort((a, b) => b.priority - a.priority)
-          .find(
-            (rule) =>
-              categoryFromCurrentRules(
-                preview?.merchant ||
-                  merchantFromForwardedEvidence(rawText) ||
-                  (typeof cachedFields?.description === 'string' ? cachedFields.description : ''),
-                rawText,
-                preview?.amountDecimal
-                  ? Number(preview.amountDecimal)
-                  : bankPreview?.amountDecimal
-                    ? Number(bankPreview.amountDecimal)
-                    : eventEvidence.amount
-                      ? Number(eventEvidence.amount)
-                      : typeof cachedFields?.amount === 'number'
-                        ? cachedFields.amount
-                        : null,
-                accountId,
-                [rule],
-              ) === validRuleCategory,
-          )
-      : undefined;
+    const matchedRule = ruleClearsCategory
+      ? currentRules.find((rule) => rule.id === ruleCategoryDecision.ruleId)
+      : validRuleCategory
+        ? [...currentRules]
+            .sort((a, b) => b.priority - a.priority || a.id.localeCompare(b.id))
+            .find(
+              (rule) =>
+                categoryFromCurrentRules(
+                  preview?.merchant ||
+                    merchantFromForwardedEvidence(rawText) ||
+                    (typeof cachedFields?.description === 'string' ? cachedFields.description : ''),
+                  rawText,
+                  preview?.amountDecimal
+                    ? Number(preview.amountDecimal)
+                    : bankPreview?.amountDecimal
+                      ? Number(bankPreview.amountDecimal)
+                      : eventEvidence.amount
+                        ? Number(eventEvidence.amount)
+                        : typeof cachedFields?.amount === 'number'
+                          ? cachedFields.amount
+                          : null,
+                  accountId,
+                  [rule],
+                ) === validRuleCategory,
+            )
+        : undefined;
     const ruleNote = (matchedRule?.actions.add_note ?? recipientHistory?.notes)
       ?.trim()
       .slice(0, 500);
@@ -451,12 +462,13 @@ export async function POST(request: Request, context: Context): Promise<Response
       (!refresh || matchedRule || recipientHistory) &&
       (sourceEvidence.amount !== null || typeof cached.amount === 'number')
     ) {
-      const nextCategory =
-        validRuleCategory ??
-        (cached.category_source === 'automation' ||
-        (bankPreview?.kind === 'income' && cached.suggested_type !== 'income')
-          ? null
-          : cached.category_id);
+      const nextCategory = ruleClearsCategory
+        ? null
+        : (validRuleCategory ??
+          (cached.category_source === 'automation' ||
+          (bankPreview?.kind === 'income' && cached.suggested_type !== 'income')
+            ? null
+            : cached.category_id));
       const nextSource = validRuleCategory
         ? matchedRule
           ? 'automation'
@@ -543,7 +555,7 @@ export async function POST(request: Request, context: Context): Promise<Response
       suggestion = {
         type: cachedType,
         category_id: validRuleCategory,
-        category_source: 'automation',
+        category_source: ruleClearsCategory ? null : 'automation',
         description: ruleDescription ?? ruleNote ?? null,
         notes: ruleNote ?? null,
       };

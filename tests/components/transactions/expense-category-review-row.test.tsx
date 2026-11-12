@@ -104,3 +104,64 @@ it('allows reviewing wording and notes without changing the category or posting 
   fireEvent.click(screen.getByRole('button', { name: 'applyFor' }));
   expect(apply).toHaveBeenCalledWith({ description: 'My title' });
 });
+
+it('preserves edited description and notes when reanalysis returns another proposal', () => {
+  const row = {
+    id: 'tx',
+    description: 'Original',
+    notes: 'Original note',
+    category_id: null,
+    amount: 10,
+    date: '2026-11-12',
+    currency: 'COP',
+  } as ExpenseReviewRow;
+  const props = {
+    row,
+    categories: [],
+    selected: false,
+    disabled: false,
+    analyzing: false,
+    onSelect: vi.fn(),
+    onChoice: vi.fn(),
+    onApply: vi.fn(),
+  };
+  const proposal = {
+    category_id: null,
+    description: 'AI title',
+    notes: 'AI note',
+    explanation: 'Reason',
+    kind: 'expense' as const,
+    evidence_ids: [],
+  };
+  const { rerender } = render(
+    <ExpenseCategoryReviewRow {...props} result={{ id: 'tx', proposal }} />,
+  );
+  fireEvent.change(screen.getByLabelText('descriptionField'), { target: { value: 'Human title' } });
+  fireEvent.change(screen.getByLabelText('notesField'), { target: { value: 'Human note' } });
+  rerender(
+    <ExpenseCategoryReviewRow
+      {...props}
+      result={{ id: 'tx', proposal: { ...proposal, description: 'New AI', notes: 'New note' } }}
+    />,
+  );
+  expect(screen.getByLabelText('descriptionField')).toHaveValue('Human title');
+  expect(screen.getByLabelText('notesField')).toHaveValue('Human note');
+});
+
+it('explains a stale proposal and removes its apply controls', () => {
+  render(
+    <ExpenseCategoryReviewRow
+      row={{ id: 'tx', description: 'Updated', date: '2026-11-12', amount: 10 } as ExpenseReviewRow}
+      categories={[]}
+      selected={false}
+      disabled={false}
+      analyzing={false}
+      result={{ id: 'tx', stale: true }}
+      onSelect={vi.fn()}
+      onChoice={vi.fn()}
+      onApply={vi.fn()}
+    />,
+  );
+  expect(screen.getByRole('alert')).toHaveTextContent('staleProposal');
+  expect(screen.queryByRole('button', { name: 'applyFor' })).not.toBeInTheDocument();
+});

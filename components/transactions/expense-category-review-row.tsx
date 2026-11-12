@@ -93,9 +93,13 @@ export function ExpenseCategoryReviewRow({
           )}
         </p>
       ) : null}
+      {result?.stale && (
+        <p role='alert' className='text-warning pl-7 text-sm'>
+          {t('staleProposal')}
+        </p>
+      )}
       {result?.proposal && (
         <ExpenseReviewProposal
-          key={JSON.stringify(result.proposal)}
           row={row}
           proposal={result.proposal}
           categories={categories}

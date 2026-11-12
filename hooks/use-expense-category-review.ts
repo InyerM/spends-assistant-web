@@ -31,6 +31,19 @@ interface ExpenseCategoryReviewState {
   analyze: () => void;
   apply: (row: ExpenseReviewRow, changes: ExpenseReviewChanges) => void;
 }
+function rowVersion(row: Readonly<ExpenseReviewRow>): string {
+  return JSON.stringify([
+    row.id,
+    row.description,
+    row.notes,
+    row.category_id,
+    row.account_id,
+    row.type,
+    row.date,
+    row.amount,
+    row.currency,
+  ]);
+}
 export function useExpenseCategoryReview(): ExpenseCategoryReviewState {
   const locale = useLocale(),
     t = useTranslations('expenseCategoryReview');
@@ -60,17 +73,30 @@ export function useExpenseCategoryReview(): ExpenseCategoryReviewState {
   }
   function analyze(): void {
     if (busy || !selected.length) return;
+    const baselines = new Map(queue.data?.data.map((row) => [row.id, Object.freeze({ ...row })]));
     analysis.mutate(
       { ids: selected, locale },
       {
         onSuccess: (results) => {
           setReviews((prev) => ({
             ...prev,
-            ...Object.fromEntries(results.map((row) => [row.id, row])),
+            ...Object.fromEntries(
+              results.map((row) => [
+                row.id,
+                row.error && prev[row.id]?.proposal
+                  ? { ...prev[row.id], id: row.id, error: row.error }
+                  : { ...row, baseline: baselines.get(row.id) },
+              ]),
+            ),
           }));
-          setChoices((prev) => {
-            const next = { ...prev };
-            for (const row of results) next[row.id] = undefined;
+          setChoices((previous) => {
+            const next = { ...previous };
+            for (const result of results) {
+              const before = reviews[result.id]?.baseline;
+              const after = baselines.get(result.id);
+              if (before && after && rowVersion(before) !== rowVersion(after))
+                next[result.id] = undefined;
+            }
             return next;
           });
           setSelected([]);
@@ -80,8 +106,17 @@ export function useExpenseCategoryReview(): ExpenseCategoryReviewState {
   }
   function apply(row: ExpenseReviewRow, changes: ExpenseReviewChanges): void {
     if (busy || !Object.keys(changes).length) return;
+    const review = reviews[row.id];
+    const current = queue.data?.data.find((candidate) => candidate.id === row.id);
+    if (
+      !review?.proposal ||
+      !review.baseline ||
+      !current ||
+      rowVersion(current) !== rowVersion(review.baseline)
+    )
+      return;
     save.mutate(
-      { row, changes },
+      { row: review.baseline, changes },
       {
         onSuccess: () => {
           setReviews((prev) => {
@@ -89,6 +124,7 @@ export function useExpenseCategoryReview(): ExpenseCategoryReviewState {
             next[row.id] = undefined;
             return next;
           });
+          setChoices((previous) => ({ ...previous, [row.id]: undefined }));
           toast.success(t('saved'));
         },
       },
@@ -99,7 +135,17 @@ export function useExpenseCategoryReview(): ExpenseCategoryReviewState {
     changeFilters,
     selected,
     toggle,
-    reviews,
+    reviews: Object.fromEntries(
+      Object.entries(reviews).map(([id, review]) => {
+        const current = queue.data?.data.find((row) => row.id === id);
+        return [
+          id,
+          review?.baseline && current && rowVersion(current) !== rowVersion(review.baseline)
+            ? { id, stale: true }
+            : review,
+        ];
+      }),
+    ),
     choices,
     setChoice: (id: string, value: string): void =>
       setChoices((prev) => ({ ...prev, [id]: value })),

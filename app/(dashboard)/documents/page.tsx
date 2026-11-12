@@ -111,11 +111,15 @@ export default function DocumentsPage(): React.ReactElement {
     }
   };
 
-  const extract = async (id: string, password?: string): Promise<void> => {
+  const extract = async (
+    id: string,
+    password?: string,
+    strategy?: 'mistral_ocr',
+  ): Promise<void> => {
     setBusy(id);
     setError(null);
     try {
-      await extractDocument(id, password);
+      await extractDocument(id, password, strategy);
       setProtectedPdfId(null);
       setIncorrectPassword(false);
       await load();
@@ -127,7 +131,7 @@ export default function DocumentsPage(): React.ReactElement {
         } else {
           setProtectedPdfId(null);
           setIncorrectPassword(false);
-          setError(t(`pdfErrors.${cause.code}`));
+          setError(t(`${cause.code.startsWith('PDF_') ? 'pdfErrors' : 'ocrErrors'}.${cause.code}`));
         }
         return;
       }
@@ -243,11 +247,19 @@ export default function DocumentsPage(): React.ReactElement {
         <Tabs
           value={reviewFilter}
           onValueChange={(value) => setReviewFilter(value as typeof reviewFilter)}>
-          <TabsList className='h-auto max-w-full flex-wrap'>
-            <TabsTrigger value='all'>{tWorkflow('all')}</TabsTrigger>
-            <TabsTrigger value='active'>{tWorkflow('active')}</TabsTrigger>
-            <TabsTrigger value='completed'>{tWorkflow('completed')}</TabsTrigger>
-            <TabsTrigger value='no_movements'>{tWorkflow('no_movements')}</TabsTrigger>
+          <TabsList className='h-auto max-w-full flex-wrap group-data-[orientation=horizontal]/tabs:h-auto'>
+            <TabsTrigger value='all' className='h-auto min-h-11'>
+              {tWorkflow('all')}
+            </TabsTrigger>
+            <TabsTrigger value='active' className='h-auto min-h-11'>
+              {tWorkflow('active')}
+            </TabsTrigger>
+            <TabsTrigger value='completed' className='h-auto min-h-11'>
+              {tWorkflow('completed')}
+            </TabsTrigger>
+            <TabsTrigger value='no_movements' className='h-auto min-h-11'>
+              {tWorkflow('no_movements')}
+            </TabsTrigger>
           </TabsList>
         </Tabs>
       )}
@@ -300,6 +312,7 @@ export default function DocumentsPage(): React.ReactElement {
               onOpen={() => void findSuggestions(document.id)}
               onArchive={(archived) => void archiveCapture(document.id, archived)}
               onExtract={() => void extract(document.id)}
+              onExtractOcr={() => void extract(document.id, undefined, 'mistral_ocr')}
               onRestore={(documentId, observationId) =>
                 void restoreObservation(documentId, observationId)
               }

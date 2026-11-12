@@ -326,8 +326,16 @@ export function TransactionList({
   const t = useTranslations('transactions');
   const tCommon = useTranslations('common');
   const locale = useLocale();
-  const { data, isLoading, hasNextPage, fetchNextPage, isFetchingNextPage } =
-    useInfiniteTransactions(filters);
+  const {
+    data,
+    isLoading,
+    isError,
+    isFetching,
+    refetch,
+    hasNextPage,
+    fetchNextPage,
+    isFetchingNextPage,
+  } = useInfiniteTransactions(filters);
   const { data: statementProofs } = useStatementProofs(
     data?.pages.flatMap((page) => page.data.map((tx) => tx.id)) ?? [],
   );
@@ -390,6 +398,19 @@ export function TransactionList({
         {Array.from({ length: 8 }).map((_, i) => (
           <Skeleton key={i} className='h-14 w-full rounded-lg' />
         ))}
+      </div>
+    );
+  }
+
+  if (isError && dateGroups.length === 0) {
+    return (
+      <div
+        role='alert'
+        className='border-border bg-card space-y-4 rounded-xl border px-5 py-12 text-center'>
+        <p className='text-destructive text-sm'>{t('loadError')}</p>
+        <Button variant='outline' disabled={isFetching} onClick={() => void refetch()}>
+          {tCommon('retry')}
+        </Button>
       </div>
     );
   }

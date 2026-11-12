@@ -270,6 +270,90 @@ describe('applyAutomationRules', () => {
     return { from: vi.fn().mockReturnValue(chain), _chain: chain };
   }
 
+  it.each([false, true])(
+    'uses ordered first scalar writes and retains cross-field chains (clear=%s)',
+    async (clear) => {
+      const rules = [
+        createMockAutomationRule({
+          id: 'b',
+          priority: 10,
+          conditions: { from_account: 'next' },
+          actions: { set_category: 'low', set_type: 'income', add_note: 'second' },
+        }),
+        createMockAutomationRule({
+          id: 'a',
+          priority: 100,
+          conditions: {},
+          actions: { set_category: clear ? null : 'high', set_account: 'next', add_note: 'first' },
+        }),
+      ];
+      const result = await applyAutomationRules(createRulesSupabase(rules) as never, {
+        description: 'Purchase',
+        amount: 1,
+        account_id: 'old',
+        source: 'web',
+        type: 'expense',
+      });
+      expect(result.category_id).toBe(clear ? undefined : 'high');
+      expect(result.type).toBe(clear ? 'income' : 'expense');
+      expect(result.notes).toBe('first\nsecond');
+    },
+  );
+  it('rejects an incompatible type without claiming it over a later compatible assignment', async () => {
+    const rules = [
+      createMockAutomationRule({
+        id: 'high',
+        priority: 100,
+        conditions: {},
+        actions: { set_category: 'expense-category' },
+      }),
+      createMockAutomationRule({
+        id: 'incompatible',
+        priority: 50,
+        conditions: {},
+        actions: { set_type: 'income' },
+      }),
+      createMockAutomationRule({
+        id: 'compatible',
+        priority: 10,
+        conditions: {},
+        actions: { set_type: 'expense' },
+      }),
+    ];
+    const result = await applyAutomationRules(createRulesSupabase(rules) as never, {
+      description: 'Purchase',
+      amount: 1,
+      account_id: 'source',
+      source: 'web',
+      type: 'expense',
+    });
+    expect(result.type).toBe('expense');
+    expect(result.category_id).toBe('expense-category');
+    expect(result.applied_rules).toEqual([
+      expect.objectContaining({ rule_id: 'high' }),
+      expect.objectContaining({ rule_id: 'compatible' }),
+    ]);
+  });
+
+  it('resolves tied rule categories by identity independent of input order', async () => {
+    const rules = ['a', 'b'].map((id) =>
+      createMockAutomationRule({ id, priority: 10, conditions: {}, actions: { set_category: id } }),
+    );
+    for (const input of [rules, [...rules].reverse()]) {
+      expect(
+        (
+          await applyAutomationRules(createRulesSupabase(input) as never, {
+            description: 'Purchase',
+            amount: 1,
+            account_id: 'old',
+            source: 'web',
+            type: 'expense',
+          })
+        ).category_id,
+      ).toBe('a');
+    }
+  });
+
   it('preserves an explicitly reviewed USD account against legacy alias detection', async () => {
     const sb = createRulesSupabase([
       createMockAutomationRule({

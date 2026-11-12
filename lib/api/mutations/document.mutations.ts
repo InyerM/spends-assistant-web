@@ -16,7 +16,11 @@ async function check(response: Response): Promise<Response> {
   const consentError = await aiConsentErrorFromResponse(response);
   if (consentError) throw consentError;
   const body = (await response.json().catch(() => ({}))) as { error?: string; code?: string };
-  if (body.code?.startsWith('PDF_'))
+  if (
+    body.code?.startsWith('PDF_') ||
+    body.code?.startsWith('CLOUD_PDF_') ||
+    body.code === 'PARSE_LIMIT_REACHED'
+  )
     throw new DocumentExtractionError(body.code, body.error ?? body.code);
   throw new Error(body.error ?? 'Document request failed');
 }
@@ -29,12 +33,19 @@ export async function uploadDocument(file: File): Promise<StoredDocument> {
   ).json() as Promise<StoredDocument>;
 }
 
-export async function extractDocument(id: string, password?: string): Promise<void> {
+export async function extractDocument(
+  id: string,
+  password?: string,
+  strategy?: 'mistral_ocr',
+): Promise<void> {
   await check(
     await fetch(`/api/documents/${id}/extract`, {
       method: 'POST',
-      ...(password !== undefined
-        ? { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password }) }
+      ...(password !== undefined || strategy !== undefined
+        ? {
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(strategy ? { strategy } : { password }),
+          }
         : {}),
     }),
   );

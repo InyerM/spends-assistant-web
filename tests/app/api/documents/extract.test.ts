@@ -1,3 +1,5 @@
+import sharp from 'sharp';
+import { PDFDocument } from 'pdf-lib';
 import { readPdfText, PdfTextError } from '@/lib/pdf-text';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { POST } from '@/app/api/documents/[id]/extract/route';
@@ -33,6 +35,8 @@ vi.mock('@/lib/config', () => ({ workerConfig: { url: 'https://worker.test' } })
 describe('POST /api/documents/[id]/extract', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.stubEnv('DOCUMENT_PDF_OCR_ENABLED', 'false');
+    vi.stubEnv('DOCUMENT_PDF_OCR_PROXY_SECRET', '');
     vi.stubGlobal('fetch', fetchMock);
     documentQuery.mockResolvedValue({
       data: {
@@ -69,6 +73,188 @@ describe('POST /api/documents/[id]/extract', () => {
     });
   });
 
+  it('locally splits private PDF pages and completes review drafts with original page provenance', async () => {
+    vi.stubEnv('DOCUMENT_PDF_OCR_ENABLED', 'true');
+    vi.stubEnv('DOCUMENT_PDF_OCR_PROXY_SECRET', 'local-test-proxy-secret');
+    documentQuery.mockResolvedValueOnce({
+      data: { file_path: 'user-1/statement.pdf', mime_type: 'application/pdf', status: 'uploaded' },
+    });
+    const pdf = await PDFDocument.create();
+    pdf.addPage([600, 800]);
+    pdf.addPage([600, 800]);
+    const bytes = await pdf.save();
+    download.mockResolvedValueOnce({
+      data: { arrayBuffer: async () => bytes.buffer },
+      error: null,
+    });
+    const observation = {
+      amount: -12,
+      currency: 'USD',
+      occurred_at: '2026-11-12',
+      description: 'Synthetic purchase',
+      counterparty: null,
+      reference: null,
+      source_excerpt: 'Synthetic purchase 12',
+      confidence: 0.8,
+      source_page: 2,
+    };
+    fetchMock.mockResolvedValueOnce(
+      Response.json({
+        draft: { document_type: 'statement', observations: [observation] },
+        model: 'deepseek/deepseek-v3.2',
+        pageCount: 2,
+        pathway: 'cloud-pdf-mistral-ocr',
+        requiresReview: true,
+      }),
+    );
+    const response = await POST(
+      new Request('http://localhost', {
+        method: 'POST',
+        body: JSON.stringify({ strategy: 'mistral_ocr' }),
+      }) as never,
+      { params: Promise.resolve({ id: 'doc-1' }) },
+    );
+    expect(response.status).toBe(200);
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe('https://worker.test/documents/extract-pdf-ocr');
+    expect(init.headers['X-Document-OCR-Proxy-Secret']).toBe('local-test-proxy-secret');
+    const payload = JSON.parse(String(init.body)) as {
+      pages: { pageNumber: number; pdfBase64: string }[];
+      documentId: string;
+      claimToken: string;
+      sourceSha256: string;
+      password?: string;
+    };
+    expect(payload.pages.map((page: { pageNumber: number }) => page.pageNumber)).toEqual([1, 2]);
+    expect(payload.documentId).toBe('doc-1');
+    expect(payload.claimToken).toBe('11111111-1111-4111-8111-111111111111');
+    expect(payload.password).toBeUndefined();
+    for (const page of payload.pages)
+      expect((await PDFDocument.load(page.pdfBase64)).getPageCount()).toBe(1);
+    expect(readPdfText).not.toHaveBeenCalled();
+    expect(adminRpc).toHaveBeenCalledWith(
+      'complete_document_extraction_server',
+      expect.objectContaining({
+        p_page_count: 2,
+        p_source_sha256: payload.sourceSha256,
+        p_pathway: 'cloud-pdf-mistral-ocr',
+        p_observations: [expect.objectContaining({ source_page: 2 })],
+      }),
+    );
+  });
+  it('sends a canonical image PDF through optional OCR and preserves receipt classification', async () => {
+    vi.stubEnv('DOCUMENT_PDF_OCR_ENABLED', 'true');
+    vi.stubEnv('DOCUMENT_PDF_OCR_PROXY_SECRET', 'test-secret');
+    const bytes = await sharp({
+      create: { width: 30, height: 20, channels: 3, background: '#fff' },
+    })
+      .png()
+      .toBuffer();
+    download.mockResolvedValueOnce({
+      data: { arrayBuffer: async () => Uint8Array.from(bytes).buffer },
+      error: null,
+    });
+    fetchMock.mockResolvedValueOnce(
+      Response.json({
+        draft: { document_type: 'receipt', observations: [] },
+        model: 'deepseek/deepseek-v3.2',
+        pageCount: 1,
+        pathway: 'cloud-pdf-mistral-ocr',
+        requiresReview: true,
+      }),
+    );
+    const response = await POST(
+      new Request('http://localhost', {
+        method: 'POST',
+        body: JSON.stringify({ strategy: 'mistral_ocr' }),
+      }) as never,
+      { params: Promise.resolve({ id: 'doc-1' }) },
+    );
+    expect(response.status).toBe(200);
+    const payload = JSON.parse(String(fetchMock.mock.calls[0][1].body)) as {
+      pages: { pdfBase64: string }[];
+    };
+    expect(payload.pages).toHaveLength(1);
+    expect((await PDFDocument.load(payload.pages[0].pdfBase64)).getPageCount()).toBe(1);
+    expect(adminRpc).toHaveBeenCalledWith(
+      'complete_document_extraction_server',
+      expect.objectContaining({ p_document_type: 'receipt', p_page_count: 1 }),
+    );
+  });
+  it('rejects OCR password input before reading or claiming an original', async () => {
+    vi.stubEnv('DOCUMENT_PDF_OCR_ENABLED', 'true');
+    vi.stubEnv('DOCUMENT_PDF_OCR_PROXY_SECRET', 'local-test-proxy-secret');
+    const response = await POST(
+      new Request('http://localhost', {
+        method: 'POST',
+        body: JSON.stringify({ strategy: 'mistral_ocr', password: 'private' }),
+      }) as never,
+      { params: Promise.resolve({ id: 'doc-1' }) },
+    );
+    expect(response.status).toBe(400);
+    expect(rpc).not.toHaveBeenCalled();
+    expect(download).not.toHaveBeenCalled();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+  it('preserves an allowlisted OCR budget error without saving drafts', async () => {
+    vi.stubEnv('DOCUMENT_PDF_OCR_ENABLED', 'true');
+    vi.stubEnv('DOCUMENT_PDF_OCR_PROXY_SECRET', 'local-test-proxy-secret');
+    documentQuery.mockResolvedValueOnce({
+      data: { file_path: 'user-1/statement.pdf', mime_type: 'application/pdf', status: 'uploaded' },
+    });
+    const pdf = await PDFDocument.create();
+    pdf.addPage();
+    const bytes = await pdf.save();
+    download.mockResolvedValueOnce({
+      data: { arrayBuffer: async () => bytes.buffer },
+      error: null,
+    });
+    fetchMock.mockResolvedValueOnce(
+      Response.json(
+        { code: 'CLOUD_PDF_BUDGET_EXCEEDED', error: 'sensitive upstream body' },
+        { status: 429 },
+      ),
+    );
+    const response = await POST(
+      new Request('http://localhost', {
+        method: 'POST',
+        body: JSON.stringify({ strategy: 'mistral_ocr' }),
+      }) as never,
+      { params: Promise.resolve({ id: 'doc-1' }) },
+    );
+    expect(response.status).toBe(429);
+    expect(await response.json()).toEqual({
+      code: 'CLOUD_PDF_BUDGET_EXCEEDED',
+      error: 'Optional PDF OCR failed',
+    });
+    expect(adminRpc).not.toHaveBeenCalledWith(
+      'complete_document_extraction_server',
+      expect.anything(),
+    );
+  });
+  it('blocks explicit cloud OCR when capability is disabled before claiming or dispatching', async () => {
+    const response = await POST(
+      new Request('http://localhost', {
+        method: 'POST',
+        body: JSON.stringify({ strategy: 'mistral_ocr' }),
+      }) as never,
+      { params: Promise.resolve({ id: 'doc-1' }) },
+    );
+    expect(response.status).toBe(503);
+    expect(rpc).not.toHaveBeenCalled();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+  it('rejects unknown strategies rather than treating them as local extraction', async () => {
+    const response = await POST(
+      new Request('http://localhost', {
+        method: 'POST',
+        body: JSON.stringify({ strategy: 'other' }),
+      }) as never,
+      { params: Promise.resolve({ id: 'doc-1' }) },
+    );
+    expect(response.status).toBe(400);
+    expect(rpc).not.toHaveBeenCalled();
+  });
   it('parses the owner PDF locally and forwards only extracted text to the Worker', async () => {
     documentQuery.mockResolvedValueOnce({
       data: {

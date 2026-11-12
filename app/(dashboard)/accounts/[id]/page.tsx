@@ -2,9 +2,9 @@
 import { use, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useTranslations, useLocale } from 'next-intl';
+import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
-import { ArrowLeft, Pencil, Trash2, Check, Wallet } from 'lucide-react';
+import { ArrowLeft, Pencil, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAccount, useAccounts } from '@/lib/api/queries/account.queries';
@@ -15,7 +15,7 @@ import { EnableCurrency } from '@/components/accounts/enable-currency';
 import { AccountOverview } from '@/components/accounts/account-overview';
 import { AccountRecords } from '@/components/accounts/account-records';
 import { groupAccounts } from '@/lib/accounts/currency-groups';
-import { formatCurrency } from '@/lib/utils/formatting';
+import { AccountBalanceHero } from '@/components/accounts/account-balance-hero';
 export default function AccountDetailPage({
   params,
 }: {
@@ -24,7 +24,6 @@ export default function AccountDetailPage({
   const { id } = use(params);
   const t = useTranslations('accounts'),
     common = useTranslations('common'),
-    locale = useLocale(),
     router = useRouter();
   const query = useAccount(id);
   const { data: accounts } = useAccounts();
@@ -77,49 +76,19 @@ export default function AccountDetailPage({
           )}
         </div>
       </header>
-      <section className='border-border bg-card space-y-5 rounded-xl border p-5 sm:p-6'>
-        <div className='flex flex-wrap items-center justify-between gap-3'>
-          <div role='group' aria-label={t('balanceCurrency')} className='flex flex-wrap gap-2'>
-            {ledgers.map((a) => (
-              <Button
-                key={a.id}
-                size='sm'
-                variant='outline'
-                aria-pressed={selected.id === a.id}
-                className={
-                  selected.id === a.id
-                    ? 'border-success bg-success/15 text-success dark:border-success dark:bg-success/15 dark:text-success font-semibold'
-                    : ''
-                }
-                onClick={() => setActive(a.id)}>
-                {selected.id === a.id && <Check className='size-4' />}
-                {a.currency}
-              </Button>
-            ))}
-          </div>
-          {['COP', 'USD']
-            .filter((c) => !ledgers.some((a) => a.currency === c))
-            .map((currency) => (
-              <EnableCurrency
-                key={currency}
-                account={root}
-                currency={currency}
-                onEnabled={(a) => setActive(a.id)}
-              />
-            ))}
-        </div>
-        <div className='min-w-0'>
-          <p className='text-muted-foreground flex items-center gap-2 text-sm'>
-            <Wallet className='size-4' />
-            {t('currentBalance')} · {selected.currency}
-          </p>
-          <p
-            className={`mt-2 text-2xl font-semibold tracking-tight wrap-anywhere tabular-nums sm:text-3xl ${selected.balance < 0 ? 'text-destructive' : 'text-success'}`}>
-            {formatCurrency(selected.balance, selected.currency, locale)}
-          </p>
-          <p className='text-muted-foreground mt-2 text-xs'>{t('separateBalances')}</p>
-        </div>
-      </section>
+      <div className='space-y-3'>
+        <AccountBalanceHero ledgers={ledgers} selectedId={selected.id} onSelect={setActive} />
+        {['COP', 'USD']
+          .filter((currency) => !ledgers.some((ledger) => ledger.currency === currency))
+          .map((currency) => (
+            <EnableCurrency
+              key={currency}
+              account={root}
+              currency={currency}
+              onEnabled={(ledger) => setActive(ledger.id)}
+            />
+          ))}
+      </div>
       <AccountOverview key={selected.id} account={selected} />
       <AccountRecords account={selected} />
       <AccountEditDialog account={selected} open={edit} onOpenChange={setEdit} />

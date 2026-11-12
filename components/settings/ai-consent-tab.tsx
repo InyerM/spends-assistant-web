@@ -11,6 +11,7 @@ import { useAiConsent } from '@/lib/api/queries/ai-consent.queries';
 import { useUpdateAiConsent } from '@/lib/api/mutations/ai-consent.mutations';
 
 const labels: Record<AiConsentScope, { title: string; description: string }> = {
+  document_ocr: { title: 'documentOcr', description: 'documentOcrDescription' },
   financial_text: { title: 'financialText', description: 'financialTextDescription' },
   document_images: { title: 'documentImages', description: 'documentImagesDescription' },
   forwarded_email: { title: 'forwardedEmail', description: 'forwardedEmailDescription' },
@@ -69,7 +70,7 @@ export function AiConsentTab(): React.ReactElement {
                 id={`ai-consent-${scope}`}
                 aria-label={t(labels[scope].title)}
                 aria-describedby={`ai-consent-description-${scope}`}
-                checked={query.data.consents[scope]}
+                checked={query.data.consents[scope] ?? false}
                 disabled={mutation.isPending}
                 onCheckedChange={(granted) => mutation.mutate({ scope, granted })}
               />

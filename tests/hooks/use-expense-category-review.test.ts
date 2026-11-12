@@ -46,3 +46,155 @@ it('bounds selection and requires a separate category confirmation after receivi
   expect(result.current.selected).toHaveLength(0);
   expect(result.current.filters.scope).toBe('all');
 });
+
+it('binds proposals to the analyzed snapshot and rejects a changed queue row', () => {
+  mocks.analyze.mutate.mockClear();
+  mocks.save.mutate.mockClear();
+  const row = {
+    id: 'tx',
+    description: 'Original',
+    notes: null,
+    category_id: null,
+    account_id: 'account',
+    type: 'expense',
+    amount: 10,
+    date: '2026-11-12',
+    currency: 'COP',
+  };
+  mocks.queue.data.data = [row] as never[];
+  const { result, rerender } = renderHook(() => useExpenseCategoryReview());
+  act(() => result.current.toggle('tx'));
+  act(() => result.current.analyze());
+  void act(() =>
+    mocks.analyze.mutate.mock.calls[0][1].onSuccess([
+      {
+        id: 'tx',
+        proposal: {
+          description: 'AI',
+          notes: '',
+          kind: 'expense',
+          category_id: null,
+          explanation: 'Reason',
+          evidence_ids: [],
+        },
+      },
+    ]),
+  );
+  act(() => result.current.setChoice('tx', 'chosen'));
+  act(() => result.current.toggle('tx'));
+  act(() => result.current.analyze());
+  void act(() =>
+    mocks.analyze.mutate.mock.calls[1][1].onSuccess([
+      {
+        id: 'tx',
+        proposal: {
+          description: 'New AI',
+          notes: '',
+          kind: 'expense',
+          category_id: null,
+          explanation: 'Reason',
+          evidence_ids: [],
+        },
+      },
+    ]),
+  );
+  expect(result.current.choices.tx).toBe('chosen');
+  const changed = { ...row, description: 'Human update' };
+  mocks.queue.data.data = [changed] as never[];
+  rerender();
+  expect(result.current.reviews.tx?.proposal).toBeUndefined();
+  expect(result.current.reviews.tx?.stale).toBe(true);
+  act(() => result.current.apply(changed as never, { description: 'AI' }));
+  expect(mocks.save.mutate).not.toHaveBeenCalled();
+});
+
+it('does not rebase a proposal when a transaction changes while analysis is pending', () => {
+  mocks.analyze.mutate.mockClear();
+  mocks.save.mutate.mockClear();
+  const row = {
+    id: 'tx',
+    description: 'Original',
+    notes: null,
+    category_id: null,
+    account_id: 'account',
+    type: 'expense',
+    amount: 10,
+    date: '2026-11-12',
+    currency: 'COP',
+  };
+  mocks.queue.data.data = [row] as never[];
+  const { result, rerender } = renderHook(() => useExpenseCategoryReview());
+  act(() => result.current.toggle('tx'));
+  act(() => result.current.analyze());
+  mocks.queue.data.data = [{ ...row, notes: 'New human note' }] as never[];
+  rerender();
+  void act(() =>
+    mocks.analyze.mutate.mock.calls[0][1].onSuccess([
+      {
+        id: 'tx',
+        proposal: {
+          description: 'AI',
+          notes: '',
+          kind: 'expense',
+          category_id: null,
+          explanation: 'Reason',
+          evidence_ids: [],
+        },
+      },
+    ]),
+  );
+  expect(result.current.reviews.tx?.stale).toBe(true);
+  act(() => result.current.apply(row as never, { description: 'AI' }));
+  expect(mocks.save.mutate).not.toHaveBeenCalled();
+});
+
+it.each([false, true])(
+  'keeps the prior editor after failed reanalysis without rebasing it (changed=%s)',
+  (changed) => {
+    mocks.analyze.mutate.mockClear();
+    const row = {
+      id: 'tx',
+      description: 'Original',
+      notes: null,
+      category_id: null,
+      account_id: 'account',
+      type: 'expense',
+      amount: 10,
+      date: '2026-11-12',
+      currency: 'COP',
+    };
+    mocks.queue.data.data = [row] as never[];
+    const { result, rerender } = renderHook(() => useExpenseCategoryReview());
+    const proposal = {
+      description: 'AI',
+      notes: '',
+      kind: 'expense',
+      category_id: null,
+      explanation: 'Reason',
+      evidence_ids: [],
+    };
+    act(() => result.current.toggle('tx'));
+    act(() => result.current.analyze());
+    act(() => {
+      mocks.analyze.mutate.mock.calls[0][1].onSuccess([{ id: 'tx', proposal }]);
+    });
+    if (changed) {
+      mocks.queue.data.data = [{ ...row, notes: 'Human update' }] as never[];
+      rerender();
+    }
+    act(() => result.current.toggle('tx'));
+    act(() => result.current.analyze());
+    const error = new Error('Provider unavailable');
+    act(() => {
+      mocks.analyze.mutate.mock.calls[1][1].onSuccess([{ id: 'tx', error }]);
+    });
+    if (changed) {
+      expect(result.current.reviews.tx?.stale).toBe(true);
+      expect(result.current.reviews.tx?.proposal).toBeUndefined();
+    } else {
+      expect(result.current.reviews.tx?.proposal).toBe(proposal);
+      expect(result.current.reviews.tx?.error).toBe(error);
+      expect(result.current.reviews.tx?.baseline).toEqual(row);
+    }
+  },
+);

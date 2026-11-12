@@ -4,6 +4,7 @@ import type { ReconciliationCandidate } from '@/lib/document-reconciliation';
 
 export interface DocumentObservation extends ReviewHistoryObservation {
   ordinal: number;
+  source_page?: number | null;
   amount: number | null;
   occurred_at_text: string | null;
   status: string;

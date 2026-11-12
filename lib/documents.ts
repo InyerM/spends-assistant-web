@@ -54,7 +54,7 @@ const extractionSchema = z.object({
     observations: z.array(observationSchema).max(500),
   }),
   model: z.string(),
-  usage: z.unknown(),
+  usage: z.unknown().optional(),
 });
 
 export type Extraction = z.infer<typeof extractionSchema>;
@@ -62,4 +62,31 @@ export type Extraction = z.infer<typeof extractionSchema>;
 export function parseExtraction(value: unknown): Extraction | null {
   const parsed = extractionSchema.safeParse(value);
   return parsed.success ? parsed.data : null;
+}
+
+const ocrExtractionSchema = z.object({
+  draft: z.object({
+    document_type: z.enum(['receipt', 'bank_screenshot', 'sms_screenshot', 'statement', 'other']),
+    observations: z
+      .array(observationSchema.extend({ source_page: z.number().int().min(1).max(5) }))
+      .max(250),
+  }),
+  model: z.string().min(1),
+  pageCount: z.number().int().min(1).max(5),
+  pathway: z.literal('cloud-pdf-mistral-ocr'),
+  requiresReview: z.literal(true),
+});
+
+export function parseOcrExtraction(
+  value: unknown,
+  expectedPages: number,
+): z.infer<typeof ocrExtractionSchema> | null {
+  const parsed = ocrExtractionSchema.safeParse(value);
+  if (!parsed.success || parsed.data.pageCount !== expectedPages) return null;
+  if (parsed.data.draft.observations.some((row) => row.source_page > expectedPages)) return null;
+  for (let page = 1; page <= expectedPages; page++) {
+    if (parsed.data.draft.observations.filter((row) => row.source_page === page).length > 50)
+      return null;
+  }
+  return parsed.data;
 }

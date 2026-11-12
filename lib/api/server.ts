@@ -209,7 +209,10 @@ export async function applyAutomationRules(
   const appliedRules: { rule_id: string; rule_name: string; actions: Record<string, unknown> }[] =
     [];
 
-  for (const rule of rules as AutomationRule[]) {
+  const claimed = new Set<keyof AutomationRuleActions>();
+  for (const rule of [...(rules as AutomationRule[])].sort(
+    (a, b) => b.priority - a.priority || a.id.localeCompare(b.id),
+  )) {
     if (transaction.currency === 'USD' && rule.rule_type === 'account_detection') continue;
     const logic = ((rule.condition_logic as string | undefined) ?? 'or') as 'and' | 'or';
     if (matchesConditions(result, rule.conditions, logic)) {
@@ -217,11 +220,24 @@ export async function applyAutomationRules(
       if (rule.transfer_to_account_id && !actions.link_to_account) {
         actions.link_to_account = rule.transfer_to_account_id;
       }
+      if (
+        claimed.has('set_category') &&
+        result.category_id !== undefined &&
+        actions.set_type &&
+        actions.set_type !== result.type
+      )
+        delete actions.set_type;
+      for (const field of ['set_type', 'set_category', 'set_account', 'link_to_account'] as const) {
+        if (actions[field] === undefined || (field !== 'set_category' && !actions[field])) continue;
+        if (claimed.has(field)) Reflect.deleteProperty(actions, field);
+        else claimed.add(field);
+      }
+      if (!Object.keys(actions).length) continue;
       result = applyActions(result, actions);
       appliedRules.push({
         rule_id: rule.id,
         rule_name: rule.name,
-        actions: rule.actions as Record<string, unknown>,
+        actions: actions as Record<string, unknown>,
       });
     }
   }

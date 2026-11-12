@@ -32,3 +32,21 @@ describe('current category rules', () => {
     expect(categoryFromCurrentRules('Merchant', '', 25000, 'a', [conditional])).toBe('groceries');
   });
 });
+
+it('stops on an explicit high-priority clear and distinguishes it from no match', async () => {
+  const { categoryDecisionFromCurrentRules } = await import('@/lib/shortcut-inbox/updated-rules');
+  expect(
+    categoryDecisionFromCurrentRules('TIENDAS ARA', '', 1, null, [
+      { ...rule, id: 'high', actions: { set_category: null } },
+      { ...rule, id: 'low', priority: 1 },
+    ]),
+  ).toEqual({ matched: true, categoryId: null, ruleId: 'high' });
+});
+it('breaks category priority ties by ID in either input order', () => {
+  const rules = [
+    { ...rule, id: 'a', actions: { set_category: 'a' } },
+    { ...rule, id: 'b', actions: { set_category: 'b' } },
+  ];
+  for (const input of [rules, [...rules].reverse()])
+    expect(categoryFromCurrentRules('TIENDAS ARA', '', 1, null, input)).toBe('a');
+});

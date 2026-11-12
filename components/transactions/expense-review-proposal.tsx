@@ -33,13 +33,19 @@ export function ExpenseReviewProposal({
   const t = useTranslations('expenseCategoryReview'),
     locale = useLocale() as Locale;
   const proposed = choice ?? (proposal.kind === 'expense' ? proposal.category_id : null) ?? '';
-  const [description, setDescription] = useState(proposal.description);
-  const [notes, setNotes] = useState(proposal.notes);
-  const [included, setIncluded] = useState({
+  const [editedDescription, setDescription] = useState<string | null>(null);
+  const description = editedDescription ?? proposal.description;
+  const [editedNotes, setNotes] = useState<string | null>(null);
+  const notes = editedNotes ?? proposal.notes;
+  const [overrides, setIncluded] = useState<
+    Partial<Record<'description' | 'notes' | 'category', boolean>>
+  >({});
+  const included = {
     description: proposal.description !== row.description,
     notes: proposal.notes !== (row.notes ?? ''),
     category: Boolean(proposed && proposed !== row.category_id),
-  });
+    ...overrides,
+  };
   const changes: ExpenseReviewChanges = {};
   if (included.description && description.trim() && description.trim() !== row.description)
     changes.description = description.trim();

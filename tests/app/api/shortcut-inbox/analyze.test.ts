@@ -806,3 +806,57 @@ it('explicitly refreshes AI annotations in an incomplete version-2 proposal', as
   expect(fetch).toHaveBeenCalledTimes(1);
   expect(db.updates.every((update) => !('amount' in update))).toBe(true);
 });
+
+it.each([false, true])(
+  'preserves explicit category clear against cached/AI fallback (cached=%s)',
+  async (cached) => {
+    const db = fakeDb({
+      ...(cached
+        ? {
+            cached: {
+              inbox_item_id: id,
+              user_id: 'owner-a',
+              analysis_version: 2,
+              account_id: accountId,
+              suggested_type: 'expense',
+              category_id: categoryId,
+              category_source: 'ai',
+              description: 'CEA PRACTICAR DEL EJE',
+              amount: 1550000,
+            },
+          }
+        : {}),
+      rules: [
+        {
+          id: 'clear',
+          name: 'Keep category empty',
+          rule_type: 'general',
+          is_active: true,
+          priority: 100,
+          condition_logic: 'or',
+          conditions: { description_contains: ['PRACTICAR DEL EJE'] },
+          actions: { set_category: null },
+        },
+        {
+          id: 'lower',
+          name: 'Lower category',
+          rule_type: 'general',
+          is_active: true,
+          priority: 1,
+          condition_logic: 'or',
+          conditions: {},
+          actions: { set_category: categoryId },
+        },
+      ],
+    });
+    getUserClient.mockResolvedValue({ userId: 'owner-a', accessToken: 'test-jwt', supabase: db });
+    const response = await POST(request(), context);
+    expect(response.status).toBe(cached ? 200 : 201);
+    expect(await response.json()).toMatchObject({
+      category_id: null,
+      category_source: null,
+      analysis_source: 'automation',
+      automation_fields: expect.arrayContaining(['categoryId']),
+    });
+  },
+);

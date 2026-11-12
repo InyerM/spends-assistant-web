@@ -467,6 +467,7 @@
     "transfer": "Transferencia",
     "transferTo": "Transferir a",
     "noTransactions": "No se encontraron transacciones",
+    "loadError": "No se pudieron cargar tus transacciones. Inténtalo de nuevo.",
     "noTransactionsEmpty": "Aún no hay transacciones",
     "noTransactionsDescription": "Comienza a registrar tus gastos agregando tu primera transacción.",
     "noMoreTransactions": "No hay más transacciones",
@@ -889,6 +890,9 @@
     "explanationOptional": "Esta explicación es una guía. Revisa las condiciones y acciones antes de guardar."
   },
   "aiConsent": {
+    "documentOcr": "OCR de documentos",
+    "documentOcrDescription": "Permite procesar contenido de PDF o imágenes con OpenRouter y Mistral OCR e interpretar borradores con DeepSeek. La retención del complemento no está cubierta por las rutas de inferencia de retención cero. Es un permiso separado del texto financiero y la vía actual de imágenes.",
+    "requiredDocumentOcr": "Revisa el permiso de OCR de documentos antes de usar Mistral OCR + DeepSeek.",
     "tab": "Permisos de IA",
     "title": "Permisos para procesamiento con IA",
     "description": "Elige qué información puede enviar Anotto a servicios externos de IA. Cada permiso es independiente y empieza desactivado hasta que lo actives.",
@@ -1096,12 +1100,28 @@
     "description": "Comienza creando tu primer elemento."
   },
   "documents": {
-    "pdfSupportHint": "Imágenes o PDF de hasta 5 MB. Los PDF deben contener texto y tener hasta 10 páginas. Revisa los movimientos y sus coincidencias antes de confirmar la conciliación.",
+    "ocrErrors": {
+      "CLOUD_PDF_DISABLED": "El OCR opcional no está disponible. Usa la extracción local o inténtalo más tarde.",
+      "CLOUD_PDF_BUDGET_EXCEEDED": "Se agotó el presupuesto diario de OCR. Reintenta mañana o usa la extracción local.",
+      "CLOUD_PDF_CLAIM_UNAVAILABLE": "Otra extracción está procesando este documento. Actualiza antes de reintentar.",
+      "CLOUD_PDF_INVALID_INPUT": "Este PDF supera los límites del OCR. Usa un PDF más pequeño y sin cifrar.",
+      "PARSE_LIMIT_REACHED": "Se agotó tu cupo de extracciones con IA.",
+      "CLOUD_PDF_REQUEST_FAILED": "El OCR falló. No se registraron movimientos; revisa el original y reintenta."
+    },
+    "ocrProvenance": "Evidencia de páginas OCR",
+    "ocrReviewRequired": "Los borradores OCR pueden estar incompletos o ser incorrectos. Comprueba el PDF original antes de confirmar movimientos.",
+    "sourcePage": "Página original {page}",
+    "optionalOcr": "OCR opcional de documentos",
+    "ocrDisclosure": "Envía páginas del PDF o una imagen convertida localmente a OpenRouter y Mistral OCR, y el contenido extraído a DeepSeek para preparar borradores. La retención del complemento difiere de la inferencia; no se garantiza retención cero de extremo a extremo. Hasta 5 páginas PDF sin cifrar o una imagen. Revisa los resultados antes de registrar movimientos.",
+    "ocrAcknowledge": "Elijo procesar este documento con OCR externo.",
+    "extractOcr": "Extraer con Mistral OCR + DeepSeek",
+    "pdfSupportHint": "Imágenes o PDF de hasta 5 MB. La extracción local de texto admite hasta 10 páginas PDF; el OCR opcional de Mistral admite hasta 5 páginas escaneadas sin cifrar o una imagen. Revisa los movimientos antes de confirmarlos.",
     "pdfPasswordTitle": "Desbloquear extracto PDF",
     "pdfPasswordDescription": "Usaremos la clave solo para abrir este PDF en el servidor de Anotto. No se guarda ni se envía a la IA.",
     "pdfPasswordLabel": "Clave del PDF",
     "pdfUnlock": "Desbloquear y analizar",
     "pdfErrors": {
+      "PDF_OCR_ENCRYPTED": "Los PDF cifrados no admiten OCR externo. Usa la extracción local de texto.",
       "PDF_PASSWORD_REQUIRED": "Este PDF requiere una clave para abrirse.",
       "PDF_PASSWORD_INCORRECT": "La clave no es correcta. Inténtalo de nuevo.",
       "PDF_NO_TEXT": "Este PDF contiene páginas sin texto legible. Sube capturas de esas páginas para analizarlas como imágenes.",
@@ -1935,7 +1955,8 @@
     "applyNotes": "Aplicar notas",
     "applyCategory": "Aplicar categoría",
     "originalNotes": "Notas actuales: {notes}",
-    "noChanges": "Sin cambios seleccionados"
+    "noChanges": "Sin cambios seleccionados",
+    "staleProposal": "El movimiento cambió. Vuelve a analizarlo antes de aplicar una propuesta."
   },
   "statementConversion": {
     "fundingAccount": "Cuenta desde la que pagaste",

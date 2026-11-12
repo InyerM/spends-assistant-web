@@ -1,0 +1,30 @@
+{
+  "date": "2026-11-12",
+  "source": "Built real documents route; Authenticated read-only test account; all document, consent, and mutation API responses are synthetic intercepted fixtures; no database writes.",
+  "checks": [
+    {
+      "width": 320,
+      "acknowledgementRequired": true,
+      "busyDisabled": true,
+      "budgetRecoveryVisible": true,
+      "pageProvenanceVisible": true,
+      "horizontalOverflow": false
+    },
+    {
+      "width": 390,
+      "acknowledgementRequired": true,
+      "busyDisabled": true,
+      "budgetRecoveryVisible": true,
+      "pageProvenanceVisible": true,
+      "horizontalOverflow": false
+    },
+    {
+      "width": 1440,
+      "acknowledgementRequired": true,
+      "busyDisabled": true,
+      "budgetRecoveryVisible": true,
+      "pageProvenanceVisible": true,
+      "horizontalOverflow": false
+    }
+  ]
+}

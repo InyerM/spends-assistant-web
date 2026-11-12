@@ -57,3 +57,19 @@ describe('vision extraction contract', () => {
     ).toBeNull();
   });
 });
+
+describe('OCR page completion validation', () => {
+  it('requires trusted completed page count and explicit review-only pathway', async () => {
+    const { parseOcrExtraction } = await import('@/lib/documents');
+    const value = {
+      draft: { document_type: 'statement', observations: [] },
+      model: 'deepseek',
+      pageCount: 2,
+      pathway: 'cloud-pdf-mistral-ocr',
+      requiresReview: true,
+    };
+    expect(parseOcrExtraction(value, 2)).not.toBeNull();
+    expect(parseOcrExtraction(value, 3)).toBeNull();
+    expect(parseOcrExtraction({ ...value, requiresReview: false }, 2)).toBeNull();
+  });
+});

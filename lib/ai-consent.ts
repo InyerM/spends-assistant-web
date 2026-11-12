@@ -1,11 +1,16 @@
 export const AI_CONSENT_VERSION = 'external-ai-v1' as const;
-export const AI_CONSENT_SCOPES = ['financial_text', 'document_images', 'forwarded_email'] as const;
+export const AI_CONSENT_SCOPES = [
+  'financial_text',
+  'document_images',
+  'forwarded_email',
+  'document_ocr',
+] as const;
 
 export type AiConsentScope = (typeof AI_CONSENT_SCOPES)[number];
 
 export interface AiConsentState {
   version: typeof AI_CONSENT_VERSION;
-  consents: Record<AiConsentScope, boolean>;
+  consents: Record<Exclude<AiConsentScope, 'document_ocr'>, boolean> & { document_ocr?: boolean };
 }
 
 export class AiConsentRequiredError extends Error {
@@ -61,13 +66,21 @@ export function parseAiConsentState(value: unknown): AiConsentState | null {
   if (state.version !== AI_CONSENT_VERSION) return null;
   if (typeof state.consents !== 'object' || state.consents === null) return null;
   const consents = state.consents as Record<string, unknown>;
-  if (AI_CONSENT_SCOPES.some((scope) => typeof consents[scope] !== 'boolean')) return null;
+  if (
+    AI_CONSENT_SCOPES.some(
+      (scope) => scope !== 'document_ocr' && typeof consents[scope] !== 'boolean',
+    )
+  )
+    return null;
+  if (consents.document_ocr !== undefined && typeof consents.document_ocr !== 'boolean')
+    return null;
   return {
     version: AI_CONSENT_VERSION,
     consents: {
       financial_text: consents.financial_text as boolean,
       document_images: consents.document_images as boolean,
       forwarded_email: consents.forwarded_email as boolean,
+      ...(consents.document_ocr === undefined ? {} : { document_ocr: consents.document_ocr }),
     },
   };
 }

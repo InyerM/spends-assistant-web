@@ -1,6 +1,8 @@
 'use client';
 
 import Link from 'next/link';
+import { DocumentOcrProvenance } from '@/components/documents/document-ocr-provenance';
+import { PdfOcrAction } from '@/components/documents/pdf-ocr-action';
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { FileImage, FileText, Sparkles, Archive, ArchiveRestore } from 'lucide-react';
@@ -30,6 +32,7 @@ interface Props {
   onOpen: () => void;
   onArchive: (archived: boolean) => void;
   onExtract: () => void;
+  onExtractOcr?: () => void;
   onRestore: (documentId: string, observationId: string) => void;
   onRefresh: () => Promise<void>;
 }
@@ -45,6 +48,7 @@ export function DocumentCaptureCard({
   onOpen,
   onArchive,
   onExtract,
+  onExtractOcr,
   onRestore,
   onRefresh,
 }: Props): React.ReactElement {
@@ -157,6 +161,12 @@ export function DocumentCaptureCard({
             </div>
           </TooltipProvider>
         </div>
+        {canExtract && onExtractOcr ? (
+          <PdfOcrAction disabled={busy !== null} onExtract={onExtractOcr} />
+        ) : null}
+        {document.status === 'extracted' ? (
+          <DocumentOcrProvenance rows={document.document_observations} />
+        ) : null}
         {document.status === 'extracted' && !document.archived_at && (
           <DocumentReviewStatusControl document={document} disabled={busy !== null} />
         )}
