@@ -1,5 +1,6 @@
+import type * as ServerModule from '@/lib/api/server';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { GET } from '@/app/api/transactions/route';
+import { GET, POST } from '@/app/api/transactions/route';
 import { NextRequest } from 'next/server';
 
 // Mock server utilities
@@ -290,4 +291,50 @@ it('rejects currency query syntax rather than broadening a filter', async () => 
   expect(
     (await GET(new NextRequest('http://localhost/api/transactions?currency=usd'))).status,
   ).toBe(400);
+});
+
+it('returns review-required without posting when rule evaluation exceeds its budget', async () => {
+  const { getUserClient, applyAutomationRules } = await import('@/lib/api/server');
+  const { AutomationMatchingReviewRequiredError } = await import('@/lib/automation/regex');
+  const rpc = vi.fn();
+  vi.mocked(getUserClient).mockResolvedValue({ supabase: { rpc } as never, userId: 'owner' });
+  vi.mocked(applyAutomationRules).mockRejectedValueOnce(
+    new AutomationMatchingReviewRequiredError('work_limit'),
+  );
+  const response = await POST(
+    new NextRequest('https://example.test/api/transactions', {
+      method: 'POST',
+      body: JSON.stringify({ description: 'Synthetic', amount: 1, type: 'expense' }),
+    }),
+  );
+  expect(response.status).toBe(422);
+  expect(await response.json()).toMatchObject({
+    code: 'AUTOMATION_MATCHING_REVIEW_REQUIRED',
+    requires_review: true,
+  });
+  expect(rpc).not.toHaveBeenCalled();
+});
+
+it('does not invoke the financial command when the owner rules query fails', async () => {
+  const { getUserClient, applyAutomationRules } = await import('@/lib/api/server');
+  const actual = await vi.importActual<typeof ServerModule>('@/lib/api/server');
+  const chain: Record<string, unknown> = {};
+  for (const method of ['select', 'eq', 'is', 'limit', 'order']) chain[method] = vi.fn(() => chain);
+  chain.then = (resolve: (value: unknown) => void) =>
+    resolve({ data: null, error: { message: 'private infrastructure detail' } });
+  const rpc = vi.fn();
+  vi.mocked(getUserClient).mockResolvedValue({
+    supabase: { from: vi.fn(() => chain), rpc } as never,
+    userId: 'owner',
+  });
+  vi.mocked(applyAutomationRules).mockImplementationOnce(actual.applyAutomationRules);
+  const response = await POST(
+    new NextRequest('https://example.test/api/transactions', {
+      method: 'POST',
+      body: JSON.stringify({ description: 'Synthetic', amount: 1, type: 'expense' }),
+    }),
+  );
+  expect(response.status).toBe(500);
+  expect(rpc).not.toHaveBeenCalled();
+  expect(JSON.stringify(await response.json())).not.toContain('private infrastructure detail');
 });

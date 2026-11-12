@@ -429,6 +429,27 @@ describe('GET Shortcut inbox candidates', () => {
     expect((await GET(request() as never, context)).status).toBe(500);
   });
 
+  it('returns review rather than inferring an account from an oversized rule set', async () => {
+    const db = fakeDatabase({
+      accounts: [{ id: 'account-a', user_id: 'owner-a', last_four: '9999', deleted_at: null }],
+      rules: Array.from({ length: 201 }, () => ({
+        user_id: 'owner-a',
+        is_active: true,
+        deleted_at: null,
+        rule_type: 'account_detection',
+        conditions: {},
+        actions: {},
+      })),
+    });
+    getUserClient.mockResolvedValue({ supabase: db.supabase, userId: 'owner-a' });
+    const response = await GET(request() as never, context);
+    expect(response.status).toBe(422);
+    expect(await response.json()).toMatchObject({
+      code: 'AUTOMATION_MATCHING_REVIEW_REQUIRED',
+      reason: 'rule_limit',
+    });
+  });
+
   it('rejects missing authentication', async () => {
     getUserClient.mockRejectedValue(new AuthError());
     expect((await GET(request() as never, context)).status).toBe(401);

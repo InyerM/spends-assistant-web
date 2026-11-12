@@ -1,3 +1,4 @@
+import { automationMatchingErrorResponse } from '@/lib/automation/regex';
 import { hasSameRequestOrigin } from '@/lib/api/request-origin';
 import { readBoundedJson, RequestBodyError } from '@/lib/api/bounded-json';
 import { normalizeInboxAnalysis } from '@/lib/shortcut-inbox/analysis';
@@ -765,6 +766,8 @@ export async function POST(request: Request, context: Context): Promise<Response
       { status: 201, headers: privateHeaders },
     );
   } catch (error) {
+    const matchingResponse = automationMatchingErrorResponse(error);
+    if (matchingResponse) return matchingResponse;
     return error instanceof AuthError
       ? errorResponse(
           error.status === 403 ? 'Invalid request origin' : 'Unauthorized',

@@ -1,3 +1,8 @@
+import {
+  automationRuleInputError,
+  ruleMatchingCompatibility,
+} from '@/lib/automation/rule-validation';
+import type { AutomationRule } from '@/types/automation-rule';
 import type { NextRequest } from 'next/server';
 import { getUserClient, AuthError, jsonResponse, errorResponse } from '@/lib/api/server';
 
@@ -32,7 +37,11 @@ export async function GET(request: NextRequest): Promise<Response> {
       .range(from, to);
 
     if (error) return errorResponse(error.message, 400);
-    return jsonResponse({ data, count: count ?? 0, page });
+    const visible = (data as AutomationRule[]).map((rule) => {
+      const state = ruleMatchingCompatibility(rule.conditions);
+      return state.requires_review ? { ...rule, matching_compatibility: state } : rule;
+    });
+    return jsonResponse({ data: visible, count: count ?? 0, page });
   } catch (error) {
     if (error instanceof AuthError) return errorResponse('Unauthorized', 401);
     return errorResponse('Failed to fetch automation rules');
@@ -43,6 +52,8 @@ export async function POST(request: NextRequest): Promise<Response> {
   try {
     const { supabase, userId } = await getUserClient(request);
     const body = (await request.json()) as Record<string, unknown>;
+    const inputError = automationRuleInputError(body);
+    if (inputError) return Response.json(inputError, { status: 400 });
 
     // Check automation rule limit for free plan
     const [{ data: subscription }, automationCountResult, { data: limitSetting }] =

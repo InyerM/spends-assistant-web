@@ -283,3 +283,20 @@ describe('ACTION_TYPE_KEYS', () => {
     ]);
   });
 });
+
+it('retains an existing expression when editable rows do not represent that condition', () => {
+  const payload = buildPayload(
+    {
+      name: 'Synthetic',
+      is_active: false,
+      priority: 1,
+      rule_type: 'general',
+      condition_logic: 'and',
+    },
+    [],
+    [],
+    { description_regex: '(?=a)a' },
+  );
+  expect(payload.conditions.description_regex).toBe('(?=a)a');
+  expect(payload.is_active).toBe(false);
+});

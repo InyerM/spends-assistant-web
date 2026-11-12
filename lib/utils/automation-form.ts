@@ -131,8 +131,12 @@ export function buildPayload(
   values: BuildPayloadFormValues,
   conditionRows: ConditionRow[],
   actionRows: ActionRow[],
+  retainedConditions?: AutomationRuleConditions,
 ): CreateAutomationRuleInput {
-  const conditions: AutomationRuleConditions = {};
+  const conditions: AutomationRuleConditions =
+    retainedConditions?.description_regex !== undefined
+      ? { description_regex: retainedConditions.description_regex }
+      : {};
 
   interface ConditionAccumulator {
     rawTextTerms: string[];

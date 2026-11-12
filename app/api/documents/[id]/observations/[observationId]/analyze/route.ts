@@ -1,3 +1,4 @@
+import { automationMatchingErrorResponse } from '@/lib/automation/regex';
 import { z } from 'zod';
 import { AuthError, errorResponse, getUserClient, applyAutomationRules } from '@/lib/api/server';
 import { hasSameRequestOrigin } from '@/lib/api/request-origin';
@@ -147,6 +148,8 @@ export async function POST(
       { headers: { 'Cache-Control': 'private, no-store' } },
     );
   } catch (error) {
+    const matchingResponse = automationMatchingErrorResponse(error);
+    if (matchingResponse) return matchingResponse;
     return errorResponse(
       error instanceof AuthError
         ? error.status === 403

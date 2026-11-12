@@ -257,7 +257,7 @@ describe('applyAutomationRules', () => {
   });
   function createRulesSupabase(rules: ReturnType<typeof createMockAutomationRule>[]) {
     const chain: Record<string, ReturnType<typeof vi.fn>> = {};
-    const methods = ['select', 'eq', 'is', 'order'] as const;
+    const methods = ['select', 'eq', 'is', 'limit', 'order'] as const;
     for (const m of methods) {
       chain[m] = vi.fn().mockReturnValue(chain);
     }
@@ -621,9 +621,9 @@ describe('applyAutomationRules', () => {
     expect((result.applied_rules as Array<{ rule_id: string }>)[0].rule_id).toBe('rule-1');
   });
 
-  it('returns unchanged transaction when rules data is null', async () => {
+  it('fails closed when rules data is unavailable', async () => {
     const chain: Record<string, ReturnType<typeof vi.fn>> = {};
-    ['select', 'eq', 'is', 'order'].forEach((m) => {
+    ['select', 'eq', 'is', 'limit', 'order'].forEach((m) => {
       chain[m] = vi.fn().mockReturnValue(chain);
     });
     Object.defineProperty(chain, 'then', {
@@ -640,8 +640,9 @@ describe('applyAutomationRules', () => {
       source: 'api',
       type: 'expense',
     };
-    const result = await applyAutomationRules(sb as never, tx);
-    expect(result.type).toBe('expense');
+    await expect(applyAutomationRules(sb as never, tx)).rejects.toThrow(
+      'Automation rules unavailable',
+    );
   });
 });
 

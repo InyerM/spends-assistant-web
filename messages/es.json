@@ -816,6 +816,7 @@
     "starterHint": "Una selección para empezar. Las categorías que uses y las que crees aparecerán aquí."
   },
   "automation": {
+    "matchingRequiresReview": "Esta expresión necesita revisión y no se aplica. Desactiva esta regla y vuelve a crearla con condiciones simples.",
     "title": "Reglas de Automatización",
     "subtitle": "Reglas que categorizan y procesan transacciones automáticamente",
     "newRule": "Nueva Regla",

@@ -1,3 +1,4 @@
+import { automationMatchingErrorResponse } from '@/lib/automation/regex';
 import { hasSameRequestOrigin } from '@/lib/api/request-origin';
 import { readBoundedJson, RequestBodyError } from '@/lib/api/bounded-json';
 import type { NextRequest } from 'next/server';
@@ -143,6 +144,8 @@ export async function POST(request: NextRequest): Promise<Response> {
       applied_rules: processed.applied_rules ?? [],
     });
   } catch (error) {
+    const matchingResponse = automationMatchingErrorResponse(error);
+    if (matchingResponse) return matchingResponse;
     if (error instanceof AuthError)
       return errorResponse(
         error.status === 403 ? 'Invalid request origin' : 'Unauthorized',

@@ -1,3 +1,9 @@
+import {
+  assertAutomationRuleSet,
+  matchesAutomationRegex,
+  assertAutomationMatchInput,
+  MAX_AUTOMATION_RULES,
+} from '@/lib/automation/regex';
 import { hasSameRequestOrigin } from '@/lib/api/request-origin';
 import { isMobileBearerRoute } from '@/lib/api/mobile-bearer-routes';
 import { createClient, createAdminClient } from '@/lib/supabase/server';
@@ -138,6 +144,7 @@ function matchesConditions(
   conditions: AutomationRuleConditions,
   logic: 'and' | 'or' = 'or',
 ): boolean {
+  assertAutomationMatchInput(tx.description, String(tx.raw_text ?? ''));
   if (conditions.description_contains) {
     const desc = tx.description.toLowerCase();
     const matchFn =
@@ -146,14 +153,7 @@ function matchesConditions(
         : conditions.description_contains.some((kw) => desc.includes(kw.toLowerCase()));
     if (!matchFn) return false;
   }
-  if (conditions.description_regex) {
-    try {
-      const regex = new RegExp(conditions.description_regex, 'i');
-      if (!regex.test(tx.description)) return false;
-    } catch {
-      return false;
-    }
-  }
+  if (!matchesAutomationRegex(conditions.description_regex, tx.description)) return false;
   if (conditions.amount_between) {
     const [min, max] = conditions.amount_between;
     if (tx.amount < min || tx.amount > max) return false;
@@ -208,14 +208,17 @@ export async function applyAutomationRules(
   supabase: SupabaseClient,
   transaction: TransactionForRules,
 ): Promise<TransactionForRules> {
-  const { data: rules } = await supabase
+  const { data: rules, error } = await supabase
     .from('automation_rules')
     .select('*')
     .eq('is_active', true)
     .is('deleted_at', null)
+    .limit(MAX_AUTOMATION_RULES + 1)
     .order('priority', { ascending: false });
 
-  if (!rules) return transaction;
+  assertAutomationMatchInput(transaction.description, String(transaction.raw_text ?? ''));
+  if (error || !Array.isArray(rules)) throw new Error('Automation rules unavailable');
+  assertAutomationRuleSet(rules as AutomationRule[]);
 
   let result = transaction;
   const appliedRules: { rule_id: string; rule_name: string; actions: Record<string, unknown> }[] =

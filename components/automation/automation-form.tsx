@@ -214,7 +214,12 @@ export function AutomationForm({
 
   async function onSubmit(values: FormValues): Promise<void> {
     try {
-      const payload = buildPayload(values, conditionRows, actionRows);
+      const payload = buildPayload(
+        values,
+        conditionRows,
+        actionRows,
+        rule?.conditions ?? initialData?.conditions,
+      );
       if (aiPrompt) {
         (payload as unknown as Record<string, unknown>).ai_prompt = aiPrompt;
       }
@@ -226,8 +231,17 @@ export function AutomationForm({
         toast.success(t('ruleCreated'));
       }
       onOpenChange(false);
-    } catch {
-      toast.error(isEditing ? t('failedToUpdate') : t('failedToCreate'));
+    } catch (error) {
+      toast.error(
+        error instanceof Error &&
+          ['Automation expression requires review', 'Automation matching requires review'].includes(
+            error.message,
+          )
+          ? t('matchingRequiresReview')
+          : isEditing
+            ? t('failedToUpdate')
+            : t('failedToCreate'),
+      );
     }
   }
 
@@ -247,6 +261,11 @@ export function AutomationForm({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className='border-border bg-card max-h-[85dvh] overflow-y-auto sm:max-w-[550px]'>
+        {rule?.matching_compatibility?.requires_review && (
+          <p role='alert' className='text-warning text-sm'>
+            {t('matchingRequiresReview')}
+          </p>
+        )}
         <DialogHeader>
           <DialogTitle>{isEditing ? t('editRule') : t('newRule')}</DialogTitle>
         </DialogHeader>

@@ -1,3 +1,8 @@
+import {
+  assertAutomationRuleSet,
+  matchesAutomationRegex,
+  assertAutomationMatchInput,
+} from '@/lib/automation/regex';
 import type { AutomationRule } from '@/types/automation-rule';
 
 type CategoryRule = Pick<
@@ -22,6 +27,8 @@ export function categoryDecisionFromCurrentRules(
   accountId: string | null,
   rules: CategoryRule[],
 ): { matched: boolean; categoryId: string | null; ruleId: string | null } {
+  assertAutomationRuleSet(rules.filter((rule) => rule.is_active));
+  assertAutomationMatchInput(description, rawText);
   const normalizedDescription = description.toLowerCase();
   const normalizedRaw = rawText.toLowerCase();
   for (const rule of [...rules].sort(
@@ -48,13 +55,7 @@ export function categoryDecisionFromCurrentRules(
         : conditions.raw_text_contains.some((term) => normalizedRaw.includes(term.toLowerCase())))
     )
       continue;
-    if (conditions.description_regex) {
-      try {
-        if (!new RegExp(conditions.description_regex, 'iu').test(description)) continue;
-      } catch {
-        continue;
-      }
-    }
+    if (!matchesAutomationRegex(conditions.description_regex, description)) continue;
     if (conditions.amount_equals !== undefined && conditions.amount_equals !== amount) continue;
     if (
       conditions.amount_between &&

@@ -1,3 +1,4 @@
+import { automationMatchingErrorResponse } from '@/lib/automation/regex';
 import type { NextRequest } from 'next/server';
 import type { FinancialRole, IncomingFlowRole } from '@/types/transaction';
 import {
@@ -260,6 +261,8 @@ export async function POST(request: NextRequest): Promise<Response> {
     }
     return jsonResponse(data.transaction, 201);
   } catch (error) {
+    const matchingResponse = automationMatchingErrorResponse(error);
+    if (matchingResponse) return matchingResponse;
     if (error instanceof AuthError)
       return errorResponse(
         error.status === 403 ? 'Invalid request origin' : 'Unauthorized',

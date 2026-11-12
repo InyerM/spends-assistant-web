@@ -109,3 +109,38 @@ describe('POST /api/automation-rules', () => {
     expect(response.status).toBe(400);
   });
 });
+
+describe('bounded expression validation', () => {
+  it.each([false, true])(
+    'rejects unsupported expressions before inserting any rule (bulk=%s)',
+    async (bulk) => {
+      const { getUserClient } = await import('@/lib/api/server');
+      const mock = createChainableQuery([]);
+      vi.mocked(getUserClient).mockResolvedValue({ supabase: mock as never, userId: 'owner' });
+      const rule = { name: 'Synthetic', conditions: { description_regex: '(?=a)a' }, actions: {} };
+      const response = await POST(
+        new NextRequest('https://example.test/api/automation-rules', {
+          method: 'POST',
+          headers: { Origin: 'https://example.test', 'Content-Type': 'application/json' },
+          body: JSON.stringify(bulk ? [{ name: 'Safe', conditions: {}, actions: {} }, rule] : rule),
+        }),
+      );
+      expect(response.status).toBe(400);
+      expect(await response.json()).toMatchObject({ code: 'AUTOMATION_REGEX_REVIEW_REQUIRED' });
+      expect(mock._chain.insert).not.toHaveBeenCalled();
+    },
+  );
+});
+
+it('exposes review metadata without rewriting an existing unsupported expression', async () => {
+  const { getUserClient } = await import('@/lib/api/server');
+  const rule = { id: 'synthetic', conditions: { description_regex: '(?=a)a' } };
+  const mock = createChainableQuery([rule]);
+  vi.mocked(getUserClient).mockResolvedValue({ supabase: mock as never, userId: 'owner' });
+  const response = await GET(new NextRequest('https://example.test/api/automation-rules'));
+  expect(response.status).toBe(200);
+  const body = await response.json();
+  expect(body.data[0].matching_compatibility).toMatchObject({ requires_review: true });
+  expect(body.data[0].conditions).toEqual(rule.conditions);
+  expect(mock._chain.insert).not.toHaveBeenCalled();
+});

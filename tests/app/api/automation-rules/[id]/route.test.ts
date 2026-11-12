@@ -145,3 +145,27 @@ describe('DELETE /api/automation-rules/[id]', () => {
     expect(response.status).toBe(400);
   });
 });
+
+it.each([true, false])(
+  'requires review before reactivation but allows disabling legacy expressions (active=%s)',
+  async (active) => {
+    const { getUserClient } = await import('@/lib/api/server');
+    const existing = {
+      id: 'rule-1',
+      managed_account_id: null,
+      conditions: { description_regex: '(?=a)a' },
+    };
+    const mock = createChainableQuery(existing);
+    vi.mocked(getUserClient).mockResolvedValue({ supabase: mock as never, userId: 'owner' });
+    const response = await PATCH(
+      new NextRequest('https://example.test/api/automation-rules/rule-1', {
+        method: 'PATCH',
+        body: JSON.stringify({ is_active: active }),
+      }),
+      makeParams('rule-1'),
+    );
+    expect(response.status).toBe(active ? 400 : 200);
+    if (active) expect(mock._chain.update).not.toHaveBeenCalled();
+    else expect(mock._chain.update).toHaveBeenCalledWith({ is_active: false });
+  },
+);

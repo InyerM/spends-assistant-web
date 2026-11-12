@@ -275,6 +275,23 @@ describe('forwarded email creation draft', () => {
       actions: { set_account: 'savings' },
     };
     expect(inferForwardedAccountFromRules(raw, [account], [rule])).toBe('savings');
+    expect(
+      inferForwardedAccountFromRules(
+        raw,
+        [account],
+        [{ ...rule, conditions: { ...rule.conditions, description_regex: '(?=x)x' } }],
+      ),
+    ).toBe('');
+    expect(() =>
+      inferForwardedAccountFromRules(
+        raw,
+        [account],
+        Array.from({ length: 201 }, () => rule),
+      ),
+    ).toThrow('Automation matching requires review');
+    expect(() => inferForwardedAccountFromRules('x'.repeat(8193), [account], [])).toThrow(
+      'Automation matching requires review',
+    );
   });
 
   it('uses an owner account rule for a Bancolombia debit alias with two masking stars', () => {

@@ -782,6 +782,7 @@
     "starterHint": "Uma seleção inicial. As categorias que você usar e criar aparecerão aqui."
   },
   "automation": {
+    "matchingRequiresReview": "Esta expressão precisa de revisão e não é aplicada. Desative esta regra e crie outra com condições simples.",
     "title": "Regras de Automação",
     "subtitle": "Regras que categorizam e processam transações automaticamente",
     "newRule": "Nova Regra",

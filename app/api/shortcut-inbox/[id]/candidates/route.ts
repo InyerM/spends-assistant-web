@@ -1,3 +1,4 @@
+import { MAX_AUTOMATION_RULES, automationMatchingErrorResponse } from '@/lib/automation/regex';
 import { inferForwardedAccountFromRules } from '@/lib/shortcut-inbox/create-draft';
 import type { AutomationRule } from '@/types/automation-rule';
 import type { NextRequest } from 'next/server';
@@ -87,7 +88,8 @@ export async function GET(request: NextRequest, context: Context): Promise<Respo
           .select('rule_type,is_active,condition_logic,conditions,actions')
           .eq('user_id', userId)
           .eq('is_active', true)
-          .is('deleted_at', null);
+          .is('deleted_at', null)
+          .limit(MAX_AUTOMATION_RULES + 1);
         if (rulesError) return errorResponse('Candidate account lookup failed');
         const ruleAccountId = inferForwardedAccountFromRules(
           ownedInbox.raw_text,
@@ -125,6 +127,8 @@ export async function GET(request: NextRequest, context: Context): Promise<Respo
       { headers: { 'Cache-Control': 'private, no-store' } },
     );
   } catch (error) {
+    const matchingError = automationMatchingErrorResponse(error);
+    if (matchingError) return matchingError;
     return error instanceof AuthError
       ? errorResponse('Unauthorized', 401)
       : errorResponse('Candidate lookup failed');

@@ -1,3 +1,8 @@
+import {
+  assertAutomationMatchInput,
+  assertAutomationRuleSet,
+  matchesAutomationRegex,
+} from '@/lib/automation/regex';
 import { extractEmailEventEvidence } from './email-event-evidence';
 import type { Account, Category, Transaction } from '@/types';
 import type { AutomationRule } from '@/types/automation-rule';
@@ -158,6 +163,8 @@ export function inferForwardedAccountFromRules(
     'rule_type' | 'is_active' | 'condition_logic' | 'conditions' | 'actions'
   >[],
 ): string {
+  assertAutomationMatchInput('', rawText);
+  assertAutomationRuleSet(rules.filter((rule) => rule.is_active));
   if (previewBancolombiaNotice('forwarded_email', rawText)?.currency === 'USD') return '';
   const generic = extractEmailEventEvidence(rawText);
   const source =
@@ -171,6 +178,7 @@ export function inferForwardedAccountFromRules(
   for (const rule of rules) {
     if (!rule.is_active || rule.rule_type !== 'account_detection' || !rule.actions.set_account)
       continue;
+    if (!matchesAutomationRegex(rule.conditions.description_regex, '')) continue;
     const keywords = rule.conditions.raw_text_contains ?? [];
     if (!keywords.some((keyword) => keyword.replace(/^[*•]+/u, '') === source.suffix)) continue;
     const conditionMatches =

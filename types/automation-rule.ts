@@ -1,3 +1,4 @@
+import type { AutomationRegexCompatibility } from '@/lib/automation/regex';
 import type { TransactionType } from './transaction';
 
 export interface AutomationRuleConditions {
@@ -25,6 +26,7 @@ export type RuleType = 'general' | 'account_detection' | 'transfer';
 export type ConditionLogic = 'and' | 'or';
 
 export interface AutomationRule {
+  matching_compatibility?: AutomationRegexCompatibility;
   managed_account_id?: string | null;
   id: string;
   user_id: string;

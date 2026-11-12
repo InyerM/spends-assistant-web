@@ -816,6 +816,7 @@
     "starterHint": "A starter selection. Categories you use and create will appear here."
   },
   "automation": {
+    "matchingRequiresReview": "This expression needs review and is not applied. Disable this rule and recreate it with simple conditions.",
     "title": "Automation Rules",
     "subtitle": "Rules that automatically categorize and process transactions",
     "newRule": "New Rule",

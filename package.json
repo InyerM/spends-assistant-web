@@ -42,6 +42,7 @@
     "pdf-lib": "1.17.1",
     "pdfjs-dist": "6.4.299",
     "radix-ui": "^1.4.3",
+    "re2js": "2.10.0",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-hook-form": "^7.71.1",
