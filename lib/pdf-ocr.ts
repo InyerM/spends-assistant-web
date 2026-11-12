@@ -105,6 +105,9 @@ async function prepareOcrDocument(input: Uint8Array, mimeType: string): Promise<
     (mimeType === 'application/pdf' && Buffer.from(input.subarray(0, 5)).toString() !== '%PDF-')
   )
     throw new PdfOcrError('PDF_UNSUPPORTED');
+  // Native dependency imports keep the deployed trace complete; parsing stays in the worker.
+  await import('pdf-lib');
+  if (mimeType !== 'application/pdf') await import('sharp');
   const bytes = Uint8Array.from(input);
   const sourceSha256 = createHash('sha256').update(bytes).digest('hex');
   return new Promise((resolve, reject) => {
