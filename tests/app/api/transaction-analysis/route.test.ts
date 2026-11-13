@@ -33,6 +33,7 @@ it('reviews edited metadata from the owned transaction and original evidence wit
     data: {
       id: '00000000-0000-4000-8000-000000000001',
       type: 'expense',
+      date: '2026-10-01',
       account_id: 'bank',
       description: 'Original',
       notes: null,
@@ -62,6 +63,7 @@ it('reviews edited metadata from the owned transaction and original evidence wit
     'token',
     expect.objectContaining({
       type: 'expense',
+      event_date: '2026-10-01',
       description: 'Edited lunch',
       excerpt: 'Bank evidence',
     }),

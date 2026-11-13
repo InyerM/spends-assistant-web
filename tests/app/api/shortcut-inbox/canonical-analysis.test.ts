@@ -137,3 +137,41 @@ it('forwards only the public quota contract, keeping provider details private', 
     limit: 5,
   });
 });
+
+it('returns the refreshed partial Barbería proposal without turning the undated inbox transfer into a posting', async () => {
+  const { calls } = setup('native-bank-message');
+  vi.mocked(fetch).mockResolvedValue(
+    Response.json({
+      analysis_version: 3,
+      status: 'needs_review',
+      category_id: 'barber',
+      category_source: 'review_context',
+      description: 'Transferencia a Mi barbería',
+      amount: 30000,
+      merchant: null,
+      bank_event_at: null,
+      account_id: null,
+      event_date: null,
+      analysis_source: 'history',
+      evidence_ids: ['one', 'two'],
+    }),
+  );
+  const response = await POST(request(true), context);
+  expect(response.status).toBe(200);
+  expect(await response.json()).toMatchObject({
+    status: 'needs_review',
+    category_id: 'barber',
+    amount: 30000,
+    bank_event_at: null,
+    account_id: null,
+    event_date: null,
+    analysis_source: 'history',
+    evidence_ids: ['one', 'two'],
+  });
+  expect(fetch).toHaveBeenCalledOnce();
+  expect(fetch).toHaveBeenCalledWith(
+    'https://worker.example/inbox/analyze',
+    expect.objectContaining({ body: JSON.stringify({ inbox_item_id: id, refresh: true }) }),
+  );
+  expect(calls).not.toContain('transactions');
+});

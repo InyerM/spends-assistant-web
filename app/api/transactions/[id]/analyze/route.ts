@@ -47,6 +47,9 @@ export async function POST(
     if (!token) return errorResponse('Unauthorized', 401);
     const result = await requestCategoryReview(token, {
       transaction_id: transaction.id,
+      ...(/^\d{4}-\d{2}-\d{2}$/.test(String(transaction.date))
+        ? { event_date: transaction.date }
+        : {}),
       amount: transaction.amount,
       account_id: body.data.account_id ?? transaction.account_id,
       source: transaction.source,

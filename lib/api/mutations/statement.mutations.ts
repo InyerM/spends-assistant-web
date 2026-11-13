@@ -67,7 +67,7 @@ export function useCreateStatementTransaction(
 
 import type { CategoryReview } from '@/lib/category-review';
 export type StatementAnalysis = CategoryReview & {
-  source: 'automation' | 'ai' | 'evidence';
+  source: 'automation' | 'ai' | 'evidence' | 'history' | 'mixed';
   reason_code: string;
 };
 export function useAnalyzeStatementMovement(

@@ -91,6 +91,10 @@ export async function POST(
       amount: Math.abs(Number(movement.amount)),
       account_id: scopedAccount,
       source: 'statement',
+      review_fields: ['category', 'description'],
+      ...(/^\d{4}-\d{2}-\d{2}$/.test(String(movement.occurred_at_text))
+        ? { event_date: movement.occurred_at_text }
+        : {}),
       locale: body.data.locale,
       type,
       account_type: account.data.type,
@@ -129,7 +133,13 @@ export async function POST(
       )
         categoryId = String(category.data.id);
     }
-    const automated = categoryId && processed.category_id !== proposal.category_id;
+    const automated = (processed.category_id ?? null) !== proposal.category_id;
+    const fieldSources = proposal.field_sources
+      ? { ...proposal.field_sources, ...(automated ? { category: 'automation' as const } : {}) }
+      : undefined;
+    const aiWording = fieldSources
+      ? fieldSources.description === 'ai' || fieldSources.notes === 'ai'
+      : !proposal.source || proposal.source === 'ai' || proposal.source === 'mixed';
     return Response.json(
       {
         ...proposal,
@@ -143,7 +153,14 @@ export async function POST(
             : proposal.kind === 'own_transfer'
               ? 'transfer_review'
               : 'insufficient_context',
-        source: automated ? 'automation' : cardPayment ? 'evidence' : 'ai',
+        ...(fieldSources ? { field_sources: fieldSources } : {}),
+        source: cardPayment
+          ? 'evidence'
+          : automated
+            ? aiWording
+              ? 'mixed'
+              : 'automation'
+            : (proposal.source ?? 'ai'),
       },
       { headers: { 'Cache-Control': 'private, no-store' } },
     );

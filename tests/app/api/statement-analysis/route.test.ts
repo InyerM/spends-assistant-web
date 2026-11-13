@@ -105,3 +105,82 @@ it('only proposes description and a validated category, leaving verified amounts
   expect(JSON.parse(fetcher.mock.calls[0][1].body as string).account_type).toBe('credit_card');
   vi.unstubAllGlobals();
 });
+
+it('forwards original transfer evidence and the actual observation date for deterministic owner history', async () => {
+  const original = 'Transferencia de $30,000.00 desde cuenta *2651 a la cuenta *3243466403';
+  Object.assign(tableValues.document_observations as object, {
+    amount: -30000,
+    description: original,
+    source_excerpt: original,
+  });
+  const fetcher = vi.fn().mockResolvedValue(
+    Response.json({
+      category_id: id,
+      description: original,
+      notes: '',
+      explanation: 'Historial Barbería.',
+      kind: 'expense',
+      evidence_ids: ['previous'],
+      source: 'history',
+    }),
+  );
+  vi.stubGlobal('fetch', fetcher);
+  try {
+    const response = await POST(
+      new Request('https://my.anotto.app', {
+        method: 'POST',
+        body: JSON.stringify({ locale: 'es' }),
+      }),
+      { params: Promise.resolve({ id, observationId: id }) },
+    );
+    expect(JSON.parse(String(fetcher.mock.calls[0][1].body))).toMatchObject({
+      description: original,
+      excerpt: original,
+      event_date: '2026-09-01',
+    });
+    expect(await response.json()).toMatchObject({ description: original, source: 'history' });
+  } finally {
+    vi.unstubAllGlobals();
+  }
+});
+
+it.each([null, '10000000-0000-4000-8000-000000000002'])(
+  'attributes a later automation category change, including explicit clear %s',
+  async (categoryId) => {
+    const fetcher = vi.fn().mockResolvedValue(
+      Response.json({
+        category_id: id,
+        description: 'Transferencia a Mi barbería',
+        notes: '',
+        explanation: 'Historical category',
+        kind: 'expense',
+        evidence_ids: ['old'],
+        source: 'history',
+        field_sources: { category: 'history', description: 'contact', notes: 'original' },
+      }),
+    );
+    tableValues.categories = { id: categoryId, type: 'expense', slug: 'barber' };
+    vi.mocked(applyAutomationRules).mockImplementation(async (_client, input) => {
+      const result = { ...input };
+      Reflect.set(result, 'category_id', categoryId);
+      return result;
+    });
+    vi.stubGlobal('fetch', fetcher);
+    try {
+      const response = await POST(
+        new Request('https://my.anotto.app', {
+          method: 'POST',
+          body: JSON.stringify({ locale: 'es' }),
+        }),
+        { params: Promise.resolve({ id, observationId: id }) },
+      );
+      expect(await response.json()).toMatchObject({
+        category_id: categoryId,
+        source: 'automation',
+        field_sources: { category: 'automation', description: 'contact', notes: 'original' },
+      });
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  },
+);
