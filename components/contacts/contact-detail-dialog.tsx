@@ -32,7 +32,7 @@ export function ContactDetailDialog({
   const cache = useQueryClient();
   const { data, isLoading, isError } = useContactDetail(contact.id);
   const proofs = useStatementProofs(data?.transactions.map((row) => row.id) ?? []);
-  const [name, setName] = useState(contact.name);
+  const [name, setName] = useState(contact.custom_name ?? contact.name);
   const [saving, setSaving] = useState(false);
   const save = async (): Promise<void> => {
     setSaving(true);
@@ -65,6 +65,7 @@ export function ContactDetailDialog({
             <Input
               className='min-w-0 flex-1'
               id='contact-name'
+              aria-describedby='contact-name-help'
               value={name}
               onChange={(event) => setName(event.target.value)}
               maxLength={100}
@@ -76,9 +77,19 @@ export function ContactDetailDialog({
               {t('save')}
             </Button>
           </div>
-          <p className='text-muted-foreground text-sm wrap-anywhere'>
-            {t(`kind.${contact.identity_kind}`)} · {contact.identity_value}
+          <p id='contact-name-help' className='text-muted-foreground text-sm wrap-anywhere'>
+            {t('nameHelp')}
           </p>
+          <div className='border-border bg-muted/30 space-y-1 rounded-lg border p-3'>
+            <p className='text-sm font-medium'>{t('originalIdentity')}</p>
+            <p className='text-muted-foreground text-sm wrap-anywhere'>
+              {t(`kind.${contact.identity_kind}`)}
+            </p>
+            <p className='text-sm wrap-anywhere'>{contact.identity_value}</p>
+            {contact.display_name !== contact.identity_value ? (
+              <p className='text-muted-foreground text-sm wrap-anywhere'>{contact.display_name}</p>
+            ) : null}
+          </div>
         </div>
         {isLoading ? (
           <Loader />

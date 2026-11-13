@@ -59,7 +59,7 @@ const transactions = [
 ] as Transaction[];
 it('formats summary and nature totals exclusively in the selected currency', () => {
   const view = render(<SummaryCards currency='USD' transactions={transactions} />);
-  expect(screen.getAllByText('$10').length).toBeGreaterThan(0);
+  expect(screen.getAllByText('-$10').length).toBeGreaterThan(0);
   expect(view.container.textContent).not.toContain('90,010');
   view.unmount();
   render(<SpendingNatureCards currency='USD' transactions={transactions} />);

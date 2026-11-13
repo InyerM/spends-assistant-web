@@ -5,7 +5,10 @@ import DashboardPage from '@/app/(dashboard)/dashboard/page';
 const state = vi.hoisted(() => ({
   queries: [] as Array<{ currency?: string; enabled?: boolean }>,
 }));
-vi.mock('next-intl', () => ({ useTranslations: () => (key: string) => key }));
+vi.mock('next-intl', () => ({
+  useTranslations: () => (key: string) => key,
+  useLocale: () => 'en',
+}));
 vi.mock('next/navigation', () => ({ useSearchParams: () => new URLSearchParams() }));
 vi.mock('@/lib/api/queries/account.queries', () => ({
   useAccounts: () => ({
@@ -51,9 +54,6 @@ vi.mock('@/components/planning/dashboard-zone', () => ({
     </div>
   ),
 }));
-vi.mock('@/components/dashboard/summary-cards', () => ({
-  SummaryCards: ({ currency }: { currency: string }) => <p>summary:{currency}</p>,
-}));
 vi.mock('@/components/dashboard/recent-transactions', () => ({
   RecentTransactions: ({ currency }: { currency: string }) => <p>recent:{currency}</p>,
 }));
@@ -93,7 +93,7 @@ it('connects compact selection to queries and built-in widgets while preserving 
   render(<DashboardPage />);
   expect(screen.getByText('COP budgets')).toBeVisible();
   fireEvent.click(screen.getByRole('button', { name: 'next' }));
-  expect(screen.getByText('summary:USD')).toBeVisible();
+  expect(screen.getByRole('region', { name: 'cashFlow' })).toHaveTextContent('USD');
   expect(screen.getByText('recent:USD')).toBeVisible();
   for (const widget of ['categories', 'nature', 'trend'])
     expect(screen.getByText(widget + ':USD')).toBeVisible();

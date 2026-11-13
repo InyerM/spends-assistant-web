@@ -95,12 +95,14 @@ export default function DashboardPage(): React.ReactElement {
           <h1 className='text-foreground text-2xl font-semibold tracking-tight sm:text-3xl'>
             {t('overview')}
           </h1>
-          <DashboardCurrencyControl
-            balances={balances}
-            currency={currency}
-            onCurrencyChange={setCurrency}
-            isLoading={accountsLoading}
-          />
+          {!layout.some((item) => item.id === 'summary') && (
+            <DashboardCurrencyControl
+              balances={balances}
+              currency={currency}
+              onCurrencyChange={setCurrency}
+              isLoading={accountsLoading}
+            />
+          )}
         </div>
         <div className='flex flex-wrap items-center gap-2'>
           <PeriodSelector dateFrom={dateFrom} dateTo={dateTo} onChange={handlePeriodChange} />
@@ -138,6 +140,8 @@ export default function DashboardPage(): React.ReactElement {
               <>
                 {id === 'summary' && (
                   <SummaryCards
+                    currencies={balances.map((balance) => balance.currency)}
+                    onCurrencyChange={setCurrency}
                     currency={currency}
                     transactions={transactions}
                     isLoading={txLoading}
